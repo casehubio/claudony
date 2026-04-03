@@ -23,30 +23,42 @@ public class TmuxService {
 
     public void createSession(String name, String workingDir, String command)
             throws IOException, InterruptedException {
-        new ProcessBuilder("tmux", "new-session", "-d", "-s", name, "-c", workingDir)
-                .start().waitFor();
-        new ProcessBuilder("tmux", "send-keys", "-t", name, command, "Enter")
-                .start().waitFor();
+        var p1 = new ProcessBuilder("tmux", "new-session", "-d", "-s", name, "-c", workingDir)
+                .redirectErrorStream(true).start();
+        p1.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p1.waitFor();
+        var p2 = new ProcessBuilder("tmux", "send-keys", "-t", name, command, "Enter")
+                .redirectErrorStream(true).start();
+        p2.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p2.waitFor();
     }
 
     public void killSession(String name) throws IOException, InterruptedException {
-        new ProcessBuilder("tmux", "kill-session", "-t", name)
-                .start().waitFor();
+        var p = new ProcessBuilder("tmux", "kill-session", "-t", name)
+                .redirectErrorStream(true).start();
+        p.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p.waitFor();
     }
 
     public void sendKeys(String sessionName, String text)
             throws IOException, InterruptedException {
-        new ProcessBuilder("tmux", "send-keys", "-t", sessionName, text, "")
-                .start().waitFor();
+        var p = new ProcessBuilder("tmux", "send-keys", "-t", sessionName, text, "")
+                .redirectErrorStream(true).start();
+        p.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p.waitFor();
     }
 
     public String capturePane(String sessionName, int lines)
             throws IOException, InterruptedException {
         var pb = new ProcessBuilder(
-                "tmux", "capture-pane", "-t", sessionName, "-p", "-S", String.valueOf(-lines));
+                "tmux", "capture-pane", "-t", sessionName, "-p", "-S", String.valueOf(-lines))
+                .redirectErrorStream(true);
         var p = pb.start();
-        p.waitFor();
-        return new String(p.getInputStream().readAllBytes());
+        try (var in = p.getInputStream()) {
+            var output = new String(in.readAllBytes());
+            p.waitFor();
+            return output;
+        }
     }
 
     public Process attachSession(String sessionName) throws IOException {
@@ -56,14 +68,19 @@ public class TmuxService {
     }
 
     public boolean sessionExists(String name) throws IOException, InterruptedException {
-        return new ProcessBuilder("tmux", "has-session", "-t", name)
-                .start().waitFor() == 0;
+        var p = new ProcessBuilder("tmux", "has-session", "-t", name)
+                .redirectErrorStream(true).start();
+        p.getInputStream().transferTo(OutputStream.nullOutputStream());
+        return p.waitFor() == 0;
     }
 
     public String tmuxVersion() throws IOException, InterruptedException {
-        var pb = new ProcessBuilder("tmux", "-V");
+        var pb = new ProcessBuilder("tmux", "-V").redirectErrorStream(true);
         var p = pb.start();
-        p.waitFor();
-        return new String(p.getInputStream().readAllBytes()).trim();
+        try (var in = p.getInputStream()) {
+            var version = new String(in.readAllBytes()).trim();
+            p.waitFor();
+            return version;
+        }
     }
 }
