@@ -75,15 +75,20 @@ public class TerminalWebSocket {
 
     @OnClose
     public void onClose(WebSocketConnection connection) {
-        var process = processes.remove(connection.id());
-        if (process != null && process.isAlive()) {
-            process.destroy();
-        }
+        cleanup(connection);
         LOG.debugf("WebSocket closed for connection %s", connection.id());
     }
 
     @OnError
-    public void onError(Throwable error) {
-        LOG.warnf("WebSocket error: %s", error.getMessage());
+    public void onError(Throwable throwable, WebSocketConnection connection) {
+        LOG.warnf("WebSocket error for connection %s: %s", connection.id(), throwable.getMessage());
+        cleanup(connection);
+    }
+
+    private void cleanup(WebSocketConnection connection) {
+        var process = processes.remove(connection.id());
+        if (process != null && process.isAlive()) {
+            process.destroy();
+        }
     }
 }
