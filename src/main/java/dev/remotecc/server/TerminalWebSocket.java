@@ -77,13 +77,21 @@ public class TerminalWebSocket {
             p.getInputStream().transferTo(OutputStream.nullOutputStream());
             p.waitFor();
 
-            // Force a redraw: the client will send a resize event on load which
-            // triggers this, but send-keys with a no-op forces any TUI app to
-            // repaint immediately at the current pane size.
-            var redraw = new ProcessBuilder("tmux", "send-keys", "-t", tmuxName, "")
-                    .redirectErrorStream(true).start();
-            redraw.getInputStream().transferTo(OutputStream.nullOutputStream());
-            redraw.waitFor();
+            // Replay pane history so reconnecting users see previous output.
+            // capture-pane -p pads every line to the pane width with spaces —
+            // we strip trailing whitespace per line before sending to xterm.js.
+            var cap = new ProcessBuilder("tmux", "capture-pane", "-t", tmuxName,
+                    "-p", "-S", "-100")
+                    .redirectErrorStream(false).start();
+            var raw = new String(cap.getInputStream().readAllBytes());
+            cap.waitFor();
+            if (!raw.isBlank()) {
+                var sb = new StringBuilder();
+                for (var line : raw.split("\n", -1)) {
+                    sb.append(line.stripTrailing()).append("\r\n");
+                }
+                connection.sendTextAndAwait(sb.toString());
+            }
 
         } catch (Exception e) {
             LOG.errorf("Failed to set up pipe for session '%s': %s", tmuxName, e.getMessage());
