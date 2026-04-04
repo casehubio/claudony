@@ -53,6 +53,14 @@ public class TerminalWebSocket {
                     .redirectErrorStream(true).start().waitFor();
             fifoPaths.put(connection.id(), fifoPath);
 
+            // Capture current pane content (scrollback) before pipe-pane starts,
+            // so reconnecting users see their previous output immediately.
+            var cap = new ProcessBuilder("tmux", "capture-pane", "-t", tmuxName,
+                    "-p", "-S", "-200")
+                    .redirectErrorStream(false).start();
+            var history = new String(cap.getInputStream().readAllBytes());
+            cap.waitFor();
+
             // Virtual thread: reads from FIFO → sends to WebSocket
             // Opening the FIFO for reading blocks until a writer connects (pipe-pane below)
             Thread.ofVirtual().start(() -> {
@@ -76,6 +84,12 @@ public class TerminalWebSocket {
                     .redirectErrorStream(true).start();
             p.getInputStream().transferTo(OutputStream.nullOutputStream());
             p.waitFor();
+
+            // Send history now — pipe-pane is running so new output streams via FIFO,
+            // history gives the reconnecting user their previous context.
+            if (!history.isBlank()) {
+                connection.sendTextAndAwait(history);
+            }
 
         } catch (Exception e) {
             LOG.errorf("Failed to set up pipe for session '%s': %s", tmuxName, e.getMessage());
