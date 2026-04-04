@@ -29,11 +29,12 @@ class TerminalWebSocketTest {
 
     @BeforeEach
     void setup() throws Exception {
-        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "echo ws-test-marker");
+        // Use bash so the session stays alive; we send commands after pipe-pane connects
+        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "bash");
         var now = Instant.now();
         registry.register(new dev.remotecc.server.model.Session(
             "ws-test-id", TEST_SESSION, System.getProperty("user.home"),
-            "echo ws-test-marker", SessionStatus.IDLE, now, now));
+            "bash", SessionStatus.IDLE, now, now));
         Thread.sleep(300);
     }
 
@@ -54,8 +55,23 @@ class TerminalWebSocketTest {
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id"));
 
-        var message = received.poll(3, TimeUnit.SECONDS);
-        assertNotNull(message, "Expected terminal output within 3s");
+        // Wait for pipe-pane to connect, then send a command to generate output
+        Thread.sleep(500);
+        session.getBasicRemote().sendText("echo ws-pipe-test\n");
+
+        // Collect output chunks for up to 3s and check for our marker
+        var sb = new StringBuilder();
+        String chunk;
+        long deadline = System.currentTimeMillis() + 3000;
+        while (System.currentTimeMillis() < deadline) {
+            chunk = received.poll(200, TimeUnit.MILLISECONDS);
+            if (chunk != null) {
+                sb.append(chunk);
+                if (sb.toString().contains("ws-pipe-test")) break;
+            }
+        }
+        assertTrue(sb.toString().contains("ws-pipe-test"),
+            "Expected 'ws-pipe-test' in output, got: " + sb);
         session.close();
     }
 
