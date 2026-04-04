@@ -77,4 +77,26 @@ class StaticFilesTest {
             .body(containsString("key-bar"))
             .body(containsString("Ctrl+C"));
     }
+
+    @Test
+    void manifestHasRequiredFields() {
+        given().when().get("/manifest.json")
+            .then().statusCode(200)
+            .body(containsString("\"name\""))
+            .body(containsString("\"start_url\""))
+            .body(containsString("standalone"));
+    }
+
+    @Test
+    void serviceWorkerHasSkipWaiting() {
+        given().when().get("/sw.js")
+            .then().statusCode(200)
+            .body(containsString("skipWaiting"));
+    }
+
+    @Test
+    void iconsAreAccessible() {
+        given().when().get("/icons/icon-192.svg").then().statusCode(200);
+        given().when().get("/icons/icon-512.svg").then().statusCode(200);
+    }
 }
