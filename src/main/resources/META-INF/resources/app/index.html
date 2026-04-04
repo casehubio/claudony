@@ -1,1 +1,37 @@
-<!DOCTYPE html><html><body>loading...</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#007acc">
+    <title>RemoteCC</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/app/style.css">
+</head>
+<body>
+    <header>
+        <h1>RemoteCC</h1>
+        <button id="new-session-btn">+ New Session</button>
+    </header>
+
+    <main id="session-grid"></main>
+
+    <dialog id="new-session-dialog">
+        <form id="new-session-form">
+            <h2>New Session</h2>
+            <label>Name
+                <input name="name" required placeholder="myproject" autocomplete="off">
+            </label>
+            <label>Working Directory
+                <input name="workingDir" required placeholder="/home/user/project" autocomplete="off">
+            </label>
+            <div class="dialog-actions">
+                <button type="button" id="cancel-btn" class="secondary">Cancel</button>
+                <button type="submit">Create</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="/app/dashboard.js"></script>
+</body>
+</html>

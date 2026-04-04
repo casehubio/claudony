@@ -1,0 +1,89 @@
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    var sessionId = params.get('id');
+    var sessionName = params.get('name') || 'Session';
+
+    if (!sessionId) { window.location.href = '/app/'; return; }
+
+    document.getElementById('session-name').textContent = sessionName;
+    document.title = sessionName + ' \u2014 RemoteCC';
+
+    // Show key bar on touch devices
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        document.getElementById('key-bar').classList.remove('hidden');
+    }
+
+    var terminal = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        scrollback: 5000,
+        theme: {
+            background: '#1e1e1e',
+            foreground: '#d4d4d4',
+            cursor: '#aeafad',
+            selectionBackground: 'rgba(255,255,255,0.2)'
+        }
+    });
+
+    var fitAddon = new FitAddon.FitAddon();
+    terminal.loadAddon(fitAddon);
+    terminal.open(document.getElementById('terminal-container'));
+    fitAddon.fit();
+
+    var resizeObserver = new ResizeObserver(function () { fitAddon.fit(); });
+    resizeObserver.observe(document.getElementById('terminal-container'));
+
+    terminal.onResize(function (size) {
+        fetch('/api/sessions/' + sessionId + '/resize?cols=' + size.cols + '&rows=' + size.rows, {
+            method: 'POST'
+        }).catch(function () {});
+    });
+
+    var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var wsUrl = proto + '//' + location.host + '/ws/' + sessionId;
+    var ws, attachAddon;
+    var reconnectDelay = 1000;
+    var reconnectTimer;
+
+    function updateStatus(text, cssClass) {
+        var badge = document.getElementById('status-badge');
+        badge.textContent = text;
+        badge.className = 'badge ' + cssClass;
+    }
+
+    function connect() {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function () {
+            reconnectDelay = 1000;
+            clearTimeout(reconnectTimer);
+            if (attachAddon) attachAddon.dispose();
+            attachAddon = new AttachAddon.AttachAddon(ws);
+            terminal.loadAddon(attachAddon);
+            updateStatus('connected', 'active');
+            terminal.focus();
+        };
+
+        ws.onclose = function () {
+            updateStatus('reconnecting\u2026', 'idle');
+            reconnectTimer = setTimeout(function () {
+                reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+                connect();
+            }, reconnectDelay);
+        };
+
+        ws.onerror = function () { ws.close(); };
+    }
+
+    connect();
+
+    document.querySelectorAll('#key-bar button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(btn.dataset.code);
+            }
+            terminal.focus();
+        });
+    });
+})();

@@ -1,1 +1,40 @@
-<!DOCTYPE html><html><body>loading...</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1e1e1e">
+    <title>RemoteCC Terminal</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/css/xterm.css">
+    <link rel="stylesheet" href="/app/style.css">
+</head>
+<body class="terminal-page">
+    <header class="terminal-header">
+        <a href="/app/" id="back-btn">&#8592; Dashboard</a>
+        <span id="session-name">Session</span>
+        <span id="status-badge" class="badge idle">connecting</span>
+    </header>
+
+    <div id="terminal-container"></div>
+
+    <div id="key-bar" class="key-bar hidden">
+        <button data-code="&#x1b;">Esc</button>
+        <button data-code="&#x03;">Ctrl+C</button>
+        <button data-code="&#x04;">Ctrl+D</button>
+        <button data-code="&#x09;">Tab</button>
+        <button data-code="`">` </button>
+        <button data-code="|">|</button>
+        <button data-code="~">~</button>
+        <button data-code="&#x1b;[A">&#8593;</button>
+        <button data-code="&#x1b;[B">&#8595;</button>
+        <button data-code="&#x1b;[C">&#8594;</button>
+        <button data-code="&#x1b;[D">&#8592;</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-attach@0.11/lib/addon-attach.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10/lib/addon-fit.js"></script>
+    <script src="/app/terminal.js"></script>
+</body>
+</html>

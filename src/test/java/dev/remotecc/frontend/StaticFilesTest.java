@@ -33,4 +33,48 @@ class StaticFilesTest {
             .then().statusCode(200)
             .contentType(containsString("javascript"));
     }
+
+    @Test
+    void dashboardContainsDashboardScript() {
+        given().when().get("/app/index.html")
+            .then().statusCode(200)
+            .body(containsString("dashboard.js"));
+    }
+
+    @Test
+    void styleSheetIsAccessible() {
+        given().when().get("/app/style.css")
+            .then().statusCode(200)
+            .contentType(containsString("text/css"));
+    }
+
+    @Test
+    void dashboardScriptIsAccessible() {
+        given().when().get("/app/dashboard.js")
+            .then().statusCode(200)
+            .contentType(containsString("javascript"));
+    }
+
+    @Test
+    void sessionHtmlContainsXtermScript() {
+        given().when().get("/app/session.html")
+            .then().statusCode(200)
+            .body(containsString("xterm.js"))
+            .body(containsString("terminal.js"));
+    }
+
+    @Test
+    void terminalScriptIsAccessible() {
+        given().when().get("/app/terminal.js")
+            .then().statusCode(200)
+            .contentType(containsString("javascript"));
+    }
+
+    @Test
+    void sessionHtmlContainsKeyBar() {
+        given().when().get("/app/session.html")
+            .then().statusCode(200)
+            .body(containsString("key-bar"))
+            .body(containsString("Ctrl+C"));
+    }
 }
