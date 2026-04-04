@@ -8,6 +8,7 @@ import jakarta.ws.rs.core.*;
 import org.jboss.logging.Logger;
 import java.time.Instant;
 import java.util.UUID;
+import java.io.OutputStream;
 
 @Path("/api/sessions")
 @Produces(MediaType.APPLICATION_JSON)
@@ -88,6 +89,37 @@ public class SessionResource {
                 registry.register(renamed);
                 return Response.ok(SessionResponse.from(renamed, config.port())).build();
             } catch (Exception e) {
+                return Response.serverError().build();
+            }
+        }).orElse(Response.status(404).build());
+    }
+
+    @POST
+    @Path("/{id}/input")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response sendInput(@PathParam("id") String id, SendInputRequest req) {
+        return registry.find(id).map(session -> {
+            try {
+                tmux.sendKeys(session.name(), req.text());
+                return Response.noContent().build();
+            } catch (Exception e) {
+                LOG.errorf("Failed to send input to session '%s': %s", session.name(), e.getMessage());
+                return Response.serverError().build();
+            }
+        }).orElse(Response.status(404).build());
+    }
+
+    @GET
+    @Path("/{id}/output")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response getOutput(@PathParam("id") String id,
+                              @QueryParam("lines") @DefaultValue("50") int lines) {
+        return registry.find(id).map(session -> {
+            try {
+                var output = tmux.capturePane(session.name(), lines);
+                return Response.ok(output).build();
+            } catch (Exception e) {
+                LOG.errorf("Failed to get output from session '%s': %s", session.name(), e.getMessage());
                 return Response.serverError().build();
             }
         }).orElse(Response.status(404).build());
