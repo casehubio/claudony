@@ -86,13 +86,25 @@ public class TerminalWebSocket {
             var raw = new String(cap.getInputStream().readAllBytes());
             cap.waitFor();
             if (!raw.isBlank()) {
+                var lines = raw.split("\n", -1);
+                // Trim trailing blank lines
+                int end = lines.length - 1;
+                while (end >= 0 && lines[end].stripTrailing().isEmpty()) end--;
+                // Trim leading blank lines
+                int start = 0;
+                while (start <= end && lines[start].stripTrailing().isEmpty()) start++;
+                // Collapse consecutive interior blank lines to at most one
                 var sb = new StringBuilder();
-                boolean leadingEmpty = true;
-                for (var line : raw.split("\n", -1)) {
-                    var stripped = line.stripTrailing();
-                    if (leadingEmpty && stripped.isEmpty()) continue; // skip top blank rows
-                    leadingEmpty = false;
-                    sb.append(stripped).append("\r\n");
+                boolean prevBlank = false;
+                for (int i = start; i <= end; i++) {
+                    var stripped = lines[i].stripTrailing();
+                    if (stripped.isEmpty()) {
+                        if (!prevBlank) sb.append("\r\n");
+                        prevBlank = true;
+                    } else {
+                        sb.append(stripped).append("\r\n");
+                        prevBlank = false;
+                    }
                 }
                 if (!sb.isEmpty()) {
                     connection.sendTextAndAwait(sb.toString());
