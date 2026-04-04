@@ -124,4 +124,26 @@ public class SessionResource {
             }
         }).orElse(Response.status(404).build());
     }
+
+    @POST
+    @Path("/{id}/resize")
+    public Response resize(@PathParam("id") String id,
+                           @QueryParam("cols") @DefaultValue("80") int cols,
+                           @QueryParam("rows") @DefaultValue("24") int rows) {
+        return registry.find(id).map(session -> {
+            try {
+                var p = new ProcessBuilder("tmux", "resize-pane", "-t", session.name(),
+                        "-x", String.valueOf(cols), "-y", String.valueOf(rows))
+                        .redirectErrorStream(true).start();
+                try (var in = p.getInputStream()) {
+                    in.transferTo(java.io.OutputStream.nullOutputStream());
+                }
+                p.waitFor();
+                return Response.noContent().build();
+            } catch (Exception e) {
+                LOG.errorf("Failed to resize session '%s': %s", session.name(), e.getMessage());
+                return Response.serverError().build();
+            }
+        }).orElse(Response.status(404).build());
+    }
 }
