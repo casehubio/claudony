@@ -49,28 +49,25 @@ public class TerminalWebSocket {
 
         try {
             // Step 1: Send history BEFORE pipe-pane starts to avoid race conditions.
-            // capture-pane -p pads lines to pane width — strip trailing whitespace,
-            // trim leading/trailing blank lines, collapse interior blanks to one.
+            // Use -e to preserve ANSI color codes. Lines are still padded to pane
+            // width — detect blank lines by stripping ANSI codes first, then include
+            // the original colored line with trailing whitespace removed.
             var cap = new ProcessBuilder("tmux", "capture-pane", "-t", tmuxName,
-                    "-p", "-S", "-100")
+                    "-e", "-p", "-S", "-100")
                     .redirectErrorStream(false).start();
             var raw = new String(cap.getInputStream().readAllBytes());
             cap.waitFor();
             if (!raw.isBlank()) {
-                var lines = raw.split("\n", -1);
-                int end = lines.length - 1;
-                while (end >= 0 && lines[end].stripTrailing().isEmpty()) end--;
-                int start = 0;
-                while (start <= end && lines[start].stripTrailing().isEmpty()) start++;
-                // Skip blank lines — they are tmux pane grid artifacts, not real output
                 var sb = new StringBuilder();
-                for (int i = start; i <= end; i++) {
-                    var stripped = lines[i].stripTrailing();
-                    if (!stripped.isEmpty()) {
-                        sb.append(stripped).append("\r\n");
+                for (var line : raw.split("\n", -1)) {
+                    // Strip ANSI CSI sequences to check for visible content
+                    var plain = line.replaceAll("\u001B\\[[0-9;]*[a-zA-Z]", "").stripTrailing();
+                    if (!plain.isEmpty()) {
+                        sb.append(line.stripTrailing()).append("\r\n");
                     }
                 }
                 if (!sb.isEmpty()) {
+                    sb.append("\u001B[0m"); // reset colors so pipe-pane output starts clean
                     connection.sendTextAndAwait(sb.toString());
                 }
             }
