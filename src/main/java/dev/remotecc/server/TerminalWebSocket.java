@@ -87,10 +87,16 @@ public class TerminalWebSocket {
             cap.waitFor();
             if (!raw.isBlank()) {
                 var sb = new StringBuilder();
+                boolean leadingEmpty = true;
                 for (var line : raw.split("\n", -1)) {
-                    sb.append(line.stripTrailing()).append("\r\n");
+                    var stripped = line.stripTrailing();
+                    if (leadingEmpty && stripped.isEmpty()) continue; // skip top blank rows
+                    leadingEmpty = false;
+                    sb.append(stripped).append("\r\n");
                 }
-                connection.sendTextAndAwait(sb.toString());
+                if (!sb.isEmpty()) {
+                    connection.sendTextAndAwait(sb.toString());
+                }
             }
 
         } catch (Exception e) {
