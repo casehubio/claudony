@@ -58,17 +58,23 @@ public class TerminalWebSocket {
             var raw = new String(cap.getInputStream().readAllBytes());
             cap.waitFor();
             if (!raw.isBlank()) {
-                var sb = new StringBuilder();
+                // Collect non-blank lines, join with \r\n between them (not after last).
+                // Cursor stays at end of last line (the current prompt) so pipe-pane
+                // output continues from there without adding a blank line.
+                var contentLines = new java.util.ArrayList<String>();
                 for (var line : raw.split("\n", -1)) {
-                    // Strip ANSI CSI sequences to check for visible content
                     var plain = line.replaceAll("\u001B\\[[0-9;]*[a-zA-Z]", "").stripTrailing();
                     if (!plain.isEmpty()) {
-                        sb.append(line.stripTrailing()).append("\r\n");
+                        contentLines.add(line.stripTrailing());
                     }
                 }
-                if (!sb.isEmpty()) {
-                    sb.append("\u001B[0m"); // reset colors so pipe-pane output starts clean
-                    connection.sendTextAndAwait(sb.toString());
+                if (!contentLines.isEmpty()) {
+                    // Restore one trailing space on the last line (the current prompt)
+                    // so cursor is positioned correctly after "$ " for user input.
+                    var last = contentLines.size() - 1;
+                    contentLines.set(last, contentLines.get(last) + " ");
+                    var history = String.join("\r\n", contentLines) + "\u001B[0m";
+                    connection.sendTextAndAwait(history);
                 }
             }
 
