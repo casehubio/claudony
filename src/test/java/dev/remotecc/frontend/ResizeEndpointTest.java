@@ -1,6 +1,7 @@
 package dev.remotecc.frontend;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.*;
 import jakarta.inject.Inject;
 import dev.remotecc.server.SessionRegistry;
@@ -8,6 +9,7 @@ import dev.remotecc.server.TmuxService;
 import static io.restassured.RestAssured.*;
 
 @QuarkusTest
+@TestSecurity(user = "test", roles = "user")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ResizeEndpointTest {
 

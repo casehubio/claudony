@@ -1,6 +1,7 @@
 package dev.remotecc.agent;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.*;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
@@ -14,6 +15,7 @@ import static org.hamcrest.Matchers.*;
  * instance — testing the full MCP → REST → tmux flow end-to-end.
  */
 @QuarkusTest
+@TestSecurity(user = "test", roles = "user")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class McpServerIntegrationTest {
 

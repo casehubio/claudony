@@ -2,6 +2,7 @@ package dev.remotecc.server;
 
 import dev.remotecc.config.RemoteCCConfig;
 import dev.remotecc.server.model.*;
+import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
@@ -13,6 +14,7 @@ import java.io.OutputStream;
 @Path("/api/sessions")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Authenticated
 public class SessionResource {
 
     private static final Logger LOG = Logger.getLogger(SessionResource.class);

@@ -2,6 +2,7 @@ package dev.remotecc.server;
 
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import jakarta.websocket.ClientEndpointConfig;
 import jakarta.websocket.ContainerProvider;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
+@TestSecurity(user = "test", roles = "user")
 class TerminalWebSocketTest {
 
     @TestHTTPResource("/ws/")

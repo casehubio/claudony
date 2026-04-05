@@ -1,12 +1,14 @@
 package dev.remotecc.server;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.*;
 import jakarta.inject.Inject;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
+@TestSecurity(user = "test", roles = "user")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SessionResourceTest {
 
