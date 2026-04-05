@@ -3,10 +3,12 @@ package dev.remotecc.agent;
 import dev.remotecc.server.model.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 import java.util.List;
 
 @RegisterRestClient(configKey = "remotecc-server")
+@RegisterProvider(ApiKeyClientFilter.class)
 @Path("/api")
 public interface ServerClient {
 
