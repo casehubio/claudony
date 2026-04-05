@@ -62,4 +62,20 @@ class TmuxServiceTest {
         assertTrue(output.contains("remotecc-marker"),
                 "Expected pane output to contain 'remotecc-marker', got: " + output);
     }
+
+    @Test
+    @Order(6)
+    void sendKeysLiteralModeDoesNotInterpretTmuxKeyNames() throws Exception {
+        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "bash");
+        Thread.sleep(300);
+        // "Escape" is a tmux key name. Without -l, tmux fires the Escape key (^[)
+        // instead of typing the literal text, so "Escape" never appears in output.
+        // We send "Escape" as the sole text argument to exercise this code path.
+        tmux.sendKeys(TEST_SESSION, "Escape");
+        Thread.sleep(300);
+        var output = tmux.capturePane(TEST_SESSION, 20);
+        assertTrue(output.contains("Escape"),
+            "Expected literal 'Escape' in output — tmux may have fired " +
+            "the Escape key (missing -l flag). Got: " + output);
+    }
 }
