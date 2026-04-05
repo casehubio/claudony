@@ -33,6 +33,10 @@ public interface RemoteCCConfig {
     @WithName("agent.api-key")
     Optional<String> agentApiKey();
 
+    @WithName("default-working-dir")
+    @WithDefault("${user.home}/.remotecc")
+    String defaultWorkingDir();
+
     @WithName("credentials-file")
     @WithDefault("${user.home}/.remotecc/credentials.json")
     String credentialsFile();

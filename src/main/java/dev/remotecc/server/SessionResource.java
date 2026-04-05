@@ -43,10 +43,15 @@ public class SessionResource {
         var id = UUID.randomUUID().toString();
         var name = config.tmuxPrefix() + req.name();
         var command = req.effectiveCommand(config.claudeCommand());
+        var workingDir = (req.workingDir() == null || req.workingDir().isBlank())
+                ? config.defaultWorkingDir() : req.workingDir();
+        // Ensure the working directory exists
+        try { java.nio.file.Files.createDirectories(java.nio.file.Path.of(workingDir)); }
+        catch (Exception ignored) {}
         var now = Instant.now();
-        var session = new Session(id, name, req.workingDir(), command, SessionStatus.IDLE, now, now);
+        var session = new Session(id, name, workingDir, command, SessionStatus.IDLE, now, now);
         try {
-            tmux.createSession(name, req.workingDir(), command);
+            tmux.createSession(name, workingDir, command);
             registry.register(session);
             LOG.infof("Created session '%s' (id=%s)", name, id);
             return Response.status(201)
