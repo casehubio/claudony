@@ -65,6 +65,9 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dremotecc.mode=server
 - Sessions API: `http://localhost:7777/api/sessions`
 - MCP endpoint (Agent): `http://localhost:7778/mcp`
 - WebSocket terminal: `ws://localhost:7777/ws/{session-id}`
+- Register passkey: `http://localhost:7777/auth/register` (first run, or with invite token)
+- Login: `http://localhost:7777/auth/login`
+- Dev quick login: `http://localhost:7777/auth/dev-login` (POST — dev mode only, sets auth cookie)
 
 ---
 
@@ -97,9 +100,15 @@ src/main/java/dev/remotecc/
 │   ├── SessionRegistry.java            — in-memory ConcurrentHashMap session store
 │   ├── SessionResource.java            — REST API /api/sessions
 │   ├── TerminalWebSocket.java          — WebSocket /ws/{id}, pipe-pane + FIFO streaming
-│   └── ServerStartup.java              — startup health checks + tmux bootstrap
+│   ├── ServerStartup.java              — startup health checks, directory creation, tmux bootstrap
+│   └── auth/
+│       ├── ApiKeyAuthMechanism.java    — X-Api-Key header auth (Agent→Server) + dev cookie
+│       ├── AuthResource.java           — /auth/register, /auth/login, /auth/dev-login
+│       ├── CredentialStore.java        — WebAuthn credential persistence (~/.remotecc/credentials.json)
+│       └── InviteService.java          — invite token generation and validation
 └── agent/
     ├── ServerClient.java               — typed REST client to Server
+    ├── ApiKeyClientFilter.java         — injects X-Api-Key on all ServerClient calls
     ├── McpServer.java                  — JSON-RPC POST /mcp (8 tools)
     ├── ClipboardChecker.java           — tmux clipboard detection/fix
     ├── AgentStartup.java               — Agent-mode startup checks
@@ -147,31 +156,38 @@ See `docs/BUGS-AND-ODDITIES.md` for comprehensive details. Key ones:
 ```properties
 remotecc.mode=server|agent
 remotecc.port=7777
-remotecc.bind=localhost          # use 0.0.0.0 for Mac Mini / remote access
+remotecc.bind=localhost                  # use 0.0.0.0 for Mac Mini / remote access
 remotecc.server.url=http://localhost:7777
 remotecc.claude-command=claude
 remotecc.tmux-prefix=remotecc-
-remotecc.terminal=auto           # auto|iterm2|none
+remotecc.terminal=auto                   # auto|iterm2|none
+remotecc.default-working-dir=~/remotecc-workspace   # default dir for new sessions
+remotecc.credentials-file=~/.remotecc/credentials.json
+remotecc.agent.api-key=                  # required in production; set via env var
 ```
+
+**Directory convention:** `~/.remotecc/` holds config/credentials (hidden, system); `~/remotecc-workspace/` is the default session working directory (visible, user-facing). Both are created on server startup.
 
 ---
 
 ## Test Count and Status
 
-**81 tests passing** across:
+**106 tests passing** across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
+- `server/auth/` — ApiKeyAuthMechanism, AuthResource, CredentialStore, InviteService
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `frontend/` — StaticFilesTest (all static files + content), ResizeEndpointTest
 - `e2e/` — ClaudeE2ETest (real `claude` CLI via `mvn test -Pe2e`, skipped in default run)
 
 `ServerStartup.bootstrapRegistry()` is package-private to allow direct testing.
+Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in non-auth test classes.
 
 ---
 
 ## What's Not Done Yet
 
-- Authentication — important for Mac Mini deployment, currently undesigned
+- Authentication — WebAuthn passkey + API key implemented; **not yet production-hardened** (no rate limiting, no session expiry, dev quick-login must be removed before deployment)
 - GitHub PR/CI integration in dashboard (idea logged)
 - Docker sandbox per session (idea logged)
 - Windows Terminal or Linux terminal adapters beyond iTerm2 (interface is pluggable, no implementation)

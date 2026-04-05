@@ -34,7 +34,7 @@ public interface RemoteCCConfig {
     Optional<String> agentApiKey();
 
     @WithName("default-working-dir")
-    @WithDefault("${user.home}/.remotecc")
+    @WithDefault("${user.home}/remotecc-workspace")
     String defaultWorkingDir();
 
     @WithName("credentials-file")

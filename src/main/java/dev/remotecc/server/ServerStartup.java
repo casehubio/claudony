@@ -8,6 +8,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -23,8 +25,24 @@ public class ServerStartup {
     void onStart(@Observes StartupEvent event) {
         if (!config.isServerMode()) return;
         checkTmux();
+        ensureDirectories();
         bootstrapRegistry();
         LOG.infof("RemoteCC Server ready — http://%s:%d", config.bind(), config.port());
+    }
+
+    private void ensureDirectories() {
+        // ~/.remotecc  — config/credentials (hidden, system)
+        // ~/remotecc-workspace — default session working directory (visible, user-facing)
+        for (var dir : new String[]{
+                Path.of(config.credentialsFile()).getParent().toString(),
+                config.defaultWorkingDir()}) {
+            try {
+                Files.createDirectories(Path.of(dir));
+                LOG.debugf("Directory ready: %s", dir);
+            } catch (Exception e) {
+                LOG.warnf("Could not create directory %s: %s", dir, e.getMessage());
+            }
+        }
     }
 
     private void checkTmux() {
