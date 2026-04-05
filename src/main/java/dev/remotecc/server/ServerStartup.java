@@ -37,7 +37,7 @@ public class ServerStartup {
         }
     }
 
-    private void bootstrapRegistry() {
+    void bootstrapRegistry() {
         try {
             var names = tmux.listSessionNames();
             var prefix = config.tmuxPrefix();
