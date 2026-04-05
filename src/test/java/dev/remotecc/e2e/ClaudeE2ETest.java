@@ -2,7 +2,6 @@ package dev.remotecc.e2e;
 
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import java.nio.file.*;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * loops back to the same instance (configured in test application.properties).
  */
 @QuarkusTest
-@EnabledIfEnvironmentVariable(named = "ANTHROPIC_API_KEY", matches = ".+")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ClaudeE2ETest {
 
@@ -28,12 +26,14 @@ class ClaudeE2ETest {
 
     @BeforeAll
     static void setupMcpConfig() throws Exception {
-        // --mcp-config format: top-level keys are server names (no mcpServers wrapper)
+        // --mcp-config format: requires mcpServers wrapper (same as settings.json)
         var config = """
             {
-              "remotecc": {
-                "type": "http",
-                "url": "http://localhost:8081/mcp"
+              "mcpServers": {
+                "remotecc": {
+                  "type": "http",
+                  "url": "http://localhost:8081/mcp"
+                }
               }
             }
             """;
@@ -57,8 +57,13 @@ class ClaudeE2ETest {
         var apiKey = System.getenv("ANTHROPIC_API_KEY");
         if (apiKey != null) pb.environment().put("ANTHROPIC_API_KEY", apiKey);
         var process = pb.start();
-        process.getInputStream().transferTo(java.io.OutputStream.nullOutputStream());
-        return process.waitFor(120, TimeUnit.SECONDS) ? process.exitValue() : -1;
+        // Capture output — useful if test fails
+        var output = new String(process.getInputStream().readAllBytes());
+        boolean finished = process.waitFor(120, TimeUnit.SECONDS);
+        if (!finished || process.exitValue() != 0) {
+            System.err.println("[ClaudeE2ETest] claude output:\n" + output);
+        }
+        return finished ? process.exitValue() : -1;
     }
 
     private boolean tmuxSessionExists(String name) throws Exception {

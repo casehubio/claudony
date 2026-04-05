@@ -24,6 +24,9 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test
 # Run specific test
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Dtest=ClassName
 
+# Run real Claude E2E tests (requires claude CLI authenticated)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Pe2e
+
 # JVM build
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn package -DskipTests
 
@@ -155,17 +158,19 @@ remotecc.terminal=auto           # auto|iterm2|none
 
 ## Test Count and Status
 
-**64 tests passing** across:
+**81 tests passing** across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `frontend/` — StaticFilesTest (all static files + content), ResizeEndpointTest
+- `e2e/` — ClaudeE2ETest (real `claude` CLI via `mvn test -Pe2e`, skipped in default run)
+
+`ServerStartup.bootstrapRegistry()` is package-private to allow direct testing.
 
 ---
 
 ## What's Not Done Yet
 
-- Controller Claude end-to-end validation — MCP tools built and tested in isolation but not used by a real Claude Code instance managing sessions
 - Authentication — important for Mac Mini deployment, currently undesigned
 - GitHub PR/CI integration in dashboard (idea logged)
 - Docker sandbox per session (idea logged)
