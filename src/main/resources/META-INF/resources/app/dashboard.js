@@ -2,6 +2,10 @@
     var grid = document.getElementById('session-grid');
     var dialog = document.getElementById('new-session-dialog');
     var form = document.getElementById('new-session-form');
+    var nameInput = form.querySelector('[name="name"]');
+    var nameError = document.getElementById('name-error');
+    var overwriteBtn = document.getElementById('overwrite-btn');
+    var sessions = [];
 
     function timeAgo(iso) {
         var diff = Date.now() - new Date(iso).getTime();
@@ -80,12 +84,29 @@
         });
     }
 
+    function validateName(value) {
+        var exists = sessions.some(function (s) { return displayName(s.name) === value.trim(); });
+        nameError.textContent = exists ? 'A session named \u201c' + value.trim() + '\u201d already exists' : '';
+        nameError.style.display = exists ? 'block' : 'none';
+        overwriteBtn.style.display = exists ? 'inline-block' : 'none';
+    }
+
+    nameInput.addEventListener('input', function () { validateName(nameInput.value); });
+
+    document.getElementById('new-session-btn').addEventListener('click', function () {
+        form.reset();
+        nameError.style.display = 'none';
+        overwriteBtn.style.display = 'none';
+        dialog.showModal();
+    });
+
     function loadSessions() {
         fetch('/api/sessions').then(function (r) {
             if (!requireAuth(r)) return null;
             return r.json();
-        }).then(function (sessions) {
-            if (!sessions) return;
+        }).then(function (data) {
+            if (!data) return;
+            sessions = data;
             grid.innerHTML = '';
             if (sessions.length === 0) {
                 grid.innerHTML =
@@ -102,13 +123,12 @@
     loadSessions();
     setInterval(loadSessions, 5000);
 
-    document.getElementById('new-session-btn').addEventListener('click', function () { dialog.showModal(); });
     document.getElementById('cancel-btn').addEventListener('click', function () { dialog.close(); });
 
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
+    function submitSession(overwrite) {
         var data = new FormData(form);
-        fetch('/api/sessions', {
+        var url = '/api/sessions' + (overwrite ? '?overwrite=true' : '');
+        fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: data.get('name'), workingDir: data.get('workingDir') })
@@ -121,5 +141,8 @@
             form.reset();
             loadSessions();
         });
-    });
+    }
+
+    form.addEventListener('submit', function (e) { e.preventDefault(); submitSession(false); });
+    overwriteBtn.addEventListener('click', function () { submitSession(true); });
 })();

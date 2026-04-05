@@ -6,6 +6,7 @@ import org.junit.jupiter.api.*;
 import jakarta.inject.Inject;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -92,6 +93,58 @@ class SessionResourceTest {
 
     @Test
     @Order(7)
+    void createSessionWithDuplicateNameReturns409() {
+        given().contentType("application/json")
+            .body("{\"name\":\"test-dup\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
+            .when().post("/api/sessions")
+            .then().statusCode(201);
+
+        given().contentType("application/json")
+            .body("{\"name\":\"test-dup\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
+            .when().post("/api/sessions")
+            .then()
+            .statusCode(409)
+            .body("error", containsString("remotecc-test-dup"));
+    }
+
+    @Test
+    @Order(8)
+    void createSessionWithOverwriteReplacesExistingSession() {
+        var originalId = given().contentType("application/json")
+            .body("{\"name\":\"test-overwrite\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
+            .when().post("/api/sessions")
+            .then().statusCode(201).extract().<String>path("id");
+
+        var newId = given().contentType("application/json")
+            .body("{\"name\":\"test-overwrite\",\"workingDir\":\"/home\",\"command\":\"bash\"}")
+            .when().post("/api/sessions?overwrite=true")
+            .then()
+            .statusCode(201)
+            .body("name", equalTo("remotecc-test-overwrite"))
+            .body("workingDir", equalTo("/home"))
+            .extract().<String>path("id");
+
+        assertNotEquals(originalId, newId, "Overwrite should produce a new session ID");
+
+        // Exactly one session with this name remains
+        given().when().get("/api/sessions")
+            .then().statusCode(200)
+            .body("findAll { it.name == 'remotecc-test-overwrite' }.size()", equalTo(1));
+    }
+
+    @Test
+    @Order(9)
+    void overwriteWithNonExistentNameCreatesNormally() {
+        given().contentType("application/json")
+            .body("{\"name\":\"test-new-overwrite\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
+            .when().post("/api/sessions?overwrite=true")
+            .then()
+            .statusCode(201)
+            .body("name", equalTo("remotecc-test-new-overwrite"));
+    }
+
+    @Test
+    @Order(10)
     void resizeSessionReturns204() throws Exception {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-resize\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")

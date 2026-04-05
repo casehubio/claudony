@@ -39,12 +39,34 @@ public class SessionResource {
     }
 
     @POST
-    public Response create(CreateSessionRequest req) {
+    public Response create(CreateSessionRequest req,
+                           @QueryParam("overwrite") @DefaultValue("false") boolean overwrite) {
         var id = UUID.randomUUID().toString();
         var name = config.tmuxPrefix() + req.name();
         var command = req.effectiveCommand(config.claudeCommand());
         var workingDir = (req.workingDir() == null || req.workingDir().isBlank())
                 ? config.defaultWorkingDir() : req.workingDir();
+
+        // Duplicate name check
+        var existing = registry.all().stream()
+                .filter(s -> s.name().equals(name))
+                .findFirst();
+        if (existing.isPresent()) {
+            if (!overwrite) {
+                return Response.status(409)
+                        .entity("{\"error\":\"Session '" + name + "' already exists\"}")
+                        .build();
+            }
+            // Overwrite: remove existing session first
+            try {
+                tmux.killSession(name);
+                registry.remove(existing.get().id());
+                LOG.infof("Overwrote existing session '%s'", name);
+            } catch (Exception e) {
+                LOG.warnf("Could not clean up existing session '%s': %s", name, e.getMessage());
+            }
+        }
+
         // Ensure the working directory exists
         try { java.nio.file.Files.createDirectories(java.nio.file.Path.of(workingDir)); }
         catch (Exception ignored) {}

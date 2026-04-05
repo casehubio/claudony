@@ -21,13 +21,15 @@
             <h2>New Session</h2>
             <label>Name
                 <input name="name" required placeholder="myproject" autocomplete="off">
+                <span id="name-error" style="display:none;color:#ff6b6b;font-size:0.8rem;margin-top:0.25rem;display:none"></span>
             </label>
             <label>Working Directory
                 <input name="workingDir" placeholder="~/.remotecc (default)" autocomplete="off">
             </label>
             <div class="dialog-actions">
                 <button type="button" id="cancel-btn" class="secondary">Cancel</button>
-                <button type="submit">Create</button>
+                <button type="button" id="overwrite-btn" class="danger" style="display:none">Overwrite</button>
+                <button type="submit" id="create-btn">Create</button>
             </div>
         </form>
     </dialog>
