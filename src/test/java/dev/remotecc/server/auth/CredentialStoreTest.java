@@ -32,7 +32,7 @@ class CredentialStoreTest {
 
     @Test
     void isEmptyReturnsFalseAfterStoringCredential() {
-        store.writeForTest("alice", "cred-id-1", "pubkey-1", -7, 0L, "aaguid-1");
+        store.writeForTest("alice", "cred-id-1", "pubkey-1", 0L, "aaguid-1");
         assertFalse(store.isEmpty());
     }
 
@@ -44,7 +44,7 @@ class CredentialStoreTest {
 
     @Test
     void findByUsernameReturnsStoredCredential() throws Exception {
-        store.writeForTest("bob", "cred-id-2", "pubkey-2", -7, 5L, "aaguid-2");
+        store.writeForTest("bob", "cred-id-2", "pubkey-2", 5L, "aaguid-2");
         var result = store.findWebAuthnCredentialsByUserName("bob").subscribeAsCompletionStage().get();
         assertEquals(1, result.size());
         assertEquals("bob", result.get(0).getUserName());
@@ -53,7 +53,7 @@ class CredentialStoreTest {
 
     @Test
     void findByCredentialIdReturnsStoredCredential() throws Exception {
-        store.writeForTest("carol", "cred-id-3", "pubkey-3", -7, 0L, "aaguid-3");
+        store.writeForTest("carol", "cred-id-3", "pubkey-3", 0L, "aaguid-3");
         var result = store.findWebAuthnCredentialsByCredID("cred-id-3").subscribeAsCompletionStage().get();
         assertEquals(1, result.size());
         assertEquals("carol", result.get(0).getUserName());
@@ -61,7 +61,7 @@ class CredentialStoreTest {
 
     @Test
     void updateChangesCounter() throws Exception {
-        store.writeForTest("dave", "cred-id-4", "pubkey-4", -7, 0L, "aaguid-4");
+        store.writeForTest("dave", "cred-id-4", "pubkey-4", 0L, "aaguid-4");
         store.updateCounter("cred-id-4", 99L);
         var result = store.findWebAuthnCredentialsByCredID("cred-id-4").subscribeAsCompletionStage().get();
         assertEquals(99L, result.get(0).getCounter());
@@ -69,7 +69,7 @@ class CredentialStoreTest {
 
     @Test
     void credentialsFileIsCreatedOnWrite() {
-        store.writeForTest("eve", "cred-id-5", "pubkey-5", -7, 0L, "aaguid-5");
+        store.writeForTest("eve", "cred-id-5", "pubkey-5", 0L, "aaguid-5");
         assertTrue(tmp.resolve("credentials.json").toFile().exists());
     }
 }

@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import org.jboss.logging.Logger;
+import java.util.Map;
 
 @Path("/auth")
 public class AuthResource {
@@ -26,7 +27,7 @@ public class AuthResource {
             .build()
             .toString();
         LOG.infof("Generated invite link (token=%s...)", token.substring(0, 8));
-        return Response.ok("{\"url\":\"" + url + "\"}").build();
+        return Response.ok(Map.of("url", url)).build();
     }
 
     @GET
@@ -43,6 +44,7 @@ public class AuthResource {
                 .type(MediaType.TEXT_HTML)
                 .build();
         }
+        inviteService.consume(token);   // consume after validation, before serving page
         return serveRegisterPage();
     }
 

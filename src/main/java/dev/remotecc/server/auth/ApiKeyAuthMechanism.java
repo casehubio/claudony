@@ -14,6 +14,8 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Optional;
 import java.util.Set;
 
@@ -31,7 +33,9 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
             return Uni.createFrom().optional(Optional.empty());
         }
         var expected = config.agentApiKey();
-        if (expected.isEmpty() || !apiKey.equals(expected.get())) {
+        if (expected.isEmpty() || !MessageDigest.isEqual(
+                expected.get().getBytes(StandardCharsets.UTF_8),
+                apiKey.getBytes(StandardCharsets.UTF_8))) {
             return Uni.createFrom().failure(
                 new io.quarkus.security.AuthenticationFailedException("Invalid API key"));
         }

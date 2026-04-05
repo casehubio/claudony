@@ -3,6 +3,7 @@ package dev.remotecc.server.auth;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -14,6 +15,9 @@ class AuthResourceTest {
 
     @InjectMock
     CredentialStore credentialStore;
+
+    @Inject
+    InviteService inviteService;
 
     @BeforeEach
     void setUp() {
@@ -47,5 +51,17 @@ class AuthResourceTest {
         Mockito.when(credentialStore.isEmpty()).thenReturn(true);
         given().when().get("/auth/register")
             .then().statusCode(200);
+    }
+
+    @Test
+    void tokenIsConsumedAfterSuccessfulUse() {
+        // setUp() sets isEmpty()=false, so the token path is exercised
+        var token = inviteService.generate();
+        // First use with valid token → serves page (200)
+        given().when().get("/auth/register?token=" + token)
+            .then().statusCode(200);
+        // Second use → token consumed, now invalid → 403
+        given().when().get("/auth/register?token=" + token)
+            .then().statusCode(403);
     }
 }
