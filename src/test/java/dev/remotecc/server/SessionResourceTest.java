@@ -69,4 +69,35 @@ class SessionResourceTest {
     void getUnknownSessionReturns404() {
         given().when().get("/api/sessions/does-not-exist").then().statusCode(404);
     }
+
+    @Test
+    @Order(6)
+    void renameSessionReturns200WithNewName() throws Exception {
+        var id = given().contentType("application/json")
+            .body("{\"name\":\"test-rename\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
+            .when().post("/api/sessions")
+            .then().statusCode(201).extract().path("id");
+
+        given().when().patch("/api/sessions/" + id + "/rename?name=renamed")
+            .then()
+            .statusCode(200)
+            .body("name", equalTo("remotecc-renamed"));
+
+        // Verify registry reflects the new name
+        given().when().get("/api/sessions/" + id)
+            .then().statusCode(200).body("name", equalTo("remotecc-renamed"));
+    }
+
+    @Test
+    @Order(7)
+    void resizeSessionReturns204() throws Exception {
+        var id = given().contentType("application/json")
+            .body("{\"name\":\"test-resize\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
+            .when().post("/api/sessions")
+            .then().statusCode(201).extract().path("id");
+
+        given().contentType("application/json")
+            .when().post("/api/sessions/" + id + "/resize?cols=120&rows=40")
+            .then().statusCode(204);
+    }
 }
