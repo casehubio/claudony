@@ -29,6 +29,11 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
     public Uni<SecurityIdentity> authenticate(RoutingContext context, IdentityProviderManager identityProviderManager) {
         var apiKey = context.request().getHeader("X-Api-Key");
         if (apiKey == null) {
+            // Also accept the dev cookie (set by POST /auth/dev-login in dev mode)
+            var devCookie = context.getCookie("remotecc-dev-key");
+            if (devCookie != null) apiKey = devCookie.getValue();
+        }
+        if (apiKey == null) {
             // No key provided — defer to path policy (allow anonymous for non-protected paths)
             return Uni.createFrom().optional(Optional.empty());
         }

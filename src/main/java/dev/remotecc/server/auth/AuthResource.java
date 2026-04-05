@@ -1,5 +1,7 @@
 package dev.remotecc.server.auth;
 
+import dev.remotecc.config.RemoteCCConfig;
+import io.quarkus.runtime.LaunchMode;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -14,6 +16,7 @@ public class AuthResource {
 
     @Inject InviteService inviteService;
     @Inject CredentialStore credentialStore;
+    @Inject RemoteCCConfig config;
 
     @POST
     @Path("/invite")
@@ -28,6 +31,28 @@ public class AuthResource {
             .toString();
         LOG.infof("Generated invite link (token=%s...)", token.substring(0, 8));
         return Response.ok(Map.of("url", url)).build();
+    }
+
+    /** Dev-mode only: sets a cookie so the browser authenticates without WebAuthn. */
+    @POST
+    @Path("/dev-login")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response devLogin() {
+        if (LaunchMode.current() != LaunchMode.DEVELOPMENT) {
+            return Response.status(404).build();
+        }
+        var key = config.agentApiKey();
+        if (key.isEmpty()) {
+            return Response.status(503)
+                .entity(Map.of("error", "No dev API key configured — add %dev.remotecc.agent.api-key to application.properties"))
+                .build();
+        }
+        var cookie = new NewCookie.Builder("remotecc-dev-key")
+            .value(key.get())
+            .path("/")
+            .httpOnly(true)
+            .build();
+        return Response.ok(Map.of("ok", true)).cookie(cookie).build();
     }
 
     @GET

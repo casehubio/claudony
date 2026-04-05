@@ -50,8 +50,34 @@
     }
 
     function requireAuth(r) {
-        if (r.status === 401) { window.location.href = '/auth/login'; return false; }
+        if (r.status === 401) { showAuthDialog(); return false; }
         return true;
+    }
+
+    function showAuthDialog() {
+        if (document.getElementById('auth-overlay')) return; // already shown
+        var overlay = document.createElement('div');
+        overlay.id = 'auth-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999';
+        overlay.innerHTML =
+            '<div style="background:#2a2a2a;border-radius:12px;padding:2rem;text-align:center;width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">' +
+                '<h2 style="color:#fff;margin:0 0 0.5rem;font-size:1.2rem">Not authenticated</h2>' +
+                '<p style="color:#aaa;margin:0 0 1.5rem;font-size:0.9rem">Dev mode: click below to log in instantly.<br>Production: use passkey login.</p>' +
+                '<button id="dev-login-btn" style="width:100%;padding:0.75rem;margin-bottom:0.75rem;background:#4c9aff;color:#fff;border:none;border-radius:6px;font-size:1rem;cursor:pointer;font-weight:600">Quick Dev Login</button>' +
+                '<button onclick="window.location.href=\'/auth/login\'" style="width:100%;padding:0.6rem;background:transparent;color:#888;border:1px solid #444;border-radius:6px;font-size:0.9rem;cursor:pointer">Sign in with Passkey</button>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        document.getElementById('dev-login-btn').addEventListener('click', function () {
+            fetch('/auth/dev-login', { method: 'POST' }).then(function (r) {
+                if (r.ok) {
+                    document.body.removeChild(overlay);
+                    loadSessions();
+                } else if (r.status === 404) {
+                    // Not in dev mode — fall back to passkey login
+                    window.location.href = '/auth/login';
+                }
+            });
+        });
     }
 
     function loadSessions() {
