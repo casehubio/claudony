@@ -3,6 +3,7 @@ package dev.remotecc.config;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
+import java.util.Optional;
 
 @ConfigMapping(prefix = "remotecc")
 public interface RemoteCCConfig {
@@ -28,6 +29,13 @@ public interface RemoteCCConfig {
 
     @WithDefault("auto")
     String terminal();
+
+    @WithName("agent.api-key")
+    Optional<String> agentApiKey();
+
+    @WithName("credentials-file")
+    @WithDefault("${user.home}/.remotecc/credentials.json")
+    String credentialsFile();
 
     default boolean isServerMode() { return "server".equals(mode()); }
     default boolean isAgentMode()  { return "agent".equals(mode()); }
