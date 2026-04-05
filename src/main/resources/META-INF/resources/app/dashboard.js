@@ -43,14 +43,23 @@
         card.querySelector('.delete-btn').addEventListener('click', function (e) {
             e.stopPropagation();
             if (!confirm('Delete session "' + name + '"?')) return;
-            fetch('/api/sessions/' + s.id, { method: 'DELETE' }).then(loadSessions);
+            fetch('/api/sessions/' + s.id, { method: 'DELETE' }).then(function (r) { requireAuth(r); loadSessions(); });
         });
         card.addEventListener('click', function () { window.location.href = openUrl; });
         return card;
     }
 
+    function requireAuth(r) {
+        if (r.status === 401) { window.location.href = '/auth/login'; return false; }
+        return true;
+    }
+
     function loadSessions() {
-        fetch('/api/sessions').then(function (r) { return r.json(); }).then(function (sessions) {
+        fetch('/api/sessions').then(function (r) {
+            if (!requireAuth(r)) return null;
+            return r.json();
+        }).then(function (sessions) {
+            if (!sessions) return;
             grid.innerHTML = '';
             if (sessions.length === 0) {
                 grid.innerHTML =
@@ -77,7 +86,11 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: data.get('name'), workingDir: data.get('workingDir') })
-        }).then(function (r) { return r.json(); }).then(function () {
+        }).then(function (r) {
+            if (!requireAuth(r)) return null;
+            return r.json();
+        }).then(function (s) {
+            if (!s) return;
             dialog.close();
             form.reset();
             loadSessions();
