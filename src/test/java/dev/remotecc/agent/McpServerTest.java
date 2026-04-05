@@ -108,4 +108,91 @@ class McpServerTest {
             .body("error.code", equalTo(-32601))
             .body("error.message", containsString("Method not found"));
     }
+
+    @Test
+    @Order(6)
+    void serverErrorOnToolCallReturnsGracefulMcpError() {
+        Mockito.when(serverClient.createSession(Mockito.any()))
+            .thenThrow(new RuntimeException("tmux: bad session name"));
+
+        given().contentType("application/json")
+            .body("{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\"," +
+                  "\"params\":{\"name\":\"create_session\"," +
+                  "\"arguments\":{\"name\":\"bad\",\"workingDir\":\"/tmp\"}}}")
+            .when().post("/mcp")
+            .then()
+            .statusCode(200)
+            .body("error.code", equalTo(-32603))
+            .body("error.message", containsString("Internal error"));
+    }
+
+    @Test
+    @Order(7)
+    void sendInputPassesTextLiterallyToServer() {
+        Mockito.doNothing().when(serverClient)
+            .sendInput(Mockito.anyString(), Mockito.any(SendInputRequest.class));
+
+        given().contentType("application/json")
+            .body("{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\"," +
+                  "\"params\":{\"name\":\"send_input\"," +
+                  "\"arguments\":{\"id\":\"id-1\",\"text\":\"echo Escape marker\\n\"}}}")
+            .when().post("/mcp")
+            .then()
+            .statusCode(200)
+            .body("result.content[0].text", equalTo("Input sent."));
+
+        Mockito.verify(serverClient).sendInput(
+            Mockito.eq("id-1"),
+            Mockito.argThat(req -> "echo Escape marker\n".equals(req.text())));
+    }
+
+    @Test
+    @Order(8)
+    void renameSessionToolReturnsNewName() {
+        var now = Instant.now();
+        Mockito.when(serverClient.renameSession(
+                Mockito.eq("id-1"), Mockito.eq("newname")))
+            .thenReturn(new SessionResponse("id-1", "remotecc-newname", "/tmp", "claude",
+                SessionStatus.IDLE, now, now,
+                "ws://localhost:7777/ws/id-1",
+                "http://localhost:7777/app/session/id-1"));
+
+        given().contentType("application/json")
+            .body("{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"tools/call\"," +
+                  "\"params\":{\"name\":\"rename_session\"," +
+                  "\"arguments\":{\"id\":\"id-1\",\"name\":\"newname\"}}}")
+            .when().post("/mcp")
+            .then()
+            .statusCode(200)
+            .body("result.content[0].text", containsString("remotecc-newname"));
+    }
+
+    @Test
+    @Order(9)
+    void openInTerminalWithNoAdapterReturnsHelpfulMessage() {
+        // terminalFactory.resolve() already returns Optional.empty() from @BeforeEach
+        given().contentType("application/json")
+            .body("{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\"," +
+                  "\"params\":{\"name\":\"open_in_terminal\"," +
+                  "\"arguments\":{\"id\":\"id-1\"}}}")
+            .when().post("/mcp")
+            .then()
+            .statusCode(200)
+            .body("result.content[0].text",
+                  equalTo("No terminal adapter available on this machine."));
+    }
+
+    @Test
+    @Order(10)
+    void getServerInfoReturnsExpectedFields() {
+        given().contentType("application/json")
+            .body("{\"jsonrpc\":\"2.0\",\"id\":10,\"method\":\"tools/call\"," +
+                  "\"params\":{\"name\":\"get_server_info\",\"arguments\":{}}}")
+            .when().post("/mcp")
+            .then()
+            .statusCode(200)
+            .body("result.content[0].text", containsString("Server URL:"))
+            .body("result.content[0].text", containsString("Agent mode:"))
+            .body("result.content[0].text", containsString("Terminal adapter: none"));
+    }
 }
