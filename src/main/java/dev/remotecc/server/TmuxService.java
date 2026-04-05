@@ -42,6 +42,7 @@ public class TmuxService {
 
     public void sendKeys(String sessionName, String text)
             throws IOException, InterruptedException {
+        // -l: literal mode — prevents tmux interpreting words like "Escape"/"Enter" as key names
         var p = new ProcessBuilder("tmux", "send-keys", "-t", sessionName, "-l", text)
                 .redirectErrorStream(true).start();
         p.getInputStream().transferTo(OutputStream.nullOutputStream());
