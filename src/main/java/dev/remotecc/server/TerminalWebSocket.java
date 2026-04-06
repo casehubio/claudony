@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * This works in a headless JVM/native environment where no TTY is available.
  */
-@WebSocket(path = "/ws/{id}")
+@WebSocket(path = "/ws/{id}/{cols}/{rows}")
 public class TerminalWebSocket {
 
     private static final Logger LOG = Logger.getLogger(TerminalWebSocket.class);
@@ -43,7 +43,9 @@ public class TerminalWebSocket {
 
         var tmuxName = session.get().name();
         var fifoPath = "/tmp/remotecc-" + connection.id() + ".pipe";
-        LOG.debugf("WebSocket open for session '%s' (id=%s)", tmuxName, sessionId);
+        int cols = parsePathInt(connection.pathParam("cols"));
+        int rows = parsePathInt(connection.pathParam("rows"));
+        LOG.debugf("WebSocket open for session '%s' (id=%s) at %dx%d", tmuxName, sessionId, cols, rows);
 
         sessionNames.put(connection.id(), tmuxName);
 
@@ -78,7 +80,18 @@ public class TerminalWebSocket {
                 }
             }
 
-            // Step 2: Set up FIFO + pipe-pane for live output streaming.
+            // Step 2: Resize tmux pane to the browser dimensions and deliver SIGWINCH.
+            // This causes any running TUI app (Claude Code, vim, etc.) to redraw at the
+            // correct size BEFORE pipe-pane starts streaming — so the user never sees
+            // the garbled history-replay state.
+            if (cols > 0 && rows > 0) {
+                new ProcessBuilder("tmux", "resize-pane", "-t", tmuxName,
+                        "-x", String.valueOf(cols), "-y", String.valueOf(rows))
+                        .redirectErrorStream(true).start().waitFor();
+                LOG.debugf("Resized pane '%s' to %dx%d to trigger TUI redraw", tmuxName, cols, rows);
+            }
+
+            // Step 3: Set up FIFO + pipe-pane for live output streaming.
             new ProcessBuilder("mkfifo", fifoPath)
                     .redirectErrorStream(true).start().waitFor();
             fifoPaths.put(connection.id(), fifoPath);
@@ -136,6 +149,11 @@ public class TerminalWebSocket {
     public void onError(Throwable error, WebSocketConnection connection) {
         LOG.warnf("WebSocket error for connection %s: %s", connection.id(), error.getMessage());
         cleanup(connection);
+    }
+
+    private static int parsePathInt(String value) {
+        try { return value != null ? Integer.parseInt(value) : 0; }
+        catch (NumberFormatException e) { return 0; }
     }
 
     private void cleanup(WebSocketConnection connection) {

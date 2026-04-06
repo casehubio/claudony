@@ -55,7 +55,7 @@ class TerminalWebSocketTest {
             @Override public void onOpen(Session s, EndpointConfig c) {
                 s.addMessageHandler(String.class, received::offer);
             }
-        }, cec, URI.create(wsBaseUri + "ws-test-id"));
+        }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
 
         // Wait for pipe-pane to connect, then send a command to generate output
         Thread.sleep(500);
@@ -85,7 +85,7 @@ class TerminalWebSocketTest {
         var session = container.connectToServer(new Endpoint() {
             @Override public void onOpen(Session s, EndpointConfig c) {}
             @Override public void onClose(Session s, CloseReason r) { closed.countDown(); }
-        }, cec, URI.create(wsBaseUri + "unknown-id"));
+        }, cec, URI.create(wsBaseUri + "unknown-id/0/0"));
 
         assertTrue(closed.await(2, TimeUnit.SECONDS),
             "Expected WebSocket to close for unknown session");
@@ -102,7 +102,7 @@ class TerminalWebSocketTest {
             @Override public void onOpen(Session s, EndpointConfig c) {
                 s.addMessageHandler(String.class, received::offer);
             }
-        }, cec, URI.create(wsBaseUri + "ws-test-id"));
+        }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
         Thread.sleep(500);
         session1.getBasicRemote().sendText("echo history-replay-marker\n");
 
@@ -127,7 +127,7 @@ class TerminalWebSocketTest {
             @Override public void onOpen(Session s, EndpointConfig c) {
                 s.addMessageHandler(String.class, history::offer);
             }
-        }, cec, URI.create(wsBaseUri + "ws-test-id"));
+        }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
 
         var historyText = new StringBuilder();
         deadline = System.currentTimeMillis() + 2000;
@@ -155,7 +155,7 @@ class TerminalWebSocketTest {
                 s.addMessageHandler(String.class, msg -> {});
                 opened1.countDown();
             }
-        }, cec, URI.create(wsBaseUri + "ws-test-id"));
+        }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
         assertTrue(opened1.await(3, TimeUnit.SECONDS), "First connection should open");
         Thread.sleep(300);
 
@@ -165,7 +165,7 @@ class TerminalWebSocketTest {
                 s.addMessageHandler(String.class, received2::offer);
                 opened2.countDown();
             }
-        }, cec, URI.create(wsBaseUri + "ws-test-id"));
+        }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
         assertTrue(opened2.await(3, TimeUnit.SECONDS), "Second connection should open");
         Thread.sleep(500);
 

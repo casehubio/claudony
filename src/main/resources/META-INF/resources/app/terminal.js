@@ -41,7 +41,6 @@
     });
 
     var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var wsUrl = proto + '//' + location.host + '/ws/' + sessionId;
     var ws, attachAddon;
     var reconnectDelay = 1000;
     var reconnectTimer;
@@ -53,6 +52,11 @@
     }
 
     function connect() {
+        // Include current terminal dimensions in the URL so the server can
+        // resize the tmux pane immediately after history replay, forcing TUI
+        // apps to redraw at the correct size before the live stream starts.
+        var wsUrl = proto + '//' + location.host + '/ws/' + sessionId
+            + '/' + terminal.cols + '/' + terminal.rows;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = function () {
