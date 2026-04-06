@@ -175,16 +175,23 @@ remotecc.agent.api-key=                  # required in production; set via env v
 
 ## Test Count and Status
 
-**111 tests passing** across:
+**116 tests passing** across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
 - `server/auth/` — ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
-- `frontend/` — StaticFilesTest (all static files + content), ResizeEndpointTest
+- `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
 - `e2e/` — ClaudeE2ETest (real `claude` CLI via `mvn test -Pe2e`, skipped in default run)
 
 `ServerStartup.bootstrapRegistry()` is package-private to allow direct testing.
 Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in non-auth test classes.
+Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTest()` / `setClockForTest()` package-private hooks; `@AfterEach` cleanup is required to prevent state bleeding across `@QuarkusTest` classes, which share one app instance per test run.
+
+---
+
+## Design Document
+
+`docs/DESIGN.md` is the living architectural overview — updated via `/update-design` (or automatically by `java-git-commit`). For point-in-time snapshots, see `docs/design-snapshots/`.
 
 ---
 

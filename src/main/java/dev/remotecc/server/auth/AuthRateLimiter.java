@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import org.jboss.logging.Logger;
 
 /**
@@ -24,6 +25,7 @@ public class AuthRateLimiter {
     static final Duration WINDOW = Duration.ofMinutes(5);
 
     private final ConcurrentHashMap<String, ArrayDeque<Instant>> attempts = new ConcurrentHashMap<>();
+    private Supplier<Instant> clock = Instant::now;
 
     void init(@Observes Router router) {
         for (var path : new String[]{
@@ -53,9 +55,14 @@ public class AuthRateLimiter {
         attempts.clear();
     }
 
+    /** Replaces the clock. Package-private for testing only. */
+    void setClockForTest(Supplier<Instant> clock) {
+        this.clock = clock;
+    }
+
     /** Returns true if the IP has exceeded the rate limit. Package-private for testing. */
     boolean isRateLimited(String ip) {
-        var now = Instant.now();
+        var now = clock.get();
         var deque = attempts.computeIfAbsent(ip, k -> new ArrayDeque<>());
         synchronized (deque) {
             deque.removeIf(t -> t.isBefore(now.minus(WINDOW)));

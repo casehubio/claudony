@@ -3,7 +3,7 @@
 **Date:** 2026-04-06
 **Topic:** Full system state — post-blog-catchup
 **Supersedes:** [2026-04-06-full-system-state](2026-04-06-full-system-state.md)
-**Superseded by:** *(leave blank — filled in if this snapshot is later superseded)*
+**Superseded by:** [2026-04-06-post-auth-hardening](2026-04-06-post-auth-hardening.md)
 
 ---
 

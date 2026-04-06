@@ -1,6 +1,7 @@
 package dev.remotecc.server.auth;
 
 import dev.remotecc.config.RemoteCCConfig;
+import io.vertx.ext.auth.webauthn.Authenticator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -71,5 +72,38 @@ class CredentialStoreTest {
     void credentialsFileIsCreatedOnWrite() {
         store.writeForTest("eve", "cred-id-5", "pubkey-5", 0L, "aaguid-5");
         assertTrue(tmp.resolve("credentials.json").toFile().exists());
+    }
+
+    @Test
+    void storeNewCredentialViaWebAuthnInterface() throws Exception {
+        var auth = new Authenticator()
+            .setUserName("frank")
+            .setCredID("cred-id-6")
+            .setPublicKey("pubkey-6")
+            .setCounter(0L)
+            .setAaguid("aaguid-6");
+
+        store.updateOrStoreWebAuthnCredentials(auth).subscribeAsCompletionStage().get();
+
+        var result = store.findWebAuthnCredentialsByCredID("cred-id-6").subscribeAsCompletionStage().get();
+        assertEquals(1, result.size());
+        assertEquals("frank", result.get(0).getUserName());
+        assertEquals(0L, result.get(0).getCounter());
+    }
+
+    @Test
+    void updateExistingCredentialCounterViaWebAuthnInterface() throws Exception {
+        store.writeForTest("grace", "cred-id-7", "pubkey-7", 5L, "aaguid-7");
+
+        // Framework calls this after each successful login to bump the sign counter
+        var auth = new Authenticator()
+            .setCredID("cred-id-7")
+            .setCounter(99L);
+        store.updateOrStoreWebAuthnCredentials(auth).subscribeAsCompletionStage().get();
+
+        var result = store.findWebAuthnCredentialsByCredID("cred-id-7").subscribeAsCompletionStage().get();
+        assertEquals(1, result.size());
+        assertEquals(99L, result.get(0).getCounter());
+        assertEquals("grace", result.get(0).getUserName()); // username preserved on update
     }
 }
