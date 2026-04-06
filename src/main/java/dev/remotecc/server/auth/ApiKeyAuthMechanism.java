@@ -2,6 +2,7 @@ package dev.remotecc.server.auth;
 
 import dev.remotecc.config.RemoteCCConfig;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.quarkus.runtime.LaunchMode;
 import io.quarkus.security.identity.IdentityProviderManager;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.identity.request.AuthenticationRequest;
@@ -28,8 +29,8 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
     @Override
     public Uni<SecurityIdentity> authenticate(RoutingContext context, IdentityProviderManager identityProviderManager) {
         var apiKey = context.request().getHeader("X-Api-Key");
-        if (apiKey == null) {
-            // Also accept the dev cookie (set by POST /auth/dev-login in dev mode)
+        if (apiKey == null && LaunchMode.current() == LaunchMode.DEVELOPMENT) {
+            // Accept the dev cookie only in dev mode (set by POST /auth/dev-login)
             var devCookie = context.getCookie("remotecc-dev-key");
             if (devCookie != null) apiKey = devCookie.getValue();
         }

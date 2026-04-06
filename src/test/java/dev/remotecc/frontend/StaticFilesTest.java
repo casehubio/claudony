@@ -1,11 +1,13 @@
 package dev.remotecc.frontend;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.Test;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
+@TestSecurity(user = "test", roles = "user")
 class StaticFilesTest {
 
     @Test

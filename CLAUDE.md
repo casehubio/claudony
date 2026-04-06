@@ -175,10 +175,10 @@ remotecc.agent.api-key=                  # required in production; set via env v
 
 ## Test Count and Status
 
-**106 tests passing** across:
+**109 tests passing** across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
-- `server/auth/` — ApiKeyAuthMechanism, AuthResource, CredentialStore, InviteService
+- `server/auth/` — ApiKeyAuthMechanism, AuthResource, AuthRateLimiter, CredentialStore, InviteService
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `frontend/` — StaticFilesTest (all static files + content), ResizeEndpointTest
 - `e2e/` — ClaudeE2ETest (real `claude` CLI via `mvn test -Pe2e`, skipped in default run)
@@ -198,7 +198,7 @@ style guide at `~/claude-workspace/writing-styles/blog-technical.md`
 
 ## What's Not Done Yet
 
-- Authentication — WebAuthn passkey + API key implemented; **not yet production-hardened** (no rate limiting, no session expiry, dev quick-login must be removed before deployment)
+- Authentication — WebAuthn passkey + API key implemented; rate limiting and dev-login backdoor closed; **session expiry not yet implemented** (sessions are effectively session cookies — expire on browser close or server restart)
 - GitHub PR/CI integration in dashboard (idea logged)
 - Docker sandbox per session (idea logged)
 - Windows Terminal or Linux terminal adapters beyond iTerm2 (interface is pluggable, no implementation)
