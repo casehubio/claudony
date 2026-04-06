@@ -167,6 +167,8 @@ remotecc.terminal=auto                   # auto|iterm2|none
 remotecc.default-working-dir=~/remotecc-workspace   # default dir for new sessions
 remotecc.credentials-file=~/.remotecc/credentials.json
 remotecc.agent.api-key=                  # required in production; set via env var
+# Production — must also set via env var (no default; random key = sessions lost on restart):
+# QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
 ```
 
 **Directory convention:** `~/.remotecc/` holds config/credentials (hidden, system); `~/remotecc-workspace/` is the default session working directory (visible, user-facing). Both are created on server startup.
@@ -205,7 +207,7 @@ style guide at `~/claude-workspace/writing-styles/blog-technical.md`
 
 ## What's Not Done Yet
 
-- Authentication — WebAuthn passkey + API key implemented; rate limiting and dev-login backdoor closed; **session expiry not yet implemented** (sessions are effectively session cookies — expire on browser close or server restart)
+- Authentication — WebAuthn passkey + API key implemented; rate limiting and dev-login backdoor closed; **session expiry not yet implemented** (sessions are session cookies — expire on browser close; server restarts no longer invalidate sessions since encryption key is now persistent)
 - GitHub PR/CI integration in dashboard (idea logged)
 - Docker sandbox per session (idea logged)
 - Windows Terminal or Linux terminal adapters beyond iTerm2 (interface is pluggable, no implementation)

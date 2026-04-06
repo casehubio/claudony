@@ -175,7 +175,7 @@ Both created on server startup if absent.
 - **No PTY in JVM** — `tmux attach-session` is not available; all terminal I/O goes through pipe-pane + FIFO
 - **WebAuthn requires HTTPS** — Caddy handles TLS; Quarkus does not terminate TLS in production
 - **Native image** — no reflection-based tricks; HTTP JSON-RPC for MCP (no stdio subprocess)
-- **Session cookies expire on restart** — WebAuthn signing key is in-memory; server restart invalidates all browser sessions (users re-authenticate with Touch ID)
+- **Session cookies survive restarts** — `quarkus.http.auth.session.encryption-key` must be set to a stable value (env var `QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY` in production). Without it, a random key is generated on startup, invalidating all sessions.
 
 ---
 

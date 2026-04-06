@@ -2,7 +2,7 @@
 **Date:** 2026-04-06
 **Topic:** Post auth-hardening and test quality pass
 **Supersedes:** [2026-04-06-post-blog-catchup](2026-04-06-post-blog-catchup.md)
-**Superseded by:** *(leave blank — filled in if this snapshot is later superseded)*
+**Superseded by:** [2026-04-07-post-native-build-webauthn-fixes](2026-04-07-post-native-build-webauthn-fixes.md)
 
 ---
 
