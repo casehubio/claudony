@@ -1,37 +1,32 @@
 # Handover — 2026-04-06
 
-**Head commit:** `642d611` — docs: add design snapshot 2026-04-06-full-system-state
+**Head commit:** `8037c27` — docs: add design snapshot 2026-04-06-post-blog-catchup
 **Previous handover:** `git show HEAD~1:HANDOVER.md` | diff: `git diff HEAD~1 HEAD -- HANDOVER.md`
 
 ## What Changed This Session
 
-- **Auth system live** — WebAuthn passkeys + API key. 22 commits from a separate Claude session. Reviewed and committed unchanged.
-- **Dev quick login** — overlay dialog with one-click cookie-based auth (dev mode only, `POST /auth/dev-login`)
-- **Silent 401 fixed** — `dashboard.js` now redirects to auth dialog on 401 instead of silently doing nothing
-- **Directory split** — `~/.remotecc/` config/credentials, `~/remotecc-workspace/` session default (was mixed in `~/.remotecc/`)
-- **Duplicate session detection** — 409 on create with existing name, `?overwrite=true` to replace, live validation in UI
-- **TUI auto-resize** — WebSocket URL now carries `/{cols}/{rows}`; server calls `tmux resize-pane` before pipe-pane; TUI redraws before user sees garble
-- **Blog moved** — `docs/project-blog/` → `docs/blog/`, CLAUDE.md updated with style guide pointer
-- **First design snapshot** — `docs/design-snapshots/2026-04-06-full-system-state.md`
-- **Blog entry 1 written** — `docs/blog/2026-04-05-01-testing-what-wasnt-tested.md`
-- 106 tests passing
+- **Blog entry 2 written** — `docs/blog/2026-04-05-02-locking-the-door.md` (auth implementation — WebAuthn passkeys, invite tokens, API key, auth review catches)
+- **Blog catch-up complete** — "Entry 3" (TUI garble fix) decided → knowledge garden instead of blog
+- **Design snapshot** — `docs/design-snapshots/2026-04-06-post-blog-catchup.md` supersedes `2026-04-06-full-system-state.md`
+- **Knowledge garden** — 2 new entries: TUI pane dimensions not synced to browser viewport (`tools/tmux.md`), Quarkus `Authenticator.publicKeyAlgorithm` has no getter/setter (`quarkus/webauthn.md`)
+- **CLAUDE.md** — added `## Project Type` section header (was bare `**Type:** java` at top; tooling hook required the section)
 
 ## Immediate Next Step
 
-**Write blog entries 2 and 3** — draft for Entry 2 ("Locking the Door") was approved in Typora but not yet committed. Open `/tmp/remotecc-blog-entry2-preview.md`, write to `docs/blog/2026-04-05-02-locking-the-door.md`, commit, then draft Entry 3 ("First Real Use" — auth 401 silent failure, wrong default dir, TUI garble fix via SIGWINCH research).
+**Production-harden auth** — rate limiting on auth endpoints, session expiry, remove dev quick-login before Mac Mini deployment. Start with `docs/superpowers/specs/2026-04-05-auth-design.md` for scope, then `src/main/java/dev/remotecc/server/auth/`.
 
 ## Open Questions / Blockers
 
-- Auth not production-hardened: no rate limiting, no session expiry, dev quick-login must be removed before Mac Mini deployment
-- Native binary not verified since `quarkus-security-webauthn` was added — may need GraalVM reflection config
+- Native binary not verified since `quarkus-security-webauthn` was added — run native build to check
 - ADRs flagged but not created: terminal streaming, MCP transport, auth mechanism
+- Agent API key provisioning on fresh Mac Mini — env var, config file, or first-run wizard?
 
 ## References
 
 | Context | Where | Retrieve with |
 |---------|-------|---------------|
-| Design state | `docs/design-snapshots/2026-04-06-full-system-state.md` | `cat` |
+| Design state | `docs/design-snapshots/2026-04-06-post-blog-catchup.md` | `cat` |
 | Blog entries | `docs/blog/` | `ls` then `cat` |
-| Technical gotchas | `~/claude/knowledge-garden/GARDEN.md` | index only |
-| Previous handover | git history | `git show HEAD~1:HANDOVER.md` |
+| Technical gotchas | `~/claude/knowledge-garden/GARDEN.md` | index only; detail on demand |
 | Auth design | `docs/superpowers/specs/2026-04-05-auth-design.md` | `cat` |
+| Previous handover | git history | `git show HEAD~1:HANDOVER.md` |

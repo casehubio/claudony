@@ -1,15 +1,15 @@
 # RemoteCC — Design Snapshot
 
 **Date:** 2026-04-06
-**Topic:** Full system state — server, agent, auth, frontend, testing
-**Supersedes:** *(none — first snapshot)*
-**Superseded by:** [2026-04-06-post-blog-catchup](2026-04-06-post-blog-catchup.md)
+**Topic:** Full system state — post-blog-catchup
+**Supersedes:** [2026-04-06-full-system-state](2026-04-06-full-system-state.md)
+**Superseded by:** *(leave blank — filled in if this snapshot is later superseded)*
 
 ---
 
 ## Where We Are
 
-RemoteCC is a working system. A Quarkus binary running in two modes — Server and Agent — lets you run Claude Code CLI sessions on a Mac and access them from any browser or PWA. The Server manages tmux sessions, streams terminal output over WebSocket via pipe-pane + FIFO (no PTY required), and serves the web dashboard. The Agent exposes a JSON-RPC MCP endpoint so a controller Claude instance can manage sessions through conversation. Authentication is implemented: WebAuthn passkeys for browser users, an API key for the Agent. 106 tests pass. The end-to-end chain — real `claude` CLI → MCP → REST → tmux — has been validated.
+RemoteCC is a working system. A Quarkus binary in two modes — Server and Agent — lets you run Claude Code CLI sessions on a Mac and access them from any browser or PWA. The Server manages tmux sessions, streams terminal output over WebSocket via pipe-pane + FIFO, and serves the web dashboard. The Agent exposes a JSON-RPC MCP endpoint so a controller Claude instance can manage sessions. Authentication is implemented: WebAuthn passkeys for browsers, API key for the Agent. 106 tests pass. The end-to-end chain — real `claude` CLI → MCP → REST → tmux — has been validated. The blog is caught up through this session.
 
 ## How We Got Here
 
@@ -33,7 +33,7 @@ Key decisions made to reach this point.
 **Next steps:**
 - Production-harden auth: rate limiting, session expiry, dev quick-login removal before deployment
 - Mac Mini deployment: bind to `0.0.0.0`, configure as launchd service, set real WebAuthn RP ID and origins
-- Remaining blog entries (2 of 3 pending)
+- Verify native binary still compiles cleanly with `quarkus-security-webauthn` included
 
 **Open questions:**
 - Should the credential store eventually support multiple named users, or remain single-owner?
@@ -50,3 +50,4 @@ Key decisions made to reach this point.
 - Original design spec: [`docs/superpowers/specs/2026-04-03-remotecc-design.md`](superpowers/specs/2026-04-03-remotecc-design.md)
 - Auth design spec: [`docs/superpowers/specs/2026-04-05-auth-design.md`](superpowers/specs/2026-04-05-auth-design.md)
 - E2E testing design: [`docs/superpowers/specs/2026-04-05-e2e-testing-design.md`](superpowers/specs/2026-04-05-e2e-testing-design.md)
+- Blog entries: [`docs/blog/`](../blog/)

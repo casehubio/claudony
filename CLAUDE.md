@@ -1,6 +1,9 @@
 # RemoteCC — Claude Code Project Guide
 
+## Project Type
+
 **Type:** java
+
 **Stack:** Java 21 (on Java 26 JVM), Quarkus 3.9.5, GraalVM 25 (native image), tmux, xterm.js
 
 ---
