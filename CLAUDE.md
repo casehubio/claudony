@@ -185,6 +185,14 @@ Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in 
 
 ---
 
+## Project Blog
+
+Entries live in `docs/blog/`. Written using the personal technical writing
+style guide at `~/claude-workspace/writing-styles/blog-technical.md`
+(set `PERSONAL_WRITING_STYLES_PATH=~/claude-workspace/writing-styles`).
+
+---
+
 ## What's Not Done Yet
 
 - Authentication — WebAuthn passkey + API key implemented; **not yet production-hardened** (no rate limiting, no session expiry, dev quick-login must be removed before deployment)
