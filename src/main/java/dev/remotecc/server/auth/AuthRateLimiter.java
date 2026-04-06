@@ -48,6 +48,11 @@ public class AuthRateLimiter {
         ctx.next();
     }
 
+    /** Clears all recorded attempts. Package-private for testing only. */
+    void resetForTest() {
+        attempts.clear();
+    }
+
     /** Returns true if the IP has exceeded the rate limit. Package-private for testing. */
     boolean isRateLimited(String ip) {
         var now = Instant.now();

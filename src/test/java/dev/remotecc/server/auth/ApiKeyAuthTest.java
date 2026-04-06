@@ -33,4 +33,14 @@ class ApiKeyAuthTest {
             .when().get("/api/sessions")
             .then().statusCode(401);
     }
+
+    @Test
+    void devCookieIsRejectedOutsideDevMode() {
+        // LaunchMode in tests is TEST, not DEVELOPMENT.
+        // The dev cookie must not authenticate — the LaunchMode guard must hold.
+        given()
+            .cookie("remotecc-dev-key", "test-api-key-do-not-use-in-prod")
+            .when().get("/api/sessions")
+            .then().statusCode(401);
+    }
 }
