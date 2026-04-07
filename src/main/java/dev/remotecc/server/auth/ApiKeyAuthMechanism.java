@@ -1,6 +1,5 @@
 package dev.remotecc.server.auth;
 
-import dev.remotecc.config.RemoteCCConfig;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.security.identity.IdentityProviderManager;
@@ -24,7 +23,7 @@ import java.util.Set;
 public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
 
     @Inject
-    RemoteCCConfig config;
+    ApiKeyService apiKeyService;
 
     @Override
     public Uni<SecurityIdentity> authenticate(RoutingContext context, IdentityProviderManager identityProviderManager) {
@@ -38,7 +37,7 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
             // No key provided — defer to path policy (allow anonymous for non-protected paths)
             return Uni.createFrom().optional(Optional.empty());
         }
-        var expected = config.agentApiKey();
+        var expected = apiKeyService.getKey();
         if (expected.isEmpty() || !MessageDigest.isEqual(
                 expected.get().getBytes(StandardCharsets.UTF_8),
                 apiKey.getBytes(StandardCharsets.UTF_8))) {

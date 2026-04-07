@@ -1,6 +1,6 @@
 package dev.remotecc.agent;
 
-import dev.remotecc.config.RemoteCCConfig;
+import dev.remotecc.server.auth.ApiKeyService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.client.ClientRequestContext;
 import jakarta.ws.rs.client.ClientRequestFilter;
@@ -11,11 +11,11 @@ import java.io.IOException;
 public class ApiKeyClientFilter implements ClientRequestFilter {
 
     @Inject
-    RemoteCCConfig config;
+    ApiKeyService apiKeyService;
 
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
-        config.agentApiKey().ifPresent(key ->
+        apiKeyService.getKey().ifPresent(key ->
             requestContext.getHeaders().add("X-Api-Key", key));
     }
 }
