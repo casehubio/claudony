@@ -274,23 +274,75 @@ Ctrl+L (if the app supports it) or trigger a resize by resizing the browser wind
 
 ---
 
-## 12. One Blank Line After Prompt on Terminal Connect
+## 12. Initial pipe-pane \r\n Flush on FIFO Connect
 
-**Symptom:** When opening or reconnecting to a terminal, there is one blank line
-visible after the current prompt. This happens consistently.
+**Symptom:** (Historical) When opening a terminal, one blank line appeared after
+the current prompt.
 
-**Root cause:** pipe-pane connects and cat flushes an initial `\r\n` from the
+**Root cause:** pipe-pane connects and `cat` flushes an initial `\r\n` from the
 pane's pending output buffer when the FIFO connection is first established.
-This newline appears in xterm.js as a blank line after the history replay.
 
-**Status:** Cosmetic only. The terminal functions correctly. The blank line
-disappears as soon as the user types (new output overwrites it). Fixing it
-would require intercepting the first bytes from pipe-pane before sending to
-xterm.js, which adds complexity for minimal gain.
+**Fix (committed d64a632):** The virtual thread that reads the FIFO now skips the
+first read if it is exactly `\n` or `\r\n`. Any other first-read content is real
+output and is forwarded normally.
 
 ---
 
-## 13. Tmux Session Bootstrap Survives Server Restart
+## 13. TUI Duplicate Prompt on Connect — Blank Line Removal Broke Row Alignment
+
+**Symptom:** Connecting to a Claude Code session showed two consecutive `❯` prompts
+with no separator between them.
+
+**Root cause:** The history processing loop removed ALL blank lines from the
+`capture-pane` output. Claude Code's pane has a blank row (e.g. row 12) between
+the welcome box and the first exchange. Removing it shifted `❯` from xterm.js row
+13 to row 12. When Claude Code sent `ESC[13;1H` to update the prompt, it landed
+on the separator `────` at row 13 — one row below the history's `❯` at row 12 —
+leaving both visible.
+
+**Fix (committed d64a632):** Preserve blank rows *within* the content range (between
+first and last non-blank lines). Strip only leading blanks (scrollback) and trailing
+blanks (pane row padding). Visually blank rows that contain only ANSI codes are
+stored as empty strings so they produce `\r\n\r\n` in the join, keeping xterm.js
+row N == pane row N.
+
+**Rule:** Never remove blank rows from within the visible pane area. Row correspondence
+is the invariant that makes TUI absolute cursor positioning work.
+
+---
+
+## 14. Typed Input Appeared Below Cursor — Missing Cursor Positioning After History
+
+**Symptom:** After connecting to a Claude Code session, typed characters appeared
+on the line below `❯` rather than on the `❯` line itself.
+
+**Root cause:** History was sent as plain text; xterm.js cursor landed at the
+end of the last content line (`? for shortcuts`, row 22), not at the `❯` prompt
+(row 20). The pipe-pane `\r\n` flush (entry #12) moved it one more row down.
+Typed input echoed at row 23 while `❯` was displayed at row 20.
+
+**Fix (committed d64a632):** After sending history, append `ESC[row;colH` computed
+from `tmux display-message #{cursor_y} #{cursor_x} #{pane_height}`. This positions
+xterm.js cursor exactly where the pane cursor is. Combined with skipping the
+initial `\r\n` flush (entry #12), typed input now echoes on the prompt line.
+
+---
+
+## 15. resize-pane Is a No-Op for Detached Sessions — Use resize-window
+
+**Symptom:** `tmux resize-pane -x W -y H` had no effect on sessions with no
+attached clients (the typical remotecc mode).
+
+**Root cause:** `resize-pane` is constrained by the minimum attached-client size.
+With no clients, it silently no-ops regardless of the requested dimensions.
+
+**Fix (committed d64a632):** Use `tmux resize-window -x W -y H` instead.
+`resize-window` bypasses client-size constraints and reliably resizes detached
+sessions. For single-pane windows (all remotecc sessions), the effect is identical.
+
+---
+
+## 16. Tmux Session Bootstrap Survives Server Restart
 
 **Behaviour (correct):** When the Quarkus server restarts, `ServerStartup`
 calls `tmux list-sessions` and re-imports sessions with the `remotecc-` prefix
@@ -308,7 +360,7 @@ be picked up.
 
 ---
 
-## 14. `tmux send-keys -l` for Raw Input
+## 17. `tmux send-keys -l` for Raw Input
 
 When forwarding WebSocket text input to tmux, use `-l` (literal) flag:
 ```bash
@@ -322,7 +374,7 @@ Available in tmux 3.2+.
 
 ---
 
-## 15. Clipboard in tmux Requires Configuration
+## 18. Clipboard in tmux Requires Configuration
 
 **Symptom:** Copy/paste between the browser terminal and macOS clipboard does
 not work.
