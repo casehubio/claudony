@@ -2,7 +2,7 @@
 **Date:** 2026-04-07
 **Topic:** Post native-build verification and WebAuthn config fixes
 **Supersedes:** [2026-04-06-post-auth-hardening](2026-04-06-post-auth-hardening.md)
-**Superseded by:** *(leave blank — filled in if this snapshot is later superseded)*
+**Superseded by:** [2026-04-07-post-api-key-provisioning](2026-04-07-post-api-key-provisioning.md)
 
 ---
 
