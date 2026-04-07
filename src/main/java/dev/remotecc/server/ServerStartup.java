@@ -1,6 +1,7 @@
 package dev.remotecc.server;
 
 import dev.remotecc.config.RemoteCCConfig;
+import dev.remotecc.server.auth.ApiKeyService;
 import dev.remotecc.server.model.Session;
 import dev.remotecc.server.model.SessionStatus;
 import io.quarkus.runtime.StartupEvent;
@@ -21,11 +22,13 @@ public class ServerStartup {
     @Inject RemoteCCConfig config;
     @Inject TmuxService tmux;
     @Inject SessionRegistry registry;
+    @Inject ApiKeyService apiKeyService;
 
     void onStart(@Observes StartupEvent event) {
         if (!config.isServerMode()) return;
         checkTmux();
         ensureDirectories();
+        apiKeyService.initServer();
         bootstrapRegistry();
         LOG.infof("RemoteCC Server ready — http://%s:%d", config.bind(), config.port());
     }

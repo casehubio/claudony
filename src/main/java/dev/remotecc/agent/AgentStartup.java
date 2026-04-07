@@ -2,6 +2,7 @@ package dev.remotecc.agent;
 
 import dev.remotecc.agent.terminal.TerminalAdapterFactory;
 import dev.remotecc.config.RemoteCCConfig;
+import dev.remotecc.server.auth.ApiKeyService;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -17,12 +18,14 @@ public class AgentStartup {
     @Inject RemoteCCConfig config;
     @Inject ClipboardChecker clipboard;
     @Inject TerminalAdapterFactory terminalFactory;
+    @Inject ApiKeyService apiKeyService;
     @RestClient ServerClient serverClient;
 
     void onStart(@Observes StartupEvent event) {
         if (!config.isAgentMode()) return;
 
         LOG.infof("RemoteCC Agent starting — proxying to %s", config.serverUrl());
+        apiKeyService.initAgent();
         checkServerConnectivity();
         detectTerminalAdapter();
         reportClipboardStatus();
