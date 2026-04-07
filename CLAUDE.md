@@ -52,6 +52,15 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dremotecc.mode=server
 # After ANY Java commit that triggers a reload, do a full server restart.
 # See docs/BUGS-AND-ODDITIES.md entry #1 for details.
 
+# Start JVM jar (IMPORTANT: -D flags must come BEFORE -jar, not after)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) java \
+  -Dremotecc.mode=server -Dremotecc.bind=0.0.0.0 \
+  -jar target/quarkus-app/quarkus-run.jar
+
+JAVA_HOME=$(/usr/libexec/java_home -v 26) java \
+  -Dremotecc.mode=agent -Dremotecc.port=7778 \
+  -jar target/quarkus-app/quarkus-run.jar
+
 # Start native binary
 ./target/remotecc-1.0.0-SNAPSHOT-runner                     # server mode (default)
 ./target/remotecc-1.0.0-SNAPSHOT-runner -Dremotecc.mode=agent -Dquarkus.http.port=7778

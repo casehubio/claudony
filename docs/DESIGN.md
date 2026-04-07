@@ -30,11 +30,14 @@ dev.remotecc
 │   ├── TerminalWebSocket       — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup           — startup health checks, tmux bootstrap
 │   └── auth/
-│       ├── ApiKeyAuthMechanism — HttpAuthenticationMechanism for X-Api-Key header
-│       ├── AuthRateLimiter     — sliding-window rate limiter on auth/WebAuthn paths
-│       ├── AuthResource        — /auth/invite, /auth/register, /auth/login, /auth/dev-login
-│       ├── CredentialStore     — WebAuthnUserProvider; reads/writes credentials.json
-│       └── InviteService       — one-time invite token generation and validation
+│       ├── ApiKeyAuthMechanism    — HttpAuthenticationMechanism for X-Api-Key header
+│       ├── ApiKeyService          — key generation, file persistence, banner logging
+│       ├── AuthRateLimiter        — sliding-window rate limiter on auth/WebAuthn paths
+│       ├── AuthResource           — /auth/invite, /auth/register, /auth/login, /auth/dev-login
+│       ├── CredentialStore        — WebAuthnUserProvider; reads/writes credentials.json
+│       ├── InviteService          — one-time invite token generation and validation
+│       ├── LenientNoneAttestation — Vert.x attestation override: accepts non-zero AAGUID
+│       └── WebAuthnPatcher        — startup bean that swaps the "none" handler via reflection
 └── agent/
     ├── ServerClient            — typed REST client to Server (@RegisterRestClient)
     ├── ApiKeyClientFilter      — injects X-Api-Key on all ServerClient calls
@@ -63,9 +66,12 @@ Sessions live in tmux independently of the Quarkus process. On server restart, `
 2. A Java virtual thread reads the FIFO and writes to the WebSocket
 3. Input goes via `tmux send-keys -t name -l "text"` (literal mode, `-l` flag required)
 
-**History replay on reconnect:** `tmux capture-pane -e -p -S -100` (with ANSI colour) is sent synchronously *before* pipe-pane starts. Trailing whitespace is stripped (tmux pads to pane width), consecutive blank lines removed (grid artefacts), lines joined with `\r\n`.
-
-**TUI redraw on connect:** `tmux resize-pane` to the browser's reported viewport dimensions before pipe-pane starts, delivering SIGWINCH so TUI apps (Claude Code, vim) redraw immediately into the live stream.
+**History replay on reconnect:** `tmux resize-window` (not `resize-pane` — works for detached sessions with no attached clients) is called *first*, delivering SIGWINCH so TUI apps redraw before capture. After 150 ms, `tmux capture-pane -e -p -S -100` snapshots the post-resize state. Processing rules:
+- Leading and trailing blank rows (scrollback / pane padding) are stripped
+- Blank rows *within* the content range are **preserved** — removing them shifts xterm.js rows relative to tmux pane rows, breaking TUI absolute cursor positioning and producing duplicate prompts
+- Visually blank rows that contain only ANSI codes are stored as empty strings
+- A cursor-positioning escape `ESC[row;colH` (derived from `tmux display-message #{cursor_y} #{cursor_x}`) is appended so xterm.js cursor lands at the pane cursor after replay — not at the last text line
+- The initial `\r\n` flush that pipe-pane sends on FIFO connect is swallowed (see BUGS-AND-ODDITIES #12) so it cannot move the cursor past the positioned point
 
 ### MCP Transport: HTTP JSON-RPC
 
@@ -82,7 +88,9 @@ The Agent exposes `POST /mcp` as a synchronous JSON-RPC endpoint. Claude Code co
 | Browser / PWA | WebAuthn passkeys | `quarkus-security-webauthn`; Touch ID / Face ID; iCloud Keychain sync |
 | Agent | `X-Api-Key` header | Pre-shared key; checked by `ApiKeyAuthMechanism` |
 
-Both mechanisms are tried in turn on every request. Valid session cookie or valid API key → authenticated as role `user`.
+Both mechanisms are tried in turn on every request.
+
+**Apple passkey compatibility:** iCloud Keychain passkeys always respond with `fmt=none` attestation even when the server requests direct attestation, but include a non-zero AAGUID. Vert.x `NoneAttestation` rejects this. `WebAuthnPatcher` replaces the `"none"` handler in Vert.x's attestation map at startup with `LenientNoneAttestation`, which skips the AAGUID check while still enforcing that `attStmt` is empty. Valid session cookie or valid API key → authenticated as role `user`.
 
 ### Protected Routes
 

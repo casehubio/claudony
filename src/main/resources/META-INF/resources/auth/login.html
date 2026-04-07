@@ -53,7 +53,7 @@ async function login() {
   if (!username) { showError('Enter your username'); return; }
 
   try {
-    const optRes = await fetch('/q/webauthn/login/options', {
+    const optRes = await fetch('/q/webauthn/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({name: username})
@@ -80,7 +80,7 @@ async function login() {
       type: cred.type
     };
 
-    const finishRes = await fetch('/q/webauthn/login/finish', {
+    const finishRes = await fetch('/q/webauthn/callback', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body)

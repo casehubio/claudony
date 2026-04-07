@@ -53,8 +53,8 @@
 
     function connect() {
         // Include current terminal dimensions in the URL so the server can
-        // resize the tmux pane immediately after history replay, forcing TUI
-        // apps to redraw at the correct size before the live stream starts.
+        // resize the tmux pane BEFORE capturing history, causing TUI apps to
+        // redraw first so capture-pane gets the fresh state (not stale).
         var wsUrl = proto + '//' + location.host + '/ws/' + sessionId
             + '/' + terminal.cols + '/' + terminal.rows;
         ws = new WebSocket(wsUrl);
