@@ -105,6 +105,7 @@ src/main/java/dev/remotecc/
 │   ├── TerminalWebSocket.java          — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup.java              — startup health checks, directory creation, tmux bootstrap
 │   └── auth/
+│       ├── ApiKeyService.java          — key resolution (config → file → generate), first-run banner
 │       ├── ApiKeyAuthMechanism.java    — X-Api-Key header auth (Agent→Server) + dev cookie
 │       ├── AuthResource.java           — /auth/register, /auth/login, /auth/dev-login
 │       ├── CredentialStore.java        — WebAuthn credential persistence (~/.remotecc/credentials.json)
@@ -166,7 +167,7 @@ remotecc.tmux-prefix=remotecc-
 remotecc.terminal=auto                   # auto|iterm2|none
 remotecc.default-working-dir=~/remotecc-workspace   # default dir for new sessions
 remotecc.credentials-file=~/.remotecc/credentials.json
-remotecc.agent.api-key=                  # required in production; set via env var
+remotecc.agent.api-key=                  # auto-generated on first server run; saved to ~/.remotecc/api-key
 # Production — must also set via env var (no default; random key = sessions lost on restart):
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
 ```
@@ -177,10 +178,10 @@ remotecc.agent.api-key=                  # required in production; set via env v
 
 ## Test Count and Status
 
-**116 tests passing** across:
+**124 tests passing** across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
-- `server/auth/` — ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService
+- `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
 - `e2e/` — ClaudeE2ETest (real `claude` CLI via `mvn test -Pe2e`, skipped in default run)
