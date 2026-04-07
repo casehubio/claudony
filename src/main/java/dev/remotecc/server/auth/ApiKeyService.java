@@ -43,9 +43,11 @@ public class ApiKeyService {
         if (resolvedKey.isPresent()) return;
 
         var key = "remotecc-" + UUID.randomUUID().toString().replace("-", "");
-        persistKey(key);
-        resolvedKey = Optional.of(key);
-        logGenerationBanner(key);
+        if (persistKey(key)) {
+            resolvedKey = Optional.of(key);
+            logGenerationBanner(key);
+        }
+        // If persistKey failed, it already logged ERROR — resolvedKey stays empty
     }
 
     /** Called by AgentStartup before checkServerConnectivity(). Warns if key absent. */
@@ -80,13 +82,19 @@ public class ApiKeyService {
         }
     }
 
-    private void persistKey(String key) {
+    private boolean persistKey(String key) {
         var keyFile = keyFilePath();
         try {
             Files.writeString(keyFile, key);
-            Files.setPosixFilePermissions(keyFile, PosixFilePermissions.fromString("rw-------"));
+            try {
+                Files.setPosixFilePermissions(keyFile, PosixFilePermissions.fromString("rw-------"));
+            } catch (UnsupportedOperationException ignored) {
+                // Non-POSIX filesystem — skip chmod
+            }
+            return true;
         } catch (IOException e) {
             LOG.errorf("Failed to write API key file %s: %s", keyFile, e.getMessage());
+            return false;
         }
     }
 

@@ -90,4 +90,15 @@ class ApiKeyServiceTest {
 
         assertEquals("remotecc-fromfile", service.getKey().get());
     }
+
+    @Test
+    void serverGeneratesKeyWhenFileIsBlank() throws Exception {
+        Files.writeString(tmp.resolve("api-key"), "   ");
+
+        service.initServer();
+
+        // Blank file is treated as absent — key should be generated
+        assertTrue(service.getKey().isPresent());
+        assertTrue(service.getKey().get().matches("remotecc-[a-f0-9]{32}"));
+    }
 }
