@@ -23,6 +23,26 @@
 
     var isLocalhost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
+    function prStatusHtml(data) {
+        if (!data.gitRepo) return '<span class="git-info git-none">not a git repo</span>';
+        if (!data.githubRepo) return '<span class="git-info git-none">' + (data.branch || '') + ' · no GitHub remote</span>';
+        var html = '<span class="git-branch">' + data.branch + '</span>';
+        if (data.error) return html + ' <span class="git-error">⚠ ' + data.error + '</span>';
+        if (!data.pr) return html + ' <span class="git-info">no open PR</span>';
+        var pr = data.pr;
+        var stateClass = pr.state === 'OPEN' ? 'pr-open' : pr.state === 'MERGED' ? 'pr-merged' : 'pr-closed';
+        var checks = '';
+        if (pr.checksTotal > 0) {
+            checks = ' <span class="ci-checks">';
+            if (pr.checksPassed > 0) checks += '<span class="ci-pass">✓' + pr.checksPassed + '</span>';
+            if (pr.checksPending > 0) checks += '<span class="ci-pending">⟳' + pr.checksPending + '</span>';
+            if (pr.checksFailed > 0) checks += '<span class="ci-fail">✗' + pr.checksFailed + '</span>';
+            checks += '</span>';
+        }
+        html += ' <a class="pr-link ' + stateClass + '" href="' + pr.url + '" target="_blank" onclick="event.stopPropagation()">#' + pr.number + ' ' + pr.title + '</a>' + checks;
+        return html;
+    }
+
     function renderCard(s) {
         var card = document.createElement('div');
         card.className = 'session-card';
@@ -32,6 +52,8 @@
         var itermBtn = isLocalhost
             ? '<button class="iterm-btn">Open in iTerm2</button>'
             : '';
+        var hasWorkingDir = s.workingDir && s.workingDir !== 'unknown';
+        var prBtn = hasWorkingDir ? '<button class="pr-btn">Check PR</button>' : '';
 
         card.innerHTML =
             '<div class="card-header">' +
@@ -40,8 +62,10 @@
             '</div>' +
             '<div class="card-dir">' + s.workingDir + '</div>' +
             '<div class="card-meta">Active ' + timeAgo(s.lastActive) + '</div>' +
+            (hasWorkingDir ? '<div class="card-git"></div>' : '') +
             '<div class="card-actions">' +
                 '<button class="open-btn">Open Terminal</button>' +
+                prBtn +
                 itermBtn +
                 '<button class="danger delete-btn">Delete</button>' +
             '</div>';
@@ -50,6 +74,29 @@
             e.stopPropagation();
             window.location.href = openUrl;
         });
+
+        if (hasWorkingDir) {
+            card.querySelector('.pr-btn').addEventListener('click', function (e) {
+                e.stopPropagation();
+                var btn = e.target;
+                var gitDiv = card.querySelector('.card-git');
+                btn.disabled = true;
+                btn.textContent = '…';
+                fetch('/api/sessions/' + s.id + '/git-status')
+                    .then(function (r) { requireAuth(r); return r.json(); })
+                    .then(function (data) {
+                        gitDiv.innerHTML = prStatusHtml(data);
+                        btn.disabled = false;
+                        btn.textContent = 'Check PR';
+                    })
+                    .catch(function () {
+                        gitDiv.innerHTML = '<span class="git-error">⚠ fetch failed</span>';
+                        btn.disabled = false;
+                        btn.textContent = 'Check PR';
+                    });
+            });
+        }
+
         if (isLocalhost) {
             card.querySelector('.iterm-btn').addEventListener('click', function (e) {
                 e.stopPropagation();

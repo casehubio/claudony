@@ -87,6 +87,23 @@ button.danger { background: var(--danger); }
 .card-actions button { font-size: 12px; padding: 6px 12px; }
 .iterm-btn { background: #3a3a5c; color: #a0a0d0; border: 1px solid #5a5a8c; }
 .iterm-btn:hover { background: #4a4a7c; }
+.pr-btn { background: #1c3a1c; color: #6dbf6d; border: 1px solid #3a6b3a; }
+.pr-btn:hover { background: #254a25; }
+.pr-btn:disabled { opacity: 0.5; cursor: default; }
+
+.card-git { font-size: 12px; margin-bottom: 10px; min-height: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.git-branch { font-family: var(--mono); color: var(--text-dim); }
+.git-none { color: var(--text-dim); font-style: italic; }
+.git-error { color: #e07070; }
+.pr-link { color: #4c9aff; text-decoration: none; }
+.pr-link:hover { text-decoration: underline; }
+.pr-open { color: #4c9aff; }
+.pr-merged { color: #a371f7; }
+.pr-closed { color: #888; }
+.ci-checks { display: inline-flex; gap: 4px; font-family: var(--mono); }
+.ci-pass { color: #3fb950; }
+.ci-pending { color: #d29922; }
+.ci-fail { color: #f85149; }
 
 .empty-state { grid-column: 1/-1; text-align: center; padding: 80px 24px; color: var(--text-dim); }
 .empty-state p { margin-bottom: 16px; font-size: 15px; }

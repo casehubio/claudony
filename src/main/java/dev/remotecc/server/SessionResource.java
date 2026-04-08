@@ -8,9 +8,13 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import org.jboss.logging.Logger;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.UUID;
 import java.io.OutputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.stream.Collectors;
 
 @Path("/api/sessions")
 @Produces(MediaType.APPLICATION_JSON)
@@ -206,5 +210,103 @@ public class SessionResource {
                 return Response.serverError().build();
             }
         }).orElse(Response.status(404).build());
+    }
+
+    @GET
+    @Path("/{id}/git-status")
+    public Response gitStatus(@PathParam("id") String id) {
+        return registry.find(id).map(session -> {
+            var dir = session.workingDir();
+            if ("unknown".equals(dir)) {
+                return Response.ok(GitStatusResponse.notGit()).build();
+            }
+            try {
+                // Step 1: is it a git repo?
+                if (!run("git", "-C", dir, "rev-parse", "--git-dir").success()) {
+                    return Response.ok(GitStatusResponse.notGit()).build();
+                }
+                // Step 2: get current branch
+                var branch = run("git", "-C", dir, "branch", "--show-current").stdout().trim();
+
+                // Step 3: get GitHub remote
+                var remoteUrl = run("git", "-C", dir, "remote", "get-url", "origin").stdout().trim();
+                var githubRepo = parseGitHubRepo(remoteUrl);
+                if (githubRepo == null) {
+                    return Response.ok(GitStatusResponse.noGitHub(branch)).build();
+                }
+
+                // Step 4: get PR info via gh
+                var ghResult = run("gh", "pr", "view",
+                        "--repo", githubRepo,
+                        "--json", "number,title,url,state,statusCheckRollup");
+                if (!ghResult.success()) {
+                    // no PR for this branch, or gh not available
+                    if (ghResult.stdout().contains("no pull requests found") ||
+                            ghResult.stderr().contains("no pull requests found")) {
+                        return Response.ok(GitStatusResponse.noPr(githubRepo, branch)).build();
+                    }
+                    var errMsg = ghResult.stderr().isBlank() ? "gh not available or not authenticated" : ghResult.stderr().trim();
+                    return Response.ok(GitStatusResponse.error(githubRepo, branch, errMsg)).build();
+                }
+
+                var pr = parsePrInfo(ghResult.stdout());
+                return Response.ok(GitStatusResponse.withPr(githubRepo, branch, pr)).build();
+
+            } catch (Exception e) {
+                LOG.errorf("Failed to get git status for session '%s': %s", session.name(), e.getMessage());
+                return Response.serverError().build();
+            }
+        }).orElse(Response.status(404).build());
+    }
+
+    private record RunResult(int exitCode, String stdout, String stderr) {
+        boolean success() { return exitCode == 0; }
+    }
+
+    private RunResult run(String... cmd) throws Exception {
+        var p = new ProcessBuilder(cmd).start();
+        var stdout = new BufferedReader(new InputStreamReader(p.getInputStream()))
+                .lines().collect(Collectors.joining("\n"));
+        var stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()))
+                .lines().collect(Collectors.joining("\n"));
+        int exit = p.waitFor();
+        return new RunResult(exit, stdout, stderr);
+    }
+
+    private String parseGitHubRepo(String remoteUrl) {
+        // https://github.com/owner/repo.git  or  git@github.com:owner/repo.git
+        if (remoteUrl == null || remoteUrl.isBlank()) return null;
+        var url = remoteUrl.trim();
+        if (url.startsWith("https://github.com/")) {
+            var path = url.substring("https://github.com/".length());
+            return path.endsWith(".git") ? path.substring(0, path.length() - 4) : path;
+        }
+        if (url.startsWith("git@github.com:")) {
+            var path = url.substring("git@github.com:".length());
+            return path.endsWith(".git") ? path.substring(0, path.length() - 4) : path;
+        }
+        return null;
+    }
+
+    private GitStatusResponse.PrInfo parsePrInfo(String json) throws Exception {
+        var mapper = new ObjectMapper();
+        var node = mapper.readTree(json);
+        int number = node.path("number").asInt();
+        var title = node.path("title").asText();
+        var url = node.path("url").asText();
+        var state = node.path("state").asText();
+        var checks = node.path("statusCheckRollup");
+        int total = 0, passed = 0, failed = 0, pending = 0;
+        if (checks.isArray()) {
+            for (var check : checks) {
+                total++;
+                var conclusion = check.path("conclusion").asText("");
+                var status = check.path("status").asText("");
+                if ("SUCCESS".equalsIgnoreCase(conclusion)) passed++;
+                else if ("FAILURE".equalsIgnoreCase(conclusion) || "ERROR".equalsIgnoreCase(conclusion)) failed++;
+                else pending++;
+            }
+        }
+        return new GitStatusResponse.PrInfo(number, title, url, state, total, passed, failed, pending);
     }
 }

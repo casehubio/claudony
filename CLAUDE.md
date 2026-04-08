@@ -187,7 +187,7 @@ remotecc.agent.api-key=                  # auto-generated on first server run; s
 
 ## Test Count and Status
 
-**132 tests passing** across:
+**136 tests passing** across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService
