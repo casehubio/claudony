@@ -179,4 +179,5 @@ class SessionResourceTest {
         given().when().get("/api/sessions/" + idB)
             .then().statusCode(200).body("name", equalTo("remotecc-test-rename-conflict-b"));
     }
+
 }

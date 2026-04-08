@@ -1,5 +1,6 @@
 package dev.remotecc.server;
 
+import dev.remotecc.agent.terminal.TerminalAdapterFactory;
 import dev.remotecc.config.RemoteCCConfig;
 import dev.remotecc.server.model.*;
 import io.quarkus.security.Authenticated;
@@ -22,6 +23,7 @@ public class SessionResource {
     @Inject RemoteCCConfig config;
     @Inject SessionRegistry registry;
     @Inject TmuxService tmux;
+    @Inject TerminalAdapterFactory terminalFactory;
 
     @GET
     public java.util.List<SessionResponse> list() {
@@ -181,6 +183,26 @@ public class SessionResource {
                 return Response.noContent().build();
             } catch (Exception e) {
                 LOG.errorf("Failed to resize session '%s': %s", session.name(), e.getMessage());
+                return Response.serverError().build();
+            }
+        }).orElse(Response.status(404).build());
+    }
+
+    @POST
+    @Path("/{id}/open-terminal")
+    public Response openTerminal(@PathParam("id") String id) {
+        return registry.find(id).map(session -> {
+            var adapter = terminalFactory.resolve();
+            if (adapter.isEmpty()) {
+                return Response.status(503)
+                        .entity("{\"error\":\"No terminal adapter available on this machine\"}")
+                        .build();
+            }
+            try {
+                adapter.get().openSession(session.name());
+                return Response.ok("{\"opened\":true,\"adapter\":\"" + adapter.get().name() + "\"}").build();
+            } catch (Exception e) {
+                LOG.errorf("Failed to open session '%s' in terminal: %s", session.name(), e.getMessage());
                 return Response.serverError().build();
             }
         }).orElse(Response.status(404).build());

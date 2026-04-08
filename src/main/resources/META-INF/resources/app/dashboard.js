@@ -21,12 +21,17 @@
         return name.replace(/^remotecc-/, '');
     }
 
+    var isLocalhost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
     function renderCard(s) {
         var card = document.createElement('div');
         card.className = 'session-card';
         var name = displayName(s.name);
         var status = s.status.toLowerCase();
         var openUrl = '/app/session.html?id=' + s.id + '&name=' + encodeURIComponent(name);
+        var itermBtn = isLocalhost
+            ? '<button class="iterm-btn">Open in iTerm2</button>'
+            : '';
 
         card.innerHTML =
             '<div class="card-header">' +
@@ -37,6 +42,7 @@
             '<div class="card-meta">Active ' + timeAgo(s.lastActive) + '</div>' +
             '<div class="card-actions">' +
                 '<button class="open-btn">Open Terminal</button>' +
+                itermBtn +
                 '<button class="danger delete-btn">Delete</button>' +
             '</div>';
 
@@ -44,6 +50,16 @@
             e.stopPropagation();
             window.location.href = openUrl;
         });
+        if (isLocalhost) {
+            card.querySelector('.iterm-btn').addEventListener('click', function (e) {
+                e.stopPropagation();
+                fetch('/api/sessions/' + s.id + '/open-terminal', { method: 'POST' })
+                    .then(function (r) {
+                        requireAuth(r);
+                        if (r.status === 503) alert('No terminal adapter available on this machine.');
+                    });
+            });
+        }
         card.querySelector('.delete-btn').addEventListener('click', function (e) {
             e.stopPropagation();
             if (!confirm('Delete session "' + name + '"?')) return;

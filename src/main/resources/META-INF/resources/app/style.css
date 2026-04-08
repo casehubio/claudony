@@ -83,8 +83,10 @@ button.danger { background: var(--danger); }
 
 .card-dir { font-size: 12px; color: var(--text-dim); font-family: var(--mono); margin-bottom: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-meta { font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
-.card-actions { display: flex; gap: 8px; }
+.card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .card-actions button { font-size: 12px; padding: 6px 12px; }
+.iterm-btn { background: #3a3a5c; color: #a0a0d0; border: 1px solid #5a5a8c; }
+.iterm-btn:hover { background: #4a4a7c; }
 
 .empty-state { grid-column: 1/-1; text-align: center; padding: 80px 24px; color: var(--text-dim); }
 .empty-state p { margin-bottom: 16px; font-size: 15px; }
