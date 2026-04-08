@@ -63,9 +63,11 @@
             '<div class="card-dir">' + s.workingDir + '</div>' +
             '<div class="card-meta">Active ' + timeAgo(s.lastActive) + '</div>' +
             (hasWorkingDir ? '<div class="card-git"></div>' : '') +
+            '<div class="card-services"></div>' +
             '<div class="card-actions">' +
                 '<button class="open-btn">Open Terminal</button>' +
                 prBtn +
+                '<button class="svc-btn">Check Services</button>' +
                 itermBtn +
                 '<button class="danger delete-btn">Delete</button>' +
             '</div>';
@@ -96,6 +98,34 @@
                     });
             });
         }
+
+        card.querySelector('.svc-btn').addEventListener('click', function (e) {
+            e.stopPropagation();
+            var btn = e.target;
+            var svcDiv = card.querySelector('.card-services');
+            btn.disabled = true;
+            btn.textContent = '…';
+            fetch('/api/sessions/' + s.id + '/service-health')
+                .then(function (r) { requireAuth(r); return r.json(); })
+                .then(function (ports) {
+                    if (ports.length === 0) {
+                        svcDiv.innerHTML = '<span class="svc-none">no services detected</span>';
+                    } else {
+                        svcDiv.innerHTML = ports.map(function (p) {
+                            return '<a class="svc-badge" href="http://localhost:' + p.port +
+                                   '" target="_blank" onclick="event.stopPropagation()" title="' +
+                                   p.responseMs + 'ms">● ' + p.port + '</a>';
+                        }).join('');
+                    }
+                    btn.disabled = false;
+                    btn.textContent = 'Check Services';
+                })
+                .catch(function () {
+                    svcDiv.innerHTML = '<span class="svc-none">check failed</span>';
+                    btn.disabled = false;
+                    btn.textContent = 'Check Services';
+                });
+        });
 
         if (isLocalhost) {
             card.querySelector('.iterm-btn').addEventListener('click', function (e) {

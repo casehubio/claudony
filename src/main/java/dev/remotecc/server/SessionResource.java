@@ -14,6 +14,12 @@ import java.util.UUID;
 import java.io.OutputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Path("/api/sessions")
@@ -257,6 +263,40 @@ public class SessionResource {
                 return Response.serverError().build();
             }
         }).orElse(Response.status(404).build());
+    }
+
+    private static final List<Integer> DEFAULT_PORTS =
+            List.of(3000, 3001, 4000, 4200, 5000, 5173, 8000, 8080, 8081, 8888);
+
+    @GET
+    @Path("/{id}/service-health")
+    public Response serviceHealth(@PathParam("id") String id) {
+        if (registry.find(id).isEmpty()) return Response.status(404).build();
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var tasks = DEFAULT_PORTS.stream()
+                    .<Callable<PortStatus>>map(port -> () -> checkPort(port))
+                    .toList();
+            var results = new ArrayList<PortStatus>();
+            for (var future : executor.invokeAll(tasks)) {
+                var status = future.get();
+                if (status.up()) results.add(status);
+            }
+            results.sort((a, b) -> Integer.compare(a.port(), b.port()));
+            return Response.ok(results).build();
+        } catch (Exception e) {
+            LOG.errorf("Failed to check service health: %s", e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    private PortStatus checkPort(int port) {
+        var start = System.currentTimeMillis();
+        try (var socket = new Socket()) {
+            socket.connect(new InetSocketAddress("localhost", port), 500);
+            return new PortStatus(port, true, System.currentTimeMillis() - start);
+        } catch (Exception e) {
+            return new PortStatus(port, false, 0);
+        }
     }
 
     private record RunResult(int exitCode, String stdout, String stderr) {

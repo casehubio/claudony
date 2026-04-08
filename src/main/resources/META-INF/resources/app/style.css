@@ -91,7 +91,14 @@ button.danger { background: var(--danger); }
 .pr-btn:hover { background: #254a25; }
 .pr-btn:disabled { opacity: 0.5; cursor: default; }
 
-.card-git { font-size: 12px; margin-bottom: 10px; min-height: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.card-git { font-size: 12px; margin-bottom: 6px; min-height: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.card-services { font-size: 12px; margin-bottom: 10px; min-height: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.svc-badge { color: #3fb950; text-decoration: none; font-family: var(--mono); }
+.svc-badge:hover { text-decoration: underline; }
+.svc-none { color: var(--text-dim); font-style: italic; }
+.svc-btn { background: #1c2a3a; color: #6db0d0; border: 1px solid #2a4a6a; }
+.svc-btn:hover { background: #1c3550; }
+.svc-btn:disabled { opacity: 0.5; cursor: default; }
 .git-branch { font-family: var(--mono); color: var(--text-dim); }
 .git-none { color: var(--text-dim); font-style: italic; }
 .git-error { color: #e07070; }
