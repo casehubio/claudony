@@ -109,15 +109,10 @@
     function sendCompose() {
         var text = textarea.value;
         if (!text) { closeCompose(); return; }
-        var base = '/api/sessions/' + sessionId + '/input';
-        var opts = function (t) {
-            return { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({ text: t }) };
-        };
-        // Clear current prompt line (Ctrl+A + Ctrl+K), then send composed text
-        fetch(base, opts('\x01\x0b'))
-            .then(function () { return fetch(base, opts(text)); })
-            .catch(function () {});
+        // terminal.paste() fires xterm.js onData, which AttachAddon forwards to
+        // the WebSocket. Handles bracketed paste mode correctly (\x1b[200~...\x1b[201~).
+        // Direct ws.send() bypasses AttachAddon and breaks when it reconnects.
+        terminal.paste(text);
         textarea.value = '';
         closeCompose();
     }
