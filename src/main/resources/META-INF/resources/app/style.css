@@ -93,6 +93,7 @@ button.danger { background: var(--danger); }
 
 .card-git { font-size: 12px; margin-bottom: 6px; min-height: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .card-services { font-size: 12px; margin-bottom: 10px; min-height: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.svc-label { font-size: 11px; color: var(--text-dim); margin-right: 4px; }
 .svc-badge { color: #3fb950; text-decoration: none; font-family: var(--mono); }
 .svc-badge:hover { text-decoration: underline; }
 .svc-none { color: var(--text-dim); font-style: italic; }

@@ -109,12 +109,12 @@
                 .then(function (r) { requireAuth(r); return r.json(); })
                 .then(function (ports) {
                     if (ports.length === 0) {
-                        svcDiv.innerHTML = '<span class="svc-none">no services detected</span>';
+                        svcDiv.innerHTML = '<span class="svc-label">Services:</span><span class="svc-none">none detected</span>';
                     } else {
-                        svcDiv.innerHTML = ports.map(function (p) {
+                        svcDiv.innerHTML = '<span class="svc-label">Services:</span>' + ports.map(function (p) {
                             return '<a class="svc-badge" href="http://localhost:' + p.port +
-                                   '" target="_blank" onclick="event.stopPropagation()" title="' +
-                                   p.responseMs + 'ms">● ' + p.port + '</a>';
+                                   '" target="_blank" onclick="event.stopPropagation()" title="port ' +
+                                   p.port + ' responded in ' + p.responseMs + 'ms">● :' + p.port + '</a>';
                         }).join('');
                     }
                     btn.disabled = false;
