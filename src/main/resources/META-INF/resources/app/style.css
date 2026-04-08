@@ -166,6 +166,39 @@ body.terminal-page { display: flex; flex-direction: column; height: 100vh; overf
 }
 .key-bar button:hover { background: var(--accent); color: #fff; }
 
+.compose-btn {
+    font-size: 12px; padding: 4px 10px; background: #2a2a3c;
+    color: #a0a0d0; border: 1px solid #4a4a6a; flex-shrink: 0;
+}
+.compose-btn:hover { background: #3a3a5c; }
+
+.compose-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.compose-overlay.hidden { display: none; }
+.compose-dialog {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; width: min(640px, 90vw);
+    display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.compose-header { display: flex; justify-content: space-between; align-items: baseline; }
+.compose-header span:first-child { font-weight: 600; font-size: 14px; }
+.compose-hint { font-size: 11px; color: var(--text-dim); }
+.compose-textarea {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 10px; font-family: var(--mono); font-size: 14px;
+    resize: vertical; min-height: 120px; outline: none;
+    line-height: 1.5;
+}
+.compose-textarea:focus { border-color: var(--accent); }
+.compose-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.compose-send { background: var(--accent); }
+.compose-cancel { background: var(--border); }
+
 @media (max-width: 600px) {
     #session-grid { padding: 16px; gap: 12px; grid-template-columns: 1fr; }
     header { padding: 12px 16px; }

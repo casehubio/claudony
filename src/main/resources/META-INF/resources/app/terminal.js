@@ -82,12 +82,58 @@
 
     connect();
 
-    document.querySelectorAll('#key-bar button').forEach(function (btn) {
+    document.querySelectorAll('#key-bar button[data-code]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(btn.dataset.code);
             }
             terminal.focus();
         });
+    });
+
+    // Compose overlay
+    var overlay = document.getElementById('compose-overlay');
+    var textarea = document.getElementById('compose-textarea');
+
+    function openCompose() {
+        overlay.classList.remove('hidden');
+        textarea.focus();
+        textarea.select();
+    }
+
+    function closeCompose() {
+        overlay.classList.add('hidden');
+        terminal.focus();
+    }
+
+    function sendCompose() {
+        var text = textarea.value;
+        if (!text || !ws || ws.readyState !== WebSocket.OPEN) { closeCompose(); return; }
+        ws.send('\x01\x0b');   // Ctrl+A + Ctrl+K: clear current prompt line
+        ws.send(text);
+        textarea.value = '';
+        closeCompose();
+    }
+
+    document.getElementById('compose-btn').addEventListener('click', openCompose);
+    document.getElementById('compose-key-btn').addEventListener('click', openCompose);
+    document.getElementById('compose-send-btn').addEventListener('click', sendCompose);
+    document.getElementById('compose-cancel-btn').addEventListener('click', closeCompose);
+
+    textarea.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendCompose(); }
+        if (e.key === 'Escape') { e.preventDefault(); closeCompose(); }
+    });
+
+    // Ctrl+G anywhere on the terminal page opens compose
+    document.addEventListener('keydown', function (e) {
+        if (e.ctrlKey && e.key === 'g' && overlay.classList.contains('hidden')) {
+            e.preventDefault();
+            openCompose();
+        }
+    });
+
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeCompose();
     });
 })();

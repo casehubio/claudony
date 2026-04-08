@@ -14,6 +14,7 @@
         <a href="/app/" id="back-btn">&#8592; Dashboard</a>
         <span id="session-name">Session</span>
         <span id="status-badge" class="badge idle">connecting</span>
+        <button id="compose-btn" class="compose-btn" title="Compose text (Ctrl+G)">Compose</button>
     </header>
 
     <div id="terminal-container"></div>
@@ -30,6 +31,21 @@
         <button data-code="&#x1b;[B">&#8595;</button>
         <button data-code="&#x1b;[C">&#8594;</button>
         <button data-code="&#x1b;[D">&#8592;</button>
+        <button id="compose-key-btn">Compose</button>
+    </div>
+
+    <div id="compose-overlay" class="compose-overlay hidden">
+        <div class="compose-dialog">
+            <div class="compose-header">
+                <span>Compose</span>
+                <span class="compose-hint">Ctrl+Enter to send · Esc to cancel</span>
+            </div>
+            <textarea id="compose-textarea" class="compose-textarea" placeholder="Type your message here — full mouse editing supported" rows="6" spellcheck="false"></textarea>
+            <div class="compose-actions">
+                <button id="compose-send-btn" class="compose-send">Send</button>
+                <button id="compose-cancel-btn" class="compose-cancel">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/lib/xterm.js"></script>
