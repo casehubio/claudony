@@ -181,18 +181,17 @@ body.terminal-page { display: flex; flex-direction: column; height: 100vh; overf
 .compose-dialog {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px; padding: 16px; width: min(640px, 90vw);
-    display: flex; flex-direction: column; gap: 12px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
-.compose-header { display: flex; justify-content: space-between; align-items: baseline; }
+.compose-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
 .compose-header span:first-child { font-weight: 600; font-size: 14px; }
 .compose-hint { font-size: 11px; color: var(--text-dim); }
 .compose-textarea {
-    width: 100%; background: var(--bg); color: var(--text);
+    display: block; width: 100%; background: var(--bg); color: var(--text);
     border: 1px solid var(--border); border-radius: 4px;
     padding: 10px; font-family: var(--mono); font-size: 14px;
     resize: vertical; min-height: 120px; outline: none;
-    line-height: 1.5;
+    line-height: 1.5; margin-bottom: 10px;
 }
 .compose-textarea:focus { border-color: var(--accent); }
 .compose-actions { display: flex; gap: 8px; justify-content: flex-end; }

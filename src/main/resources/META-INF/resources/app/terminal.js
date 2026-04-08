@@ -108,9 +108,16 @@
 
     function sendCompose() {
         var text = textarea.value;
-        if (!text || !ws || ws.readyState !== WebSocket.OPEN) { closeCompose(); return; }
-        ws.send('\x01\x0b');   // Ctrl+A + Ctrl+K: clear current prompt line
-        ws.send(text);
+        if (!text) { closeCompose(); return; }
+        var base = '/api/sessions/' + sessionId + '/input';
+        var opts = function (t) {
+            return { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ text: t }) };
+        };
+        // Clear current prompt line (Ctrl+A + Ctrl+K), then send composed text
+        fetch(base, opts('\x01\x0b'))
+            .then(function () { return fetch(base, opts(text)); })
+            .catch(function () {});
         textarea.value = '';
         closeCompose();
     }
