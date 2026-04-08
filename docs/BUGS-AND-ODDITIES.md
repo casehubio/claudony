@@ -390,3 +390,22 @@ This uses the OSC 52 clipboard protocol, which is supported by xterm.js via
 auto-fix.
 
 Required tmux version: 3.2+ (tmux 3.6a is installed on this machine).
+
+---
+
+## 19. Quarkus WebAuthn Default Login Redirect Goes to `/login.html` (Not Found)
+
+**Symptom:** Accessing `/app/` without authentication redirects to `/login.html`,
+which returns `Resource not found`. The actual login page is at `/auth/login`.
+
+**Root cause:** `quarkus-security-webauthn` defaults `quarkus.webauthn.login-page`
+to `/login.html`. This is a framework-owned property with a hardcoded default that
+exists independently of your actual login page routing.
+
+**Fix:** Set the property explicitly in `application.properties`:
+```properties
+quarkus.webauthn.login-page=/auth/login
+```
+
+**Discoverable via:** `javap io.quarkus.security.webauthn.WebAuthnRunTimeConfig` —
+`loginPage()` method is on the config interface. Not prominently documented.
