@@ -109,12 +109,19 @@
     function sendCompose() {
         var text = textarea.value;
         if (!text) { closeCompose(); return; }
-        // terminal.paste() fires xterm.js onData, which AttachAddon forwards to
-        // the WebSocket. Handles bracketed paste mode correctly (\x1b[200~...\x1b[201~).
-        // Direct ws.send() bypasses AttachAddon and breaks when it reconnects.
-        terminal.paste(text);
         textarea.value = '';
         closeCompose();
+        // Clear current prompt line (Ctrl+A + Ctrl+K) via REST, then paste text.
+        // Small delay lets tmux process the clear before the paste arrives.
+        fetch('/api/sessions/' + sessionId + '/input', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: '\x01\x0b' })
+        }).then(function () {
+            setTimeout(function () { terminal.paste(text); }, 80);
+        }).catch(function () {
+            terminal.paste(text);  // clear failed — paste anyway
+        });
     }
 
     document.getElementById('compose-btn').addEventListener('click', openCompose);
