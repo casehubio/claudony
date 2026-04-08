@@ -53,6 +53,10 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dremotecc.mode=server
 # See docs/BUGS-AND-ODDITIES.md entry #1 for details.
 
 # Start JVM jar (IMPORTANT: -D flags must come BEFORE -jar, not after)
+# Also set QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY so auth cookies survive restarts.
+# Without it, a new random key is generated each restart and all sessions are logged out.
+# The application.properties has a fallback dev key, but prod mode generates a random one.
+QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<your-secret-32-chars> \
 JAVA_HOME=$(/usr/libexec/java_home -v 26) java \
   -Dremotecc.mode=server -Dremotecc.bind=0.0.0.0 \
   -jar target/quarkus-app/quarkus-run.jar

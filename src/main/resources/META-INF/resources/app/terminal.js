@@ -111,17 +111,7 @@
         if (!text) { closeCompose(); return; }
         textarea.value = '';
         closeCompose();
-        // Clear current prompt line (Ctrl+A + Ctrl+K) via REST, then paste text.
-        // Small delay lets tmux process the clear before the paste arrives.
-        fetch('/api/sessions/' + sessionId + '/input', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: '\x01\x0b' })
-        }).then(function () {
-            setTimeout(function () { terminal.paste(text); }, 80);
-        }).catch(function () {
-            terminal.paste(text);  // clear failed — paste anyway
-        });
+        terminal.paste(text);
     }
 
     document.getElementById('compose-btn').addEventListener('click', openCompose);
