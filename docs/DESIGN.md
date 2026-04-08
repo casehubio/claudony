@@ -1,13 +1,13 @@
 # RemoteCC — Design Document
 
-**Last updated:** 2026-04-06
+**Last updated:** 2026-04-08
 **Status:** Active
 
 ---
 
 ## Overview
 
-RemoteCC lets you run Claude Code CLI sessions on one machine (MacBook or headless Mac Mini) and access them from any device via a browser or PWA. Sessions persist independently — closing a browser tab or iTerm2 window never kills a session.
+RemoteCC lets you run Claude Code CLI sessions on one machine (a laptop or headless mini PC) and access them from any device via a browser or PWA. Sessions persist independently — closing a browser tab or iTerm2 window never kills a session.
 
 A single Quarkus binary operates in two modes:
 
@@ -86,9 +86,11 @@ The Agent exposes `POST /mcp` as a synchronous JSON-RPC endpoint. Claude Code co
 | Client | Mechanism | Detail |
 |--------|-----------|--------|
 | Browser / PWA | WebAuthn passkeys | `quarkus-security-webauthn`; Touch ID / Face ID; iCloud Keychain sync |
-| Agent | `X-Api-Key` header | Pre-shared key; checked by `ApiKeyAuthMechanism` |
+| Agent | `X-Api-Key` header | Auto-provisioned key; checked by `ApiKeyAuthMechanism` |
 
 Both mechanisms are tried in turn on every request.
+
+**API key provisioning:** `ApiKeyService` resolves the key via a priority chain: (1) explicit config property `remotecc.agent.api-key`, (2) `~/.remotecc/api-key` file, (3) auto-generate a random key. On first run the generated key is written to file with `chmod 600`, and a banner is logged to stdout. Both Server and Agent call `ApiKeyService.autoInit()` at startup so they share the same key via the filesystem without manual configuration.
 
 **Apple passkey compatibility:** iCloud Keychain passkeys always respond with `fmt=none` attestation even when the server requests direct attestation, but include a non-zero AAGUID. Vert.x `NoneAttestation` rejects this. `WebAuthnPatcher` replaces the `"none"` handler in Vert.x's attestation map at startup with `LenientNoneAttestation`, which skips the AAGUID check while still enforcing that `attStmt` is empty. Valid session cookie or valid API key → authenticated as role `user`.
 
@@ -171,7 +173,9 @@ Claude → POST /mcp → McpServer.dispatch()
 
 | Path | Purpose |
 |------|---------|
-| `~/.remotecc/` | System state (credentials.json, config) — hidden, `rw-------` |
+| `~/.remotecc/` | System state — hidden, `rw-------` |
+| `~/.remotecc/credentials.json` | WebAuthn credentials (configurable via `remotecc.credentials-file`) |
+| `~/.remotecc/api-key` | Auto-generated Agent API key; shared by Server and Agent |
 | `~/remotecc-workspace/` | Default session working directory — visible, user-facing |
 
 Both created on server startup if absent.
@@ -189,6 +193,9 @@ Both created on server startup if absent.
 
 ## Related Documents
 
+- [ADR-0001: Terminal streaming via pipe-pane and FIFO](adr/ADR-0001-terminal-streaming-pipe-pane-fifo.md)
+- [ADR-0002: MCP transport via HTTP JSON-RPC](adr/ADR-0002-mcp-transport-http-json-rpc.md)
+- [ADR-0003: Authentication via WebAuthn passkeys and API key](adr/ADR-0003-authentication-webauthn-api-key.md)
 - [Auth design spec](superpowers/specs/2026-04-05-auth-design.md)
 - [Known bugs and oddities](BUGS-AND-ODDITIES.md)
 - [Design snapshots](design-snapshots/) — immutable point-in-time records
