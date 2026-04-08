@@ -109,10 +109,20 @@ public class SessionResource {
         return registry.find(id).map(session -> {
             try {
                 var newTmuxName = config.tmuxPrefix() + newName;
+                boolean duplicate = registry.all().stream().anyMatch(s -> s.name().equals(newTmuxName));
+                if (duplicate) {
+                    return Response.status(409)
+                            .entity("{\"error\":\"Session '" + newTmuxName + "' already exists\"}")
+                            .build();
+                }
                 var p = new ProcessBuilder("tmux", "rename-session", "-t", session.name(), newTmuxName)
                         .redirectErrorStream(true).start();
-                p.getInputStream().transferTo(java.io.OutputStream.nullOutputStream());
-                p.waitFor();
+                p.getInputStream().transferTo(OutputStream.nullOutputStream());
+                int exitCode = p.waitFor();
+                if (exitCode != 0) {
+                    LOG.errorf("tmux rename-session exited %d for session '%s' -> '%s'", exitCode, session.name(), newTmuxName);
+                    return Response.serverError().build();
+                }
                 var renamed = new Session(id, newTmuxName, session.workingDir(),
                         session.command(), session.status(), session.createdAt(), Instant.now());
                 registry.register(renamed);

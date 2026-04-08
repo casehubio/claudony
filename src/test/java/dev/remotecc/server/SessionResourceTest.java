@@ -155,4 +155,28 @@ class SessionResourceTest {
             .when().post("/api/sessions/" + id + "/resize?cols=120&rows=40")
             .then().statusCode(204);
     }
+
+    @Test
+    @Order(11)
+    void renameSessionToExistingNameReturns409AndDoesNotUpdateRegistry() {
+        var idA = given().contentType("application/json")
+            .body("{\"name\":\"test-rename-conflict-a\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
+            .when().post("/api/sessions")
+            .then().statusCode(201).extract().<String>path("id");
+
+        var idB = given().contentType("application/json")
+            .body("{\"name\":\"test-rename-conflict-b\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
+            .when().post("/api/sessions")
+            .then().statusCode(201).extract().<String>path("id");
+
+        // Try to rename B to A's name — should conflict
+        given().when().patch("/api/sessions/" + idB + "/rename?name=test-rename-conflict-a")
+            .then()
+            .statusCode(409)
+            .body("error", containsString("remotecc-test-rename-conflict-a"));
+
+        // Registry must still reflect B's original name
+        given().when().get("/api/sessions/" + idB)
+            .then().statusCode(200).body("name", equalTo("remotecc-test-rename-conflict-b"));
+    }
 }

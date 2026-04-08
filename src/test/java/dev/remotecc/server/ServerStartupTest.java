@@ -1,5 +1,6 @@
 package dev.remotecc.server;
 
+import dev.remotecc.config.RemoteCCConfig;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
@@ -8,21 +9,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @QuarkusTest
 class ServerStartupTest {
 
-    @Inject
-    SessionRegistry registry;
-
-    @Inject
-    TmuxService tmux;
-
-    @Inject
-    ServerStartup serverStartup;
+    @Inject RemoteCCConfig config;
+    @Inject SessionRegistry registry;
+    @Inject TmuxService tmux;
+    @Inject ServerStartup serverStartup;
 
     @Test
     void registryIsBootstrappedFromTmuxOnStartup() throws Exception {
         var tmuxNames = tmux.listSessionNames();
         var registryNames = registry.all().stream().map(s -> s.name()).toList();
         tmuxNames.stream()
-                .filter(n -> n.startsWith("remotecc-"))
+                .filter(n -> n.startsWith(config.tmuxPrefix()))
                 .forEach(name ->
                     assertTrue(registryNames.contains(name),
                         "Expected registry to contain tmux session: " + name));
@@ -30,7 +27,7 @@ class ServerStartupTest {
 
     @Test
     void bootstrapRegistryPicksUpTmuxSessionsCreatedAfterStartup() throws Exception {
-        var sessionName = "remotecc-bootstrap-test-" + System.currentTimeMillis();
+        var sessionName = config.tmuxPrefix() + "bootstrap-test-" + System.currentTimeMillis();
         tmux.createSession(sessionName, System.getProperty("user.home"), "bash");
 
         try {
