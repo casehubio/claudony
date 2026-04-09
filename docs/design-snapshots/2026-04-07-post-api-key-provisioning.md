@@ -2,7 +2,7 @@
 **Date:** 2026-04-07
 **Topic:** Post API key provisioning — deployment-ready
 **Supersedes:** [2026-04-07-post-native-build-webauthn-fixes](2026-04-07-post-native-build-webauthn-fixes.md)
-**Superseded by:** *(leave blank — filled in if this snapshot is later superseded)*
+**Superseded by:** [2026-04-09-post-dashboard-features](2026-04-09-post-dashboard-features.md)
 
 ---
 
