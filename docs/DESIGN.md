@@ -1,6 +1,5 @@
 # RemoteCC — Design Document
 
-**Last updated:** 2026-04-08
 **Status:** Active
 
 ---
@@ -38,16 +37,20 @@ dev.remotecc
 │       ├── InviteService          — one-time invite token generation and validation
 │       ├── LenientNoneAttestation — Vert.x attestation override: accepts non-zero AAGUID
 │       └── WebAuthnPatcher        — startup bean that swaps the "none" handler via reflection
-└── agent/
-    ├── ServerClient            — typed REST client to Server (@RegisterRestClient)
-    ├── ApiKeyClientFilter      — injects X-Api-Key on all ServerClient calls
-    ├── McpServer               — JSON-RPC POST /mcp (8 session-management tools)
-    ├── ClipboardChecker        — tmux clipboard detection/fix
-    ├── AgentStartup            — Agent-mode startup checks
-    └── terminal/
-        ├── TerminalAdapter     — pluggable terminal interface
-        ├── ITerm2Adapter       — macOS AppleScript + tmux -CC
-        └── TerminalAdapterFactory — auto-detection (iterm2 | none)
+├── agent/
+│   ├── ServerClient            — typed REST client to Server (@RegisterRestClient)
+│   ├── ApiKeyClientFilter      — injects X-Api-Key on all ServerClient calls
+│   ├── McpServer               — JSON-RPC POST /mcp (8 session-management tools)
+│   ├── ClipboardChecker        — tmux clipboard detection/fix
+│   ├── AgentStartup            — Agent-mode startup checks
+│   └── terminal/
+│       ├── TerminalAdapter     — pluggable terminal interface
+│       ├── ITerm2Adapter       — macOS AppleScript + tmux -CC
+│       └── TerminalAdapterFactory — auto-detection (iterm2 | none)
+└── (frontend — served from META-INF/resources/)
+    ├── dashboard               — session card list; PR/CI badges; service health badges
+    ├── terminal view           — xterm.js; compose overlay for multi-line input
+    └── auth pages              — WebAuthn registration/login flows
 ```
 
 ---
@@ -75,7 +78,15 @@ Sessions live in tmux independently of the Quarkus process. On server restart, `
 
 ### MCP Transport: HTTP JSON-RPC
 
-The Agent exposes `POST /mcp` as a synchronous JSON-RPC endpoint. Claude Code connects to it as an MCP server via `--mcp-config`. HTTP transport is GraalVM-native compatible — no stdio subprocess needed. The `mcpServers` wrapper key in the config file is required (matches the `settings.json` schema).
+The Agent exposes `POST /mcp` as a synchronous JSON-RPC endpoint. Claude Code connects to it as an MCP server via `--mcp-config`. HTTP transport is GraalVM-native compatible — no stdio subprocess needed. The `mcpServers` wrapper key in the config file is required (matches the `settings.json` schema); omitting it produces a silent schema validation error — no session is created.
+
+### Dashboard Features
+
+**PR/CI status** — fetched on demand (button click), not auto-polled. Avoids GitHub API rate limits; keeps the dashboard lightweight.
+
+**Service health** — `Socket.connect()` with a 500 ms timeout, run in parallel via virtual threads. Works for any TCP service, not just HTTP endpoints.
+
+**Compose overlay** — a full browser text editor overlaid on the terminal view for multi-line Claude Code prompts. Sends via `terminal.paste()` (xterm.js API) rather than raw WebSocket write — routes through the AttachAddon pipeline and handles bracketed paste mode correctly. Inserts at cursor position without pre-clearing the prompt. The iTerm2 open-session button is only shown when `window.location.hostname` is localhost — iTerm2 only works when server and browser are co-located.
 
 ---
 
@@ -136,7 +147,7 @@ Client → POST /api/sessions → SessionResource
 
 ```
 Browser → WS /ws/{id} → TerminalWebSocket.onOpen()
-  → TmuxService.resizePane(cols, rows)
+  → TmuxService.resizeWindow(cols, rows)    ← resize-window, not resize-pane (works for detached)
   → TmuxService.captureHistory() → send to client
   → TmuxService.pipePaneToFifo(name, fifo)
   → virtual thread reads FIFO → send to client
@@ -191,6 +202,67 @@ Both created on server startup if absent.
 
 ---
 
+## Key Design Decisions
+
+| Decision | Chosen | Why | Alternatives Rejected |
+|---|---|---|---|
+| Terminal streaming | `tmux pipe-pane` + named FIFO | ProcessBuilder cannot provide a PTY; pipe-pane works headless | `tmux attach-session` (requires PTY — fails in JVM) |
+| History replay on reconnect | `tmux capture-pane -e -p -S -100` sent synchronously before pipe-pane | Avoids race condition; ANSI colour preserved | Replay after pipe-pane starts (race condition corrupted first char) |
+| TUI redraw on connect | `tmux resize-window` to browser dimensions before pipe-pane starts | Delivers SIGWINCH; TUI redraws into live stream before user sees anything | Manual user resize (garbled until user acts) |
+| MCP transport | HTTP JSON-RPC (`POST /mcp`) | GraalVM-native compatible; no stdio process needed | SSE, stdio MCP (incompatible with native or headless) |
+| Browser auth | WebAuthn passkeys via `quarkus-security-webauthn` | No password to leak; Touch ID UX; invite-based onboarding | Passwords (extra secret to manage), basic auth (weak) |
+| Agent→Server auth | `X-Api-Key` header | Simple, stateless, fits headless Agent | Session cookies (require browser-style session management) |
+| Credential storage | JSON file at `~/.remotecc/credentials.json` (atomic write, `rw-------`) | Self-contained, no database dependency | Database, system keychain |
+| Directory convention | `~/.remotecc/` config, `~/remotecc-workspace/` sessions | Hidden dot-dir for system state; visible dir for user work | Single directory (mixes credentials with user files) |
+| E2E test strategy | Side-effect assertions (tmux state) not LLM output | LLM output is non-deterministic; tmux state is not | Assert on Claude's words (fragile across model versions) |
+| `--mcp-config` format | `mcpServers` wrapper required (same schema as `settings.json`) | Discovered via failed run; some plugin examples misleadingly omit it | Top-level server names (produces silent schema validation error) |
+| Rate limiter placement | Vert.x `@Observes Router` handler | Covers WebAuthn ceremony paths (`/q/webauthn/*`) which bypass JAX-RS | JAX-RS `ContainerRequestFilter` (misses extension-managed paths) |
+| Rate limiter state | Sliding window (`ArrayDeque<Instant>` per IP, synchronized) | Simple, in-memory, no dependency | Fixed window (allows burst at boundary), token bucket (more complex) |
+| Clock injection | `Supplier<Instant>` field + `setClockForTest()` | Zero production overhead; avoids Mockito `mockStatic` or `Thread.sleep` | `java.time.Clock` injection (heavier), `mockStatic` (error-prone) |
+| `@QuarkusTest` isolation | `resetForTest()` + `@AfterEach` in stateful beans | All `@QuarkusTest` classes share one app instance; without cleanup, state bleeds | No cleanup (causes misleading test failures in unrelated classes) |
+| WebAuthn RP config keys | `relying-party.id`, `relying-party.name`, `origin` (singular) | Correct SmallRye Config field names from `WebAuthnRunTimeConfig` bytecode | `rp.id`, `rp.name`, `origins` — standard spec abbreviations but silently ignored |
+| Session encryption key config | `quarkus.http.auth.session.encryption-key` | Actual `@ConfigItem` annotation name on `HttpConfiguration.encryptionKey` | `quarkus.http.encryption-key` — field name guess, silently ignored |
+| Dev encryption key | Fixed value in `%dev` profile | Sessions survive restarts in dev — no re-authentication on every code change | Random key per startup |
+| Apple passkey compatibility | `LenientNoneAttestation` via `WebAuthnPatcher` | iCloud Keychain passkeys always return `fmt=none` with non-zero AAGUID; Vert.x rejects this | Disable attestation entirely (weakens security model) |
+| API key provisioning | First-run wizard: auto-generate, persist to `~/.remotecc/api-key`, log banner | Zero config for same-machine setup; self-documenting; survives restarts | Env var in launchd plist (opaque); interactive stdin prompt (most work) |
+| Key resolution order | Config property → file → auto-generate | Explicit always wins; file enables same-machine auto-discovery | Single-source (config only) — requires manual setup every time |
+| Agent degraded mode | Warn prominently and start anyway | Consistent with "server not reachable" handling; 401 errors are self-explanatory | Hard fail on startup (breaks workflow when server isn't ready) |
+| PR/CI status | On-demand fetch (button click) | Avoids GitHub API rate limits; keeps dashboard lightweight | Auto-refresh every 5s |
+| Service health | `Socket.connect()` with 500ms timeout, parallel virtual threads | Works for any TCP service; fast | HTTP GET (HTTP-only, more complex) |
+| Compose send method | `terminal.paste()` xterm.js API | Routes through AttachAddon; handles bracketed paste mode correctly | `ws.send()` — bypasses AttachAddon, breaks on reconnect |
+| iTerm2 button visibility | `window.location.hostname` localhost-only check | iTerm2 only works when server is co-located with the browser | Show always (broken on mini PC) |
+| Stable session encryption | `QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY` env var | Prevents cookie invalidation on server restart | Random key per restart (Quarkus default) |
+
+---
+
+## Testing
+
+**139 tests passing** (as of 2026-04-09). Three layers:
+- **Unit tests** — plain JUnit, no Quarkus container; stateful beans use `resetForTest()` + `@AfterEach`
+- **Integration tests** (`@QuarkusTest`) — full Quarkus context; all `@QuarkusTest` classes share one app instance
+- **E2E tests** — assert tmux session state (pane content, session existence), not Claude's output; LLM output is non-deterministic, tmux state is not
+
+---
+
+## Next Steps
+
+- Deploy to mini PC (headless, no iTerm2) — write `docs/DEPLOYMENT.md`
+- Session expiry — `Max-Age` cookies (currently session-scoped, expire on browser close)
+- Auto-naming sessions via Claude API
+- Lifecycle hooks — scripts on session create/delete
+
+---
+
+## Open Questions
+
+- Session expiry: `Max-Age` requires intercepting Quarkus internal cookie issuance — is this worth doing vs accepting browser-close expiry?
+- Mini PC deployment: will `gh` CLI be available for PR/CI status? May need setup documentation
+- Service health ports: should the checked port list be configurable per session, or is the fixed default set sufficient?
+- Docker sandbox per session: worthwhile before wider use, or is tmux namespacing sufficient?
+- Credential store multi-user: should it eventually support multiple named users, or remain single-owner?
+
+---
+
 ## Related Documents
 
 - [ADR-0001: Terminal streaming via pipe-pane and FIFO](adr/ADR-0001-terminal-streaming-pipe-pane-fifo.md)
@@ -198,4 +270,3 @@ Both created on server startup if absent.
 - [ADR-0003: Authentication via WebAuthn passkeys and API key](adr/ADR-0003-authentication-webauthn-api-key.md)
 - [Auth design spec](superpowers/specs/2026-04-05-auth-design.md)
 - [Known bugs and oddities](BUGS-AND-ODDITIES.md)
-- [Design snapshots](design-snapshots/) — immutable point-in-time records
