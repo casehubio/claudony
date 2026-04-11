@@ -55,13 +55,13 @@ nav.site-nav {
 }
 .nav-links a:hover { color: var(--text); }
 
-.nav-github {
+.nav-links a.nav-github {
   padding: 7px 18px;
   border: 1px solid rgba(160,96,255,0.35);
-  border-radius: 50px; color: var(--violet) !important;
+  border-radius: 50px; color: var(--violet);
   transition: background 0.15s;
 }
-.nav-github:hover { background: rgba(160,96,255,0.1); }
+.nav-links a.nav-github:hover { background: rgba(160,96,255,0.1); }
 
 /* ── SHARED SECTION UTILITIES ── */
 section { position: relative; overflow: hidden; }
@@ -111,6 +111,17 @@ section { position: relative; overflow: hidden; }
   cursor: pointer; letter-spacing: 0.3px; font-family: var(--font);
   text-decoration: underline; text-underline-offset: 4px;
   text-decoration-color: rgba(255,255,255,0.2);
+}
+.btn-ghost:hover { color: var(--text); text-decoration-color: rgba(255,255,255,0.4); }
+
+/* ── FOCUS (keyboard navigation) ── */
+:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.btn-primary:focus-visible {
+  outline-color: var(--green);
 }
 
 /* ── STATUS DOTS ── */
