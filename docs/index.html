@@ -1,0 +1,121 @@
+---
+layout: landing
+title: Home
+---
+
+<!-- 1. HERO -->
+<section id="hero">
+  <div class="hero-ambient"></div>
+  <div class="orb" style="width:400px;height:400px;top:-100px;right:-80px;background:radial-gradient(circle,rgba(140,0,255,0.14),transparent 70%)"></div>
+  <div class="orb" style="width:300px;height:300px;bottom:0;left:-60px;background:radial-gradient(circle,rgba(0,255,170,0.07),transparent 70%)"></div>
+
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="hero-eyebrow">Remote colony intelligence</div>
+        <h1 class="hero-h1">
+          Your Claude sessions,<br>
+          <strong>alive</strong> and <em>everywhere</em>
+        </h1>
+        <p class="hero-sub">
+          Run Claude Code on one machine. Access every session from any browser, any device. Sessions persist when you disconnect. One controller to orchestrate them all.
+        </p>
+        <div class="hero-cta">
+          <a href="#install" class="btn-primary">⬡ Deploy your colony</a>
+          <a href="#how" class="btn-ghost">See how it works ↓</a>
+        </div>
+        <div class="hero-status">
+          <div class="status-pill"><span class="dot dot-green"></span>3 sessions active</div>
+          <div class="status-pill"><span class="dot dot-violet"></span>Controller online</div>
+          <div class="status-pill"><span class="dot dot-dim"></span>2 dormant</div>
+        </div>
+      </div>
+
+      <!-- Colony network illustration -->
+      <svg viewBox="0 0 420 440" width="420" height="440" aria-hidden="true" focusable="false" style="display:block">
+        <defs>
+          <radialGradient id="hubGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#a060ff" stop-opacity="0.5"/>
+            <stop offset="60%"  stop-color="#7a2fff" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#a060ff" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="nodeG" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#00ffaa" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#00ffaa" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="nodeM" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#cc44ff" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#cc44ff" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="softglow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Hub ambient -->
+        <circle cx="210" cy="220" r="150" fill="url(#hubGrad)" opacity="0.6"/>
+
+        <!-- Controller hub rings -->
+        <circle cx="210" cy="220" r="52" fill="rgba(120,0,255,0.12)" stroke="rgba(160,96,255,0.2)" stroke-width="1" filter="url(#softglow)"/>
+        <circle cx="210" cy="220" r="36" fill="rgba(120,0,255,0.18)" stroke="rgba(160,96,255,0.4)" stroke-width="1.5"/>
+        <circle cx="210" cy="220" r="22" fill="rgba(140,0,255,0.3)"  stroke="rgba(160,96,255,0.7)" stroke-width="1.5" filter="url(#glow)"/>
+        <circle cx="210" cy="220" r="9"  fill="#a060ff" filter="url(#glow)">
+          <animate attributeName="opacity" values="1;0.5;1" dur="2.2s" repeatCount="indefinite"/>
+        </circle>
+        <text x="210" y="270" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(160,96,255,0.7)" font-weight="300" letter-spacing="2">CONTROLLER</text>
+
+        <!-- Organic connection paths -->
+        <path d="M210,220 Q260,150 330,95"  fill="none" stroke="rgba(0,255,170,0.25)"  stroke-width="1.5"/>
+        <path d="M210,220 Q145,130 85,80"   fill="none" stroke="rgba(0,255,170,0.2)"   stroke-width="1.5"/>
+        <path d="M210,220 Q310,220 385,200" fill="none" stroke="rgba(160,96,255,0.3)"  stroke-width="1.5"/>
+        <path d="M210,220 Q280,310 340,360" fill="none" stroke="rgba(204,68,255,0.15)" stroke-width="1" stroke-dasharray="4,5"/>
+        <path d="M210,220 Q130,300 75,360"  fill="none" stroke="rgba(204,68,255,0.12)" stroke-width="1" stroke-dasharray="4,5"/>
+
+        <!-- Active node: top-right -->
+        <circle cx="330" cy="95" r="32" fill="url(#nodeG)" opacity="0.5"/>
+        <circle cx="330" cy="95" r="18" fill="rgba(0,255,170,0.12)" stroke="rgba(0,255,170,0.5)" stroke-width="1.5" filter="url(#glow)"/>
+        <circle cx="330" cy="95" r="7"  fill="#00ffaa" filter="url(#glow)">
+          <animate attributeName="opacity" values="1;0.4;1" dur="1.8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="330" y="69" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(0,255,170,0.8)">api-dev</text>
+
+        <!-- Active node: top-left -->
+        <circle cx="85" cy="80" r="28" fill="url(#nodeG)" opacity="0.4"/>
+        <circle cx="85" cy="80" r="17" fill="rgba(0,255,170,0.1)" stroke="rgba(0,255,170,0.45)" stroke-width="1.5" filter="url(#glow)"/>
+        <circle cx="85" cy="80" r="7"  fill="#00ffaa" filter="url(#glow)">
+          <animate attributeName="opacity" values="1;0.4;1" dur="2.4s" repeatCount="indefinite"/>
+        </circle>
+        <text x="85" y="55" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(0,255,170,0.8)">frontend</text>
+
+        <!-- Active node: right -->
+        <circle cx="385" cy="200" r="26" fill="url(#nodeG)" opacity="0.35"/>
+        <circle cx="385" cy="200" r="16" fill="rgba(0,255,170,0.08)" stroke="rgba(0,255,170,0.4)" stroke-width="1.5" filter="url(#glow)"/>
+        <circle cx="385" cy="200" r="6"  fill="#00ffaa" opacity="0.9" filter="url(#glow)">
+          <animate attributeName="opacity" values="0.9;0.3;0.9" dur="3s" repeatCount="indefinite"/>
+        </circle>
+        <text x="385" y="230" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(0,255,170,0.7)">research</text>
+
+        <!-- Dormant node: bottom-right -->
+        <circle cx="340" cy="360" r="22" fill="url(#nodeM)" opacity="0.25"/>
+        <circle cx="340" cy="360" r="13" fill="rgba(204,68,255,0.06)" stroke="rgba(204,68,255,0.25)" stroke-width="1.2"/>
+        <circle cx="340" cy="360" r="5"  fill="rgba(204,68,255,0.4)"/>
+        <text x="340" y="383" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(204,68,255,0.4)">docs</text>
+        <text x="340" y="395" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(204,68,255,0.3)">dormant</text>
+
+        <!-- Dormant node: bottom-left -->
+        <circle cx="75" cy="360" r="20" fill="url(#nodeM)" opacity="0.2"/>
+        <circle cx="75" cy="360" r="12" fill="rgba(204,68,255,0.05)" stroke="rgba(204,68,255,0.2)" stroke-width="1"/>
+        <circle cx="75" cy="360" r="4"  fill="rgba(204,68,255,0.35)"/>
+        <text x="75" y="383" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(204,68,255,0.35)">infra</text>
+        <text x="75" y="395" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(204,68,255,0.25)">dormant</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
