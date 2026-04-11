@@ -1616,8 +1616,11 @@ Co-Authored-By: Claude Sonnet 4.6 (1M context) <noreply@anthropic.com>"
 
 ### Task 11: GitHub Pages setup and deploy
 
+**Note:** GitHub Pages "Deploy from branch" uses Jekyll 3.9.x and is incompatible with Jekyll 4.x. We must use GitHub Actions to build and deploy instead.
+
 **Files:**
 - Modify: `.gitignore` (add `docs/_site/` and `docs/.jekyll-cache/`)
+- Create: `.github/workflows/jekyll.yml`
 
 - [ ] **Step 1: Add Jekyll build artifacts to `.gitignore`**
 
@@ -1628,40 +1631,108 @@ docs/.jekyll-cache/
 docs/vendor/
 ```
 
-- [ ] **Step 2: Final local build — check for any warnings**
+- [ ] **Step 2: Create GitHub Actions workflow**
+
+Create `.github/workflows/jekyll.yml` at the repo root:
+```yaml
+name: Deploy Jekyll site to Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: docs
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Build with Jekyll
+        run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
+        working-directory: docs
+        env:
+          JEKYLL_ENV: production
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+- [ ] **Step 3: Final local build — check for any warnings**
 
 ```bash
-cd docs
+cd /Users/mdproctor/claude/claudony/.worktrees/feat-landing-page/docs
 bundle exec jekyll build --baseurl "/claudony" 2>&1
 ```
 
-Expected: Clean build with 12 posts, 0 errors. Note any warnings and fix them (typically front matter issues or broken links).
+Expected: Clean build with 12 posts, 0 errors.
 
-- [ ] **Step 3: Enable GitHub Pages in repo settings**
+- [ ] **Step 4: Enable GitHub Pages with GitHub Actions source**
 
 In a browser:
 1. Go to `https://github.com/mdproctor/claudony/settings/pages`
-2. Source → **Deploy from a branch**
-3. Branch → **main**, Folder → **/docs**
-4. Click Save
+2. Source → **GitHub Actions** (not "Deploy from a branch")
+3. Click Save — no branch or folder selection needed
 
-- [ ] **Step 4: Push and verify deployment**
+- [ ] **Step 5: Commit and push**
 
 ```bash
-cd /Users/mdproctor/claude/claudony
-git add .gitignore
-git commit -m "chore: add Jekyll build artifacts to .gitignore
+cd /Users/mdproctor/claude/claudony/.worktrees/feat-landing-page
+git add .gitignore .github/workflows/jekyll.yml
+git commit -m "feat(site): add GitHub Actions deploy workflow for Jekyll 4
+
+Uses actions/jekyll-build-pages compatible approach so Jekyll 4.x
+builds correctly. GitHub Pages classic is pinned to Jekyll 3.9.x
+and incompatible with our Gemfile.
 
 Co-Authored-By: Claude Sonnet 4.6 (1M context) <noreply@anthropic.com>"
-git push origin main
+git push origin feat/landing-page
 ```
 
-Then run:
+- [ ] **Step 6: Open PR and verify deployment**
+
 ```bash
-gh run list --repo mdproctor/claudony --limit 3
+gh pr create --title "feat(site): Claudony landing page" \
+  --body "Jekyll 4 landing page site with bioluminescent colony design. Seven sections, blog, guide. Closes #N" \
+  --repo mdproctor/claudony
 ```
 
-Wait for the Pages deployment to complete (typically 1–2 minutes). Then:
+Then monitor the Actions run:
+```bash
+gh run list --repo mdproctor/claudony --limit 5
+```
+
+Once merged to main and the Actions workflow runs, verify at:
 ```bash
 open https://mdproctor.github.io/claudony/
 ```
@@ -1675,11 +1746,11 @@ Verify:
 - Footer links resolve correctly
 - Site is mobile-responsive (check with browser dev tools)
 
-- [ ] **Step 5: Commit any fixes found during verification**
+- [ ] **Step 7: Commit any fixes found during verification**
 
-If any issues found (broken links, missing assets, layout problems), fix them and commit:
+If any issues found (broken links, missing assets, layout problems), fix and push:
 ```bash
-git add -p  # stage specific fixes
+git add -p
 git commit -m "fix(site): [describe what was broken]"
-git push origin main
+git push origin feat/landing-page
 ```
