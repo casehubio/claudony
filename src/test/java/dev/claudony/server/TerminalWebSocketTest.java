@@ -27,7 +27,7 @@ class TerminalWebSocketTest {
     @Inject SessionRegistry registry;
     @Inject TmuxService tmux;
 
-    private static final String TEST_SESSION = "test-remotecc-ws";
+    private static final String TEST_SESSION = "test-claudony-ws";
 
     @BeforeEach
     void setup() throws Exception {
@@ -419,7 +419,7 @@ class TerminalWebSocketTest {
         // 65 X's: "echo " prefix (5 chars) + 65 X's = 70 chars.
         // Wraps at 60 cols (into lines of 60 and 10), fits on one line at 80 cols.
         final String XRUN = "X".repeat(65);
-        final String extraSession = "test-remotecc-resize-order";
+        final String extraSession = "test-claudony-resize-order";
         final String extraId     = "resize-order-test-id";
 
         // Kill any stale session from a previous failed run

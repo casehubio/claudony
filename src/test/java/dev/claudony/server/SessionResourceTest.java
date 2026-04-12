@@ -39,7 +39,7 @@ class SessionResourceTest {
             .when().post("/api/sessions")
             .then().statusCode(201)
             .body("id", notNullValue())
-            .body("name", equalTo("remotecc-test-api"))
+            .body("name", equalTo("claudony-test-api"))
             .body("status", equalTo("IDLE"));
     }
 
@@ -84,11 +84,11 @@ class SessionResourceTest {
         given().when().patch("/api/sessions/" + id + "/rename?name=renamed")
             .then()
             .statusCode(200)
-            .body("name", equalTo("remotecc-renamed"));
+            .body("name", equalTo("claudony-renamed"));
 
         // Verify registry reflects the new name
         given().when().get("/api/sessions/" + id)
-            .then().statusCode(200).body("name", equalTo("remotecc-renamed"));
+            .then().statusCode(200).body("name", equalTo("claudony-renamed"));
     }
 
     @Test
@@ -104,7 +104,7 @@ class SessionResourceTest {
             .when().post("/api/sessions")
             .then()
             .statusCode(409)
-            .body("error", containsString("remotecc-test-dup"));
+            .body("error", containsString("claudony-test-dup"));
     }
 
     @Test
@@ -120,7 +120,7 @@ class SessionResourceTest {
             .when().post("/api/sessions?overwrite=true")
             .then()
             .statusCode(201)
-            .body("name", equalTo("remotecc-test-overwrite"))
+            .body("name", equalTo("claudony-test-overwrite"))
             .body("workingDir", equalTo("/home"))
             .extract().<String>path("id");
 
@@ -129,7 +129,7 @@ class SessionResourceTest {
         // Exactly one session with this name remains
         given().when().get("/api/sessions")
             .then().statusCode(200)
-            .body("findAll { it.name == 'remotecc-test-overwrite' }.size()", equalTo(1));
+            .body("findAll { it.name == 'claudony-test-overwrite' }.size()", equalTo(1));
     }
 
     @Test
@@ -140,7 +140,7 @@ class SessionResourceTest {
             .when().post("/api/sessions?overwrite=true")
             .then()
             .statusCode(201)
-            .body("name", equalTo("remotecc-test-new-overwrite"));
+            .body("name", equalTo("claudony-test-new-overwrite"));
     }
 
     @Test
@@ -173,11 +173,11 @@ class SessionResourceTest {
         given().when().patch("/api/sessions/" + idB + "/rename?name=test-rename-conflict-a")
             .then()
             .statusCode(409)
-            .body("error", containsString("remotecc-test-rename-conflict-a"));
+            .body("error", containsString("claudony-test-rename-conflict-a"));
 
         // Registry must still reflect B's original name
         given().when().get("/api/sessions/" + idB)
-            .then().statusCode(200).body("name", equalTo("remotecc-test-rename-conflict-b"));
+            .then().statusCode(200).body("name", equalTo("claudony-test-rename-conflict-b"));
     }
 
 }

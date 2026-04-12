@@ -7,7 +7,7 @@ import static org.hamcrest.Matchers.*;
 
 /**
  * Tests the API key mechanism against a real protected endpoint (/api/sessions).
- * Test API key configured in application.properties: %test.remotecc.agent.api-key=test-api-key-do-not-use-in-prod
+ * Test API key configured in application.properties: %test.claudony.agent.api-key=test-api-key-do-not-use-in-prod
  */
 @QuarkusTest
 class ApiKeyAuthTest {
@@ -39,7 +39,7 @@ class ApiKeyAuthTest {
         // LaunchMode in tests is TEST, not DEVELOPMENT.
         // The dev cookie must not authenticate — the LaunchMode guard must hold.
         given()
-            .cookie("remotecc-dev-key", "test-api-key-do-not-use-in-prod")
+            .cookie("claudony-dev-key", "test-api-key-do-not-use-in-prod")
             .when().get("/api/sessions")
             .then().statusCode(401);
     }

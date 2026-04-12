@@ -42,7 +42,7 @@ public class TerminalWebSocket {
         }
 
         var tmuxName = session.get().name();
-        var fifoPath = "/tmp/remotecc-" + connection.id() + ".pipe";
+        var fifoPath = "/tmp/claudony-" + connection.id() + ".pipe";
         int cols = parsePathInt(connection.pathParam("cols"));
         int rows = parsePathInt(connection.pathParam("rows"));
         LOG.debugf("WebSocket open for session '%s' (id=%s) at %dx%d", tmuxName, sessionId, cols, rows);

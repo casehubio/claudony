@@ -10,7 +10,7 @@ import static org.hamcrest.Matchers.*;
  * Integration test for the MCP server using the real ServerClient (no mocks).
  *
  * In test mode, Quarkus starts on port 8081. The ServerClient is configured
- * via quarkus.rest-client.remotecc-server.url=http://localhost:8081 in test
+ * via quarkus.rest-client.claudony-server.url=http://localhost:8081 in test
  * application.properties, so MCP tool calls proxy back to the same running
  * instance — testing the full MCP → REST → tmux flow end-to-end.
  */
@@ -30,7 +30,7 @@ class McpServerIntegrationTest {
             .then()
             .statusCode(200)
             .body("result.protocolVersion", equalTo("2024-11-05"))
-            .body("result.serverInfo.name", equalTo("remotecc"));
+            .body("result.serverInfo.name", equalTo("claudony"));
     }
 
     @Test
@@ -42,7 +42,7 @@ class McpServerIntegrationTest {
             .then()
             .statusCode(200)
             .body("result.content[0].type", equalTo("text"))
-            .body("result.content[0].text", containsString("remotecc-mcp-integration"))
+            .body("result.content[0].text", containsString("claudony-mcp-integration"))
             .extract().response();
 
         // Extract session id from browser URL in response text
@@ -61,7 +61,7 @@ class McpServerIntegrationTest {
             .when().post("/mcp")
             .then()
             .statusCode(200)
-            .body("result.content[0].text", containsString("remotecc-mcp-integration"));
+            .body("result.content[0].text", containsString("claudony-mcp-integration"));
     }
 
     @Test
@@ -167,7 +167,7 @@ class McpServerIntegrationTest {
             .when().post("/mcp")
             .then()
             .statusCode(200)
-            .body("result.content[0].text", containsString("remotecc-mcp-renamed"));
+            .body("result.content[0].text", containsString("claudony-mcp-renamed"));
 
         // Cleanup
         given().contentType("application/json")
@@ -233,7 +233,7 @@ class McpServerIntegrationTest {
             .then()
             .statusCode(200)
             .body("result.protocolVersion", equalTo("2024-11-05"))
-            .body("result.serverInfo.name", equalTo("remotecc"));
+            .body("result.serverInfo.name", equalTo("claudony"));
 
         // Step 2: notifications/initialized (server returns 204)
         given().contentType("application/json")

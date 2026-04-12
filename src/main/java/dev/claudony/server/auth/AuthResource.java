@@ -44,10 +44,10 @@ public class AuthResource {
         var key = config.agentApiKey();
         if (key.isEmpty()) {
             return Response.status(503)
-                .entity(Map.of("error", "No dev API key configured — add %dev.remotecc.agent.api-key to application.properties"))
+                .entity(Map.of("error", "No dev API key configured — add %dev.claudony.agent.api-key to application.properties"))
                 .build();
         }
-        var cookie = new NewCookie.Builder("remotecc-dev-key")
+        var cookie = new NewCookie.Builder("claudony-dev-key")
             .value(key.get())
             .path("/")
             .httpOnly(true)

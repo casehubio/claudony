@@ -31,7 +31,7 @@ class ApiKeyServiceTest {
     void serverGeneratesKeyWhenNoneConfigured() {
         service.initServer();
         assertTrue(service.getKey().isPresent());
-        assertTrue(service.getKey().get().matches("remotecc-[a-f0-9]{32}"));
+        assertTrue(service.getKey().get().matches("claudony-[a-f0-9]{32}"));
     }
 
     @Test
@@ -53,12 +53,12 @@ class ApiKeyServiceTest {
     @Test
     void serverLoadsExistingKeyFromFileWithoutGenerating() throws Exception {
         var keyFile = tmp.resolve("api-key");
-        Files.writeString(keyFile, "remotecc-existingkey");
+        Files.writeString(keyFile, "claudony-existingkey");
 
         service.initServer();
 
-        assertEquals("remotecc-existingkey", service.getKey().get());
-        assertEquals("remotecc-existingkey", Files.readString(keyFile).strip());
+        assertEquals("claudony-existingkey", service.getKey().get());
+        assertEquals("claudony-existingkey", Files.readString(keyFile).strip());
     }
 
     @Test
@@ -84,11 +84,11 @@ class ApiKeyServiceTest {
 
     @Test
     void agentLoadsKeyFromFile() throws Exception {
-        Files.writeString(tmp.resolve("api-key"), "remotecc-fromfile");
+        Files.writeString(tmp.resolve("api-key"), "claudony-fromfile");
 
         service.initAgent();
 
-        assertEquals("remotecc-fromfile", service.getKey().get());
+        assertEquals("claudony-fromfile", service.getKey().get());
     }
 
     @Test
@@ -99,6 +99,6 @@ class ApiKeyServiceTest {
 
         // Blank file is treated as absent — key should be generated
         assertTrue(service.getKey().isPresent());
-        assertTrue(service.getKey().get().matches("remotecc-[a-f0-9]{32}"));
+        assertTrue(service.getKey().get().matches("claudony-[a-f0-9]{32}"));
     }
 }

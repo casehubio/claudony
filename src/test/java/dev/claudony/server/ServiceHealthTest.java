@@ -35,7 +35,7 @@ class ServiceHealthTest {
     void serviceHealthReturnsArrayForKnownSession() {
         // Register a session directly — no real tmux needed for this endpoint
         var session = new dev.claudony.server.model.Session(
-            "test-svc-id", "remotecc-test-svc", "/tmp",
+            "test-svc-id", "claudony-test-svc", "/tmp",
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
             java.time.Instant.now(), java.time.Instant.now());
         registry.register(session);
@@ -52,7 +52,7 @@ class ServiceHealthTest {
     void serviceHealthReturnsOnlyUpPorts() {
         // The Quarkus test server itself runs on port 8081 — it will always be up
         var session = new dev.claudony.server.model.Session(
-            "test-svc-up-id", "remotecc-test-svc-up", "/tmp",
+            "test-svc-up-id", "claudony-test-svc-up", "/tmp",
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
             java.time.Instant.now(), java.time.Instant.now());
         registry.register(session);

@@ -40,7 +40,7 @@ class McpServerTest {
             .statusCode(200)
             .body("jsonrpc", equalTo("2.0"))
             .body("result.protocolVersion", equalTo("2024-11-05"))
-            .body("result.serverInfo.name", equalTo("remotecc"));
+            .body("result.serverInfo.name", equalTo("claudony"));
     }
 
     @Test
@@ -63,7 +63,7 @@ class McpServerTest {
     void listSessionsToolProxiesToServer() {
         var now = Instant.now();
         Mockito.when(serverClient.listSessions()).thenReturn(List.of(
-            new SessionResponse("id-1", "remotecc-proj", "/tmp", "claude",
+            new SessionResponse("id-1", "claudony-proj", "/tmp", "claude",
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
                 "http://localhost:7777/app/session/id-1")
@@ -75,7 +75,7 @@ class McpServerTest {
             .then()
             .statusCode(200)
             .body("result.content[0].type", equalTo("text"))
-            .body("result.content[0].text", containsString("remotecc-proj"));
+            .body("result.content[0].text", containsString("claudony-proj"));
     }
 
     @Test
@@ -83,7 +83,7 @@ class McpServerTest {
     void createSessionToolProxiesToServer() {
         var now = Instant.now();
         Mockito.when(serverClient.createSession(Mockito.any())).thenReturn(
-            new SessionResponse("id-2", "remotecc-new", "/home", "claude",
+            new SessionResponse("id-2", "claudony-new", "/home", "claude",
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-2",
                 "http://localhost:7777/app/session/id-2")
@@ -152,7 +152,7 @@ class McpServerTest {
         var now = Instant.now();
         Mockito.when(serverClient.renameSession(
                 Mockito.eq("id-1"), Mockito.eq("newname")))
-            .thenReturn(new SessionResponse("id-1", "remotecc-newname", "/tmp", "claude",
+            .thenReturn(new SessionResponse("id-1", "claudony-newname", "/tmp", "claude",
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
                 "http://localhost:7777/app/session/id-1"));
@@ -164,7 +164,7 @@ class McpServerTest {
             .when().post("/mcp")
             .then()
             .statusCode(200)
-            .body("result.content[0].text", containsString("remotecc-newname"));
+            .body("result.content[0].text", containsString("claudony-newname"));
     }
 
     @Test

@@ -30,7 +30,7 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
         var apiKey = context.request().getHeader("X-Api-Key");
         if (apiKey == null && LaunchMode.current() == LaunchMode.DEVELOPMENT) {
             // Accept the dev cookie only in dev mode (set by POST /auth/dev-login)
-            var devCookie = context.getCookie("remotecc-dev-key");
+            var devCookie = context.getCookie("claudony-dev-key");
             if (devCookie != null) apiKey = devCookie.getValue();
         }
         if (apiKey == null) {

@@ -51,7 +51,7 @@ public class McpServer {
         capabilities.set("tools", MAPPER.createObjectNode());
         result.set("capabilities", capabilities);
         ObjectNode serverInfo = MAPPER.createObjectNode();
-        serverInfo.put("name", "remotecc");
+        serverInfo.put("name", "claudony");
         serverInfo.put("version", "1.0.0");
         result.set("serverInfo", serverInfo);
         return result;

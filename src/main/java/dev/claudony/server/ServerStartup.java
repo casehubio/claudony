@@ -30,12 +30,12 @@ public class ServerStartup {
         ensureDirectories();
         apiKeyService.initServer();
         bootstrapRegistry();
-        LOG.infof("RemoteCC Server ready — http://%s:%d", config.bind(), config.port());
+        LOG.infof("Claudony Server ready — http://%s:%d", config.bind(), config.port());
     }
 
     private void ensureDirectories() {
-        // ~/.remotecc  — config/credentials (hidden, system)
-        // ~/remotecc-workspace — default session working directory (visible, user-facing)
+        // ~/.claudony  — config/credentials (hidden, system)
+        // ~/claudony-workspace — default session working directory (visible, user-facing)
         for (var dir : new String[]{
                 Path.of(config.credentialsFile()).getParent().toString(),
                 config.defaultWorkingDir()}) {

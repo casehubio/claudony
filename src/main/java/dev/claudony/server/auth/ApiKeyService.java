@@ -30,7 +30,7 @@ public class ApiKeyService {
     // CDI no-arg constructor
     ApiKeyService() {}
 
-    // TODO: Alternative provisioning — env var in launchd plist (REMOTECC_AGENT_API_KEY):
+    // TODO: Alternative provisioning — env var in launchd plist (CLAUDONY_AGENT_API_KEY):
     //       no file needed, suitable for production macOS service deployment.
     // TODO: Alternative provisioning — interactive stdin prompt on first run:
     //       ask user to enter a key or press Enter to generate; useful for headless setup scripts.
@@ -53,7 +53,7 @@ public class ApiKeyService {
         resolvedKey = loadFromFile();
         if (resolvedKey.isPresent()) return;
 
-        var key = "remotecc-" + UUID.randomUUID().toString().replace("-", "");
+        var key = "claudony-" + UUID.randomUUID().toString().replace("-", "");
         if (persistKey(key)) {
             resolvedKey = Optional.of(key);
             logGenerationBanner(key);
@@ -116,25 +116,25 @@ public class ApiKeyService {
     private void logGenerationBanner(String key) {
         var keyFile = keyFilePath().toAbsolutePath();
         LOG.warn("\n================================================================\n" +
-                "REMOTECC — API Key Generated (first run)\n" +
+                "CLAUDONY — API Key Generated (first run)\n" +
                 "  Key:      " + key + "\n" +
                 "  Saved to: " + keyFile + "\n\n" +
                 "  Same machine (agent + server co-located): no action needed.\n" +
                 "  Different machine: configure the agent with —\n" +
-                "    export REMOTECC_AGENT_API_KEY=" + key + "\n" +
+                "    export CLAUDONY_AGENT_API_KEY=" + key + "\n" +
                 "  or in agent config:\n" +
-                "    remotecc.agent.api-key=" + key + "\n" +
+                "    claudony.agent.api-key=" + key + "\n" +
                 "================================================================");
     }
 
     private void logMissingKeyWarning() {
         LOG.warn("\n================================================================\n" +
-                "REMOTECC AGENT — No API Key Configured\n" +
+                "CLAUDONY AGENT — No API Key Configured\n" +
                 "  MCP tools will return 401 until a key is set.\n" +
-                "  Copy the key from the server's ~/.remotecc/api-key and set:\n" +
-                "    export REMOTECC_AGENT_API_KEY=<key>\n" +
+                "  Copy the key from the server's ~/.claudony/api-key and set:\n" +
+                "    export CLAUDONY_AGENT_API_KEY=<key>\n" +
                 "  or in agent config:\n" +
-                "    remotecc.agent.api-key=<key>\n" +
+                "    claudony.agent.api-key=<key>\n" +
                 "================================================================");
     }
 }

@@ -12,7 +12,7 @@ class TmuxServiceTest {
     @Inject
     TmuxService tmux;
 
-    private static final String TEST_SESSION = "test-remotecc-unit";
+    private static final String TEST_SESSION = "test-claudony-unit";
 
     @AfterEach
     void cleanup() throws Exception {
@@ -56,11 +56,11 @@ class TmuxServiceTest {
     @Test
     @Order(5)
     void capturePaneReturnsOutput() throws Exception {
-        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "echo remotecc-marker");
+        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "echo claudony-marker");
         Thread.sleep(300);
         var output = tmux.capturePane(TEST_SESSION, 20);
-        assertTrue(output.contains("remotecc-marker"),
-                "Expected pane output to contain 'remotecc-marker', got: " + output);
+        assertTrue(output.contains("claudony-marker"),
+                "Expected pane output to contain 'claudony-marker', got: " + output);
     }
 
     @Test

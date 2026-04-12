@@ -36,7 +36,7 @@ class GitStatusTest {
         // Sessions bootstrapped from tmux have workingDir="unknown"
         // We simulate this by registering a session directly with workingDir=unknown
         var session = new dev.claudony.server.model.Session(
-            "test-git-unknown-id", "remotecc-test-git-unknown", "unknown",
+            "test-git-unknown-id", "claudony-test-git-unknown", "unknown",
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
             java.time.Instant.now(), java.time.Instant.now());
         registry.register(session);
@@ -51,7 +51,7 @@ class GitStatusTest {
     @Order(3)
     void gitStatusReturnsNotGitForNonGitDirectory() {
         var session = new dev.claudony.server.model.Session(
-            "test-git-nogit-id", "remotecc-test-git-nogit", "/tmp",
+            "test-git-nogit-id", "claudony-test-git-nogit", "/tmp",
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
             java.time.Instant.now(), java.time.Instant.now());
         registry.register(session);
@@ -69,7 +69,7 @@ class GitStatusTest {
         // Use this project's own directory — it's a git repo
         var projectDir = System.getProperty("user.dir");
         var session = new dev.claudony.server.model.Session(
-            "test-git-repo-id", "remotecc-test-git-repo", projectDir,
+            "test-git-repo-id", "claudony-test-git-repo", projectDir,
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
             java.time.Instant.now(), java.time.Instant.now());
         registry.register(session);
@@ -79,6 +79,6 @@ class GitStatusTest {
             .statusCode(200)
             .body("gitRepo", equalTo(true))
             .body("branch", not(emptyOrNullString()))
-            .body("githubRepo", equalTo("mdproctor/remotecc"));
+            .body("githubRepo", equalTo("mdproctor/claudony"));
     }
 }

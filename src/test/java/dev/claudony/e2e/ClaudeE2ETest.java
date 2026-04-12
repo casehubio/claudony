@@ -30,14 +30,14 @@ class ClaudeE2ETest {
         var config = """
             {
               "mcpServers": {
-                "remotecc": {
+                "claudony": {
                   "type": "http",
                   "url": "http://localhost:8081/mcp"
                 }
               }
             }
             """;
-        mcpConfigFile = Files.createTempFile("remotecc-e2e-mcp-", ".json");
+        mcpConfigFile = Files.createTempFile("claudony-e2e-mcp-", ".json");
         Files.writeString(mcpConfigFile, config);
     }
 
@@ -78,7 +78,7 @@ class ClaudeE2ETest {
         // the MCP handshake (initialize -> tools/list) works end-to-end.
         // Assert on process exit code, not Claude's exact words.
         var exitCode = runClaude(
-            "What tools do you have available from the remotecc MCP server? " +
+            "What tools do you have available from the claudony MCP server? " +
             "Just list their names briefly.");
         assertEquals(0, exitCode,
             "claude process should exit 0 when it can connect to MCP and list tools");
@@ -87,17 +87,17 @@ class ClaudeE2ETest {
     @Test
     @Order(2)
     void claudeCanCreateAndDeleteSessionViaMcp() throws Exception {
-        var sessionName = "remotecc-e2e-test";
+        var sessionName = "claudony-e2e-test";
 
         try {
             var exitCode = runClaude(
-                "Using the remotecc MCP tools, create a new session called 'e2e-test' " +
+                "Using the claudony MCP tools, create a new session called 'e2e-test' " +
                 "in the /tmp directory running bash.");
             assertEquals(0, exitCode, "claude process should exit 0");
 
             // Assert on side effect: tmux session must exist
             assertTrue(tmuxSessionExists(sessionName),
-                "tmux session 'remotecc-e2e-test' should exist after Claude created it. " +
+                "tmux session 'claudony-e2e-test' should exist after Claude created it. " +
                 "If not, Claude did not call create_session or the tool failed.");
 
         } finally {

@@ -5,7 +5,7 @@ import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 import java.util.Optional;
 
-@ConfigMapping(prefix = "remotecc")
+@ConfigMapping(prefix = "claudony")
 public interface ClaudonyConfig {
 
     @WithDefault("server")
@@ -24,7 +24,7 @@ public interface ClaudonyConfig {
     @WithDefault("claude")
     String claudeCommand();
 
-    @WithDefault("remotecc-")
+    @WithDefault("claudony-")
     String tmuxPrefix();
 
     @WithDefault("auto")
@@ -34,11 +34,11 @@ public interface ClaudonyConfig {
     Optional<String> agentApiKey();
 
     @WithName("default-working-dir")
-    @WithDefault("${user.home}/remotecc-workspace")
+    @WithDefault("${user.home}/claudony-workspace")
     String defaultWorkingDir();
 
     @WithName("credentials-file")
-    @WithDefault("${user.home}/.remotecc/credentials.json")
+    @WithDefault("${user.home}/.claudony/credentials.json")
     String credentialsFile();
 
     default boolean isServerMode() { return "server".equals(mode()); }
