@@ -219,6 +219,28 @@ style guide at `~/claude-workspace/writing-styles/blog-technical.md`
 
 ---
 
+## Landing Page
+
+The public site lives at `https://mdproctor.github.io/claudony/` and is a Jekyll 4 site in `docs/`.
+
+**Deployed automatically** via `.github/workflows/jekyll.yml` on every push to `main` — no manual step needed.
+
+**Structure:**
+- `docs/_posts/` — blog entries (Jekyll format, mirrors `docs/blog-archive/`)
+- `docs/guide/index.md` — getting started guide
+- `docs/_layouts/` — page templates
+- `docs/assets/` — CSS and JS
+
+**Local development:**
+```bash
+cd docs && bundle exec jekyll serve --baseurl ""
+# → http://localhost:4000
+```
+
+**Ruby:** Use Homebrew Ruby (`/opt/homebrew/opt/ruby/bin/bundle`) — system Ruby 2.6 is too old for Jekyll 4.
+
+---
+
 ## What's Not Done Yet
 
 - Authentication — WebAuthn passkey + API key implemented; rate limiting and dev-login backdoor closed; **session expiry not yet implemented** (sessions are session cookies — expire on browser close; server restarts no longer invalidate sessions since encryption key is now persistent)
