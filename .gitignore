@@ -1,2 +1,5 @@
 .worktrees/
 .worktrees
+docs/_site/
+docs/.jekyll-cache/
+docs/vendor/
