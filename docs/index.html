@@ -1,0 +1,351 @@
+---
+layout: landing
+title: Home
+---
+
+<!-- 1. HERO -->
+<section id="hero">
+  <div class="hero-ambient"></div>
+  <div class="orb" style="width:400px;height:400px;top:-100px;right:-80px;background:radial-gradient(circle,rgba(140,0,255,0.14),transparent 70%)"></div>
+  <div class="orb" style="width:300px;height:300px;bottom:0;left:-60px;background:radial-gradient(circle,rgba(0,255,170,0.07),transparent 70%)"></div>
+
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="hero-eyebrow">Remote colony intelligence</div>
+        <h1 class="hero-h1">
+          Your Claude sessions,<br>
+          <strong>alive</strong> and <em>everywhere</em>
+        </h1>
+        <p class="hero-sub">
+          Run Claude Code on one machine. Access every session from any browser, any device. Sessions persist when you disconnect. One controller to orchestrate them all.
+        </p>
+        <div class="hero-cta">
+          <a href="#install" class="btn-primary">⬡ Deploy your colony</a>
+          <a href="#how" class="btn-ghost">See how it works ↓</a>
+        </div>
+        <div class="hero-status">
+          <div class="status-pill"><span class="dot dot-green"></span>3 sessions active</div>
+          <div class="status-pill"><span class="dot dot-violet"></span>Controller online</div>
+          <div class="status-pill"><span class="dot dot-dim"></span>2 dormant</div>
+        </div>
+      </div>
+
+      <!-- Colony network illustration -->
+      <svg viewBox="0 0 420 440" width="420" height="440" aria-hidden="true" focusable="false" style="display:block">
+        <defs>
+          <radialGradient id="hubGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#a060ff" stop-opacity="0.5"/>
+            <stop offset="60%"  stop-color="#7a2fff" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#a060ff" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="nodeG" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#00ffaa" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#00ffaa" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="nodeM" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#cc44ff" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#cc44ff" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="softglow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Hub ambient -->
+        <circle cx="210" cy="220" r="150" fill="url(#hubGrad)" opacity="0.6"/>
+
+        <!-- Controller hub rings -->
+        <circle cx="210" cy="220" r="52" fill="rgba(120,0,255,0.12)" stroke="rgba(160,96,255,0.2)" stroke-width="1" filter="url(#softglow)"/>
+        <circle cx="210" cy="220" r="36" fill="rgba(120,0,255,0.18)" stroke="rgba(160,96,255,0.4)" stroke-width="1.5"/>
+        <circle cx="210" cy="220" r="22" fill="rgba(140,0,255,0.3)"  stroke="rgba(160,96,255,0.7)" stroke-width="1.5" filter="url(#glow)"/>
+        <circle cx="210" cy="220" r="9"  fill="#a060ff" filter="url(#glow)">
+          <animate attributeName="opacity" values="1;0.5;1" dur="2.2s" repeatCount="indefinite"/>
+        </circle>
+        <text x="210" y="270" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(160,96,255,0.7)" font-weight="300" letter-spacing="2">CONTROLLER</text>
+
+        <!-- Organic connection paths -->
+        <path d="M210,220 Q260,150 330,95"  fill="none" stroke="rgba(0,255,170,0.25)"  stroke-width="1.5"/>
+        <path d="M210,220 Q145,130 85,80"   fill="none" stroke="rgba(0,255,170,0.2)"   stroke-width="1.5"/>
+        <path d="M210,220 Q310,220 385,200" fill="none" stroke="rgba(160,96,255,0.3)"  stroke-width="1.5"/>
+        <path d="M210,220 Q280,310 340,360" fill="none" stroke="rgba(204,68,255,0.15)" stroke-width="1" stroke-dasharray="4,5"/>
+        <path d="M210,220 Q130,300 75,360"  fill="none" stroke="rgba(204,68,255,0.12)" stroke-width="1" stroke-dasharray="4,5"/>
+
+        <!-- Active node: top-right -->
+        <circle cx="330" cy="95" r="32" fill="url(#nodeG)" opacity="0.5"/>
+        <circle cx="330" cy="95" r="18" fill="rgba(0,255,170,0.12)" stroke="rgba(0,255,170,0.5)" stroke-width="1.5" filter="url(#glow)"/>
+        <circle cx="330" cy="95" r="7"  fill="#00ffaa" filter="url(#glow)">
+          <animate attributeName="opacity" values="1;0.4;1" dur="1.8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="330" y="69" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(0,255,170,0.8)">api-dev</text>
+
+        <!-- Active node: top-left -->
+        <circle cx="85" cy="80" r="28" fill="url(#nodeG)" opacity="0.4"/>
+        <circle cx="85" cy="80" r="17" fill="rgba(0,255,170,0.1)" stroke="rgba(0,255,170,0.45)" stroke-width="1.5" filter="url(#glow)"/>
+        <circle cx="85" cy="80" r="7"  fill="#00ffaa" filter="url(#glow)">
+          <animate attributeName="opacity" values="1;0.4;1" dur="2.4s" repeatCount="indefinite"/>
+        </circle>
+        <text x="85" y="55" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(0,255,170,0.8)">frontend</text>
+
+        <!-- Active node: right -->
+        <circle cx="385" cy="200" r="26" fill="url(#nodeG)" opacity="0.35"/>
+        <circle cx="385" cy="200" r="16" fill="rgba(0,255,170,0.08)" stroke="rgba(0,255,170,0.4)" stroke-width="1.5" filter="url(#glow)"/>
+        <circle cx="385" cy="200" r="6"  fill="#00ffaa" opacity="0.9" filter="url(#glow)">
+          <animate attributeName="opacity" values="0.9;0.3;0.9" dur="3s" repeatCount="indefinite"/>
+        </circle>
+        <text x="385" y="230" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(0,255,170,0.7)">research</text>
+
+        <!-- Dormant node: bottom-right -->
+        <circle cx="340" cy="360" r="22" fill="url(#nodeM)" opacity="0.25"/>
+        <circle cx="340" cy="360" r="13" fill="rgba(204,68,255,0.06)" stroke="rgba(204,68,255,0.25)" stroke-width="1.2"/>
+        <circle cx="340" cy="360" r="5"  fill="rgba(204,68,255,0.4)"/>
+        <text x="340" y="383" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(204,68,255,0.4)">docs</text>
+        <text x="340" y="395" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(204,68,255,0.3)">dormant</text>
+
+        <!-- Dormant node: bottom-left -->
+        <circle cx="75" cy="360" r="20" fill="url(#nodeM)" opacity="0.2"/>
+        <circle cx="75" cy="360" r="12" fill="rgba(204,68,255,0.05)" stroke="rgba(204,68,255,0.2)" stroke-width="1"/>
+        <circle cx="75" cy="360" r="4"  fill="rgba(204,68,255,0.35)"/>
+        <text x="75" y="383" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" fill="rgba(204,68,255,0.35)">infra</text>
+        <text x="75" y="395" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(204,68,255,0.25)">dormant</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- 2. PROBLEM -->
+<section id="problem">
+  <div class="container">
+    <div class="problem-inner">
+      <div>
+        <div class="section-label">The problem</div>
+        <h2 class="section-h2">Claude Code dies<br>when <em>you</em> disconnect</h2>
+        <p class="section-body">
+          Close the terminal. Switch devices. Laptop goes to sleep. Your session is gone — the context, the working state, everything. You're back to square one.
+          <br><br>
+          And there's no way to reach it from your iPad, your phone, or another machine. Claude Code is tethered to wherever it was started.
+        </p>
+      </div>
+      <div class="pain-cards">
+        <div class="pain-card">
+          <div class="pain-icon">💀</div>
+          <div>
+            <div class="pain-title">Sessions don't survive disconnects</div>
+            <div class="pain-desc">Close a terminal, lose everything. Every reconnect starts cold with no context.</div>
+          </div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-icon">📱</div>
+          <div>
+            <div class="pain-title">No cross-device access</div>
+            <div class="pain-desc">Claude Code runs on one machine. You can't reach it from an iPad, phone, or another laptop.</div>
+          </div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-icon">🔀</div>
+          <div>
+            <div class="pain-title">No overview of all your sessions</div>
+            <div class="pain-desc">Multiple projects, multiple terminals. No single place to see what's running and what it's doing.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- 3. HOW IT WORKS -->
+<section id="how">
+  <div class="how-ambient"></div>
+  <div class="orb" style="width:500px;height:500px;top:-100px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(100,0,200,0.08),transparent 70%)"></div>
+  <div class="container" style="position:relative;z-index:2">
+    <div class="how-header">
+      <div class="section-label centered">How it works</div>
+      <h2 class="section-h2 centered" style="max-width:500px;margin-left:auto;margin-right:auto">
+        A colony that <em>lives</em><br>independently of you
+      </h2>
+      <p>Two lightweight processes. Sessions in tmux. Connect from any browser.</p>
+    </div>
+
+    <div class="architecture">
+      <!-- Left: your devices -->
+      <div class="arch-col">
+        <div class="arch-node green-node">
+          <div class="arch-node-title">Browser / PWA</div>
+          <div class="arch-node-desc">Any device with a browser. Install as a PWA for a full-screen native feel on iPad.</div>
+        </div>
+        <div class="arch-node green-node">
+          <div class="arch-node-title">Controller Claude</div>
+          <div class="arch-node-desc">A Claude instance with MCP tools. Create, read, and manage every session in the colony using natural language.</div>
+        </div>
+        <div class="arch-node green-node">
+          <div class="arch-node-title">iTerm2 / Terminal</div>
+          <div class="arch-node-desc">Open any session directly as a local iTerm2 window via the Agent.</div>
+        </div>
+      </div>
+
+      <!-- Centre: architecture SVG — add class arch-diagram so CSS can hide at tablet -->
+      <div class="arch-diagram">
+        <svg viewBox="0 0 260 360" width="260" height="360" aria-hidden="true" focusable="false">
+          <defs>
+            <marker id="how-arrowD" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(160,96,255,0.5)"/>
+            </marker>
+            <marker id="how-arrowU" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+              <path d="M8,0 L8,6 L0,3 z" fill="rgba(160,96,255,0.5)"/>
+            </marker>
+          </defs>
+          <!-- Agent -->
+          <rect x="70" y="10" width="120" height="56" rx="10" fill="rgba(0,255,170,0.06)" stroke="rgba(0,255,170,0.3)" stroke-width="1.5"/>
+          <text x="130" y="36" text-anchor="middle" font-family="Outfit,sans-serif" font-size="13" font-weight="600" fill="rgba(0,255,170,0.9)">Agent</text>
+          <text x="130" y="53" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(0,255,170,0.5)">MCP · iTerm2 · local</text>
+          <!-- REST arrows -->
+          <line x1="130" y1="66"  x2="130" y2="136" stroke="rgba(160,96,255,0.4)" stroke-width="1.5" marker-end="url(#how-arrowD)"/>
+          <line x1="122" y1="136" x2="122" y2="66"  stroke="rgba(160,96,255,0.3)" stroke-width="1" marker-end="url(#how-arrowU)" stroke-dasharray="4,3"/>
+          <text x="145" y="106" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(160,96,255,0.4)">REST</text>
+          <!-- Server -->
+          <rect x="50" y="141" width="160" height="66" rx="10" fill="rgba(160,96,255,0.08)" stroke="rgba(160,96,255,0.4)" stroke-width="1.5"/>
+          <circle cx="88" cy="161" r="6" fill="#a060ff" opacity="0.7">
+            <animate attributeName="opacity" values="0.7;0.3;0.7" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <text x="130" y="167" text-anchor="middle" font-family="Outfit,sans-serif" font-size="14" font-weight="600" fill="rgba(160,96,255,0.95)">Server</text>
+          <text x="130" y="184" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(160,96,255,0.5)">WebSocket · REST API</text>
+          <text x="130" y="198" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(160,96,255,0.5)">Dashboard · Auth</text>
+          <!-- tmux arrow -->
+          <line x1="130" y1="207" x2="130" y2="264" stroke="rgba(160,96,255,0.4)" stroke-width="1.5" marker-end="url(#how-arrowD)"/>
+          <text x="145" y="240" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(160,96,255,0.4)">tmux</text>
+          <!-- tmux box -->
+          <rect x="60" y="269" width="140" height="52" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.12)" stroke-width="1.2"/>
+          <text x="130" y="293" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="rgba(255,255,255,0.6)">tmux</text>
+          <text x="130" y="310" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(255,255,255,0.3)">Sessions persist here</text>
+          <!-- Browser WebSocket arc (left side) -->
+          <path d="M50,174 Q5,174 5,110 Q5,46 70,30" fill="none" stroke="rgba(0,255,170,0.2)" stroke-width="1" stroke-dasharray="4,4" marker-end="url(#how-arrowD)"/>
+          <text x="3" y="145" font-family="JetBrains Mono,monospace" font-size="7" fill="rgba(0,255,170,0.3)" transform="rotate(-90,3,145)">WebSocket</text>
+        </svg>
+      </div>
+
+      <!-- Right: sessions -->
+      <div class="arch-col right">
+        <div class="arch-node">
+          <div class="arch-node-title">Session — api-dev</div>
+          <div class="arch-node-desc">A live tmux pane. Claude Code running your API project. Accessible from browser or iTerm2.</div>
+        </div>
+        <div class="arch-node">
+          <div class="arch-node-title">Session — frontend</div>
+          <div class="arch-node-desc">Another tmux pane. Completely independent. Persists whether you're connected or not.</div>
+        </div>
+        <div class="arch-node dim-node">
+          <div class="arch-node-title">Session — dormant</div>
+          <div class="arch-node-desc">Waiting. The process lives in tmux. Reconnect instantly whenever you need it.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- 4. FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="features-header">
+      <div class="section-label centered">What you get</div>
+      <h2 class="section-h2 centered">Built for how you <em>actually</em> work</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card green">
+        <div class="feature-icon">⬡</div>
+        <div class="feature-title">Sessions that never die</div>
+        <div class="feature-desc">tmux is the source of truth. Close your browser, shut your laptop — sessions keep running. Reconnect from any device and pick up exactly where you left off.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <div class="feature-title">Any device, any browser</div>
+        <div class="feature-desc">Full xterm.js terminal in the browser. Install as a PWA on iPad for a native full-screen experience. No app to install, no SSH keys to manage — just a URL.</div>
+      </div>
+      <div class="feature-card magenta">
+        <div class="feature-icon">🧠</div>
+        <div class="feature-title">Controller Claude</div>
+        <div class="feature-desc">A Claude instance with MCP tools that sees your entire colony. Create sessions, read output, send commands — using natural language to manage your Claude fleet.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <div class="feature-title">Passkey auth + API keys</div>
+        <div class="feature-desc">WebAuthn passkey login for browser sessions. API key auth for the Agent. Rate-limited, invite-only registration. Secure by default.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- 5. GET STARTED -->
+<section id="install">
+  <div class="install-ambient"></div>
+  <div class="container" style="position:relative;z-index:2">
+    <div class="install-header">
+      <div class="section-label centered">Get started</div>
+      <h2 class="section-h2 centered">Colony running in <em>three steps</em></h2>
+    </div>
+    <div class="steps">
+      <div class="step" data-n="01">
+        <div class="step-title">Download the binary</div>
+        <div class="step-body">Grab the latest release for macOS from the GitHub releases page. A single native binary — no JVM required. Fast startup, low memory.</div>
+      </div>
+      <div class="step" data-n="02">
+        <div class="step-title">Start the server</div>
+        <div class="step-body">Run the server on your Mac. It manages tmux sessions and serves the web dashboard on port 7777. Open the URL in any browser to see your colony.</div>
+      </div>
+      <div class="step" data-n="03">
+        <div class="step-title">Connect the agent</div>
+        <div class="step-body">Start the agent locally to give your controller Claude MCP access to the full colony. Point it at the server URL.</div>
+      </div>
+    </div>
+    <pre class="code-block"><code><span class="comment"># Start the server (Mac Mini / always-on machine)</span>
+<span class="code-prompt">$ </span>./claudony server --bind 0.0.0.0
+
+<span class="comment"># Start the agent (your MacBook)</span>
+<span class="code-prompt">$ </span>./claudony agent --server http://mac-mini.local:7777</code></pre>
+    <div class="install-cta">
+      <a href="https://github.com/mdproctor/claudony/releases" class="btn-primary" style="font-size:15px;padding:14px 36px">⬡ Download Claudony</a>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- 6. BLOG PREVIEW -->
+<section id="blog">
+  <div class="container">
+    <div class="blog-header">
+      <div>
+        <div class="section-label">Development diary</div>
+        <h2 class="section-h2" style="margin-bottom:0">How we built it</h2>
+      </div>
+      <a href="{{ '/blog/' | prepend: site.baseurl }}" class="blog-all">All entries →</a>
+    </div>
+    <div class="blog-grid">
+      {% for post in site.posts limit:3 %}
+      <div class="blog-card">
+        <a href="{{ post.url | prepend: site.baseurl }}">
+          <div class="blog-date">{{ post.date | date: "%Y-%m-%d" }}</div>
+          <div class="blog-title">{{ post.title }}</div>
+          <div class="blog-excerpt">{{ post.excerpt | strip_html | truncatewords: 28 }}</div>
+        </a>
+      </div>
+      {% else %}
+      <div class="blog-card" style="grid-column:1/-1;text-align:center;color:var(--dimmer)">
+        Blog posts coming soon.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

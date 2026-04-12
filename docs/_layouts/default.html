@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if page.title %}{{ page.title }} — {% endif %}{{ site.title }}</title>
+  <meta name="description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ '/assets/css/main.css' | prepend: site.baseurl }}">
+  <link rel="stylesheet" href="{{ '/assets/css/landing.css' | prepend: site.baseurl }}">
+  <link rel="stylesheet" href="{{ '/assets/css/post.css' | prepend: site.baseurl }}">
+  {% feed_meta %}
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="{{ '/' | prepend: site.baseurl }}" class="nav-logo">CLAUDONY<span>.</span></a>
+  <div class="nav-links">
+    <a href="{{ '/#how' | prepend: site.baseurl }}">How it works</a>
+    <a href="{{ '/#features' | prepend: site.baseurl }}">Features</a>
+    <a href="{{ '/#install' | prepend: site.baseurl }}">Get started</a>
+    <a href="{{ '/blog/' | prepend: site.baseurl }}">Blog</a>
+    <a href="https://github.com/mdproctor/claudony" class="nav-github" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</nav>
+
+{{ content }}
+
+<footer class="site-footer">
+  <div class="footer-logo">CLAUDONY<span>.</span></div>
+  <div class="footer-links">
+    <a href="{{ '/guide/' | prepend: site.baseurl }}">Docs</a>
+    <a href="{{ '/blog/' | prepend: site.baseurl }}">Blog</a>
+    <a href="https://github.com/mdproctor/claudony" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/mdproctor/claudony/releases" target="_blank" rel="noopener">Releases</a>
+  </div>
+  <div class="footer-copy">Free and open source</div>
+</footer>
+
+<script src="{{ '/assets/js/main.js' | prepend: site.baseurl }}"></script>
+</body>
+</html>

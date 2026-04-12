@@ -1,0 +1,108 @@
+/* ── BLOG LISTING ── */
+.blog-listing { padding: 80px 0; min-height: 70vh; }
+.blog-listing-header { margin-bottom: 48px; }
+.blog-listing-header .section-h2 { margin-bottom: 0; }
+
+.post-list { display: flex; flex-direction: column; gap: 20px; max-width: 720px; }
+
+.post-list-item {
+  padding: 24px 28px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; transition: border-color 0.2s;
+}
+.post-list-item:hover { border-color: rgba(160,96,255,0.3); }
+.post-list-item a { display: block; }
+
+.post-list-date  { font-size: 11px; color: var(--dimmer); font-family: var(--mono); margin-bottom: 8px; }
+.post-list-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; line-height: 1.35; }
+.post-list-item:hover .post-list-title { color: var(--violet); }
+.post-list-excerpt { font-size: 14px; color: var(--dimmer); line-height: 1.6; }
+
+/* ── BLOG POST ── */
+.post-page { padding: 80px 0; }
+.post-container { max-width: 720px; margin: 0 auto; padding: 0 48px; }
+
+.post-header { margin-bottom: 48px; }
+.post-date  { font-size: 12px; color: var(--dimmer); font-family: var(--mono); margin-bottom: 16px; }
+.post-title {
+  font-size: clamp(28px, 4vw, 40px); font-weight: 700;
+  line-height: 1.2; color: #fff; margin-bottom: 0;
+}
+
+.post-body { font-size: 16px; color: var(--dim); line-height: 1.85; font-weight: 300; }
+.post-body h2 { font-size: 22px; font-weight: 600; color: var(--text); margin: 48px 0 16px; }
+.post-body h3 { font-size: 18px; font-weight: 600; color: var(--text); margin: 36px 0 12px; }
+.post-body p  { margin-bottom: 20px; }
+.post-body ul, .post-body ol { margin: 0 0 20px 24px; }
+.post-body li { margin-bottom: 8px; }
+.post-body strong { color: var(--text); font-weight: 600; }
+.post-body em { color: var(--green); font-style: normal; }
+.post-body a { color: var(--violet); text-decoration: underline; text-underline-offset: 3px; }
+.post-body a:hover { color: var(--green); }
+.post-body hr {
+  border: none; border-top: 1px solid rgba(160,96,255,0.15);
+  margin: 48px 0;
+}
+.post-body code {
+  font-family: var(--mono); font-size: 0.875em;
+  background: rgba(160,96,255,0.08); color: var(--green);
+  padding: 2px 6px; border-radius: 4px;
+}
+.post-body pre {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(160,96,255,0.2);
+  border-radius: 10px; padding: 20px 24px;
+  overflow-x: auto; margin-bottom: 24px;
+}
+.post-body pre code {
+  background: none; padding: 0; font-size: 13px;
+  color: var(--green); line-height: 1.7;
+}
+.post-body blockquote {
+  border-left: 2px solid var(--violet);
+  padding-left: 20px; margin: 24px 0;
+  color: var(--dimmer); font-style: italic;
+}
+
+.post-nav {
+  display: flex; justify-content: space-between;
+  margin-top: 64px; padding-top: 32px;
+  border-top: 1px solid rgba(160,96,255,0.1);
+  font-size: 13px;
+}
+.post-nav a { color: var(--violet); }
+.post-nav a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── DOC PAGE ── */
+.doc-page { padding: 80px 0; }
+.doc-container { max-width: 720px; margin: 0 auto; padding: 0 48px; }
+.doc-header { margin-bottom: 48px; }
+.doc-title { font-size: clamp(28px, 4vw, 40px); font-weight: 700; color: #fff; }
+
+.doc-body { font-size: 16px; color: var(--dim); line-height: 1.85; font-weight: 300; }
+.doc-body h2 { font-size: 22px; font-weight: 600; color: var(--text); margin: 48px 0 16px; }
+.doc-body h3 { font-size: 18px; font-weight: 600; color: var(--text); margin: 36px 0 12px; }
+.doc-body p  { margin-bottom: 20px; }
+.doc-body ul, .doc-body ol { margin: 0 0 20px 24px; }
+.doc-body li { margin-bottom: 8px; }
+.doc-body strong { color: var(--text); font-weight: 600; }
+.doc-body code {
+  font-family: var(--mono); font-size: 0.875em;
+  background: rgba(160,96,255,0.08); color: var(--green);
+  padding: 2px 6px; border-radius: 4px;
+}
+.doc-body pre {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(160,96,255,0.2);
+  border-radius: 10px; padding: 20px 24px;
+  overflow-x: auto; margin-bottom: 24px;
+}
+.doc-body pre code {
+  background: none; padding: 0; font-size: 13px;
+  color: var(--green); line-height: 1.7;
+}
+
+@media (max-width: 768px) {
+  .post-container, .doc-container { padding: 0 24px; }
+}

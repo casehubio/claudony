@@ -1,0 +1,37 @@
+title: Claudony
+description: >-
+  Run Claude Code on one machine. Access every session from any device.
+  Sessions persist. One controller to orchestrate them all.
+baseurl: "/claudony"
+url: "https://mdproctor.github.io"
+
+markdown: kramdown
+highlighter: rouge
+permalink: /blog/:year/:month/:day/:title/
+
+plugins:
+  - jekyll-feed
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - DESIGN.md
+  - BUGS-AND-ODDITIES.md
+  - retro-issues.md
+  - SESSION-HANDOFF-2026-04-04.md
+  - adr/
+  - ideas/
+  - research/
+  - superpowers/
+  - blog-archive/
+
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: "guide"
+    values:
+      layout: "doc"
