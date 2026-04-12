@@ -252,3 +252,74 @@ title: Home
 </section>
 
 <div class="section-divider"></div>
+
+<!-- 4. FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="features-header">
+      <div class="section-label centered">What you get</div>
+      <h2 class="section-h2 centered">Built for how you <em>actually</em> work</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card green">
+        <div class="feature-icon">⬡</div>
+        <div class="feature-title">Sessions that never die</div>
+        <div class="feature-desc">tmux is the source of truth. Close your browser, shut your laptop — sessions keep running. Reconnect from any device and pick up exactly where you left off.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <div class="feature-title">Any device, any browser</div>
+        <div class="feature-desc">Full xterm.js terminal in the browser. Install as a PWA on iPad for a native full-screen experience. No app to install, no SSH keys to manage — just a URL.</div>
+      </div>
+      <div class="feature-card magenta">
+        <div class="feature-icon">🧠</div>
+        <div class="feature-title">Controller Claude</div>
+        <div class="feature-desc">A Claude instance with MCP tools that sees your entire colony. Create sessions, read output, send commands — using natural language to manage your Claude fleet.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <div class="feature-title">Passkey auth + API keys</div>
+        <div class="feature-desc">WebAuthn passkey login for browser sessions. API key auth for the Agent. Rate-limited, invite-only registration. Secure by default.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- 5. GET STARTED -->
+<section id="install">
+  <div class="install-ambient"></div>
+  <div class="container" style="position:relative;z-index:2">
+    <div class="install-header">
+      <div class="section-label centered">Get started</div>
+      <h2 class="section-h2 centered">Colony running in <em>three steps</em></h2>
+    </div>
+    <div class="steps">
+      <div class="step" data-n="01">
+        <div class="step-title">Download the binary</div>
+        <div class="step-body">Grab the latest release for macOS from the GitHub releases page. A single native binary — no JVM required. Fast startup, low memory.</div>
+      </div>
+      <div class="step" data-n="02">
+        <div class="step-title">Start the server</div>
+        <div class="step-body">Run the server on your Mac. It manages tmux sessions and serves the web dashboard on port 7777. Open the URL in any browser to see your colony.</div>
+      </div>
+      <div class="step" data-n="03">
+        <div class="step-title">Connect the agent</div>
+        <div class="step-body">Start the agent locally to give your controller Claude MCP access to the full colony. Point it at the server URL.</div>
+      </div>
+    </div>
+    <div class="code-block">
+      <div><span class="comment"># Start the server (Mac Mini / always-on machine)</span></div>
+      <div><span class="code-prompt">$ </span>./claudony server --bind 0.0.0.0</div>
+      <div>&nbsp;</div>
+      <div><span class="comment"># Start the agent (your MacBook)</span></div>
+      <div><span class="code-prompt">$ </span>./claudony agent --server http://mac-mini.local:7777</div>
+    </div>
+    <div class="install-cta">
+      <a href="https://github.com/mdproctor/claudony/releases" class="btn-primary" style="font-size:15px;padding:14px 36px">⬡ Download Claudony</a>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
