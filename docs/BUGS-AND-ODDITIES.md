@@ -1,4 +1,4 @@
-# RemoteCC — Bugs, Fixes, and Behavioural Oddities
+# Claudony — Bugs, Fixes, and Behavioural Oddities
 
 Accumulated during initial development (2026-04-03/04). Intended to help future
 Claude sessions diagnose regressions quickly and understand non-obvious system
@@ -22,7 +22,7 @@ handler is never wired up.
 **Diagnosis:**
 ```bash
 # Test if @OnOpen is firing — check log for DEBUG entries
-grep "WebSocket open" /tmp/remotecc.log
+grep "WebSocket open" /tmp/claudony.log
 
 # Confirm WebSocket upgrade still works at HTTP level (101 = success)
 python3 -c "import socket, base64; s=socket.socket(); s.connect(('localhost',7777)); key=base64.b64encode(b'test').decode(); s.send(f'GET /ws/ID HTTP/1.1\r\nHost: localhost:7777\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n'.encode()); print(s.recv(256)[:50])"
@@ -32,7 +32,7 @@ python3 -c "import socket, base64; s=socket.socket(); s.connect(('localhost',777
 **Fix:** Full server restart (not hot-reload):
 ```bash
 pkill -f "quarkus:dev"; sleep 2
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dremotecc.mode=server ...
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dclaudony.mode=server ...
 ```
 
 **Rule:** After committing any Java changes that touch WebSocket classes during
@@ -69,7 +69,7 @@ new ProcessBuilder("tmux", "pipe-pane", "-t", sessionName, "cat > " + fifoPath)
 **Architecture:**
 ```
 tmux pane output
-    → pipe-pane spawns: /bin/sh -c "cat > /tmp/remotecc-{connid}.pipe"
+    → pipe-pane spawns: /bin/sh -c "cat > /tmp/claudony-{connid}.pipe"
     → cat writes to FIFO
     → Java virtual thread reads from FIFO via FileInputStream
     → connection.sendTextAndAwait(chunk) → xterm.js
@@ -90,8 +90,8 @@ failure immediately after starting pipe-pane.
 stop pipe-pane, and `Files.deleteIfExists(Path.of(fifoPath))` to remove the FIFO.
 On Quarkus dev-mode hot-reload, the in-memory cleanup maps (`fifoPaths`,
 `sessionNames`) are reset before `@OnClose` fires for existing connections,
-leaving orphan FIFOs in `/tmp/remotecc-*.pipe`. These are harmless but can
-accumulate. Clean with `rm /tmp/remotecc-*.pipe`.
+leaving orphan FIFOs in `/tmp/claudony-*.pipe`. These are harmless but can
+accumulate. Clean with `rm /tmp/claudony-*.pipe`.
 
 **Stopping pipe-pane:** `tmux pipe-pane -t name` (no shell command) stops any
 active pipe for that pane.
@@ -237,18 +237,18 @@ JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home \
 
 ## 10. Quarkus Dev Mode Log May Stop After Hot-Reload
 
-**Symptom:** Redirected log file (`mvn quarkus:dev > /tmp/remotecc.log 2>&1 &`)
+**Symptom:** Redirected log file (`mvn quarkus:dev > /tmp/claudony.log 2>&1 &`)
 stops receiving new entries after a hot-reload. REST endpoint logs still work
 but WebSocket DEBUG logs disappear.
 
 **Diagnosis:** Check if log is still receiving entries by making a REST call and
 checking line count:
 ```bash
-BEFORE=$(wc -l < /tmp/remotecc.log)
+BEFORE=$(wc -l < /tmp/claudony.log)
 curl -s -X POST http://localhost:7777/api/sessions -H "Content-Type: application/json" \
   -d '{"name":"test","workingDir":"/tmp","command":"bash"}' > /dev/null
 sleep 1
-AFTER=$(wc -l < /tmp/remotecc.log)
+AFTER=$(wc -l < /tmp/claudony.log)
 echo "New lines: $((AFTER - BEFORE))"
 ```
 If REST calls produce log entries but WebSocket events do not → hot-reload broke
@@ -331,21 +331,21 @@ initial `\r\n` flush (entry #12), typed input now echoes on the prompt line.
 ## 15. resize-pane Is a No-Op for Detached Sessions — Use resize-window
 
 **Symptom:** `tmux resize-pane -x W -y H` had no effect on sessions with no
-attached clients (the typical remotecc mode).
+attached clients (the typical claudony mode).
 
 **Root cause:** `resize-pane` is constrained by the minimum attached-client size.
 With no clients, it silently no-ops regardless of the requested dimensions.
 
 **Fix (committed d64a632):** Use `tmux resize-window -x W -y H` instead.
 `resize-window` bypasses client-size constraints and reliably resizes detached
-sessions. For single-pane windows (all remotecc sessions), the effect is identical.
+sessions. For single-pane windows (all claudony sessions), the effect is identical.
 
 ---
 
 ## 16. Tmux Session Bootstrap Survives Server Restart
 
 **Behaviour (correct):** When the Quarkus server restarts, `ServerStartup`
-calls `tmux list-sessions` and re-imports sessions with the `remotecc-` prefix
+calls `tmux list-sessions` and re-imports sessions with the `claudony-` prefix
 back into the in-memory registry. Sessions continue running in tmux regardless
 of server state.
 
@@ -355,7 +355,7 @@ working directory). The actual session still works correctly.
 
 **Gotcha:** Bootstrap runs at startup. Sessions created AFTER the previous server
 started but before it was killed WILL be picked up. Sessions created before any
-`remotecc-` prefix was configured (e.g., manually created tmux sessions) will NOT
+`claudony-` prefix was configured (e.g., manually created tmux sessions) will NOT
 be picked up.
 
 ---

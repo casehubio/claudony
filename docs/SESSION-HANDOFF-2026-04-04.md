@@ -1,4 +1,4 @@
-# RemoteCC — Session Handoff
+# Claudony — Session Handoff
 
 **Date:** 2026-04-04 (late night)
 **Status:** Plans 1, 2, 3 complete. System functional. Controller Claude not yet wired.
@@ -36,11 +36,11 @@ What hasn't happened: actually configuring a Claude Code instance to use `http:/
 
 ```bash
 # Terminal 1: Start Server
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dremotecc.mode=server
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dclaudony.mode=server
 
 # Terminal 2: Start Agent
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev \
-  -Dremotecc.mode=agent -Dquarkus.http.port=7778
+  -Dclaudony.mode=agent -Dquarkus.http.port=7778
 
 # ⚠️ After any Java code change, restart both — hot-reload breaks WebSocket registration
 ```
@@ -85,9 +85,9 @@ Do NOT attempt to use `tmux attach-session` via ProcessBuilder. It requires a re
 
 The correct approach (`TerminalWebSocket.java`):
 1. Send capture-pane history synchronously FIRST (before any FIFO setup)
-2. Create a named FIFO: `mkfifo /tmp/remotecc-{connection-id}.pipe`
+2. Create a named FIFO: `mkfifo /tmp/claudony-{connection-id}.pipe`
 3. Start virtual thread opening the FIFO for reading (blocks until writer)
-4. Start pipe-pane: `tmux pipe-pane -t {name} "cat > /tmp/remotecc-{connection-id}.pipe"`
+4. Start pipe-pane: `tmux pipe-pane -t {name} "cat > /tmp/claudony-{connection-id}.pipe"`
 5. For input: `tmux send-keys -t {name} -l "{text}"` (the `-l` flag is critical)
 6. On close: stop pipe-pane, delete FIFO
 
@@ -120,7 +120,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Dtest=TerminalWebSocketTest
 # Verify native binary still works after changes
 JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home \
   mvn package -Pnative -DskipTests
-./target/remotecc-1.0.0-SNAPSHOT-runner &
+./target/claudony-1.0.0-SNAPSHOT-runner &
 sleep 1 && curl http://localhost:7777/q/health && kill %1
 ```
 

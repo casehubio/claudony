@@ -40,7 +40,7 @@ mcpServers: Does not adhere to MCP server configuration schema
 
 I'd read plugin examples using top-level server names without a wrapper. The actual `--mcp-config` format requires the same `mcpServers` wrapper as `settings.json`. One misdirecting example, a few minutes of confusion, then fixed.
 
-Both E2E tests passed. Claude connected, listed all 8 tools, and created a real tmux session. `tmux has-session -t remotecc-e2e-test` exited 0.
+Both E2E tests passed. Claude connected, listed all 8 tools, and created a real tmux session. `tmux has-session -t claudony-e2e-test` exited 0.
 
 ## 106 tests later
 

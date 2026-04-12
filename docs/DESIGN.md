@@ -1,4 +1,4 @@
-# RemoteCC — Design Document
+# Claudony — Design Document
 
 **Status:** Active
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-RemoteCC lets you run Claude Code CLI sessions on one machine (a laptop or headless mini PC) and access them from any device via a browser or PWA. Sessions persist independently — closing a browser tab or iTerm2 window never kills a session.
+Claudony lets you run Claude Code CLI sessions on one machine (a laptop or headless mini PC) and access them from any device via a browser or PWA. Sessions persist independently — closing a browser tab or iTerm2 window never kills a session.
 
 A single Quarkus binary operates in two modes:
 
@@ -18,9 +18,9 @@ A single Quarkus binary operates in two modes:
 ## Component Structure
 
 ```
-dev.remotecc
+dev.claudony
 ├── config/
-│   └── RemoteCCConfig          — all @ConfigProperty bindings
+│   └── ClaudonyConfig          — all @ConfigProperty bindings
 ├── server/
 │   ├── model/                  — Session, SessionStatus, request/response records
 │   ├── TmuxService             — ProcessBuilder wrappers for tmux commands
@@ -59,7 +59,7 @@ dev.remotecc
 
 ### Source of Truth: tmux
 
-Sessions live in tmux independently of the Quarkus process. On server restart, `ServerStartup.bootstrapRegistry()` reads `tmux list-sessions` and re-registers any session with the `remotecc-` prefix. Working directory shows as "unknown" for bootstrapped sessions — expected and acceptable.
+Sessions live in tmux independently of the Quarkus process. On server restart, `ServerStartup.bootstrapRegistry()` reads `tmux list-sessions` and re-registers any session with the `claudony-` prefix. Working directory shows as "unknown" for bootstrapped sessions — expected and acceptable.
 
 ### Terminal Streaming (no PTY)
 
@@ -101,7 +101,7 @@ The Agent exposes `POST /mcp` as a synchronous JSON-RPC endpoint. Claude Code co
 
 Both mechanisms are tried in turn on every request.
 
-**API key provisioning:** `ApiKeyService` resolves the key via a priority chain: (1) explicit config property `remotecc.agent.api-key`, (2) `~/.remotecc/api-key` file, (3) auto-generate a random key. On first run the generated key is written to file with `chmod 600`, and a banner is logged to stdout. Both Server and Agent call `ApiKeyService.autoInit()` at startup so they share the same key via the filesystem without manual configuration.
+**API key provisioning:** `ApiKeyService` resolves the key via a priority chain: (1) explicit config property `claudony.agent.api-key`, (2) `~/.claudony/api-key` file, (3) auto-generate a random key. On first run the generated key is written to file with `chmod 600`, and a banner is logged to stdout. Both Server and Agent call `ApiKeyService.autoInit()` at startup so they share the same key via the filesystem without manual configuration.
 
 **Apple passkey compatibility:** iCloud Keychain passkeys always respond with `fmt=none` attestation even when the server requests direct attestation, but include a non-zero AAGUID. Vert.x `NoneAttestation` rejects this. `WebAuthnPatcher` replaces the `"none"` handler in Vert.x's attestation map at startup with `LenientNoneAttestation`, which skips the AAGUID check while still enforcing that `attStmt` is empty. Valid session cookie or valid API key → authenticated as role `user`.
 
@@ -116,7 +116,7 @@ Both mechanisms are tried in turn on every request.
 
 ### Credential Storage
 
-File: `~/.remotecc/credentials.json` (configurable via `remotecc.credentials-file`). Atomic writes (temp file + rename). Multiple credentials per username supported (multiple devices). `rw-------` permissions.
+File: `~/.claudony/credentials.json` (configurable via `claudony.credentials-file`). Atomic writes (temp file + rename). Multiple credentials per username supported (multiple devices). `rw-------` permissions.
 
 ### Invite Flow
 
@@ -184,10 +184,10 @@ Claude → POST /mcp → McpServer.dispatch()
 
 | Path | Purpose |
 |------|---------|
-| `~/.remotecc/` | System state — hidden, `rw-------` |
-| `~/.remotecc/credentials.json` | WebAuthn credentials (configurable via `remotecc.credentials-file`) |
-| `~/.remotecc/api-key` | Auto-generated Agent API key; shared by Server and Agent |
-| `~/remotecc-workspace/` | Default session working directory — visible, user-facing |
+| `~/.claudony/` | System state — hidden, `rw-------` |
+| `~/.claudony/credentials.json` | WebAuthn credentials (configurable via `claudony.credentials-file`) |
+| `~/.claudony/api-key` | Auto-generated Agent API key; shared by Server and Agent |
+| `~/claudony-workspace/` | Default session working directory — visible, user-facing |
 
 Both created on server startup if absent.
 
@@ -212,8 +212,8 @@ Both created on server startup if absent.
 | MCP transport | HTTP JSON-RPC (`POST /mcp`) | GraalVM-native compatible; no stdio process needed | SSE, stdio MCP (incompatible with native or headless) |
 | Browser auth | WebAuthn passkeys via `quarkus-security-webauthn` | No password to leak; Touch ID UX; invite-based onboarding | Passwords (extra secret to manage), basic auth (weak) |
 | Agent→Server auth | `X-Api-Key` header | Simple, stateless, fits headless Agent | Session cookies (require browser-style session management) |
-| Credential storage | JSON file at `~/.remotecc/credentials.json` (atomic write, `rw-------`) | Self-contained, no database dependency | Database, system keychain |
-| Directory convention | `~/.remotecc/` config, `~/remotecc-workspace/` sessions | Hidden dot-dir for system state; visible dir for user work | Single directory (mixes credentials with user files) |
+| Credential storage | JSON file at `~/.claudony/credentials.json` (atomic write, `rw-------`) | Self-contained, no database dependency | Database, system keychain |
+| Directory convention | `~/.claudony/` config, `~/claudony-workspace/` sessions | Hidden dot-dir for system state; visible dir for user work | Single directory (mixes credentials with user files) |
 | E2E test strategy | Side-effect assertions (tmux state) not LLM output | LLM output is non-deterministic; tmux state is not | Assert on Claude's words (fragile across model versions) |
 | `--mcp-config` format | `mcpServers` wrapper required (same schema as `settings.json`) | Discovered via failed run; some plugin examples misleadingly omit it | Top-level server names (produces silent schema validation error) |
 | Rate limiter placement | Vert.x `@Observes Router` handler | Covers WebAuthn ceremony paths (`/q/webauthn/*`) which bypass JAX-RS | JAX-RS `ContainerRequestFilter` (misses extension-managed paths) |
@@ -224,7 +224,7 @@ Both created on server startup if absent.
 | Session encryption key config | `quarkus.http.auth.session.encryption-key` | Actual `@ConfigItem` annotation name on `HttpConfiguration.encryptionKey` | `quarkus.http.encryption-key` — field name guess, silently ignored |
 | Dev encryption key | Fixed value in `%dev` profile | Sessions survive restarts in dev — no re-authentication on every code change | Random key per startup |
 | Apple passkey compatibility | `LenientNoneAttestation` via `WebAuthnPatcher` | iCloud Keychain passkeys always return `fmt=none` with non-zero AAGUID; Vert.x rejects this | Disable attestation entirely (weakens security model) |
-| API key provisioning | First-run wizard: auto-generate, persist to `~/.remotecc/api-key`, log banner | Zero config for same-machine setup; self-documenting; survives restarts | Env var in launchd plist (opaque); interactive stdin prompt (most work) |
+| API key provisioning | First-run wizard: auto-generate, persist to `~/.claudony/api-key`, log banner | Zero config for same-machine setup; self-documenting; survives restarts | Env var in launchd plist (opaque); interactive stdin prompt (most work) |
 | Key resolution order | Config property → file → auto-generate | Explicit always wins; file enables same-machine auto-discovery | Single-source (config only) — requires manual setup every time |
 | Agent degraded mode | Warn prominently and start anyway | Consistent with "server not reachable" handling; 401 errors are self-explanatory | Hard fail on startup (breaks workflow when server isn't ready) |
 | PR/CI status | On-demand fetch (button click) | Avoids GitHub API rate limits; keeps dashboard lightweight | Auto-refresh every 5s |

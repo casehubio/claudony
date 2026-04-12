@@ -25,12 +25,12 @@
 Server and agent are running (JVM mode, not native):
 ```bash
 # Server
-JAVA_HOME=$(/usr/libexec/java_home -v 26) java -Dremotecc.mode=server -Dremotecc.bind=0.0.0.0 -jar target/quarkus-app/quarkus-run.jar
+JAVA_HOME=$(/usr/libexec/java_home -v 26) java -Dclaudony.mode=server -Dclaudony.bind=0.0.0.0 -jar target/quarkus-app/quarkus-run.jar
 
 # Agent  
-JAVA_HOME=$(/usr/libexec/java_home -v 26) java -Dremotecc.mode=agent -Dremotecc.port=7778 -jar target/quarkus-app/quarkus-run.jar
+JAVA_HOME=$(/usr/libexec/java_home -v 26) java -Dclaudony.mode=agent -Dclaudony.port=7778 -jar target/quarkus-app/quarkus-run.jar
 ```
-Logs: `/tmp/remotecc-server.log`, `/tmp/remotecc-agent.log`
+Logs: `/tmp/claudony-server.log`, `/tmp/claudony-agent.log`
 
 ## Immediate Next Step
 

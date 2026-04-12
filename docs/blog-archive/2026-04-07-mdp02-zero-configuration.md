@@ -17,7 +17,7 @@ That meant auto-generation.
 ## What I believed going in: the design was clear, the implementation would be routine
 
 The resolution order came together quickly in design: check the config property first
-(explicit always wins), then check `~/.remotecc/api-key` (same-machine auto-discovery),
+(explicit always wins), then check `~/.claudony/api-key` (same-machine auto-discovery),
 then generate if absent. Server generates, agent reads or warns. New `ApiKeyService`
 bean, injected wherever the key is needed.
 
@@ -28,7 +28,7 @@ after startup. You can't inject a runtime-generated key back into the config sys
 ## The timing trap buried in the auth wiring
 
 We built `ApiKeyService` as a pure unit test first — `@TempDir`, mocked
-`RemoteCCConfig`, same pattern as `CredentialStore`. Eight tests covering
+`ClaudonyConfig`, same pattern as `CredentialStore`. Eight tests covering
 the resolution branches, file permissions (600), blank-file handling, config
 precedence. A code quality review caught one real issue before commit: `persistKey()`
 was void and always set `resolvedKey`, so a failed write would still trigger the
@@ -56,13 +56,13 @@ On first server run with no key configured:
 
 ```
 ================================================================
-REMOTECC — API Key Generated (first run)
-  Key:      remotecc-550e8400e29b41d4a716446655440000
-  Saved to: /Users/you/.remotecc/api-key
+CLAUDONY — API Key Generated (first run)
+  Key:      claudony-550e8400e29b41d4a716446655440000
+  Saved to: /Users/you/.claudony/api-key
 
   Same machine (agent + server co-located): no action needed.
   Different machine: configure the agent with —
-    export REMOTECC_AGENT_API_KEY=remotecc-550e8400...
+    export CLAUDONY_AGENT_API_KEY=claudony-550e8400...
 ================================================================
 ```
 

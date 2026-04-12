@@ -16,7 +16,7 @@ Mac Mini deployment on hold. I wanted to close those.
 I expected reflection errors, proxy issues, something. We ran the build.
 
 ```
-Finished generating 'remotecc-1.0.0-SNAPSHOT-runner' in 1m 44s.
+Finished generating 'claudony-1.0.0-SNAPSHOT-runner' in 1m 44s.
 BUILD SUCCESS
 ```
 
