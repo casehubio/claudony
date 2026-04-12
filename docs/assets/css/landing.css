@@ -192,6 +192,7 @@
 }
 .code-block .comment { color: rgba(255,255,255,0.25); }
 .code-prompt { color: var(--dimmer); user-select: none; }
+pre.code-block { white-space: pre; }
 
 .install-cta { text-align: center; margin-top: 40px; }
 
@@ -219,6 +220,13 @@
 .blog-excerpt { font-size: 13px; color: var(--dimmer); line-height: 1.6; }
 .blog-card a  { display: block; }
 .blog-card a:hover .blog-title { color: var(--violet); }
+
+.arch-diagram {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 0;
+}
 
 /* ── RESPONSIVE (landing) ── */
 @media (max-width: 1024px) {

@@ -193,13 +193,13 @@ title: Home
       </div>
 
       <!-- Centre: architecture SVG — add class arch-diagram so CSS can hide at tablet -->
-      <div class="arch-diagram" style="display:flex;justify-content:center;align-items:center;padding:20px 0">
+      <div class="arch-diagram">
         <svg viewBox="0 0 260 360" width="260" height="360" aria-hidden="true" focusable="false">
           <defs>
-            <marker id="arrowD" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <marker id="how-arrowD" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
               <path d="M0,0 L0,6 L8,3 z" fill="rgba(160,96,255,0.5)"/>
             </marker>
-            <marker id="arrowU" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+            <marker id="how-arrowU" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
               <path d="M8,0 L8,6 L0,3 z" fill="rgba(160,96,255,0.5)"/>
             </marker>
           </defs>
@@ -208,8 +208,8 @@ title: Home
           <text x="130" y="36" text-anchor="middle" font-family="Outfit,sans-serif" font-size="13" font-weight="600" fill="rgba(0,255,170,0.9)">Agent</text>
           <text x="130" y="53" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(0,255,170,0.5)">MCP · iTerm2 · local</text>
           <!-- REST arrows -->
-          <line x1="130" y1="66"  x2="130" y2="136" stroke="rgba(160,96,255,0.4)" stroke-width="1.5" marker-end="url(#arrowD)"/>
-          <line x1="122" y1="136" x2="122" y2="66"  stroke="rgba(160,96,255,0.3)" stroke-width="1" marker-end="url(#arrowU)" stroke-dasharray="4,3"/>
+          <line x1="130" y1="66"  x2="130" y2="136" stroke="rgba(160,96,255,0.4)" stroke-width="1.5" marker-end="url(#how-arrowD)"/>
+          <line x1="122" y1="136" x2="122" y2="66"  stroke="rgba(160,96,255,0.3)" stroke-width="1" marker-end="url(#how-arrowU)" stroke-dasharray="4,3"/>
           <text x="145" y="106" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(160,96,255,0.4)">REST</text>
           <!-- Server -->
           <rect x="50" y="141" width="160" height="66" rx="10" fill="rgba(160,96,255,0.08)" stroke="rgba(160,96,255,0.4)" stroke-width="1.5"/>
@@ -220,14 +220,14 @@ title: Home
           <text x="130" y="184" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(160,96,255,0.5)">WebSocket · REST API</text>
           <text x="130" y="198" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(160,96,255,0.5)">Dashboard · Auth</text>
           <!-- tmux arrow -->
-          <line x1="130" y1="207" x2="130" y2="264" stroke="rgba(160,96,255,0.4)" stroke-width="1.5" marker-end="url(#arrowD)"/>
+          <line x1="130" y1="207" x2="130" y2="264" stroke="rgba(160,96,255,0.4)" stroke-width="1.5" marker-end="url(#how-arrowD)"/>
           <text x="145" y="240" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(160,96,255,0.4)">tmux</text>
           <!-- tmux box -->
           <rect x="60" y="269" width="140" height="52" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.12)" stroke-width="1.2"/>
           <text x="130" y="293" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="rgba(255,255,255,0.6)">tmux</text>
           <text x="130" y="310" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(255,255,255,0.3)">Sessions persist here</text>
           <!-- Browser WebSocket arc (left side) -->
-          <path d="M50,174 Q5,174 5,110 Q5,46 70,30" fill="none" stroke="rgba(0,255,170,0.2)" stroke-width="1" stroke-dasharray="4,4" marker-end="url(#arrowD)"/>
+          <path d="M50,174 Q5,174 5,110 Q5,46 70,30" fill="none" stroke="rgba(0,255,170,0.2)" stroke-width="1" stroke-dasharray="4,4" marker-end="url(#how-arrowD)"/>
           <text x="3" y="145" font-family="JetBrains Mono,monospace" font-size="7" fill="rgba(0,255,170,0.3)" transform="rotate(-90,3,145)">WebSocket</text>
         </svg>
       </div>
@@ -309,13 +309,11 @@ title: Home
         <div class="step-body">Start the agent locally to give your controller Claude MCP access to the full colony. Point it at the server URL.</div>
       </div>
     </div>
-    <div class="code-block">
-      <div><span class="comment"># Start the server (Mac Mini / always-on machine)</span></div>
-      <div><span class="code-prompt">$ </span>./claudony server --bind 0.0.0.0</div>
-      <div>&nbsp;</div>
-      <div><span class="comment"># Start the agent (your MacBook)</span></div>
-      <div><span class="code-prompt">$ </span>./claudony agent --server http://mac-mini.local:7777</div>
-    </div>
+    <pre class="code-block"><code><span class="comment"># Start the server (Mac Mini / always-on machine)</span>
+<span class="code-prompt">$ </span>./claudony server --bind 0.0.0.0
+
+<span class="comment"># Start the agent (your MacBook)</span>
+<span class="code-prompt">$ </span>./claudony agent --server http://mac-mini.local:7777</code></pre>
     <div class="install-cta">
       <a href="https://github.com/mdproctor/claudony/releases" class="btn-primary" style="font-size:15px;padding:14px 36px">⬡ Download Claudony</a>
     </div>
