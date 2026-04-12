@@ -18,6 +18,8 @@ layout: default
       {% endif %}
       {% if page.next.url %}
         <a href="{{ page.next.url | prepend: site.baseurl }}">{{ page.next.title }} →</a>
+      {% else %}
+        <span></span>
       {% endif %}
     </div>
   </div>

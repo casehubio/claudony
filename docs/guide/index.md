@@ -29,19 +29,15 @@ mv claudony /usr/local/bin/claudony
 Run this on the machine that will host your sessions (Mac Mini, always-on MacBook, etc.):
 
 ```bash
-claudony server --bind 0.0.0.0
-```
-
-On first run, the server prints an API key and opens the registration page at `http://localhost:7777/auth/register`. Register your passkey — this is how you log in from any browser.
-
-**To persist sessions across server restarts**, set the encryption key env var so auth cookies survive:
-
-```bash
 QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=your-secret-32-chars \
-  claudony server --bind 0.0.0.0
+  ./claudony-runner -Dremotecc.mode=server -Dremotecc.bind=0.0.0.0
 ```
 
-Default port is `7777`. Set `--port` to change it.
+On first run, the server logs the generated API key to the console. Navigate to `http://localhost:7777/auth/register` in your browser to register your passkey — this is how you log in from any device.
+
+**Set the encryption key** so auth cookies survive server restarts. Without it, a new random key is generated on each start and all sessions are logged out.
+
+Default port is `7777`. Change it with `-Dquarkus.http.port=7778`.
 
 ## Open the Dashboard
 
@@ -58,7 +54,7 @@ From the dashboard, click **New Session**. Give it a name and a working director
 The agent gives your controller Claude MCP tools to manage the colony. Run this on your local machine (the machine with iTerm2):
 
 ```bash
-claudony agent --server http://your-server:7777
+./claudony-runner -Dremotecc.mode=agent -Dremotecc.server.url=http://your-server:7777
 ```
 
 Then add the MCP endpoint to your controller Claude's config:
@@ -90,4 +86,4 @@ Key settings (can be passed as flags or env vars):
 ## What's Next
 
 - Read the [development diary](/claudony/blog/) to understand how it was built
-- Open an issue on [GitHub](https://github.com/mdproctor) if something breaks
+- Open an issue on [GitHub](https://github.com/mdproctor/claudony/issues) if something breaks
