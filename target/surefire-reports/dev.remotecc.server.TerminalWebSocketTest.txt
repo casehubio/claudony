@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: dev.remotecc.server.TerminalWebSocketTest
--------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.23 s -- in dev.remotecc.server.TerminalWebSocketTest

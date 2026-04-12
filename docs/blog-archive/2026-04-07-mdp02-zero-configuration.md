@@ -1,4 +1,4 @@
-# RemoteCC — Zero Configuration
+# Claudony — Zero Configuration
 
 **Date:** 2026-04-07
 **Type:** phase-update

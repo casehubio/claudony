@@ -1,4 +1,4 @@
-# RemoteCC — From SSH to PWA
+# Claudony — From SSH to PWA
 
 **Date:** 2026-04-03
 **Type:** phase-update

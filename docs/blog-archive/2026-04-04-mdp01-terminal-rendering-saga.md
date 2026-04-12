@@ -1,4 +1,4 @@
-# RemoteCC — The Terminal Rendering Saga
+# Claudony — The Terminal Rendering Saga
 
 **Date:** 2026-04-04
 **Type:** phase-update

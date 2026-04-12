@@ -1,4 +1,4 @@
-# RemoteCC — Server Core and the Java Version Maze
+# Claudony — Server Core and the Java Version Maze
 
 **Date:** 2026-04-03
 **Type:** phase-update

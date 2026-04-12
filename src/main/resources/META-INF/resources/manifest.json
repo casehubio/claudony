@@ -1,6 +1,6 @@
 {
-    "name": "RemoteCC",
-    "short_name": "RemoteCC",
+    "name": "Claudony",
+    "short_name": "Claudony",
     "description": "Claude Code session manager",
     "start_url": "/app/",
     "scope": "/",

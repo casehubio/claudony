@@ -42,7 +42,7 @@ Fix: capture `p.waitFor()` return value and return 500 if non-zero. Consider als
 ## [2026-04-04] ServerStartupTest hardcodes tmux prefix
 **Status:** Open
 **Priority:** Someday
-**Context:** ServerStartupTest.java hardcodes `"remotecc-"` as the expected prefix instead of reading from config. If `remotecc.tmux-prefix` is changed in config, the test would silently pass vacuously (no sessions would match either the hardcoded or configured prefix). Should inject RemoteCCConfig and use config.tmuxPrefix().
+**Context:** ServerStartupTest.java hardcodes `"claudony-"` as the expected prefix instead of reading from config. If `claudony.tmux-prefix` is changed in config, the test would silently pass vacuously (no sessions would match either the hardcoded or configured prefix). Should inject ClaudonyConfig and use config.tmuxPrefix().
 
 ---
 

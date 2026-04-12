@@ -73,7 +73,7 @@ class ClaudeE2ETest {
 
     @Test
     @Order(1)
-    void claudeCanDiscoverRemoteCCMcpTools() throws Exception {
+    void claudeCanDiscoverClaudonyMcpTools() throws Exception {
         // Ask Claude to list MCP tools. If it can connect and enumerate tools,
         // the MCP handshake (initialize -> tools/list) works end-to-end.
         // Assert on process exit code, not Claude's exact words.

@@ -1,4 +1,4 @@
-# Retrospective Issue Mapping — RemoteCC
+# Retrospective Issue Mapping — Claudony
 
 **Generated:** 2026-04-08  
 **Repo:** mdproctor/claudony  
@@ -74,7 +74,7 @@
 ### Epic 3: Build Agent and MCP Control Plane
 
 **Covers:** 2026-04-04  
-**Definition of Done:** Controller Claude can manage RemoteCC sessions via MCP tools; Agent proxies to Server via authenticated REST; iTerm2 opens sessions; clipboard configured automatically.
+**Definition of Done:** Controller Claude can manage Claudony sessions via MCP tools; Agent proxies to Server via authenticated REST; iTerm2 opens sessions; clipboard configured automatically.
 
 #### #14 — Add ServerClient REST client for Agent-to-Server communication
 

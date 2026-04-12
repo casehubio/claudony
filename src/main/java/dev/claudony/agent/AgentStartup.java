@@ -24,12 +24,12 @@ public class AgentStartup {
     void onStart(@Observes StartupEvent event) {
         if (!config.isAgentMode()) return;
 
-        LOG.infof("RemoteCC Agent starting — proxying to %s", config.serverUrl());
+        LOG.infof("Claudony Agent starting — proxying to %s", config.serverUrl());
         apiKeyService.initAgent();
         checkServerConnectivity();
         detectTerminalAdapter();
         reportClipboardStatus();
-        LOG.infof("RemoteCC Agent ready — MCP endpoint: http://localhost:%d/mcp", config.port());
+        LOG.infof("Claudony Agent ready — MCP endpoint: http://localhost:%d/mcp", config.port());
     }
 
     private void checkServerConnectivity() {

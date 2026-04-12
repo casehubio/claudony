@@ -1,4 +1,4 @@
-# RemoteCC — The iPad Itch
+# Claudony — The iPad Itch
 
 **Date:** 2026-04-03
 **Type:** day-zero

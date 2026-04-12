@@ -1,4 +1,4 @@
-# RemoteCC — Closing the Gaps
+# Claudony — Closing the Gaps
 
 **Date:** 2026-04-06
 **Type:** phase-update

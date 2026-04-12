@@ -1,4 +1,4 @@
-# RemoteCC — Testing What Wasn't Being Tested
+# Claudony — Testing What Wasn't Being Tested
 
 **Date:** 2026-04-05
 **Type:** phase-update
@@ -7,7 +7,7 @@
 
 ## What I was trying to achieve: proving the end-to-end chain actually works
 
-The system existed and functioned — 64 tests passing, native binary building in 70ms, MCP server exposing 8 tools. But the whole point of RemoteCC is a controller Claude managing sessions through conversation. That flow had never been exercised with a real Claude instance. Not once.
+The system existed and functioned — 64 tests passing, native binary building in 70ms, MCP server exposing 8 tools. But the whole point of Claudony is a controller Claude managing sessions through conversation. That flow had never been exercised with a real Claude instance. Not once.
 
 I wanted it rock solid before calling it done. Unit tests, integration tests, and something that actually ran `claude` CLI processes against the MCP server.
 

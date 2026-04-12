@@ -1,4 +1,4 @@
-# RemoteCC — Locking the Door
+# Claudony — Locking the Door
 
 **Date:** 2026-04-05
 **Type:** phase-update

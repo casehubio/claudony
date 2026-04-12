@@ -22,7 +22,7 @@ Naively, you'd add rate limiting as a JAX-RS `ContainerRequestFilter`. That woul
 
 `AuthRateLimiter` tracks per-IP attempts as a sliding window: `ConcurrentHashMap<String, ArrayDeque<Instant>>`, synchronized per deque. Ten attempts in five minutes returns 429 with `Retry-After: 300`.
 
-The dev cookie was a one-line fix. `ApiKeyAuthMechanism` was accepting `remotecc-dev-key` unconditionally — the cookie used by `POST /auth/dev-login`. Added `&& LaunchMode.current() == LaunchMode.DEVELOPMENT`. The endpoint itself already had that guard; the cookie check didn't.
+The dev cookie was a one-line fix. `ApiKeyAuthMechanism` was accepting `claudony-dev-key` unconditionally — the cookie used by `POST /auth/dev-login`. Added `&& LaunchMode.current() == LaunchMode.DEVELOPMENT`. The endpoint itself already had that guard; the cookie check didn't.
 
 ## Then I asked Claude to check the tests
 

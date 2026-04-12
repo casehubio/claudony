@@ -1,4 +1,4 @@
-# RemoteCC — Two Silent Bugs and a Working Binary
+# Claudony — Two Silent Bugs and a Working Binary
 
 **Date:** 2026-04-07
 **Type:** phase-update

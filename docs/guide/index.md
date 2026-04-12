@@ -30,7 +30,7 @@ Run this on the machine that will host your sessions (Mac Mini, always-on MacBoo
 
 ```bash
 QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=your-secret-32-chars \
-  ./claudony-runner -Dremotecc.mode=server -Dremotecc.bind=0.0.0.0
+  ./claudony-runner -Dclaudony.mode=server -Dclaudony.bind=0.0.0.0
 ```
 
 On first run, the server logs the generated API key to the console. Navigate to `http://localhost:7777/auth/register` in your browser to register your passkey — this is how you log in from any device.
@@ -54,7 +54,7 @@ From the dashboard, click **New Session**. Give it a name and a working director
 The agent gives your controller Claude MCP tools to manage the colony. Run this on your local machine (the machine with iTerm2):
 
 ```bash
-./claudony-runner -Dremotecc.mode=agent -Dremotecc.server.url=http://your-server:7777
+./claudony-runner -Dclaudony.mode=agent -Dclaudony.server.url=http://your-server:7777
 ```
 
 Then add the MCP endpoint to your controller Claude's config:
@@ -77,11 +77,11 @@ Key settings (can be passed as flags or env vars):
 
 | Property | Default | Description |
 |---|---|---|
-| `remotecc.mode` | `server` | `server` or `agent` |
-| `remotecc.port` | `7777` | HTTP port |
-| `remotecc.bind` | `localhost` | Bind address (`0.0.0.0` for remote) |
-| `remotecc.server.url` | `http://localhost:7777` | Agent → Server URL |
-| `remotecc.default-working-dir` | `~/remotecc-workspace` | Default dir for new sessions |
+| `claudony.mode` | `server` | `server` or `agent` |
+| `claudony.port` | `7777` | HTTP port |
+| `claudony.bind` | `localhost` | Bind address (`0.0.0.0` for remote) |
+| `claudony.server.url` | `http://localhost:7777` | Agent → Server URL |
+| `claudony.default-working-dir` | `~/claudony-workspace` | Default dir for new sessions |
 
 ## What's Next
 
