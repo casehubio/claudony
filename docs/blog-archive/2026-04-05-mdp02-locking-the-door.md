@@ -1,4 +1,4 @@
-# RemoteCC — Locking the Door
+# Claudony — Locking the Door
 
 **Date:** 2026-04-05
 **Type:** phase-update
@@ -21,11 +21,11 @@ For registration: invite-only. The owner registers first (before any credentials
 
 ## Implementing it: five classes, a login page, and a naming mistake caught late
 
-I brought Claude in for the implementation. We built five new classes: `InviteService` (token map, consumed on first use), `CredentialStore` (`WebAuthnUserProvider` backed by `~/.remotecc/credentials.json` with atomic temp-file-rename saves), `ApiKeyAuthMechanism` (Quarkus `HttpAuthenticationMechanism` — reads the `X-Api-Key` header), `AuthResource` (POST invite for existing users, GET register for new ones), and `ApiKeyClientFilter` (injects the API key on every outgoing Agent request).
+I brought Claude in for the implementation. We built five new classes: `InviteService` (token map, consumed on first use), `CredentialStore` (`WebAuthnUserProvider` backed by `~/.claudony/credentials.json` with atomic temp-file-rename saves), `ApiKeyAuthMechanism` (Quarkus `HttpAuthenticationMechanism` — reads the `X-Api-Key` header), `AuthResource` (POST invite for existing users, GET register for new ones), and `ApiKeyClientFilter` (injects the API key on every outgoing Agent request).
 
 On top of those: login and register HTML pages using the WebAuthn browser API, a dev quick-login dialog that bypasses the ceremony with a single POST (dev mode only), and `@Authenticated` on all `/api/*` routes with `@TestSecurity` to keep the existing 106 tests green.
 
-We also caught a naming problem. The server had been using `~/.remotecc/` both as the config directory and as the default session working directory. That's awkward — a hidden config directory as your tmux workspace. We split it: `~/.remotecc/` for config and credentials, `~/remotecc-workspace/` for sessions.
+We also caught a naming problem. The server had been using `~/.claudony/` both as the config directory and as the default session working directory. That's awkward — a hidden config directory as your tmux workspace. We split it: `~/.claudony/` for config and credentials, `~/claudony-workspace/` for sessions.
 
 ## The code review finds four issues
 

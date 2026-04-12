@@ -44,7 +44,7 @@ Use `tmux pipe-pane` to route pane output to a named FIFO; read the FIFO from a 
 
 ## Decision
 
-Use `tmux pipe-pane -t {name} "cat > /tmp/remotecc-{id}.pipe"` to redirect pane output to a named FIFO. A Java virtual thread opens the FIFO for reading (blocking until the writer connects) and forwards bytes to the WebSocket. Input goes via `tmux send-keys -t {name} -l "{text}"`.
+Use `tmux pipe-pane -t {name} "cat > /tmp/claudony-{id}.pipe"` to redirect pane output to a named FIFO. A Java virtual thread opens the FIFO for reading (blocking until the writer connects) and forwards bytes to the WebSocket. Input goes via `tmux send-keys -t {name} -l "{text}"`.
 
 The `-l` (literal) flag on `send-keys` is required — without it, tmux interprets key names in the text string (e.g. the word "Enter" becomes a newline).
 

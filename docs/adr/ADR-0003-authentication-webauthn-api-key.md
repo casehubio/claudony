@@ -37,7 +37,7 @@ Rejected. Same problem as basic auth (password UX), plus added complexity of tok
 **WebAuthn passkeys (chosen)**  
 A passkey is a public-key credential backed by device hardware (Secure Enclave on Apple devices). Authentication uses Touch ID / Face ID. Keys sync to iCloud Keychain — register once on MacBook, authenticate from iPad. No password stored anywhere.
 
-`quarkus-security-webauthn` provides the protocol implementation. Credentials stored locally in `~/.remotecc/credentials.json` — no external service.
+`quarkus-security-webauthn` provides the protocol implementation. Credentials stored locally in `~/.claudony/credentials.json` — no external service.
 
 ### Agent authentication
 
@@ -48,7 +48,7 @@ Each deployment would require manually setting a secret in config on both Server
 Strong security but high operational complexity — certificate generation, rotation, storage. Overkill for a local network tool.
 
 **Auto-provisioned API key (chosen)**  
-`ApiKeyService` generates a random key on first Server run, persists it to `~/.remotecc/api-key`, and logs a first-run banner. The Agent reads the same file at startup. Zero manual configuration for local deployments; the config property `remotecc.agent.api-key` overrides for production scenarios.
+`ApiKeyService` generates a random key on first Server run, persists it to `~/.claudony/api-key`, and logs a first-run banner. The Agent reads the same file at startup. Zero manual configuration for local deployments; the config property `claudony.agent.api-key` overrides for production scenarios.
 
 ---
 
@@ -56,7 +56,7 @@ Strong security but high operational complexity — certificate generation, rota
 
 **Browser clients** authenticate via WebAuthn passkeys using `quarkus-security-webauthn`. Registration is invite-only (first user bootstraps; subsequent users require a 24-hour one-time token). Session cookies are signed with a stable encryption key (must be set via `QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY` in production).
 
-**Agent clients** authenticate via `X-Api-Key` header. The key is auto-provisioned by `ApiKeyService` and shared between Server and Agent via `~/.remotecc/api-key`.
+**Agent clients** authenticate via `X-Api-Key` header. The key is auto-provisioned by `ApiKeyService` and shared between Server and Agent via `~/.claudony/api-key`.
 
 Both mechanisms are registered as Quarkus `HttpAuthenticationMechanism` implementations and tried in turn on each request. Valid credentials from either mechanism yield role `user`.
 

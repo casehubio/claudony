@@ -1,4 +1,4 @@
-# RemoteCC — Wiring the Control Plane
+# Claudony — Wiring the Control Plane
 
 **Date:** 2026-04-04
 **Type:** phase-update

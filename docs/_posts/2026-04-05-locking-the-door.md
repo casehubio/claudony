@@ -20,7 +20,7 @@ For registration: invite-only. The owner registers first (before any credentials
 
 ## Implementing it: five classes, a login page, and a naming mistake caught late
 
-I brought Claude in for the implementation. We built five new classes: `InviteService` (token map, consumed on first use), `CredentialStore` (`WebAuthnUserProvider` backed by `~/.remotecc/credentials.json` with atomic temp-file-rename saves), `ApiKeyAuthMechanism` (Quarkus `HttpAuthenticationMechanism` — reads the `X-Api-Key` header), `AuthResource` (POST invite for existing users, GET register for new ones), and `ApiKeyClientFilter` (injects the API key on every outgoing Agent request).
+I brought Claude in for the implementation. We built five new classes: `InviteService` (token map, consumed on first use), `CredentialStore` (`WebAuthnUserProvider` backed by `~/.claudony/credentials.json` with atomic temp-file-rename saves), `ApiKeyAuthMechanism` (Quarkus `HttpAuthenticationMechanism` — reads the `X-Api-Key` header), `AuthResource` (POST invite for existing users, GET register for new ones), and `ApiKeyClientFilter` (injects the API key on every outgoing Agent request).
 
 On top of those: login and register HTML pages using the WebAuthn browser API, a dev quick-login dialog that bypasses the ceremony with a single POST (dev mode only), and `@Authenticated` on all `/api/*` routes with `@TestSecurity` to keep the existing 106 tests green.
 

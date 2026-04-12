@@ -1,24 +1,24 @@
 [
   {
-    "name": "dev.remotecc.server.model.Session",
+    "name": "dev.claudony.server.model.Session",
     "allDeclaredConstructors": true,
     "allPublicMethods": true,
     "allDeclaredFields": true
   },
   {
-    "name": "dev.remotecc.server.model.SessionStatus",
+    "name": "dev.claudony.server.model.SessionStatus",
     "allDeclaredConstructors": true,
     "allPublicMethods": true,
     "allDeclaredFields": true
   },
   {
-    "name": "dev.remotecc.server.model.CreateSessionRequest",
+    "name": "dev.claudony.server.model.CreateSessionRequest",
     "allDeclaredConstructors": true,
     "allPublicMethods": true,
     "allDeclaredFields": true
   },
   {
-    "name": "dev.remotecc.server.model.SessionResponse",
+    "name": "dev.claudony.server.model.SessionResponse",
     "allDeclaredConstructors": true,
     "allPublicMethods": true,
     "allDeclaredFields": true

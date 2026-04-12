@@ -1,4 +1,4 @@
-# RemoteCC — Claude Code Project Guide
+# Claudony — Claude Code Project Guide
 
 ## Project Type
 
@@ -10,7 +10,7 @@
 
 ## What This Project Is
 
-RemoteCC lets you run Claude Code CLI sessions on one machine (MacBook or headless Mac Mini) and access them from any device via a browser or PWA. A "controller" Claude instance manages sessions via MCP. Sessions persist independently — closing a browser tab or iTerm2 window never kills a session.
+Claudony lets you run Claude Code CLI sessions on one machine (MacBook or headless Mac Mini) and access them from any device via a browser or PWA. A "controller" Claude instance manages sessions via MCP. Sessions persist independently — closing a browser tab or iTerm2 window never kills a session.
 
 Two Quarkus modes from the same binary:
 - **Server** — owns tmux sessions, WebSocket terminal streaming, web dashboard, REST API
@@ -46,7 +46,7 @@ JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home \
 
 ```bash
 # Start server (dev mode, with hot reload)
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dremotecc.mode=server
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dclaudony.mode=server
 
 # ⚠️ IMPORTANT: Hot reload breaks WebSocket endpoint registration in Quarkus dev mode.
 # After ANY Java commit that triggers a reload, do a full server restart.
@@ -58,16 +58,16 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dremotecc.mode=server
 # The application.properties has a fallback dev key, but prod mode generates a random one.
 QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<your-secret-32-chars> \
 JAVA_HOME=$(/usr/libexec/java_home -v 26) java \
-  -Dremotecc.mode=server -Dremotecc.bind=0.0.0.0 \
+  -Dclaudony.mode=server -Dclaudony.bind=0.0.0.0 \
   -jar target/quarkus-app/quarkus-run.jar
 
 JAVA_HOME=$(/usr/libexec/java_home -v 26) java \
-  -Dremotecc.mode=agent -Dremotecc.port=7778 \
+  -Dclaudony.mode=agent -Dclaudony.port=7778 \
   -jar target/quarkus-app/quarkus-run.jar
 
 # Start native binary
-./target/remotecc-1.0.0-SNAPSHOT-runner                     # server mode (default)
-./target/remotecc-1.0.0-SNAPSHOT-runner -Dremotecc.mode=agent -Dquarkus.http.port=7778
+./target/claudony-1.0.0-SNAPSHOT-runner                     # server mode (default)
+./target/claudony-1.0.0-SNAPSHOT-runner -Dclaudony.mode=agent -Dquarkus.http.port=7778
 ```
 
 **Default ports:** Server = 7777, Agent = 7778
@@ -108,8 +108,8 @@ Virtual threads (`Thread.ofVirtual()`) work fine on Java 26 with release=21.
 ## Project Structure
 
 ```
-src/main/java/dev/remotecc/
-├── config/RemoteCCConfig.java          — all config properties
+src/main/java/dev/claudony/
+├── config/ClaudonyConfig.java          — all config properties
 ├── server/
 │   ├── model/                          — Session, SessionStatus, request/response records
 │   ├── TmuxService.java                — ProcessBuilder wrappers for tmux commands
@@ -121,7 +121,7 @@ src/main/java/dev/remotecc/
 │       ├── ApiKeyService.java          — key resolution (config → file → generate), first-run banner
 │       ├── ApiKeyAuthMechanism.java    — X-Api-Key header auth (Agent→Server) + dev cookie
 │       ├── AuthResource.java           — /auth/register, /auth/login, /auth/dev-login
-│       ├── CredentialStore.java        — WebAuthn credential persistence (~/.remotecc/credentials.json)
+│       ├── CredentialStore.java        — WebAuthn credential persistence (~/.claudony/credentials.json)
 │       └── InviteService.java          — invite token generation and validation
 └── agent/
     ├── ServerClient.java               — typed REST client to Server
@@ -146,7 +146,7 @@ src/main/resources/META-INF/resources/  — static frontend served by Quarkus
 
 ## Architecture Notes
 
-**tmux is the source of truth.** Sessions live in tmux independent of the Quarkus server. On server restart, `ServerStartup` bootstraps the registry from `tmux list-sessions` (sessions with `remotecc-` prefix). Working dir will show as "unknown" for bootstrapped sessions — this is expected.
+**tmux is the source of truth.** Sessions live in tmux independent of the Quarkus server. On server restart, `ServerStartup` bootstraps the registry from `tmux list-sessions` (sessions with `claudony-` prefix). Working dir will show as "unknown" for bootstrapped sessions — this is expected.
 
 **Terminal streaming (no PTY).** `tmux attach-session` requires a real PTY which ProcessBuilder cannot provide. We use `tmux pipe-pane` instead: pane output → FIFO → Java virtual thread → WebSocket. Input goes via `tmux send-keys -t name -l "text"` (the `-l` flag is critical — literal mode).
 
@@ -171,21 +171,21 @@ See `docs/BUGS-AND-ODDITIES.md` for comprehensive details. Key ones:
 ## Configuration Properties
 
 ```properties
-remotecc.mode=server|agent
-remotecc.port=7777
-remotecc.bind=localhost                  # use 0.0.0.0 for Mac Mini / remote access
-remotecc.server.url=http://localhost:7777
-remotecc.claude-command=claude
-remotecc.tmux-prefix=remotecc-
-remotecc.terminal=auto                   # auto|iterm2|none
-remotecc.default-working-dir=~/remotecc-workspace   # default dir for new sessions
-remotecc.credentials-file=~/.remotecc/credentials.json
-remotecc.agent.api-key=                  # auto-generated on first server run; saved to ~/.remotecc/api-key
+claudony.mode=server|agent
+claudony.port=7777
+claudony.bind=localhost                  # use 0.0.0.0 for Mac Mini / remote access
+claudony.server.url=http://localhost:7777
+claudony.claude-command=claude
+claudony.tmux-prefix=claudony-
+claudony.terminal=auto                   # auto|iterm2|none
+claudony.default-working-dir=~/claudony-workspace   # default dir for new sessions
+claudony.credentials-file=~/.claudony/credentials.json
+claudony.agent.api-key=                  # auto-generated on first server run; saved to ~/.claudony/api-key
 # Production — must also set via env var (no default; random key = sessions lost on restart):
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
 ```
 
-**Directory convention:** `~/.remotecc/` holds config/credentials (hidden, system); `~/remotecc-workspace/` is the default session working directory (visible, user-facing). Both are created on server startup.
+**Directory convention:** `~/.claudony/` holds config/credentials (hidden, system); `~/claudony-workspace/` is the default session working directory (visible, user-facing). Both are created on server startup.
 
 ---
 
@@ -229,7 +229,7 @@ style guide at `~/claude-workspace/writing-styles/blog-technical.md`
 ## Work Tracking
 
 **Issue tracking:** enabled
-**GitHub repo:** mdproctor/remotecc
+**GitHub repo:** mdproctor/claudony
 **Changelog:** GitHub Releases (run `gh release create --generate-notes` at milestones)
 
 **Automatic behaviours (Claude follows these at all times in this project):**

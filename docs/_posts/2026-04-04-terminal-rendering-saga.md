@@ -37,7 +37,7 @@ xterm.js was attached, the terminal would work. This turned out to be wrong.
 load, render cards with status badges, auto-refresh every five seconds, a
 dialog for creating new sessions, delete with confirmation. The CSS uses
 custom properties for a dark theme that matches terminal aesthetics. Cards
-show session name (stripping the `remotecc-` prefix), status badge, working
+show session name (stripping the `claudony-` prefix), status badge, working
 directory, and time since last activity. Responsive grid that works on iPad
 in portrait and landscape.
 
@@ -59,7 +59,7 @@ architecture:
 
 ```
 tmux pane output
-  → pipe-pane spawns: /bin/sh -c "cat > /tmp/remotecc-{connid}.pipe"
+  → pipe-pane spawns: /bin/sh -c "cat > /tmp/claudony-{connid}.pipe"
   → cat writes to named FIFO
   → Java virtual thread reads from FIFO via FileInputStream
   → sendTextAndAwait(chunk) → xterm.js
@@ -68,7 +68,7 @@ tmux pane output
 `tmux pipe-pane` streams pane output to any shell command — no PTY required.
 We create a named FIFO (a Unix pipe file), start a virtual thread that opens
 it for reading (blocking until a writer connects), then start pipe-pane
-which runs `cat > /tmp/remotecc-{connid}.pipe`. Both sides block on the
+which runs `cat > /tmp/claudony-{connid}.pipe`. Both sides block on the
 FIFO open, then unblock each other — standard POSIX FIFO semantics.
 
 For input, `tmux send-keys -t sessionName -l "text"` with the `-l` flag for

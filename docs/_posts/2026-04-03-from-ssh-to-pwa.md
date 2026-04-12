@@ -85,7 +85,7 @@ tool assuming iTerm2 on macOS. But mid-design we realised: the Agent could
 run on Linux too, and other terminals exist (WezTerm, Kitty). We made the
 terminal integration pluggable — a `TerminalAdapter` interface with iTerm2
 as the first implementation, auto-detection at startup, configuration via
-`remotecc.terminal=auto|iterm2|none`.
+`claudony.terminal=auto|iterm2|none`.
 
 **The controller Claude.** This is the concept we're most excited about:
 a Claude Code instance in its own iTerm2 window that has MCP tools giving

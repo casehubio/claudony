@@ -1,4 +1,4 @@
-# RemoteCC — The Dashboard Grew Up (And the Compose Took Five Tries)
+# Claudony — The Dashboard Grew Up (And the Compose Took Five Tries)
 
 **Date:** 2026-04-09
 **Type:** phase-update

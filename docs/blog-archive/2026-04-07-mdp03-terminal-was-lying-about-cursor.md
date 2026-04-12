@@ -1,4 +1,4 @@
-# RemoteCC — The Terminal Was Lying About Its Cursor
+# Claudony — The Terminal Was Lying About Its Cursor
 
 **Date:** 2026-04-07
 **Type:** phase-update

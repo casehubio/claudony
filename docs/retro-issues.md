@@ -1,7 +1,7 @@
-# Retrospective Issue Mapping — RemoteCC
+# Retrospective Issue Mapping — Claudony
 
 **Generated:** 2026-04-08  
-**Repo:** mdproctor/remotecc  
+**Repo:** mdproctor/claudony  
 **Commits analysed:** 107 (2026-04-03 → 2026-04-07)  
 **Method:** conventional-commit scope clustering + time-window boundary detection
 
@@ -48,7 +48,7 @@
 
 **Label:** `enhancement`  
 **Commits:** `2a5be544`, `79131677`, `f873c89f`  
-**Key commits:** `2a5be544` Duplicate session name detection — 409 + live UI validation / `79131677` Split ~/.remotecc (config) from ~/remotecc-workspace (sessions)
+**Key commits:** `2a5be544` Duplicate session name detection — 409 + live UI validation / `79131677` Split ~/.claudony (config) from ~/claudony-workspace (sessions)
 
 ---
 
@@ -74,7 +74,7 @@
 ### Epic 3: Build Agent and MCP Control Plane
 
 **Covers:** 2026-04-04  
-**Definition of Done:** Controller Claude can manage RemoteCC sessions via MCP tools; Agent proxies to Server via authenticated REST; iTerm2 opens sessions; clipboard configured automatically.
+**Definition of Done:** Controller Claude can manage Claudony sessions via MCP tools; Agent proxies to Server via authenticated REST; iTerm2 opens sessions; clipboard configured automatically.
 
 #### #14 — Add ServerClient REST client for Agent-to-Server communication
 
@@ -180,7 +180,7 @@
 ### Epic 7: Implement Auto-generated API Key Provisioning
 
 **Covers:** 2026-04-07  
-**Definition of Done:** On first server run, an API key is auto-generated, persisted to ~/.remotecc/api-key, and displayed in a first-run banner; Agent reads same key on startup; no manual config needed.
+**Definition of Done:** On first server run, an API key is auto-generated, persisted to ~/.claudony/api-key, and displayed in a first-run banner; Agent reads same key on startup; no manual config needed.
 
 #### #27 — Add ApiKeyService — key resolution, generation, and file persistence
 
