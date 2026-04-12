@@ -226,6 +226,7 @@
   .hero-inner svg { display: none; }
   .architecture { grid-template-columns: 1fr; gap: 32px; }
   .arch-col.right { align-items: flex-start; text-align: left; }
+  .arch-diagram { display: none; }
 }
 
 @media (max-width: 768px) {

@@ -119,3 +119,136 @@ title: Home
 </section>
 
 <div class="section-divider"></div>
+
+<!-- 2. PROBLEM -->
+<section id="problem">
+  <div class="container">
+    <div class="problem-inner">
+      <div>
+        <div class="section-label">The problem</div>
+        <h2 class="section-h2">Claude Code dies<br>when <em>you</em> disconnect</h2>
+        <p class="section-body">
+          Close the terminal. Switch devices. Laptop goes to sleep. Your session is gone — the context, the working state, everything. You're back to square one.
+          <br><br>
+          And there's no way to reach it from your iPad, your phone, or another machine. Claude Code is tethered to wherever it was started.
+        </p>
+      </div>
+      <div class="pain-cards">
+        <div class="pain-card">
+          <div class="pain-icon">💀</div>
+          <div>
+            <div class="pain-title">Sessions don't survive disconnects</div>
+            <div class="pain-desc">Close a terminal, lose everything. Every reconnect starts cold with no context.</div>
+          </div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-icon">📱</div>
+          <div>
+            <div class="pain-title">No cross-device access</div>
+            <div class="pain-desc">Claude Code runs on one machine. You can't reach it from an iPad, phone, or another laptop.</div>
+          </div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-icon">🔀</div>
+          <div>
+            <div class="pain-title">No overview of all your sessions</div>
+            <div class="pain-desc">Multiple projects, multiple terminals. No single place to see what's running and what it's doing.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- 3. HOW IT WORKS -->
+<section id="how">
+  <div class="how-ambient"></div>
+  <div class="orb" style="width:500px;height:500px;top:-100px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(100,0,200,0.08),transparent 70%)"></div>
+  <div class="container" style="position:relative;z-index:2">
+    <div class="how-header">
+      <div class="section-label centered">How it works</div>
+      <h2 class="section-h2 centered" style="max-width:500px;margin-left:auto;margin-right:auto">
+        A colony that <em>lives</em><br>independently of you
+      </h2>
+      <p>Two lightweight processes. Sessions in tmux. Connect from any browser.</p>
+    </div>
+
+    <div class="architecture">
+      <!-- Left: your devices -->
+      <div class="arch-col">
+        <div class="arch-node green-node">
+          <div class="arch-node-title">Browser / PWA</div>
+          <div class="arch-node-desc">Any device with a browser. Install as a PWA for a full-screen native feel on iPad.</div>
+        </div>
+        <div class="arch-node green-node">
+          <div class="arch-node-title">Controller Claude</div>
+          <div class="arch-node-desc">A Claude instance with MCP tools. Create, read, and manage every session in the colony using natural language.</div>
+        </div>
+        <div class="arch-node green-node">
+          <div class="arch-node-title">iTerm2 / Terminal</div>
+          <div class="arch-node-desc">Open any session directly as a local iTerm2 window via the Agent.</div>
+        </div>
+      </div>
+
+      <!-- Centre: architecture SVG — add class arch-diagram so CSS can hide at tablet -->
+      <div class="arch-diagram" style="display:flex;justify-content:center;align-items:center;padding:20px 0">
+        <svg viewBox="0 0 260 360" width="260" height="360" aria-hidden="true" focusable="false">
+          <defs>
+            <marker id="arrowD" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(160,96,255,0.5)"/>
+            </marker>
+            <marker id="arrowU" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+              <path d="M8,0 L8,6 L0,3 z" fill="rgba(160,96,255,0.5)"/>
+            </marker>
+          </defs>
+          <!-- Agent -->
+          <rect x="70" y="10" width="120" height="56" rx="10" fill="rgba(0,255,170,0.06)" stroke="rgba(0,255,170,0.3)" stroke-width="1.5"/>
+          <text x="130" y="36" text-anchor="middle" font-family="Outfit,sans-serif" font-size="13" font-weight="600" fill="rgba(0,255,170,0.9)">Agent</text>
+          <text x="130" y="53" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(0,255,170,0.5)">MCP · iTerm2 · local</text>
+          <!-- REST arrows -->
+          <line x1="130" y1="66"  x2="130" y2="136" stroke="rgba(160,96,255,0.4)" stroke-width="1.5" marker-end="url(#arrowD)"/>
+          <line x1="122" y1="136" x2="122" y2="66"  stroke="rgba(160,96,255,0.3)" stroke-width="1" marker-end="url(#arrowU)" stroke-dasharray="4,3"/>
+          <text x="145" y="106" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(160,96,255,0.4)">REST</text>
+          <!-- Server -->
+          <rect x="50" y="141" width="160" height="66" rx="10" fill="rgba(160,96,255,0.08)" stroke="rgba(160,96,255,0.4)" stroke-width="1.5"/>
+          <circle cx="88" cy="161" r="6" fill="#a060ff" opacity="0.7">
+            <animate attributeName="opacity" values="0.7;0.3;0.7" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <text x="130" y="167" text-anchor="middle" font-family="Outfit,sans-serif" font-size="14" font-weight="600" fill="rgba(160,96,255,0.95)">Server</text>
+          <text x="130" y="184" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(160,96,255,0.5)">WebSocket · REST API</text>
+          <text x="130" y="198" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(160,96,255,0.5)">Dashboard · Auth</text>
+          <!-- tmux arrow -->
+          <line x1="130" y1="207" x2="130" y2="264" stroke="rgba(160,96,255,0.4)" stroke-width="1.5" marker-end="url(#arrowD)"/>
+          <text x="145" y="240" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(160,96,255,0.4)">tmux</text>
+          <!-- tmux box -->
+          <rect x="60" y="269" width="140" height="52" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.12)" stroke-width="1.2"/>
+          <text x="130" y="293" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="rgba(255,255,255,0.6)">tmux</text>
+          <text x="130" y="310" text-anchor="middle" font-family="Outfit,sans-serif" font-size="10" fill="rgba(255,255,255,0.3)">Sessions persist here</text>
+          <!-- Browser WebSocket arc (left side) -->
+          <path d="M50,174 Q5,174 5,110 Q5,46 70,30" fill="none" stroke="rgba(0,255,170,0.2)" stroke-width="1" stroke-dasharray="4,4" marker-end="url(#arrowD)"/>
+          <text x="3" y="145" font-family="JetBrains Mono,monospace" font-size="7" fill="rgba(0,255,170,0.3)" transform="rotate(-90,3,145)">WebSocket</text>
+        </svg>
+      </div>
+
+      <!-- Right: sessions -->
+      <div class="arch-col right">
+        <div class="arch-node">
+          <div class="arch-node-title">Session — api-dev</div>
+          <div class="arch-node-desc">A live tmux pane. Claude Code running your API project. Accessible from browser or iTerm2.</div>
+        </div>
+        <div class="arch-node">
+          <div class="arch-node-title">Session — frontend</div>
+          <div class="arch-node-desc">Another tmux pane. Completely independent. Persists whether you're connected or not.</div>
+        </div>
+        <div class="arch-node dim-node">
+          <div class="arch-node-title">Session — dormant</div>
+          <div class="arch-node-desc">Waiting. The process lives in tmux. Reconnect instantly whenever you need it.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
