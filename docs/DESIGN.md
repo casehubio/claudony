@@ -232,6 +232,11 @@ Both created on server startup if absent.
 | Compose send method | `terminal.paste()` xterm.js API | Routes through AttachAddon; handles bracketed paste mode correctly | `ws.send()` — bypasses AttachAddon, breaks on reconnect |
 | iTerm2 button visibility | `window.location.hostname` localhost-only check | iTerm2 only works when server is co-located with the browser | Show always (broken on mini PC) |
 | Stable session encryption | `QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY` env var | Prevents cookie invalidation on server restart | Random key per restart (Quarkus default) |
+| Project name | Claudony (from colony metaphor) | Unique, available; evokes controller/fleet concept; strong visual identity | RemoteCC (working name), other candidates checked for trademark conflicts |
+| Visual identity | Bioluminescent colony — void-black, violet/green/magenta, organic SVG nodes | Colony metaphor maps naturally to sessions as organisms; distinctive from QuarkMind (hex + cyan) | Deep Space Colony (hex grid + cyan — too close to QuarkMind) |
+| Landing page | Jekyll 4 in `docs/`, GitHub Pages via Actions | Follows project convention; Jekyll 4 needs Actions (classic pins 3.9) | Served from Quarkus app, separate domain |
+| Two-mode binary | Single Quarkus binary, `claudony.mode=server\|agent` | Mac Mini hosts sessions; MacBook has iTerm2 — same binary, different roles | Two separate binaries |
+| Internal rename | Clean cut — no backward compat | Personal tool, no external users; existing tmux sessions and `~/.remotecc/` abandoned | Dual-prefix support, migration script |
 
 ---
 
@@ -246,9 +251,9 @@ Both created on server startup if absent.
 
 ## Next Steps
 
-- Deploy to mini PC (headless, no iTerm2) — write `docs/DEPLOYMENT.md`
+- Dashboard redesign — apply Claudony colony theme (void-black, violet/green/magenta) to session cards and dashboard chrome
+- xterm.js theming — expose configurable presets; don't force the colony palette inside the terminal pane (users have strong preferences: Nord, Solarized, Dracula)
 - Session expiry — `Max-Age` cookies (currently session-scoped, expire on browser close)
-- Auto-naming sessions via Claude API
 - Lifecycle hooks — scripts on session create/delete
 
 ---
@@ -256,7 +261,9 @@ Both created on server startup if absent.
 ## Open Questions
 
 - Session expiry: `Max-Age` requires intercepting Quarkus internal cookie issuance — is this worth doing vs accepting browser-close expiry?
-- Mini PC deployment: will `gh` CLI be available for PR/CI status? May need setup documentation
+- xterm.js theming: URL params, settings UI, or user preference stored in credentials file?
+- Dashboard theme: user-configurable or fixed to the colony palette?
+- CLI wrapper: when does the binary get `claudony server` / `claudony agent` instead of `-Dclaudony.mode=...`?
 - Service health ports: should the checked port list be configurable per session, or is the fixed default set sufficient?
 - Docker sandbox per session: worthwhile before wider use, or is tmux namespacing sufficient?
 - Credential store multi-user: should it eventually support multiple named users, or remain single-owner?
@@ -269,4 +276,6 @@ Both created on server startup if absent.
 - [ADR-0002: MCP transport via HTTP JSON-RPC](adr/ADR-0002-mcp-transport-http-json-rpc.md)
 - [ADR-0003: Authentication via WebAuthn passkeys and API key](adr/ADR-0003-authentication-webauthn-api-key.md)
 - [Auth design spec](superpowers/specs/2026-04-05-auth-design.md)
+- [Landing page spec](superpowers/specs/2026-04-11-landing-page-design.md)
 - [Known bugs and oddities](BUGS-AND-ODDITIES.md)
+- Landing page: https://mdproctor.github.io/claudony/
