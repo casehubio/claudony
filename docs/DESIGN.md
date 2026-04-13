@@ -258,6 +258,69 @@ Both created on server startup if absent.
 
 ---
 
+## Planned Ecosystem Integration
+
+> **Context:** Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem alongside **CaseHub** (orchestration/choreography engine) and **Qhorus** (agent communication mesh — `~/claude/qhorus`). Claudony depends on both; neither depends on Claudony. Full ecosystem design: `~/claude/cross-claude-mcp/docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md`
+
+This section describes what Claudony needs to prepare for. Not immediate work — design constraints to keep in mind.
+
+### Implementing CaseHub's Four SPIs
+
+When CaseHub gains its provider interfaces (see CaseHub DESIGN.md §10.x), Claudony implements all four:
+
+| CaseHub SPI | Claudony Implementation | Uses |
+|---|---|---|
+| `WorkerProvisioner` | `ClaudonyWorkerProvisioner` | `TmuxService` + `SessionRegistry` to create/terminate Claude sessions |
+| `CaseChannelProvider` | `ClaudonyChannelProvider` | Qhorus client to open/close channels |
+| `WorkerContextProvider` | `ClaudonyWorkerContextProvider` | Builds Claude startup prompt with task, lineage, channel name |
+| `WorkerStatusListener` | `ClaudonyWorkerStatusListener` | Monitors tmux session lifecycle → updates CaseHub worker status |
+
+**Design constraint:** `TmuxService` and `SessionRegistry` should remain unaware of CaseHub. The SPI implementations are thin wrappers over them — don't let CaseHub concepts leak into the core session management classes.
+
+### Embedding Qhorus
+
+Claudony will add `qhorus` as a Maven dependency. Qhorus's MCP tools join the Agent's MCP endpoint alongside Claudony's existing session tools.
+
+**Design constraint:** The Agent's `McpServer` currently dispatches a hardcoded set of tools. It needs to become **composable** — multiple tool sources registered independently so Qhorus tools and future CaseHub MCP tools can be added without modifying `McpServer.java`. Plan for a registration mechanism (CDI `Instance<McpToolProvider>` or similar) rather than a growing dispatch table.
+
+### Three-Panel Dashboard
+
+The dashboard evolves from its current session-card layout to a three-panel observatory:
+
+```
+┌──────────────┬───────────────────────┬────────────────────────┐
+│  CASE GRAPH  │      TERMINAL         │      SIDE PANEL        │
+│  (CaseHub)   │  (existing xterm.js)  │  CaseHub task + goal   │
+│              │                       │  Lineage               │
+│  worker list │                       │  Qhorus channel msgs   │
+│  transitions │                       │  [Human interjection]  │
+└──────────────┴───────────────────────┴────────────────────────┘
+```
+
+**Design constraint:** Don't bake the current layout into the dashboard JS in a way that's hard to extend. The terminal view (`session.html` / `terminal.js`) will become the centre panel. The left and right panels are new. Keep the terminal component self-contained so it can be composed into a wider layout without rewriting it.
+
+### Human Interjection
+
+The side panel's channel conversation view includes a human input that posts to the Qhorus channel as a `human` sender. This is first-class — workers see it on their next `check_messages` or `wait_for_reply` cycle, and CaseHub records it in lineage as a `HumanDecision` node.
+
+**Design constraint:** The human sender needs a distinct visual treatment in the channel view (different from Claude agent messages). Plan for `sender_type: human | agent` on rendered messages.
+
+### Worker ↔ Session ↔ Channel Correlation
+
+When a Claudony session starts for a CaseHub task, Claudony automatically links:
+- tmux session ID ↔ CaseHub worker ID ↔ Qhorus channel name
+
+This triple correlation is what makes the dashboard work — click a worker in the case graph, see their terminal and their channel. The `Session` model will need to carry optional `caseWorkerId` and `qhorusChannel` fields.
+
+### Guard Rails
+
+- `TmuxService`, `SessionRegistry`, `TerminalWebSocket` — keep clean of CaseHub/Qhorus concepts
+- The SPI implementations are the coupling point, nothing else
+- `McpServer` dispatch must become composable before Qhorus tools are added
+- Terminal component must remain independently functional (no hard dependency on side panel existing)
+
+---
+
 ## Open Questions
 
 - Session expiry: `Max-Age` requires intercepting Quarkus internal cookie issuance — is this worth doing vs accepting browser-close expiry?
