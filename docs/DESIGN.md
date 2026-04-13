@@ -260,7 +260,7 @@ Both created on server startup if absent.
 
 ## Planned Ecosystem Integration
 
-> **Context:** Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem alongside **CaseHub** (orchestration/choreography engine) and **Qhorus** (agent communication mesh — `~/claude/qhorus`). Claudony depends on both; neither depends on Claudony. Full ecosystem design: `~/claude/cross-claude-mcp/docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md`
+> **Context:** Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem alongside **CaseHub** (orchestration/choreography engine) and **Qhorus** (agent communication mesh — `~/claude/qhorus`). Claudony depends on both; neither depends on Claudony. The canonical ecosystem design document lives in this repo at `docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md`
 
 This section describes what Claudony needs to prepare for. Not immediate work — design constraints to keep in mind.
 

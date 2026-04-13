@@ -211,9 +211,17 @@ Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTes
 
 ## Ecosystem Context
 
-Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem (CaseHub + Qhorus + Claudony). Load the ecosystem design only when working on CaseHub SPI implementations, Qhorus embedding, the unified MCP endpoint, or the three-panel dashboard:
+Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem:
 
-@/Users/mdproctor/claude/cross-claude-mcp/docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md
+- **CaseHub** (`~/claude/casehub`) — orchestration/choreography engine; defines SPIs that Claudony implements
+- **Qhorus** (`~/claude/quarkus-qhorus`) — agent communication mesh; Claudony embeds it and provides the dashboard observation layer
+- **Claudony** (this project) — wires everything together; implements CaseHub SPIs, embeds Qhorus, hosts the unified dashboard
+
+The canonical ecosystem design document lives here in this repo. It is the master architectural blueprint for all three projects — covering project topology, SPI contracts, MCP tool surfaces, choreography/orchestration use cases, the unified observer dashboard, human-in-the-loop interjection, and the B→C→A build roadmap.
+
+Load it when working on: CaseHub SPI implementations, Qhorus embedding, the unified MCP endpoint, the three-panel dashboard, or any cross-project architectural decisions:
+
+@/Users/mdproctor/claude/claudony/docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md
 
 ---
 
