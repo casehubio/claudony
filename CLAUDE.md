@@ -209,6 +209,12 @@ Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTes
 
 `docs/DESIGN.md` is the living architectural overview — updated via `/update-design` (or automatically by `java-git-commit`). For point-in-time snapshots, see `docs/design-snapshots/`.
 
+## Ecosystem Context
+
+Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem (CaseHub + Qhorus + Claudony). Load the ecosystem design only when working on CaseHub SPI implementations, Qhorus embedding, the unified MCP endpoint, or the three-panel dashboard:
+
+@/Users/mdproctor/claude/cross-claude-mcp/docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md
+
 ---
 
 ## Project Blog
