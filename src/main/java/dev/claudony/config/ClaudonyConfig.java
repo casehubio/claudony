@@ -3,6 +3,7 @@ package dev.claudony.config;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
+import java.time.Duration;
 import java.util.Optional;
 
 @ConfigMapping(prefix = "claudony")
@@ -40,6 +41,10 @@ public interface ClaudonyConfig {
     @WithName("credentials-file")
     @WithDefault("${user.home}/.claudony/credentials.json")
     String credentialsFile();
+
+    @WithName("session-timeout")
+    @WithDefault("P7D")
+    Duration sessionTimeout();
 
     default boolean isServerMode() { return "server".equals(mode()); }
     default boolean isAgentMode()  { return "agent".equals(mode()); }
