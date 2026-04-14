@@ -148,15 +148,14 @@ class PeerRegistryTest {
     @Test
     void manualPeerPersistedToFile() throws Exception {
         registry.addPeer("id1", "http://peer-a:7777", "A", DiscoverySource.MANUAL, TerminalMode.DIRECT);
-        // Give the async persist thread a moment to write
-        Thread.sleep(200);
+        registry.persist(); // synchronous — no Thread.sleep needed
         assertThat(tempDir.resolve("peers.json")).exists();
     }
 
     @Test
     void configPeerNotPersistedToFile() throws Exception {
         registry.addPeer("id1", "http://peer-a:7777", "Config", DiscoverySource.CONFIG, TerminalMode.DIRECT);
-        Thread.sleep(200);
+        registry.persist(); // synchronous
         // Config peers are never written to peers.json (they come from config, not file)
         if (tempDir.resolve("peers.json").toFile().exists()) {
             var content = java.nio.file.Files.readString(tempDir.resolve("peers.json"));

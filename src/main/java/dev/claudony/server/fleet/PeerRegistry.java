@@ -152,6 +152,10 @@ public class PeerRegistry {
         Thread.ofVirtual().start(this::persist);
     }
 
+    /**
+     * Synchronously writes non-CONFIG peers to peers.json (atomic write).
+     * Package-private so unit tests can call directly instead of going through persistAsync().
+     */
     void persist() {
         try {
             var toSave = peers.values().stream()
