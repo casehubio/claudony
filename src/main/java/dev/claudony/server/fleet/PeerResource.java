@@ -6,6 +6,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
@@ -32,7 +33,7 @@ public class PeerResource {
 
     @POST
     public Response add(AddPeerRequest req) {
-        if (req == null || req.url() == null || req.url().isBlank()) {
+        if (req.url() == null || req.url().isBlank()) {
             return Response.status(400).entity("{\"error\":\"url is required\"}").build();
         }
         var created = manual.addPeer(req.url(), req.name(), req.terminalMode());
@@ -42,16 +43,17 @@ public class PeerResource {
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") String id) {
-        if (registry.findById(id).isEmpty()) {
-            return Response.status(404).build();
-        }
-        var removed = registry.removePeer(id);
-        if (!removed) {
-            return Response.status(405)
-                    .entity("{\"error\":\"Cannot remove a peer registered via static config\"}")
-                    .build();
-        }
-        return Response.noContent().build();
+        return registry.findById(id)
+                .map(peer -> {
+                    if (peer.source() == DiscoverySource.CONFIG) {
+                        return Response.status(405)
+                                .entity("{\"error\":\"Cannot remove a peer registered via static config\"}")
+                                .build();
+                    }
+                    registry.removePeer(id);
+                    return Response.noContent().build();
+                })
+                .orElse(Response.status(404).build());
     }
 
     @PATCH
@@ -61,7 +63,9 @@ public class PeerResource {
             return Response.status(404).build();
         }
         registry.updatePeer(id, req.name(), req.terminalMode());
-        return Response.ok(registry.findById(id)).build();
+        return registry.findById(id)
+                .map(updated -> Response.ok(updated).build())
+                .orElse(Response.status(404).build());
     }
 
     @GET
@@ -85,7 +89,7 @@ public class PeerResource {
                     .findFirst()
                     .ifPresent(entry -> {
                         try {
-                            var client = org.eclipse.microprofile.rest.client.RestClientBuilder.newBuilder()
+                            var client = RestClientBuilder.newBuilder()
                                     .baseUri(URI.create(entry.url))
                                     .connectTimeout(5, TimeUnit.SECONDS)
                                     .readTimeout(5, TimeUnit.SECONDS)
