@@ -109,6 +109,8 @@ public class EncryptionKeyConfigSource implements ConfigSource {
                     LOG.debugf("Loaded session encryption key from %s", keyFile);
                     return key;
                 }
+                LOG.warnf("Session encryption key file %s exists but is blank — regenerating." +
+                        " All existing auth sessions will be invalidated.", keyFile);
             } catch (IOException e) {
                 LOG.warnf("Could not read session encryption key from %s: %s — regenerating",
                         keyFile, e.getMessage());

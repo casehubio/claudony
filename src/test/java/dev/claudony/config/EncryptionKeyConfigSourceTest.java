@@ -169,6 +169,30 @@ class EncryptionKeyConfigSourceTest {
         }
     }
 
+    // ─── Thread safety ───────────────────────────────────────────────────────
+
+    @Test
+    void concurrent_allThreadsGetSameKey() throws Exception {
+        var source = new EncryptionKeyConfigSource(tempDir);
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(8);
+        try {
+            var futures = java.util.stream.IntStream.range(0, 16)
+                    .mapToObj(i -> executor.submit(() -> source.getValue(ENC_KEY_PROP)))
+                    .toList();
+            var keys = futures.stream()
+                    .map(f -> {
+                        try { return f.get(); } catch (Exception e) { throw new RuntimeException(e); }
+                    })
+                    .collect(java.util.stream.Collectors.toSet());
+            // All 16 concurrent calls must return the same key
+            assertThat(keys).hasSize(1);
+            // And the key file must exist (written exactly once)
+            assertThat(tempDir.resolve("encryption-key")).exists();
+        } finally {
+            executor.shutdown();
+        }
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────────────
 
     private static boolean isPosix() {
