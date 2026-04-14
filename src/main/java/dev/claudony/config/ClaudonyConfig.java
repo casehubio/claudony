@@ -46,6 +46,20 @@ public interface ClaudonyConfig {
     @WithDefault("P7D")
     Duration sessionTimeout();
 
+    @WithName("fleet-key")
+    Optional<String> fleetKey();
+
+    @WithName("peers")
+    Optional<String> peers(); // comma-separated peer URLs; absent means no static peers
+
+    @WithName("mdns-discovery")
+    @WithDefault("false")
+    boolean mdnsDiscovery();
+
+    @WithName("name")
+    @WithDefault("Claudony")
+    String name(); // human-readable instance name shown in fleet dashboard
+
     default boolean isServerMode() { return "server".equals(mode()); }
     default boolean isAgentMode()  { return "agent".equals(mode()); }
 }

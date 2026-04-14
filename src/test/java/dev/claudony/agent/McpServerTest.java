@@ -66,7 +66,8 @@ class McpServerTest {
             new SessionResponse("id-1", "claudony-proj", "/tmp", "claude",
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
-                "http://localhost:7777/app/session/id-1")
+                "http://localhost:7777/app/session/id-1",
+                null, null, null)
         ));
 
         given().contentType("application/json")
@@ -86,7 +87,8 @@ class McpServerTest {
             new SessionResponse("id-2", "claudony-new", "/home", "claude",
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-2",
-                "http://localhost:7777/app/session/id-2")
+                "http://localhost:7777/app/session/id-2",
+                null, null, null)
         );
 
         given().contentType("application/json")
@@ -155,7 +157,8 @@ class McpServerTest {
             .thenReturn(new SessionResponse("id-1", "claudony-newname", "/tmp", "claude",
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
-                "http://localhost:7777/app/session/id-1"));
+                "http://localhost:7777/app/session/id-1",
+                null, null, null));
 
         given().contentType("application/json")
             .body("{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"tools/call\"," +
