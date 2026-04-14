@@ -25,6 +25,9 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
     @Inject
     ApiKeyService apiKeyService;
 
+    @Inject
+    FleetKeyService fleetKeyService;
+
     @Override
     public Uni<SecurityIdentity> authenticate(RoutingContext context, IdentityProviderManager identityProviderManager) {
         var apiKey = context.request().getHeader("X-Api-Key");
@@ -37,18 +40,33 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
             // No key provided — defer to path policy (allow anonymous for non-protected paths)
             return Uni.createFrom().optional(Optional.empty());
         }
-        var expected = apiKeyService.getKey();
-        if (expected.isEmpty() || !MessageDigest.isEqual(
-                expected.get().getBytes(StandardCharsets.UTF_8),
+
+        // Check agent API key
+        var agentKey = apiKeyService.getKey();
+        if (agentKey.isPresent() && MessageDigest.isEqual(
+                agentKey.get().getBytes(StandardCharsets.UTF_8),
                 apiKey.getBytes(StandardCharsets.UTF_8))) {
-            return Uni.createFrom().failure(
-                new io.quarkus.security.AuthenticationFailedException("Invalid API key"));
+            return Uni.createFrom().item(
+                QuarkusSecurityIdentity.builder()
+                    .setPrincipal(new QuarkusPrincipal("agent"))
+                    .addRole("user")
+                    .build());
         }
-        return Uni.createFrom().item(
-            QuarkusSecurityIdentity.builder()
-                .setPrincipal(new QuarkusPrincipal("agent"))
-                .addRole("user")
-                .build());
+
+        // Check fleet key (peer-to-peer calls from other Claudony instances)
+        var fleetKey = fleetKeyService.getKey();
+        if (fleetKey.isPresent() && MessageDigest.isEqual(
+                fleetKey.get().getBytes(StandardCharsets.UTF_8),
+                apiKey.getBytes(StandardCharsets.UTF_8))) {
+            return Uni.createFrom().item(
+                QuarkusSecurityIdentity.builder()
+                    .setPrincipal(new QuarkusPrincipal("peer"))
+                    .addRole("user")
+                    .build());
+        }
+
+        return Uni.createFrom().failure(
+            new io.quarkus.security.AuthenticationFailedException("Invalid API key"));
     }
 
     @Override
