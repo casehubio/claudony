@@ -1,5 +1,6 @@
 package dev.claudony.server.fleet;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,6 +19,15 @@ class PeerRegistryTest {
     @BeforeEach
     void setUp() {
         registry = new PeerRegistry(tempDir);
+    }
+
+    /**
+     * Drain any in-flight persistAsync() virtual threads before JUnit deletes @TempDir.
+     * persistAsync() spawns a virtual thread; without this, cleanup may race with the write.
+     */
+    @AfterEach
+    void drainPersist() {
+        registry.persist();
     }
 
     // ─── Basic CRUD ──────────────────────────────────────────────────────────
