@@ -53,9 +53,9 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -Dclaudony.mode=server
 # See docs/BUGS-AND-ODDITIES.md entry #1 for details.
 
 # Start JVM jar (IMPORTANT: -D flags must come BEFORE -jar, not after)
-# Also set QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY so auth cookies survive restarts.
-# Without it, a new random key is generated each restart and all sessions are logged out.
-# The application.properties has a fallback dev key, but prod mode generates a random one.
+# Prod: session encryption key is auto-generated on first run and persisted to
+# ~/.claudony/encryption-key — no env var needed. Set the env var only if you want
+# to manage the key yourself (e.g. from a secrets manager); it takes precedence.
 QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<your-secret-32-chars> \
 JAVA_HOME=$(/usr/libexec/java_home -v 26) java \
   -Dclaudony.mode=server -Dclaudony.bind=0.0.0.0 \
@@ -181,7 +181,8 @@ claudony.terminal=auto                   # auto|iterm2|none
 claudony.default-working-dir=~/claudony-workspace   # default dir for new sessions
 claudony.credentials-file=~/.claudony/credentials.json
 claudony.agent.api-key=                  # auto-generated on first server run; saved to ~/.claudony/api-key
-# Production — must also set via env var (no default; random key = sessions lost on restart):
+# Production — optional; auto-generated and persisted to ~/.claudony/encryption-key on first run.
+# Set only if managing the key externally (secrets manager, etc.):
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
 ```
 
@@ -191,10 +192,11 @@ claudony.agent.api-key=                  # auto-generated on first server run; s
 
 ## Test Count and Status
 
-**139 tests passing** across:
+**159 tests passing** across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService
+- `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
 - `e2e/` — ClaudeE2ETest (real `claude` CLI via `mvn test -Pe2e`, skipped in default run)
