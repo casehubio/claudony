@@ -93,6 +93,7 @@ public class PeerResource {
                                     .baseUri(URI.create(entry.url))
                                     .connectTimeout(5, TimeUnit.SECONDS)
                                     .readTimeout(5, TimeUnit.SECONDS)
+                                    .register(FleetKeyClientFilter.class)
                                     .build(PeerClient.class);
                             var sessions = client.getSessions(true);
                             registry.recordSuccess(id);

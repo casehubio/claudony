@@ -2,13 +2,18 @@ package dev.claudony.server;
 
 import dev.claudony.agent.terminal.TerminalAdapterFactory;
 import dev.claudony.config.ClaudonyConfig;
+import dev.claudony.server.fleet.FleetKeyClientFilter;
+import dev.claudony.server.fleet.PeerClient;
+import dev.claudony.server.fleet.PeerRegistry;
 import dev.claudony.server.model.*;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
 import java.io.OutputStream;
@@ -20,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Path("/api/sessions")
@@ -34,12 +40,64 @@ public class SessionResource {
     @Inject SessionRegistry registry;
     @Inject TmuxService tmux;
     @Inject TerminalAdapterFactory terminalFactory;
+    @Inject PeerRegistry peerRegistry;
 
     @GET
-    public java.util.List<SessionResponse> list() {
-        return registry.all().stream()
+    public List<SessionResponse> list(@QueryParam("local") @DefaultValue("false") boolean localOnly) {
+        // Local sessions — always returned
+        var result = new ArrayList<>(registry.all().stream()
                 .map(s -> SessionResponse.from(s, config.port()))
-                .toList();
+                .toList());
+
+        if (localOnly) return result;
+
+        var allPeers = peerRegistry.getAllPeers();
+        if (allPeers.isEmpty()) return result;
+
+        // Healthy peers (CLOSED/HALF_OPEN): attempt live fetch, fall back to stale cache on failure
+        var healthyPeers = peerRegistry.getHealthyPeers();
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var futures = healthyPeers.stream()
+                    .map(peer -> executor.submit(() -> fetchPeerSessions(peer.url())))
+                    .toList();
+
+            for (int i = 0; i < futures.size(); i++) {
+                var peer = healthyPeers.get(i);
+                try {
+                    var sessions = futures.get(i).get(2, TimeUnit.SECONDS);
+                    peerRegistry.recordSuccess(peer.id());
+                    peerRegistry.updateCachedSessions(peer.id(), sessions);
+                    sessions.stream()
+                            .map(s -> s.withInstance(peer.url(), peer.name(), false))
+                            .forEach(result::add);
+                } catch (Exception e) {
+                    peerRegistry.recordFailure(peer.id());
+                    peerRegistry.getCachedSessions(peer.id()).stream()
+                            .map(s -> s.withInstance(peer.url(), peer.name(), true))
+                            .forEach(result::add);
+                }
+            }
+        }
+
+        // OPEN circuit peers: don't attempt a live call — serve stale cache only
+        var healthyIds = healthyPeers.stream().map(p -> p.id()).collect(java.util.stream.Collectors.toSet());
+        allPeers.stream()
+                .filter(p -> !healthyIds.contains(p.id()))
+                .forEach(peer -> peerRegistry.getCachedSessions(peer.id()).stream()
+                        .map(s -> s.withInstance(peer.url(), peer.name(), true))
+                        .forEach(result::add));
+
+        return result;
+    }
+
+    private List<SessionResponse> fetchPeerSessions(String peerUrl) {
+        var client = RestClientBuilder.newBuilder()
+                .baseUri(URI.create(peerUrl))
+                .connectTimeout(3, TimeUnit.SECONDS)
+                .readTimeout(2, TimeUnit.SECONDS)
+                .register(FleetKeyClientFilter.class)
+                .build(PeerClient.class);
+        return client.getSessions(true); // local=true prevents recursive federation
     }
 
     @GET
