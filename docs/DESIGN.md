@@ -2,6 +2,8 @@
 
 **Status:** Active
 
+**See also:** [Fleet Architecture](FLEET.md) — multi-instance peer mesh, Docker deployment, session federation
+
 ---
 
 ## Overview
