@@ -130,4 +130,23 @@ class PeerResourceTest {
             .extract().asString();
         org.assertj.core.api.Assertions.assertThat(key).isNotBlank();
     }
+
+    @Test
+    void proxyResize_unknownPeer_returns404() {
+        given()
+            .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
+            .when().post("/api/peers/does-not-exist/sessions/some-session/resize?cols=80&rows=24")
+            .then().statusCode(404);
+    }
+
+    @Test
+    void proxyResize_knownPeer_peerUnreachable_returns502() {
+        registry.addPeer("resize-test-peer", "http://localhost:19999",
+                "Unreachable", DiscoverySource.MANUAL, TerminalMode.PROXY);
+
+        given()
+            .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
+            .when().post("/api/peers/resize-test-peer/sessions/any-session/resize?cols=80&rows=24")
+            .then().statusCode(502);
+    }
 }

@@ -108,6 +108,36 @@ public class PeerResource {
     }
 
     @POST
+    @Path("/{peerId}/sessions/{sessionId}/resize")
+    @Consumes(MediaType.WILDCARD)
+    public Response proxyResize(
+            @PathParam("peerId") String peerId,
+            @PathParam("sessionId") String sessionId,
+            @QueryParam("cols") @DefaultValue("80") int cols,
+            @QueryParam("rows") @DefaultValue("24") int rows) {
+
+        var peer = registry.findById(peerId);
+        if (peer.isEmpty()) {
+            return Response.status(404).build();
+        }
+
+        var client = RestClientBuilder.newBuilder()
+                .baseUri(URI.create(peer.get().url()))
+                .connectTimeout(3, TimeUnit.SECONDS)
+                .readTimeout(2, TimeUnit.SECONDS)
+                .register(FleetKeyClientFilter.class)
+                .build(PeerClient.class);
+
+        try {
+            var peerResponse = client.resize(sessionId, cols, rows);
+            return Response.status(peerResponse.getStatus()).build();
+        } catch (Exception e) {
+            LOG.debugf("Proxy resize failed for peer %s session %s: %s", peerId, sessionId, e.getMessage());
+            return Response.status(502).build();
+        }
+    }
+
+    @POST
     @Path("/generate-fleet-key")
     @Produces(MediaType.TEXT_PLAIN)
     @Consumes(MediaType.WILDCARD)

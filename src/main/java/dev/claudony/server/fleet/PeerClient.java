@@ -1,9 +1,9 @@
 package dev.claudony.server.fleet;
 
 import dev.claudony.server.model.SessionResponse;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
@@ -31,4 +31,15 @@ public interface PeerClient {
     @GET
     @Path("/sessions")
     List<SessionResponse> getSessions(@QueryParam("local") boolean localOnly);
+
+    /**
+     * Proxies a terminal resize command to the peer's session.
+     * Returns the peer's response status (204 on success, 404 if session not found).
+     */
+    @POST
+    @Path("/sessions/{sessionId}/resize")
+    @Consumes(MediaType.WILDCARD)
+    Response resize(@PathParam("sessionId") String sessionId,
+                    @QueryParam("cols") int cols,
+                    @QueryParam("rows") int rows);
 }
