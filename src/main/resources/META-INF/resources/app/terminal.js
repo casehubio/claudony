@@ -30,14 +30,19 @@
     terminal.loadAddon(fitAddon);
     terminal.open(document.getElementById('terminal-container'));
     fitAddon.fit();
+    // Expose for E2E testing: allows tests to trigger onResize with known dimensions
+    window._xtermTerminal = terminal;
 
     var resizeObserver = new ResizeObserver(function () { fitAddon.fit(); });
     resizeObserver.observe(document.getElementById('terminal-container'));
 
     terminal.onResize(function (size) {
-        fetch('/api/sessions/' + sessionId + '/resize?cols=' + size.cols + '&rows=' + size.rows, {
-            method: 'POST'
-        }).catch(function () {});
+        var proxyPeer = params.get('proxyPeer');
+        var resizeUrl = proxyPeer
+            ? '/api/peers/' + proxyPeer + '/sessions/' + sessionId
+              + '/resize?cols=' + size.cols + '&rows=' + size.rows
+            : '/api/sessions/' + sessionId + '/resize?cols=' + size.cols + '&rows=' + size.rows;
+        fetch(resizeUrl, { method: 'POST' }).catch(function () {});
     });
 
     var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
