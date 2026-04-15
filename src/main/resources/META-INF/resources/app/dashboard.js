@@ -18,7 +18,7 @@
     }
 
     function displayName(name) {
-        return name.replace(/^remotecc-/, '');
+        return name.replace(/^claudony-/, '');
     }
 
     var isLocalhost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
