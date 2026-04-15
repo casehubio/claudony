@@ -4,6 +4,7 @@ import dev.claudony.server.auth.FleetKeyService;
 import io.quarkus.websockets.next.*;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.mutiny.core.Vertx;
+import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
@@ -29,6 +30,13 @@ public class ProxyWebSocket {
     @Inject FleetKeyService fleetKeyService;
     @Inject Vertx vertx;
 
+    private io.vertx.mutiny.core.http.HttpClient httpClient;
+
+    @PostConstruct
+    void initClient() {
+        httpClient = vertx.createHttpClient();
+    }
+
     /** connectionId → upstream WebSocket to the peer */
     private final ConcurrentHashMap<String, io.vertx.mutiny.core.http.WebSocket> upstreams
             = new ConcurrentHashMap<>();
@@ -48,17 +56,21 @@ public class ProxyWebSocket {
         }
 
         var peerUrl = peer.get().url();
-        var uri     = URI.create(peerUrl);
-        var port    = uri.getPort() == -1 ? (peerUrl.startsWith("https") ? 443 : 80) : uri.getPort();
-        var wsPath  = "/ws/" + sessionId + "/" + cols + "/" + rows;
+        var uri = URI.create(peerUrl);
+        var isHttps = "https".equalsIgnoreCase(uri.getScheme());
+        var port = uri.getPort() == -1 ? (isHttps ? 443 : 80) : uri.getPort();
+        var wsPath = "/ws/" + sessionId + "/" + cols + "/" + rows;
 
         var options = new WebSocketConnectOptions()
                 .setHost(uri.getHost())
                 .setPort(port)
                 .setURI(wsPath);
+        if (isHttps) {
+            options.setSsl(true);
+        }
         fleetKeyService.getKey().ifPresent(k -> options.addHeader("X-Api-Key", k));
 
-        vertx.createHttpClient()
+        httpClient
                 .webSocket(options)
                 .subscribe().with(
                     upstream -> {
@@ -90,9 +102,8 @@ public class ProxyWebSocket {
                                 peerUrl, sessionId, cols, rows);
                     },
                     err -> {
-                        LOG.warnf("Proxy WS upstream connect failed to %s: %s",
-                                peerUrl, err.getMessage());
-                        connection.closeAndAwait();
+                        LOG.warnf("Proxy WS upstream connect failed to %s: %s", peerUrl, err.getMessage());
+                        connection.close().subscribeAsCompletionStage();
                     }
                 );
     }
@@ -113,6 +124,12 @@ public class ProxyWebSocket {
                     io.vertx.mutiny.core.buffer.Buffer.buffer(data))
                     .subscribeAsCompletionStage();
         }
+    }
+
+    @OnError
+    public void onError(Throwable error, WebSocketConnection connection) {
+        LOG.debugf("Proxy WS browser error for %s: %s", connection.id(), error.getMessage());
+        onClose(connection);
     }
 
     @OnClose
