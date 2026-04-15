@@ -1,13 +1,14 @@
 package dev.claudony.server.auth;
 
 import dev.claudony.config.ClaudonyConfig;
-import io.vertx.ext.auth.webauthn.Authenticator;
+import io.quarkus.security.webauthn.WebAuthnCredentialRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CredentialStoreTest {
@@ -39,33 +40,36 @@ class CredentialStoreTest {
 
     @Test
     void findByUsernameReturnsEmptyForUnknownUser() throws Exception {
-        var result = store.findWebAuthnCredentialsByUserName("nobody").subscribeAsCompletionStage().get();
+        var result = store.findByUsername("nobody").subscribeAsCompletionStage().get();
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void findByUsernameReturnsStoredCredential() throws Exception {
+    void findByUsernameReturnsStoredCredential() {
         store.writeForTest("bob", "cred-id-2", "pubkey-2", 5L, "aaguid-2");
-        var result = store.findWebAuthnCredentialsByUserName("bob").subscribeAsCompletionStage().get();
-        assertEquals(1, result.size());
-        assertEquals("bob", result.get(0).getUserName());
-        assertEquals("cred-id-2", result.get(0).getCredID());
+        var creds = store.loadForTest();
+        assertEquals(1, creds.size());
+        assertEquals("bob", creds.get(0).username());
+        assertEquals("cred-id-2", creds.get(0).credentialId());
     }
 
     @Test
-    void findByCredentialIdReturnsStoredCredential() throws Exception {
+    void findByCredentialIdReturnsStoredCredential() {
         store.writeForTest("carol", "cred-id-3", "pubkey-3", 0L, "aaguid-3");
-        var result = store.findWebAuthnCredentialsByCredID("cred-id-3").subscribeAsCompletionStage().get();
-        assertEquals(1, result.size());
-        assertEquals("carol", result.get(0).getUserName());
+        var creds = store.loadForTest();
+        var found = creds.stream().filter(c -> c.credentialId().equals("cred-id-3")).findFirst();
+        assertTrue(found.isPresent());
+        assertEquals("carol", found.get().username());
     }
 
     @Test
-    void updateChangesCounter() throws Exception {
+    void updateChangesCounter() {
         store.writeForTest("dave", "cred-id-4", "pubkey-4", 0L, "aaguid-4");
         store.updateCounter("cred-id-4", 99L);
-        var result = store.findWebAuthnCredentialsByCredID("cred-id-4").subscribeAsCompletionStage().get();
-        assertEquals(99L, result.get(0).getCounter());
+        var creds = store.loadForTest();
+        var found = creds.stream().filter(c -> c.credentialId().equals("cred-id-4")).findFirst();
+        assertTrue(found.isPresent());
+        assertEquals(99L, found.get().counter());
     }
 
     @Test
@@ -76,34 +80,31 @@ class CredentialStoreTest {
 
     @Test
     void storeNewCredentialViaWebAuthnInterface() throws Exception {
-        var auth = new Authenticator()
-            .setUserName("frank")
-            .setCredID("cred-id-6")
-            .setPublicKey("pubkey-6")
-            .setCounter(0L)
-            .setAaguid("aaguid-6");
+        var data = new WebAuthnCredentialRecord.RequiredPersistedData(
+            "frank", "cred-id-6", new UUID(0, 0), new byte[32], -7L, 0L);
+        var record = Mockito.mock(WebAuthnCredentialRecord.class);
+        Mockito.when(record.getRequiredPersistedData()).thenReturn(data);
 
-        store.updateOrStoreWebAuthnCredentials(auth).subscribeAsCompletionStage().get();
+        store.store(record).subscribeAsCompletionStage().get();
 
-        var result = store.findWebAuthnCredentialsByCredID("cred-id-6").subscribeAsCompletionStage().get();
-        assertEquals(1, result.size());
-        assertEquals("frank", result.get(0).getUserName());
-        assertEquals(0L, result.get(0).getCounter());
+        var creds = store.loadForTest();
+        var found = creds.stream().filter(c -> c.credentialId().equals("cred-id-6")).findFirst();
+        assertTrue(found.isPresent());
+        assertEquals("frank", found.get().username());
+        assertEquals(0L, found.get().counter());
     }
 
     @Test
     void updateExistingCredentialCounterViaWebAuthnInterface() throws Exception {
         store.writeForTest("grace", "cred-id-7", "pubkey-7", 5L, "aaguid-7");
 
-        // Framework calls this after each successful login to bump the sign counter
-        var auth = new Authenticator()
-            .setCredID("cred-id-7")
-            .setCounter(99L);
-        store.updateOrStoreWebAuthnCredentials(auth).subscribeAsCompletionStage().get();
+        // Framework calls update(credentialId, counter) after each successful login
+        store.update("cred-id-7", 99L).subscribeAsCompletionStage().get();
 
-        var result = store.findWebAuthnCredentialsByCredID("cred-id-7").subscribeAsCompletionStage().get();
-        assertEquals(1, result.size());
-        assertEquals(99L, result.get(0).getCounter());
-        assertEquals("grace", result.get(0).getUserName()); // username preserved on update
+        var creds = store.loadForTest();
+        var found = creds.stream().filter(c -> c.credentialId().equals("cred-id-7")).findFirst();
+        assertTrue(found.isPresent());
+        assertEquals(99L, found.get().counter());
+        assertEquals("grace", found.get().username());
     }
 }

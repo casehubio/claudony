@@ -12,7 +12,7 @@
     <compiler-plugin.version>3.13.0</compiler-plugin.version>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <quarkus.platform.version>3.9.5</quarkus.platform.version>
+    <quarkus.platform.version>3.32.2</quarkus.platform.version>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
   </properties>
 
@@ -65,7 +65,7 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-junit5</artifactId>
+      <artifactId>quarkus-junit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -84,11 +84,11 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-rest-client-reactive-jackson</artifactId>
+      <artifactId>quarkus-rest-client-jackson</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-junit5-mockito</artifactId>
+      <artifactId>quarkus-junit-mockito</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

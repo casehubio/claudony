@@ -3,10 +3,10 @@ package dev.claudony.server.auth;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.claudony.config.ClaudonyConfig;
+import io.quarkus.security.webauthn.WebAuthnCredentialRecord;
 import io.quarkus.security.webauthn.WebAuthnUserProvider;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
-import io.vertx.ext.auth.webauthn.Authenticator;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.io.IOException;
@@ -15,20 +15,22 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class CredentialStore implements WebAuthnUserProvider {
 
-    // Note: publicKeyAlgorithm is intentionally omitted — io.vertx.ext.auth.webauthn.Authenticator
-    // exposes no getter or setter for the algorithm field, so it cannot be persisted or restored.
+    // Persisted format. publicKey is Base64-encoded COSE key bytes; aaguid is UUID string.
     record StoredCredential(
         String username,
         String credentialId,
+        String aaguid,
         String publicKey,
-        long counter,
-        String aaguid
+        long publicKeyAlgorithm,
+        long counter
     ) {}
 
     private static final TypeReference<List<StoredCredential>> LIST_TYPE =
@@ -55,30 +57,41 @@ public class CredentialStore implements WebAuthnUserProvider {
     }
 
     @Override
-    public Uni<List<Authenticator>> findWebAuthnCredentialsByUserName(String userName) {
+    public Uni<List<WebAuthnCredentialRecord>> findByUsername(String username) {
         return Uni.createFrom()
             .item(() -> load().stream()
-                .filter(c -> c.username().equals(userName))
-                .map(CredentialStore::toAuthenticator)
+                .filter(c -> c.username().equals(username))
+                .map(CredentialStore::toRecord)
                 .collect(Collectors.toList()))
             .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @Override
-    public Uni<List<Authenticator>> findWebAuthnCredentialsByCredID(String credId) {
+    public Uni<WebAuthnCredentialRecord> findByCredentialId(String credentialId) {
         return Uni.createFrom()
             .item(() -> load().stream()
-                .filter(c -> c.credentialId().equals(credId))
-                .map(CredentialStore::toAuthenticator)
-                .collect(Collectors.toList()))
+                .filter(c -> c.credentialId().equals(credentialId))
+                .map(CredentialStore::toRecord)
+                .findFirst()
+                .orElse(null))
             .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @Override
-    public Uni<Void> updateOrStoreWebAuthnCredentials(Authenticator authenticator) {
+    public Uni<Void> store(WebAuthnCredentialRecord record) {
         return Uni.createFrom()
             .<Void>item(() -> {
-                storeOrUpdate(authenticator);
+                doStore(record);
+                return null;
+            })
+            .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
+
+    @Override
+    public Uni<Void> update(String credentialId, long counter) {
+        return Uni.createFrom()
+            .<Void>item(() -> {
+                doUpdate(credentialId, counter);
                 return null;
             })
             .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
@@ -88,58 +101,76 @@ public class CredentialStore implements WebAuthnUserProvider {
     // Package-private test helpers
     // -------------------------------------------------------------------------
 
-    void writeForTest(String username, String credId, String pubKey,
+    void writeForTest(String username, String credentialId, String publicKey,
                       long counter, String aaguid) {
+        UUID parsedAaguid;
+        try {
+            parsedAaguid = UUID.fromString(aaguid);
+        } catch (IllegalArgumentException e) {
+            parsedAaguid = new UUID(0, 0);
+        }
+        byte[] pubKeyBytes = publicKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         synchronized (this) {
             var creds = new ArrayList<>(load());
-            creds.add(new StoredCredential(username, credId, pubKey, counter, aaguid));
+            creds.add(new StoredCredential(
+                username, credentialId, parsedAaguid.toString(),
+                Base64.getEncoder().encodeToString(pubKeyBytes), -7L, counter));
             save(creds);
         }
     }
 
     void updateCounter(String credId, long newCounter) {
-        synchronized (this) {
-            var creds = load().stream()
-                .map(c -> c.credentialId().equals(credId)
-                    ? new StoredCredential(c.username(), c.credentialId(), c.publicKey(),
-                                          newCounter, c.aaguid())
-                    : c)
-                .collect(Collectors.toCollection(ArrayList::new));
-            save(creds);
-        }
+        doUpdate(credId, newCounter);
+    }
+
+    List<StoredCredential> loadForTest() {
+        return load();
     }
 
     // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
 
-    private void storeOrUpdate(Authenticator authenticator) {
+    private void doStore(WebAuthnCredentialRecord record) {
+        var data = record.getRequiredPersistedData();
         synchronized (this) {
-            var existing = load();
-            var credId = authenticator.getCredID();
-            boolean found = false;
-            var updated = new ArrayList<StoredCredential>();
-            for (var c : existing) {
-                if (c.credentialId().equals(credId)) {
-                    updated.add(new StoredCredential(
-                        c.username(), c.credentialId(), c.publicKey(),
-                        authenticator.getCounter(), c.aaguid()));
-                    found = true;
-                } else {
-                    updated.add(c);
-                }
-            }
-            if (!found) {
-                updated.add(new StoredCredential(
-                    authenticator.getUserName(),
-                    credId,
-                    authenticator.getPublicKey(),
-                    authenticator.getCounter(),
-                    authenticator.getAaguid()
-                ));
-            }
-            save(updated);
+            var creds = new ArrayList<>(load());
+            creds.removeIf(c -> c.credentialId().equals(data.credentialId()));
+            creds.add(new StoredCredential(
+                data.username(),
+                data.credentialId(),
+                data.aaguid().toString(),
+                Base64.getEncoder().encodeToString(data.publicKey()),
+                data.publicKeyAlgorithm(),
+                data.counter()
+            ));
+            save(creds);
         }
+    }
+
+    private void doUpdate(String credentialId, long newCounter) {
+        synchronized (this) {
+            var creds = load().stream()
+                .map(c -> c.credentialId().equals(credentialId)
+                    ? new StoredCredential(c.username(), c.credentialId(), c.aaguid(),
+                                          c.publicKey(), c.publicKeyAlgorithm(), newCounter)
+                    : c)
+                .collect(Collectors.toCollection(ArrayList::new));
+            save(creds);
+        }
+    }
+
+    private static WebAuthnCredentialRecord toRecord(StoredCredential c) {
+        return WebAuthnCredentialRecord.fromRequiredPersistedData(
+            new WebAuthnCredentialRecord.RequiredPersistedData(
+                c.username(),
+                c.credentialId(),
+                UUID.fromString(c.aaguid()),
+                Base64.getDecoder().decode(c.publicKey()),
+                c.publicKeyAlgorithm(),
+                c.counter()
+            )
+        );
     }
 
     private synchronized List<StoredCredential> load() {
@@ -172,14 +203,5 @@ public class CredentialStore implements WebAuthnUserProvider {
         } catch (IOException e) {
             throw new RuntimeException("Failed to write credentials file: " + path, e);
         }
-    }
-
-    private static Authenticator toAuthenticator(StoredCredential c) {
-        return new Authenticator()
-            .setUserName(c.username())
-            .setCredID(c.credentialId())
-            .setPublicKey(c.publicKey())
-            .setCounter(c.counter())
-            .setAaguid(c.aaguid());
     }
 }

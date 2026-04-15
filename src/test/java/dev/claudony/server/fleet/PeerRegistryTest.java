@@ -23,11 +23,12 @@ class PeerRegistryTest {
 
     /**
      * Drain any in-flight persistAsync() virtual threads before JUnit deletes @TempDir.
-     * persistAsync() spawns a virtual thread; without this, cleanup may race with the write.
+     * In newer JUnit 5, @TempDir cleanup failures are reported errors, so we must
+     * join the virtual thread rather than just kicking off another sync write.
      */
     @AfterEach
     void drainPersist() {
-        registry.persist();
+        registry.drainAsync();
     }
 
     // ─── Basic CRUD ──────────────────────────────────────────────────────────
