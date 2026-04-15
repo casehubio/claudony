@@ -68,6 +68,15 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) java \
 # Start native binary
 ./target/claudony-1.0.0-SNAPSHOT-runner                     # server mode (default)
 ./target/claudony-1.0.0-SNAPSHOT-runner -Dclaudony.mode=agent -Dquarkus.http.port=7778
+
+# Build Docker image (requires jar built first)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn package -DskipTests
+docker build -t claudony:latest .
+
+# Run two-node fleet with docker compose
+export CLAUDONY_FLEET_KEY=$(openssl rand -base64 32)
+docker compose up
+# Node A: http://localhost:7777  Node B: http://localhost:7778
 ```
 
 **Default ports:** Server = 7777, Agent = 7778

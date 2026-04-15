@@ -103,6 +103,25 @@ class PeerResourceTest {
     }
 
     @Test
+    void addPeer_duplicateUrl_returnsExisting() {
+        given()
+            .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
+            .contentType(ContentType.JSON)
+            .body("{\"url\":\"http://dup-peer:7777\",\"name\":\"First\"}")
+            .when().post("/api/peers")
+            .then().statusCode(201);
+
+        // Second POST with same URL must NOT return 500
+        given()
+            .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
+            .contentType(ContentType.JSON)
+            .body("{\"url\":\"http://dup-peer:7777\",\"name\":\"Duplicate\"}")
+            .when().post("/api/peers")
+            .then().statusCode(201)
+            .body("url", equalTo("http://dup-peer:7777"));
+    }
+
+    @Test
     void generateFleetKey_returnsNonBlankKey() {
         var key = given()
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")

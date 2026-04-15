@@ -22,7 +22,7 @@ final class PeerEntry {
     volatile TerminalMode terminalMode;
     volatile PeerHealth health = PeerHealth.UNKNOWN;
     volatile CircuitState circuitState = CircuitState.CLOSED;
-    volatile int consecutiveFailures = 0;
+    final java.util.concurrent.atomic.AtomicInteger consecutiveFailures = new java.util.concurrent.atomic.AtomicInteger(0);
     volatile Instant lastSeen = null;
     volatile Instant circuitOpenedAt = null;
     volatile long currentBackoffMs = INITIAL_BACKOFF_MS;
@@ -43,7 +43,7 @@ final class PeerEntry {
 
     /** Record a successful peer call — resets circuit to CLOSED. */
     void recordSuccess() {
-        consecutiveFailures = 0;
+        consecutiveFailures.set(0);
         currentBackoffMs = INITIAL_BACKOFF_MS;
         circuitState = CircuitState.CLOSED;
         health = PeerHealth.UP;
@@ -52,9 +52,9 @@ final class PeerEntry {
 
     /** Record a failed peer call — may open circuit after threshold. */
     void recordFailure() {
-        consecutiveFailures++;
+        int failures = consecutiveFailures.incrementAndGet();
         health = PeerHealth.DOWN;
-        if (consecutiveFailures >= FAILURE_THRESHOLD && circuitState == CircuitState.CLOSED) {
+        if (failures >= FAILURE_THRESHOLD && circuitState == CircuitState.CLOSED) {
             circuitState = CircuitState.OPEN;
             circuitOpenedAt = Instant.now();
         }
