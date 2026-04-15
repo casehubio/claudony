@@ -41,6 +41,7 @@ class TerminalPageE2ETest extends PlaywrightBase {
     @Test
     void proxyMode_resizeCallsProxyEndpoint() {
         var proxyPeerId = "test-proxy-peer-id";
+        page.addInitScript("window.__CLAUDONY_TEST_MODE__ = true;");
 
         // Intercept the resize fetch before navigating — route handler captures the URL.
         // Respond with 200 so fetch() doesn't fail and leave pending requests.
@@ -67,6 +68,8 @@ class TerminalPageE2ETest extends PlaywrightBase {
         assertThat(capturedUrl.get())
                 .as("In PROXY mode, resize must call /api/peers/{peerId}/sessions/ not /api/sessions/")
                 .isNotNull()
-                .contains("/api/peers/" + proxyPeerId + "/sessions/fake-session/resize");
+                .contains("/api/peers/" + proxyPeerId + "/sessions/fake-session/resize")
+                .contains("cols=100")
+                .contains("rows=30");
     }
 }

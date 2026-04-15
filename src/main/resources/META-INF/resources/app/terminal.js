@@ -31,7 +31,9 @@
     terminal.open(document.getElementById('terminal-container'));
     fitAddon.fit();
     // Expose for E2E testing: allows tests to trigger onResize with known dimensions
-    window._xtermTerminal = terminal;
+    if (window.__CLAUDONY_TEST_MODE__) {
+        window._xtermTerminal = terminal;
+    }
 
     var resizeObserver = new ResizeObserver(function () { fitAddon.fit(); });
     resizeObserver.observe(document.getElementById('terminal-container'));
