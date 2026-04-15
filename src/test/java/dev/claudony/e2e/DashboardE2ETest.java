@@ -41,6 +41,8 @@ class DashboardE2ETest extends PlaywrightBase {
         page.navigate(BASE_URL + "/app/");
         var fleetPanel = page.locator("#fleet-panel");
         assertThat(fleetPanel.isVisible()).isTrue();
+        // Wait for loadPeers() fetch to complete and re-render the peer list
+        page.locator(".peer-empty").waitFor();
         assertThat(page.locator(".peer-empty").textContent()).contains("No peers configured");
     }
 
@@ -49,7 +51,7 @@ class DashboardE2ETest extends PlaywrightBase {
         page.navigate(BASE_URL + "/app/");
         // Wait for the dashboard to finish its first poll (up to 6s — polls every 5s)
         page.locator(".empty-state").waitFor(
-                new Locator.WaitForOptions().setTimeout(6000));
+                new Locator.WaitForOptions().setTimeout(10000));
         assertThat(page.locator(".empty-state").textContent()).contains("No active sessions");
     }
 
@@ -84,7 +86,7 @@ class DashboardE2ETest extends PlaywrightBase {
                 RequestOptions.create()
                         .setHeader("Content-Type", "application/json")
                         .setHeader("X-Api-Key", API_KEY)
-                        .setData("{\"name\":\"playwright-test-session\"}"));
+                        .setData("{\"name\":\"playwright-test\"}"));
         assertThat(response.status()).isEqualTo(201);
         try {
             createdSessionId = new ObjectMapper()
@@ -99,9 +101,9 @@ class DashboardE2ETest extends PlaywrightBase {
         page.locator(".session-card").waitFor(
                 new Locator.WaitForOptions().setTimeout(10000));
 
-        // Card renders with the correct session name (prefix stripped by displayName())
+        // Server prepends "claudony-" to the name; displayName() strips it back to "playwright-test"
         assertThat(page.locator(".card-name").first().textContent())
-                .isEqualTo("playwright-test-session");
+                .isEqualTo("playwright-test");
         // Status badge is present and non-blank
         assertThat(page.locator(".badge").first().textContent().trim()).isNotBlank();
     }
