@@ -45,31 +45,61 @@
 
     function renderCard(s) {
         var card = document.createElement('div');
-        card.className = 'session-card';
+        card.className = 'session-card' + (s.stale ? ' stale' : '');
+
         var name = displayName(s.name);
         var status = s.status.toLowerCase();
-        var openUrl = '/app/session.html?id=' + s.id + '&name=' + encodeURIComponent(name);
-        var itermBtn = isLocalhost
+
+        // Determine open URL based on whether this is a local or remote session
+        var openUrl;
+        if (!s.instanceUrl) {
+            openUrl = '/app/session.html?id=' + s.id + '&name=' + encodeURIComponent(name);
+        } else {
+            var peerInfo = peerTerminalModes[s.instanceUrl];
+            if (peerInfo && peerInfo.terminalMode === 'PROXY') {
+                // PROXY: browser connects via local proxy WebSocket
+                // Note: resize silently fails for remote sessions (known Phase 2 limitation)
+                openUrl = '/app/session.html?id=' + s.id
+                    + '&name=' + encodeURIComponent(name)
+                    + '&proxyPeer=' + encodeURIComponent(peerInfo.id);
+            } else {
+                // DIRECT: navigate browser to the remote Claudony instance
+                openUrl = s.instanceUrl + '/app/session.html?id=' + s.id
+                    + '&name=' + encodeURIComponent(name);
+            }
+        }
+
+        var instanceBadge = s.instanceUrl
+            ? '<span class="instance-badge">' + (s.instanceName || s.instanceUrl) + '</span>'
+            : '';
+
+        var staleBadge = s.stale
+            ? '<div class="stale-badge">⏰ last seen ' + timeAgo(s.lastActive) + '</div>'
+            : '';
+
+        var itermBtn = (isLocalhost && !s.instanceUrl)
             ? '<button class="iterm-btn">Open in iTerm2</button>'
             : '';
         var hasWorkingDir = s.workingDir && s.workingDir !== 'unknown';
-        var prBtn = hasWorkingDir ? '<button class="pr-btn">Check PR</button>' : '';
+        var prBtn = (hasWorkingDir && !s.instanceUrl) ? '<button class="pr-btn">Check PR</button>' : '';
 
         card.innerHTML =
             '<div class="card-header">' +
                 '<span class="card-name">' + name + '</span>' +
                 '<span class="badge ' + status + '">' + status + '</span>' +
+                instanceBadge +
             '</div>' +
+            staleBadge +
             '<div class="card-dir">' + s.workingDir + '</div>' +
             '<div class="card-meta">Active ' + timeAgo(s.lastActive) + '</div>' +
-            (hasWorkingDir ? '<div class="card-git"></div>' : '') +
-            '<div class="card-services"></div>' +
+            (hasWorkingDir && !s.instanceUrl ? '<div class="card-git"></div>' : '') +
+            (s.instanceUrl ? '' : '<div class="card-services"></div>') +
             '<div class="card-actions">' +
                 '<button class="open-btn">Open Terminal</button>' +
                 prBtn +
-                '<button class="svc-btn">Check Services</button>' +
+                (s.instanceUrl ? '' : '<button class="svc-btn">Check Services</button>') +
                 itermBtn +
-                '<button class="danger delete-btn">Delete</button>' +
+                (s.instanceUrl ? '' : '<button class="danger delete-btn">Delete</button>') +
             '</div>';
 
         card.querySelector('.open-btn').addEventListener('click', function (e) {
@@ -77,7 +107,7 @@
             window.location.href = openUrl;
         });
 
-        if (hasWorkingDir) {
+        if (hasWorkingDir && !s.instanceUrl) {
             card.querySelector('.pr-btn').addEventListener('click', function (e) {
                 e.stopPropagation();
                 var btn = e.target;
@@ -99,35 +129,37 @@
             });
         }
 
-        card.querySelector('.svc-btn').addEventListener('click', function (e) {
-            e.stopPropagation();
-            var btn = e.target;
-            var svcDiv = card.querySelector('.card-services');
-            btn.disabled = true;
-            btn.textContent = '…';
-            fetch('/api/sessions/' + s.id + '/service-health')
-                .then(function (r) { requireAuth(r); return r.json(); })
-                .then(function (ports) {
-                    if (ports.length === 0) {
-                        svcDiv.innerHTML = '<span class="svc-label">Services:</span><span class="svc-none">none detected</span>';
-                    } else {
-                        svcDiv.innerHTML = '<span class="svc-label">Services:</span>' + ports.map(function (p) {
-                            return '<a class="svc-badge" href="http://localhost:' + p.port +
-                                   '" target="_blank" onclick="event.stopPropagation()" title="port ' +
-                                   p.port + ' responded in ' + p.responseMs + 'ms">● :' + p.port + '</a>';
-                        }).join('');
-                    }
-                    btn.disabled = false;
-                    btn.textContent = 'Check Services';
-                })
-                .catch(function () {
-                    svcDiv.innerHTML = '<span class="svc-none">check failed</span>';
-                    btn.disabled = false;
-                    btn.textContent = 'Check Services';
-                });
-        });
+        if (!s.instanceUrl) {
+            card.querySelector('.svc-btn').addEventListener('click', function (e) {
+                e.stopPropagation();
+                var btn = e.target;
+                var svcDiv = card.querySelector('.card-services');
+                btn.disabled = true;
+                btn.textContent = '…';
+                fetch('/api/sessions/' + s.id + '/service-health')
+                    .then(function (r) { requireAuth(r); return r.json(); })
+                    .then(function (ports) {
+                        if (ports.length === 0) {
+                            svcDiv.innerHTML = '<span class="svc-label">Services:</span><span class="svc-none">none detected</span>';
+                        } else {
+                            svcDiv.innerHTML = '<span class="svc-label">Services:</span>' + ports.map(function (p) {
+                                return '<a class="svc-badge" href="http://localhost:' + p.port +
+                                       '" target="_blank" onclick="event.stopPropagation()" title="port ' +
+                                       p.port + ' responded in ' + p.responseMs + 'ms">● :' + p.port + '</a>';
+                            }).join('');
+                        }
+                        btn.disabled = false;
+                        btn.textContent = 'Check Services';
+                    })
+                    .catch(function () {
+                        svcDiv.innerHTML = '<span class="svc-none">check failed</span>';
+                        btn.disabled = false;
+                        btn.textContent = 'Check Services';
+                    });
+            });
+        }
 
-        if (isLocalhost) {
+        if (isLocalhost && !s.instanceUrl) {
             card.querySelector('.iterm-btn').addEventListener('click', function (e) {
                 e.stopPropagation();
                 fetch('/api/sessions/' + s.id + '/open-terminal', { method: 'POST' })
@@ -137,11 +169,16 @@
                     });
             });
         }
-        card.querySelector('.delete-btn').addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (!confirm('Delete session "' + name + '"?')) return;
-            fetch('/api/sessions/' + s.id, { method: 'DELETE' }).then(function (r) { requireAuth(r); loadSessions(); });
-        });
+
+        if (!s.instanceUrl) {
+            card.querySelector('.delete-btn').addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (!confirm('Delete session "' + name + '"?')) return;
+                fetch('/api/sessions/' + s.id, { method: 'DELETE' })
+                    .then(function (r) { requireAuth(r); loadSessions(); });
+            });
+        }
+
         card.addEventListener('click', function () { window.location.href = openUrl; });
         return card;
     }
@@ -238,4 +275,150 @@
 
     form.addEventListener('submit', function (e) { e.preventDefault(); submitSession(false); });
     overwriteBtn.addEventListener('click', function () { submitSession(true); });
+
+    // ─── Fleet panel ─────────────────────────────────────────────────────────
+
+    var peerList = document.getElementById('peer-list');
+    var addPeerDialog = document.getElementById('add-peer-dialog');
+    var addPeerForm = document.getElementById('add-peer-form');
+
+    // Map of peer URL → {id, terminalMode} for session card lookup
+    var peerTerminalModes = {};
+
+    function healthClass(health) {
+        if (health === 'UP') return 'up';
+        if (health === 'DOWN') return 'down';
+        return 'unknown';
+    }
+
+    function circuitClass(state) {
+        if (state === 'CLOSED') return 'closed';
+        if (state === 'OPEN') return 'open';
+        return 'half-open';
+    }
+
+    function circuitLabel(state) {
+        if (state === 'HALF_OPEN') return 'half-open';
+        return state.toLowerCase();
+    }
+
+    function renderPeer(p) {
+        var card = document.createElement('div');
+        card.className = 'peer-card';
+        card.dataset.id = p.id;
+
+        var lastSeen = p.lastSeen ? timeAgo(p.lastSeen) : 'never';
+        var staleNote = p.health === 'DOWN' && p.sessionCount > 0
+            ? '<span class="stale-badge">⏰ ' + lastSeen + '</span>'
+            : '<span>' + lastSeen + '</span>';
+
+        card.innerHTML =
+            '<div class="peer-header">' +
+                '<div class="health-dot ' + healthClass(p.health) + '"></div>' +
+                '<span class="peer-name">' + (p.name || p.url) + '</span>' +
+                '<span class="peer-source">' + p.source.toLowerCase() + '</span>' +
+            '</div>' +
+            '<div class="peer-url">' + p.url + '</div>' +
+            '<div class="peer-meta">' +
+                '<span class="circuit-label ' + circuitClass(p.circuitState) + '">' +
+                    circuitLabel(p.circuitState) +
+                '</span>' +
+                staleNote +
+            '</div>' +
+            '<div class="peer-actions">' +
+                '<button class="peer-ping-btn secondary">Ping</button>' +
+                '<button class="peer-mode-btn secondary" title="Click to toggle">' +
+                    p.terminalMode +
+                '</button>' +
+                (p.source !== 'CONFIG'
+                    ? '<button class="peer-remove-btn danger">Remove</button>'
+                    : '') +
+            '</div>';
+
+        card.querySelector('.peer-ping-btn').addEventListener('click', function (e) {
+            e.stopPropagation();
+            var btn = e.target;
+            btn.disabled = true;
+            btn.textContent = '…';
+            fetch('/api/peers/' + p.id + '/ping', { method: 'POST' })
+                .then(function (r) { requireAuth(r); })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.textContent = 'Ping';
+                    setTimeout(loadPeers, 2000);
+                });
+        });
+
+        card.querySelector('.peer-mode-btn').addEventListener('click', function (e) {
+            e.stopPropagation();
+            var newMode = p.terminalMode === 'DIRECT' ? 'PROXY' : 'DIRECT';
+            fetch('/api/peers/' + p.id, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ terminalMode: newMode })
+            }).then(function (r) { requireAuth(r); loadPeers(); });
+        });
+
+        if (p.source !== 'CONFIG') {
+            card.querySelector('.peer-remove-btn').addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (!confirm('Remove peer "' + (p.name || p.url) + '"?')) return;
+                fetch('/api/peers/' + p.id, { method: 'DELETE' })
+                    .then(function (r) { requireAuth(r); loadPeers(); });
+            });
+        }
+
+        return card;
+    }
+
+    function loadPeers() {
+        fetch('/api/peers').then(function (r) {
+            if (!requireAuth(r)) return null;
+            return r.json();
+        }).then(function (peers) {
+            if (!peers) return;
+            peerTerminalModes = {};
+            peers.forEach(function (p) {
+                peerTerminalModes[p.url] = { id: p.id, terminalMode: p.terminalMode };
+            });
+
+            peerList.innerHTML = '';
+            if (peers.length === 0) {
+                peerList.innerHTML = '<div class="peer-empty">No peers configured</div>';
+            } else {
+                peers.forEach(function (p) { peerList.appendChild(renderPeer(p)); });
+            }
+        });
+    }
+
+    loadPeers();
+    setInterval(loadPeers, 10000);
+
+    document.getElementById('add-peer-btn').addEventListener('click', function () {
+        addPeerForm.reset();
+        addPeerDialog.showModal();
+    });
+
+    document.getElementById('cancel-peer-btn').addEventListener('click', function () {
+        addPeerDialog.close();
+    });
+
+    addPeerForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var data = new FormData(addPeerForm);
+        fetch('/api/peers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: data.get('url'),
+                name: data.get('name') || null,
+                terminalMode: data.get('terminalMode')
+            })
+        }).then(function (r) {
+            if (!requireAuth(r)) return;
+            addPeerDialog.close();
+            addPeerForm.reset();
+            loadPeers();
+        });
+    });
 })();
