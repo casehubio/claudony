@@ -1,0 +1,55 @@
+# Claudony — two-node fleet example
+#
+# Prerequisites:
+#   1. Build: mvn package -DskipTests
+#   2. Set fleet key: export CLAUDONY_FLEET_KEY=$(openssl rand -base64 32)
+#   3. Start: docker compose up
+#
+# Sessions from both nodes will be visible in each other's dashboards.
+# Access Node A: http://localhost:7777
+# Access Node B: http://localhost:7778
+
+services:
+  claudony-a:
+    build: .
+    ports:
+      - "7777:7777"
+    volumes:
+      - claudony-a-data:/root/.claudony
+      - claudony-a-workspace:/root/claudony-workspace
+    environment:
+      CLAUDONY_PEERS: "http://claudony-b:7777"
+      CLAUDONY_FLEET_KEY: "${CLAUDONY_FLEET_KEY}"
+      CLAUDONY_SERVER_URL: "http://claudony-a:7777"
+      CLAUDONY_NAME: "Node A"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7777/q/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  claudony-b:
+    build: .
+    ports:
+      - "7778:7777"
+    volumes:
+      - claudony-b-data:/root/.claudony
+      - claudony-b-workspace:/root/claudony-workspace
+    environment:
+      CLAUDONY_PEERS: "http://claudony-a:7777"
+      CLAUDONY_FLEET_KEY: "${CLAUDONY_FLEET_KEY}"
+      CLAUDONY_SERVER_URL: "http://claudony-b:7777"
+      CLAUDONY_NAME: "Node B"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7777/q/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  claudony-a-data:
+  claudony-b-data:
+  claudony-a-workspace:
+  claudony-b-workspace:

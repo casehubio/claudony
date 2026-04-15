@@ -117,6 +117,14 @@ src/main/java/dev/claudony/
 │   ├── SessionResource.java            — REST API /api/sessions
 │   ├── TerminalWebSocket.java          — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup.java              — startup health checks, directory creation, tmux bootstrap
+│   ├── fleet/
+│   │   ├── PeerRegistry.java           — authoritative peer list, circuit breaker, atomic peers.json persistence
+│   │   ├── PeerHealthScheduler.java    — @Scheduled health check loop, per-peer virtual thread
+│   │   ├── PeerResource.java           — REST /api/peers (CRUD + /{id}/sessions + /{id}/ping + /generate-fleet-key)
+│   │   ├── PeerClient.java             — @RegisterRestClient for peer /api/sessions calls
+│   │   ├── StaticConfigDiscovery.java  — loads claudony.peers at startup
+│   │   ├── ManualRegistrationDiscovery.java — REST-triggered peer management, persisted to peers.json
+│   │   └── MdnsDiscovery.java          — mDNS advertise/discover (scaffold; full impl follow-on)
 │   └── auth/
 │       ├── ApiKeyService.java          — key resolution (config → file → generate), first-run banner
 │       ├── ApiKeyAuthMechanism.java    — X-Api-Key header auth (Agent→Server) + dev cookie
@@ -181,6 +189,10 @@ claudony.terminal=auto                   # auto|iterm2|none
 claudony.default-working-dir=~/claudony-workspace   # default dir for new sessions
 claudony.credentials-file=~/.claudony/credentials.json
 claudony.agent.api-key=                  # auto-generated on first server run; saved to ~/.claudony/api-key
+claudony.fleet-key=                     # shared secret for peer-to-peer API calls; generate with POST /api/peers/generate-fleet-key
+claudony.peers=                         # comma-separated peer URLs for static discovery (e.g. http://mac-mini:7777)
+claudony.mdns-discovery=false           # enable mDNS auto-discovery on LAN (scaffold; full impl follow-on)
+claudony.name=Claudony                  # instance name shown in fleet dashboard
 # Production — optional; auto-generated and persisted to ~/.claudony/encryption-key on first run.
 # Set only if managing the key externally (secrets manager, etc.):
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
@@ -192,11 +204,12 @@ claudony.agent.api-key=                  # auto-generated on first server run; s
 
 ## Test Count and Status
 
-**162 tests passing** across:
+**206 tests passing** across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
-- `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService
+- `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
+- `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest), SessionFederationTest (QuarkusTest)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
 - `e2e/` — ClaudeE2ETest (real `claude` CLI via `mvn test -Pe2e`, skipped in default run)
