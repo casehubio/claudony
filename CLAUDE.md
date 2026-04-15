@@ -30,6 +30,16 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Dtest=ClassName
 # Run real Claude E2E tests (requires claude CLI authenticated)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Pe2e
 
+# Install Chromium for browser E2E tests (one-time per machine; uses local Maven repo)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn dependency:copy-dependencies -DincludeGroupIds=com.microsoft.playwright -DoutputDirectory=/tmp/pw && \
+  java -cp "/tmp/pw/*" com.microsoft.playwright.CLI install chromium
+
+# Run browser E2E tests (requires Chromium installed above)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Pe2e -Dtest=PlaywrightSetupE2ETest,DashboardE2ETest,TerminalPageE2ETest
+
+# Run with visible browser (local debugging)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Pe2e -Dplaywright.headless=false -Dtest=DashboardE2ETest
+
 # JVM build
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn package -DskipTests
 
@@ -221,7 +231,7 @@ claudony.name=Claudony                  # instance name shown in fleet dashboard
 - `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
-- `e2e/` — ClaudeE2ETest (real `claude` CLI via `mvn test -Pe2e`, skipped in default run)
+- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (1 terminal page) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
 
 `ServerStartup.bootstrapRegistry()` is package-private to allow direct testing.
 Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in non-auth test classes.
