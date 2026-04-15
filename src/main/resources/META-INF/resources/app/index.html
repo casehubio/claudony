@@ -4,18 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#007acc">
-    <title>RemoteCC</title>
+    <title>Claudony</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/app/style.css">
 </head>
 <body>
     <header>
-        <h1>RemoteCC</h1>
+        <h1>Claudony</h1>
         <button id="new-session-btn">+ New Session</button>
     </header>
 
-    <main id="session-grid"></main>
+    <div class="app-body">
+        <aside id="fleet-panel">
+            <div class="fleet-panel-header">
+                <span class="fleet-panel-title">Fleet</span>
+                <button id="add-peer-btn" class="small">+ Add Peer</button>
+            </div>
+            <div id="peer-list">
+                <div class="peer-empty">No peers configured</div>
+            </div>
+        </aside>
 
+        <main id="session-grid"></main>
+    </div>
+
+    <!-- New Session dialog (unchanged content) -->
     <dialog id="new-session-dialog">
         <form id="new-session-form">
             <h2>New Session</h2>
@@ -24,12 +37,35 @@
                 <span id="name-error" style="display:none;color:#ff6b6b;font-size:0.8rem;margin-top:0.25rem;display:none"></span>
             </label>
             <label>Working Directory
-                <input name="workingDir" placeholder="~/remotecc-workspace (default)" autocomplete="off">
+                <input name="workingDir" placeholder="~/claudony-workspace (default)" autocomplete="off">
             </label>
             <div class="dialog-actions">
                 <button type="button" id="cancel-btn" class="secondary">Cancel</button>
                 <button type="button" id="overwrite-btn" class="danger" style="display:none">Overwrite</button>
                 <button type="submit" id="create-btn">Create</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Add Peer dialog -->
+    <dialog id="add-peer-dialog">
+        <form id="add-peer-form">
+            <h2>Add Peer</h2>
+            <label>URL
+                <input name="url" required placeholder="http://mac-mini:7777" autocomplete="off">
+            </label>
+            <label>Name
+                <input name="name" placeholder="Mac Mini (optional)" autocomplete="off">
+            </label>
+            <label>Terminal Mode
+                <select name="terminalMode">
+                    <option value="DIRECT">Direct — browser connects to peer directly</option>
+                    <option value="PROXY">Proxy — traffic routed through this server</option>
+                </select>
+            </label>
+            <div class="dialog-actions">
+                <button type="button" id="cancel-peer-btn" class="secondary">Cancel</button>
+                <button type="submit">Add Peer</button>
             </div>
         </form>
     </dialog>

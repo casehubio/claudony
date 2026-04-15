@@ -55,6 +55,9 @@ button.danger { background: var(--danger); }
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
     padding: 24px;
+    align-content: start;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .session-card {
@@ -201,4 +204,200 @@ body.terminal-page { display: flex; flex-direction: column; height: 100vh; overf
 @media (max-width: 600px) {
     #session-grid { padding: 16px; gap: 12px; grid-template-columns: 1fr; }
     header { padding: 12px 16px; }
+}
+
+/* ─── Fleet: layout ──────────────────────────────────────────────────────── */
+
+.app-body {
+    display: flex;
+    height: calc(100vh - 57px);
+    overflow: hidden;
+}
+
+#fleet-panel {
+    width: 240px;
+    min-width: 200px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.fleet-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+}
+
+.fleet-panel-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-dim);
+}
+
+button.small {
+    font-size: 11px;
+    padding: 4px 8px;
+}
+
+.peer-empty {
+    padding: 16px 14px;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+/* ─── Fleet: peer cards ──────────────────────────────────────────────────── */
+
+.peer-card {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+}
+
+.peer-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.peer-name {
+    font-weight: 600;
+    font-size: 12px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.peer-source {
+    font-size: 10px;
+    color: var(--text-dim);
+    background: rgba(255,255,255,.05);
+    border-radius: 4px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+}
+
+.peer-url {
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+}
+
+.peer-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
+.peer-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.peer-actions button {
+    font-size: 10px;
+    padding: 3px 7px;
+}
+
+/* ─── Fleet: health dots ─────────────────────────────────────────────────── */
+
+.health-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.health-dot.up      { background: #3fb950; }
+.health-dot.unknown { background: #d29922; }
+.health-dot.down    { background: #f85149; }
+
+.circuit-label {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.circuit-label.closed    { background: rgba(63,185,80,.15); color: #3fb950; }
+.circuit-label.open      { background: rgba(248,81,73,.15); color: #f85149; }
+.circuit-label.half-open { background: rgba(210,153,34,.15); color: #d29922; }
+
+/* ─── Fleet: session card instance badge ────────────────────────────────── */
+
+.instance-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: rgba(0,122,204,.2);
+    color: #4c9aff;
+    border: 1px solid rgba(76,154,255,.3);
+}
+
+/* ─── Fleet: stale session indicator ────────────────────────────────────── */
+
+.session-card.stale {
+    border-color: rgba(210,153,34,.4);
+    opacity: .85;
+}
+
+.stale-badge {
+    font-size: 10px;
+    color: #d29922;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 6px;
+}
+
+/* ─── Fleet: dialog select ───────────────────────────────────────────────── */
+
+dialog select {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font);
+}
+
+dialog select:focus { outline: none; border-color: var(--accent); }
+
+/* ─── Fleet: responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+    #fleet-panel { display: none; }
+    .app-body { display: block; }
+    #session-grid { height: auto; overflow: auto; }
 }
