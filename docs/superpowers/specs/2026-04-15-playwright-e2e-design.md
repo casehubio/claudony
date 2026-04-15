@@ -87,6 +87,21 @@ Default: headless. Debug locally with `-Dplaywright.headless=false`.
 
 ## Test Classes
 
+### `PlaywrightSetupE2ETest` — `src/test/java/dev/claudony/e2e/PlaywrightSetupE2ETest.java`
+
+4 tests that verify the test infrastructure itself before any real tests run. These should be the first tests to pass on a new machine or CI environment. A failure here means "the architecture is broken" — fix the setup before running functional tests.
+
+| Test | What it asserts |
+|---|---|
+| `playwright_chromiumLaunches` | `browser.isConnected()` is true — Chromium started successfully |
+| `playwright_canNavigate` | `page.navigate(BASE_URL + "/app/")` returns HTTP 200 — server is reachable |
+| `authHeader_allowsProtectedEndpoint` | `page.navigate(BASE_URL + "/api/sessions")` returns HTTP 200 — `setExtraHTTPHeaders` is injecting the API key and the server accepts it |
+| `unauthenticated_context_isBlocked` | A fresh `BrowserContext` created without any extra headers navigates to `/api/sessions` and gets HTTP 401 — confirming that the auth protection is active and the test context is the thing providing access, not a misconfiguration |
+
+The unauthenticated test creates a temporary `BrowserContext` directly from `browser` (not via `PlaywrightBase`'s `@BeforeEach` which sets the headers) so it can test the no-auth case without affecting other tests.
+
+---
+
 ### `DashboardE2ETest` — `src/test/java/dev/claudony/e2e/DashboardE2ETest.java`
 
 7 tests covering the dashboard golden path. Each test is isolated — no state bleeds between tests because `BrowserContext` is fresh per test.
@@ -127,6 +142,7 @@ Default: headless. Debug locally with `-Dplaywright.headless=false`.
 |---|---|
 | `pom.xml` | Add `playwright` dependency (test scope) |
 | `src/test/java/dev/claudony/e2e/PlaywrightBase.java` | **Create** — abstract base class |
+| `src/test/java/dev/claudony/e2e/PlaywrightSetupE2ETest.java` | **Create** — 4 architecture verification tests |
 | `src/test/java/dev/claudony/e2e/DashboardE2ETest.java` | **Create** — 7 dashboard tests |
 | `src/test/java/dev/claudony/e2e/TerminalPageE2ETest.java` | **Create** — 1 terminal page structure test |
 | `CLAUDE.md` | Add Playwright browser install command under Build and Test |
