@@ -55,8 +55,12 @@
         // Include current terminal dimensions in the URL so the server can
         // resize the tmux pane BEFORE capturing history, causing TUI apps to
         // redraw first so capture-pane gets the fresh state (not stale).
-        var wsUrl = proto + '//' + location.host + '/ws/' + sessionId
-            + '/' + terminal.cols + '/' + terminal.rows;
+        var proxyPeer = params.get('proxyPeer');
+        var wsUrl = proxyPeer
+            ? proto + '//' + location.host + '/ws/proxy/' + proxyPeer
+              + '/' + sessionId + '/' + terminal.cols + '/' + terminal.rows
+            : proto + '//' + location.host + '/ws/' + sessionId
+              + '/' + terminal.cols + '/' + terminal.rows;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = function () {
