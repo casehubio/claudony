@@ -8,6 +8,7 @@ import io.quarkus.security.webauthn.WebAuthnUserProvider;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.jboss.logging.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,6 +33,8 @@ public class CredentialStore implements WebAuthnUserProvider {
         long publicKeyAlgorithm,
         long counter
     ) {}
+
+    private static final Logger LOG = Logger.getLogger(CredentialStore.class);
 
     private static final TypeReference<List<StoredCredential>> LIST_TYPE =
         new TypeReference<>() {};
@@ -61,7 +64,8 @@ public class CredentialStore implements WebAuthnUserProvider {
         return Uni.createFrom()
             .item(() -> load().stream()
                 .filter(c -> c.username().equals(username))
-                .map(CredentialStore::toRecord)
+                .map(CredentialStore::toRecordOrNull)
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList()))
             .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
@@ -71,7 +75,8 @@ public class CredentialStore implements WebAuthnUserProvider {
         return Uni.createFrom()
             .item(() -> load().stream()
                 .filter(c -> c.credentialId().equals(credentialId))
-                .map(CredentialStore::toRecord)
+                .map(CredentialStore::toRecordOrNull)
+                .filter(java.util.Objects::nonNull)
                 .findFirst()
                 .orElse(null))
             .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
@@ -160,17 +165,27 @@ public class CredentialStore implements WebAuthnUserProvider {
         }
     }
 
-    private static WebAuthnCredentialRecord toRecord(StoredCredential c) {
-        return WebAuthnCredentialRecord.fromRequiredPersistedData(
-            new WebAuthnCredentialRecord.RequiredPersistedData(
-                c.username(),
-                c.credentialId(),
-                UUID.fromString(c.aaguid()),
-                Base64.getDecoder().decode(c.publicKey()),
-                c.publicKeyAlgorithm(),
-                c.counter()
-            )
-        );
+    private static WebAuthnCredentialRecord toRecordOrNull(StoredCredential c) {
+        try {
+            UUID aaguid;
+            try {
+                aaguid = UUID.fromString(c.aaguid());
+            } catch (IllegalArgumentException e) {
+                LOG.warnf("Credential '%s' has unreadable aaguid '%s' — skipping. " +
+                          "This credential was stored by an older Claudony version. " +
+                          "The user must re-register their passkey.", c.credentialId(), c.aaguid());
+                return null;
+            }
+            return WebAuthnCredentialRecord.fromRequiredPersistedData(
+                new WebAuthnCredentialRecord.RequiredPersistedData(
+                    c.username(), c.credentialId(), aaguid,
+                    Base64.getDecoder().decode(c.publicKey()),
+                    c.publicKeyAlgorithm(), c.counter()));
+        } catch (Exception e) {
+            LOG.warnf("Credential '%s' could not be reconstructed — skipping: %s",
+                      c.credentialId(), e.getMessage());
+            return null;
+        }
     }
 
     private synchronized List<StoredCredential> load() {

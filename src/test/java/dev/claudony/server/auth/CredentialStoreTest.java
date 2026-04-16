@@ -107,4 +107,30 @@ class CredentialStoreTest {
         assertEquals(99L, found.get().counter());
         assertEquals("grace", found.get().username());
     }
+
+    @Test
+    void load_withNonUuidAaguid_skipsRecordAndLogsWarning() throws Exception {
+        // Write a credential file with an old-style non-UUID aaguid
+        var json = """
+            [{"username":"alice","credentialId":"cred-1",
+              "aaguid":"00000000000000000000000000000000",
+              "publicKey":"dGVzdA==","publicKeyAlgorithm":-7,"counter":5}]
+            """;
+        java.nio.file.Files.writeString(tmp.resolve("credentials.json"), json);
+        // Should not throw — gracefully excludes unreadable records
+        var result = store.findByUsername("alice").subscribeAsCompletionStage().get();
+        assertTrue(result.isEmpty(), "Unreadable credentials should be excluded, not throw");
+    }
+
+    @Test
+    void findByCredentialId_withNonUuidAaguid_returnsNull() throws Exception {
+        var json = """
+            [{"username":"bob","credentialId":"cred-2",
+              "aaguid":"not-a-uuid","publicKey":"dGVzdA==",
+              "publicKeyAlgorithm":-7,"counter":0}]
+            """;
+        java.nio.file.Files.writeString(tmp.resolve("credentials.json"), json);
+        var result = store.findByCredentialId("cred-2").subscribeAsCompletionStage().get();
+        assertNull(result, "Unreadable credential should be excluded, not throw");
+    }
 }
