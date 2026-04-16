@@ -106,7 +106,7 @@ public class ClaudonyMcpTools {
         }
         try {
             adapter.get().openSession(session.get().name());
-        } catch (final Exception e) {
+        } catch (final java.io.IOException | InterruptedException e) {
             return "Failed to open terminal: " + e.getMessage();
         }
         return "Opened in %s.".formatted(adapter.get().name());
