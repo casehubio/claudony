@@ -1,11 +1,11 @@
 package dev.claudony.agent;
 
 import static io.restassured.RestAssured.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 
 import dev.claudony.Await;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -82,7 +82,7 @@ class McpServerIntegrationTest {
             .extract().<String>path("result.content[0].text");
 
         tmuxSessionId = extractSessionId(text);
-        Assumptions.assumeTrue(tmuxSessionId != null, "Could not extract session ID");
+        assertThat(tmuxSessionId).as("session ID extracted from create_session response").isNotNull();
 
         // Send input
         mcp().body(sendInputBody(tmuxSessionId, "echo mcp-input-marker\\n"))
@@ -116,7 +116,7 @@ class McpServerIntegrationTest {
             .extract().<String>path("result.content[0].text");
 
         tmuxSessionId = extractSessionId(text);
-        Assumptions.assumeTrue(tmuxSessionId != null);
+        assertThat(tmuxSessionId).as("session ID extracted from create_session response").isNotNull();
 
         mcp().body("""
                 {"jsonrpc":"2.0","id":1,"method":"tools/call",
@@ -137,7 +137,7 @@ class McpServerIntegrationTest {
             .extract().<String>path("result.content[0].text");
 
         tmuxSessionId = extractSessionId(text);
-        Assumptions.assumeTrue(tmuxSessionId != null);
+        assertThat(tmuxSessionId).as("session ID extracted from create_session response").isNotNull();
         Await.until(() -> {
             var t = mcp().body(getOutputBody(tmuxSessionId, 5))
                 .when().post("/mcp")
@@ -171,6 +171,29 @@ class McpServerIntegrationTest {
             .then().statusCode(200)
             .body("result.content[0].text", containsString("Server URL:"))
             .body("result.content[0].text", containsString("Agent mode:"));
+    }
+
+    @Test
+    void deleteSession_nonExistentId_returnsReadableErrorMessage() {
+        // Call delete_session with a UUID that doesn't correspond to any real session.
+        // With error handling in place, the tool returns a readable string — not an exception.
+        var fakeId = "00000000-0000-0000-0000-000000000000";
+        var result = mcp()
+            .body("""
+                {"jsonrpc":"2.0","id":1,"method":"tools/call",
+                 "params":{"name":"delete_session","arguments":{"id":"%s"}}}
+                """.formatted(fakeId))
+            .when().post("/mcp")
+            .then()
+            .statusCode(200)
+            .body("result.content[0].text", notNullValue())
+            .extract().<String>path("result.content[0].text");
+
+        // Tool returns a readable error string, not a JSON-RPC error and not an exception.
+        assertThat(result)
+            .as("delete of non-existent session should return readable error")
+            .containsIgnoringCase("not found")
+            .doesNotContain("Exception");
     }
 
     @Test
@@ -219,8 +242,8 @@ class McpServerIntegrationTest {
     // -------------------------------------------------------------------------
 
     private String extractSessionId(String text) {
-        var parts = text.split("Browser: http://localhost:\\d+/app/session/");
-        return parts.length > 1 ? parts[1].trim() : null;
+        var m = java.util.regex.Pattern.compile("/app/session/([\\w-]+)").matcher(text);
+        return m.find() ? m.group(1) : null;
     }
 
     private String createBody(String name, String dir, String cmd) {

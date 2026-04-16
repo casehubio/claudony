@@ -263,6 +263,24 @@ class ClaudonyMcpToolsTest {
     }
 
     @Test
+    void openInTerminal_adapterThrowsInterruptedException_returnsErrorMessage() throws Exception {
+        var now = Instant.now();
+        var mockAdapter = Mockito.mock(TerminalAdapter.class);
+        Mockito.when(terminalFactory.resolve()).thenReturn(Optional.of(mockAdapter));
+        Mockito.when(serverClient.listSessions()).thenReturn(List.of(
+            new SessionResponse("id-1", "claudony-test", "/tmp", "claude",
+                SessionStatus.IDLE, now, now,
+                "ws://localhost:7777/ws/id-1",
+                "http://localhost:7777/app/session/id-1",
+                null, null, null)));
+        Mockito.doThrow(new InterruptedException("interrupted"))
+            .when(mockAdapter).openSession(Mockito.anyString());
+
+        assertThat(tools.openInTerminal("id-1"))
+            .startsWith("Failed to open terminal:");
+    }
+
+    @Test
     void openInTerminal_sessionFound_opensAdapterAndReturnsName() throws Exception {
         var now = Instant.now();
         var mockAdapter = Mockito.mock(TerminalAdapter.class);
