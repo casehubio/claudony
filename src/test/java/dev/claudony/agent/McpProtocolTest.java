@@ -104,4 +104,48 @@ class McpProtocolTest {
                 "rename_session", "send_input", "get_output",
                 "open_in_terminal", "get_server_info"));
     }
+
+    @Test
+    void toolsCall_withoutMcpSessionId_isRejected() {
+        // No Mcp-Session-Id: the initialize handshake was never completed,
+        // so the library rejects tools/call with JSON-RPC error -32601.
+        given()
+            .contentType(ContentType.JSON)
+            .accept("application/json, text/event-stream")
+            .body("""
+                {"jsonrpc":"2.0","id":1,"method":"tools/call",
+                 "params":{"name":"list_sessions","arguments":{}}}
+                """)
+            .when().post("/mcp")
+            .then()
+            .statusCode(200)
+            .body("error.code", equalTo(-32601));
+    }
+
+    @Test
+    void toolsCall_withInvalidSessionId_isRejected() {
+        // Unrecognised session ID: the library returns HTTP 404.
+        given()
+            .contentType(ContentType.JSON)
+            .accept("application/json, text/event-stream")
+            .header("Mcp-Session-Id", "not-a-real-session-id")
+            .body("""
+                {"jsonrpc":"2.0","id":1,"method":"tools/call",
+                 "params":{"name":"list_sessions","arguments":{}}}
+                """)
+            .when().post("/mcp")
+            .then()
+            .statusCode(404);
+    }
+
+    @Test
+    void initialize_calledTwice_eachCallSucceeds() {
+        // Each initialize call creates a fresh session with a distinct ID
+        var sid1 = initialize();
+        assertThat(sid1).isNotNull();
+
+        var sid2 = initialize();
+        assertThat(sid2).isNotNull();
+        assertThat(sid2).isNotEqualTo(sid1);
+    }
 }
