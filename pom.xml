@@ -13,6 +13,7 @@
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <quarkus.platform.version>3.32.2</quarkus.platform.version>
+    <quarkus-mcp-server.version>1.11.1</quarkus-mcp-server.version>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
   </properties>
 
@@ -54,6 +55,11 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-websockets-next</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkiverse.mcp</groupId>
+      <artifactId>quarkus-mcp-server-http</artifactId>
+      <version>${quarkus-mcp-server.version}</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/mdproctor/claude/claudony/**)",
+      "Bash(git -C /Users/mdproctor/claude/claudony log -1 --format=\"%ar\" -- HANDOFF.md)"
+    ]
+  }
+}
