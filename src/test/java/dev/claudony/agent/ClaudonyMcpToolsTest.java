@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import dev.claudony.agent.terminal.TerminalAdapter;
 import dev.claudony.agent.terminal.TerminalAdapterFactory;
 import dev.claudony.server.model.CreateSessionRequest;
 import dev.claudony.server.model.SessionResponse;
@@ -18,6 +19,9 @@ import dev.claudony.server.model.SessionStatus;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.ProcessingException;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 
 /**
  * Tests for ClaudonyMcpTools tool logic via direct CDI injection.
@@ -167,5 +171,64 @@ class ClaudonyMcpToolsTest {
             .contains("Server URL:")
             .contains("Agent mode:")
             .contains("Terminal adapter: none");
+    }
+
+    // ── Error handling ───────────────────────────────────────────────────────────
+
+    @Test
+    void listSessions_serverReturns500_returnsServerError() {
+        Mockito.when(serverClient.listSessions())
+            .thenThrow(new WebApplicationException(Response.status(500).build()));
+        assertThat(tools.listSessions()).startsWith("Server error (HTTP 500)");
+    }
+
+    @Test
+    void listSessions_serverUnreachable_returnsConnectError() {
+        Mockito.when(serverClient.listSessions())
+            .thenThrow(new ProcessingException("Connection refused"));
+        assertThat(tools.listSessions()).startsWith("Unable to reach Claudony server");
+    }
+
+    @Test
+    void createSession_serverReturns409_returnsConflictMessage() {
+        Mockito.when(serverClient.createSession(Mockito.any()))
+            .thenThrow(new WebApplicationException(Response.status(409).build()));
+        assertThat(tools.createSession("dup", "/tmp", null)).contains("Conflict");
+    }
+
+    @Test
+    void deleteSession_serverReturns404_returnsNotFoundMessage() {
+        Mockito.doThrow(new WebApplicationException(Response.status(404).build()))
+            .when(serverClient).deleteSession("bad-id");
+        assertThat(tools.deleteSession("bad-id"))
+            .contains("not found")
+            .contains("list_sessions");
+    }
+
+    @Test
+    void renameSession_serverReturns404_returnsNotFoundMessage() {
+        Mockito.when(serverClient.renameSession(Mockito.eq("bad-id"), Mockito.any()))
+            .thenThrow(new WebApplicationException(Response.status(404).build()));
+        assertThat(tools.renameSession("bad-id", "new-name")).contains("not found");
+    }
+
+    @Test
+    void sendInput_serverReturns404_returnsNotFoundMessage() {
+        Mockito.doThrow(new WebApplicationException(Response.status(404).build()))
+            .when(serverClient).sendInput(Mockito.eq("bad-id"), Mockito.any());
+        assertThat(tools.sendInput("bad-id", "echo hi")).contains("not found");
+    }
+
+    @Test
+    void getOutput_serverReturns500_returnsServerError() {
+        Mockito.when(serverClient.getOutput(Mockito.eq("id-1"), Mockito.anyInt()))
+            .thenThrow(new WebApplicationException(Response.status(500).build()));
+        assertThat(tools.getOutput("id-1", null)).startsWith("Server error (HTTP 500)");
+    }
+
+    @Test
+    void getServerInfo_doesNotContainNullLiteral() {
+        // getServerInfo reads config — verify null-safety: output must not contain the string "null"
+        assertThat(tools.getServerInfo()).doesNotContain("null");
     }
 }
