@@ -38,7 +38,7 @@ public class ClipboardChecker {
             return isConfigured()
                     ? "tmux clipboard: configured ✓"
                     : "tmux clipboard: not configured (run fix to enable)";
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             return "tmux clipboard: check failed (" + e.getMessage() + ")";
         }
     }

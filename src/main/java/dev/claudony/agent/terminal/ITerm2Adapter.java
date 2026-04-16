@@ -23,7 +23,7 @@ public class ITerm2Adapter implements TerminalAdapter {
                 p.waitFor();
                 return "true".equals(output);
             }
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             LOG.debugf("iTerm2 check failed: %s", e.getMessage());
             return false;
         }

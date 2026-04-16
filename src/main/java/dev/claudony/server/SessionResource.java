@@ -133,7 +133,7 @@ public class SessionResource {
                 tmux.killSession(name);
                 registry.remove(existing.get().id());
                 LOG.infof("Overwrote existing session '%s'", name);
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 LOG.warnf("Could not clean up existing session '%s': %s", name, e.getMessage());
             }
         }
@@ -152,7 +152,7 @@ public class SessionResource {
             return Response.status(201)
                     .entity(SessionResponse.from(session, config.port()))
                     .build();
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             LOG.errorf("Failed to create session '%s': %s", name, e.getMessage());
             return Response.serverError()
                     .entity("{\"error\":\"" + e.getMessage() + "\"}")
@@ -169,7 +169,7 @@ public class SessionResource {
                 registry.remove(id);
                 LOG.infof("Deleted session '%s' (id=%s)", session.name(), id);
                 return Response.noContent().build();
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 LOG.errorf("Failed to delete session: %s", e.getMessage());
                 return Response.serverError().build();
             }
@@ -215,7 +215,7 @@ public class SessionResource {
             try {
                 tmux.sendKeys(session.name(), req.text());
                 return Response.noContent().build();
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 LOG.errorf("Failed to send input to session '%s': %s", session.name(), e.getMessage());
                 return Response.serverError().build();
             }
@@ -231,7 +231,7 @@ public class SessionResource {
             try {
                 var output = tmux.capturePane(session.name(), lines);
                 return Response.ok(output).build();
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 LOG.errorf("Failed to get output from session '%s': %s", session.name(), e.getMessage());
                 return Response.serverError().build();
             }
@@ -253,7 +253,7 @@ public class SessionResource {
                 }
                 p.waitFor();
                 return Response.noContent().build();
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 LOG.errorf("Failed to resize session '%s': %s", session.name(), e.getMessage());
                 return Response.serverError().build();
             }
@@ -273,7 +273,7 @@ public class SessionResource {
             try {
                 adapter.get().openSession(session.name());
                 return Response.ok("{\"opened\":true,\"adapter\":\"" + adapter.get().name() + "\"}").build();
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 LOG.errorf("Failed to open session '%s' in terminal: %s", session.name(), e.getMessage());
                 return Response.serverError().build();
             }
@@ -320,7 +320,7 @@ public class SessionResource {
                 var pr = parsePrInfo(ghResult.stdout());
                 return Response.ok(GitStatusResponse.withPr(githubRepo, branch, pr)).build();
 
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 LOG.errorf("Failed to get git status for session '%s': %s", session.name(), e.getMessage());
                 return Response.serverError().build();
             }
@@ -356,7 +356,7 @@ public class SessionResource {
         try (var socket = new Socket()) {
             socket.connect(new InetSocketAddress("localhost", port), 500);
             return new PortStatus(port, true, System.currentTimeMillis() - start);
-        } catch (Exception e) {
+        } catch (IOException e) {
             return new PortStatus(port, false, 0);
         }
     }
@@ -365,7 +365,7 @@ public class SessionResource {
         boolean success() { return exitCode == 0; }
     }
 
-    private RunResult run(String... cmd) throws Exception {
+    private RunResult run(String... cmd) throws IOException, InterruptedException {
         var p = new ProcessBuilder(cmd).start();
         var stdout = new BufferedReader(new InputStreamReader(p.getInputStream()))
                 .lines().collect(Collectors.joining("\n"));
@@ -390,7 +390,7 @@ public class SessionResource {
         return null;
     }
 
-    private GitStatusResponse.PrInfo parsePrInfo(String json) throws Exception {
+    private GitStatusResponse.PrInfo parsePrInfo(String json) throws IOException {
         var mapper = new ObjectMapper();
         var node = mapper.readTree(json);
         int number = node.path("number").asInt();

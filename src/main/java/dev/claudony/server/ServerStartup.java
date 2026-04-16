@@ -9,6 +9,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -42,7 +43,7 @@ public class ServerStartup {
             try {
                 Files.createDirectories(Path.of(dir));
                 LOG.debugf("Directory ready: %s", dir);
-            } catch (Exception e) {
+            } catch (IOException e) {
                 LOG.warnf("Could not create directory %s: %s", dir, e.getMessage());
             }
         }
@@ -52,7 +53,7 @@ public class ServerStartup {
         try {
             var version = tmux.tmuxVersion();
             LOG.infof("tmux found: %s", version);
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             throw new IllegalStateException(
                 "tmux not found on PATH. Install with: brew install tmux", e);
         }
@@ -73,7 +74,7 @@ public class ServerStartup {
                 count++;
             }
             LOG.infof("Bootstrapped %d existing session(s) from tmux", count);
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             LOG.warn("Could not bootstrap from tmux list-sessions: " + e.getMessage());
         }
     }

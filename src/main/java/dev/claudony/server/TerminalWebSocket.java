@@ -136,7 +136,7 @@ public class TerminalWebSocket {
                                 cursorSeq = "\u001B[" + xtermsRow + ";" + xtermsCol + "H";
                             }
                         }
-                    } catch (Exception e) {
+                    } catch (IOException | InterruptedException e) {
                         LOG.debugf("Could not read pane cursor for %s: %s", tmuxName, e.getMessage());
                     }
 
@@ -182,7 +182,7 @@ public class TerminalWebSocket {
             p.getInputStream().transferTo(OutputStream.nullOutputStream());
             p.waitFor();
 
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             LOG.errorf("Failed to set up pipe for session '%s': %s", tmuxName, e.getMessage());
             cleanup(connection);
             try { connection.closeAndAwait(); } catch (Exception ignored) {}
@@ -200,7 +200,7 @@ public class TerminalWebSocket {
                     .redirectErrorStream(true).start();
             p.getInputStream().transferTo(OutputStream.nullOutputStream());
             p.waitFor();
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             LOG.debugf("Failed to send input to session %s: %s", tmuxName, e.getMessage());
         }
     }
