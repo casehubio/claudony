@@ -7,6 +7,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import org.jboss.logging.Logger;
+import java.io.IOException;
 import java.util.Map;
 
 @Path("/auth")
@@ -77,21 +78,19 @@ public class AuthResource {
     @Path("/login")
     @Produces(MediaType.TEXT_HTML)
     public Response loginPage() {
-        try {
-            var stream = getClass().getResourceAsStream("/META-INF/resources/auth/login.html");
+        try (var stream = getClass().getResourceAsStream("/META-INF/resources/auth/login.html")) {
             if (stream == null) return Response.serverError().entity("login.html not found").build();
             return Response.ok(new String(stream.readAllBytes())).type(MediaType.TEXT_HTML).build();
-        } catch (Exception e) {
+        } catch (IOException e) {
             return Response.serverError().build();
         }
     }
 
     private Response serveRegisterPage() {
-        try {
-            var stream = getClass().getResourceAsStream("/META-INF/resources/auth/register.html");
+        try (var stream = getClass().getResourceAsStream("/META-INF/resources/auth/register.html")) {
             if (stream == null) return Response.serverError().entity("register.html not found").build();
             return Response.ok(new String(stream.readAllBytes())).type(MediaType.TEXT_HTML).build();
-        } catch (Exception e) {
+        } catch (IOException e) {
             return Response.serverError().build();
         }
     }

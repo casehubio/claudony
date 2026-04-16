@@ -3,13 +3,13 @@ package dev.claudony.server;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class GitStatusTest {
 
     @Inject SessionRegistry registry;
@@ -24,14 +24,12 @@ class GitStatusTest {
     }
 
     @Test
-    @Order(1)
     void gitStatusReturns404ForUnknownSession() {
         given().when().get("/api/sessions/nonexistent/git-status")
             .then().statusCode(404);
     }
 
     @Test
-    @Order(2)
     void gitStatusReturnsNotGitForUnknownWorkingDir() {
         // Sessions bootstrapped from tmux have workingDir="unknown"
         // We simulate this by registering a session directly with workingDir=unknown
@@ -48,7 +46,6 @@ class GitStatusTest {
     }
 
     @Test
-    @Order(3)
     void gitStatusReturnsNotGitForNonGitDirectory() {
         var session = new dev.claudony.server.model.Session(
             "test-git-nogit-id", "claudony-test-git-nogit", "/tmp",
@@ -64,7 +61,6 @@ class GitStatusTest {
     }
 
     @Test
-    @Order(4)
     void gitStatusDetectsGitRepoAndBranch() {
         // Use this project's own directory — it's a git repo
         var projectDir = System.getProperty("user.dir");
