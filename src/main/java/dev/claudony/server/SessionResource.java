@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.io.OutputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -139,7 +140,9 @@ public class SessionResource {
 
         // Ensure the working directory exists
         try { java.nio.file.Files.createDirectories(java.nio.file.Path.of(workingDir)); }
-        catch (Exception ignored) {}
+        catch (IOException e) {
+            LOG.debugf("Could not create working directory '%s': %s", workingDir, e.getMessage());
+        }
         var now = Instant.now();
         var session = new Session(id, name, workingDir, command, SessionStatus.IDLE, now, now);
         try {
@@ -197,7 +200,8 @@ public class SessionResource {
                         session.command(), session.status(), session.createdAt(), Instant.now());
                 registry.register(renamed);
                 return Response.ok(SessionResponse.from(renamed, config.port())).build();
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
+                LOG.errorf("Failed to rename session '%s': %s", session.name(), e.getMessage());
                 return Response.serverError().build();
             }
         }).orElse(Response.status(404).build());
