@@ -3,6 +3,7 @@ package dev.claudony.agent;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
+import dev.claudony.Await;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,7 +66,7 @@ class McpServerIntegrationTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void fullSessionLifecycle_createSendReceiveDelete() throws Exception {
+    void fullSessionLifecycle_createSendReceiveDelete() {
         // Create
         var text = mcp()
             .body("""
@@ -89,13 +90,14 @@ class McpServerIntegrationTest {
             .then().statusCode(200)
             .body("result.content[0].text", equalTo("Input sent."));
 
-        Thread.sleep(300);
-
         // Get output
-        mcp().body(getOutputBody(tmuxSessionId, 20))
-            .when().post("/mcp")
-            .then().statusCode(200)
-            .body("result.content[0].text", containsString("mcp-input-marker"));
+        Await.until(() -> {
+            var out = mcp().body(getOutputBody(tmuxSessionId, 20))
+                .when().post("/mcp")
+                .then().statusCode(200)
+                .extract().<String>path("result.content[0].text");
+            return out != null && out.contains("mcp-input-marker");
+        }, "'mcp-input-marker' to appear in session output");
 
         // Delete (also done by @AfterEach as safety net)
         mcp().body(deleteBody(tmuxSessionId))
@@ -127,7 +129,7 @@ class McpServerIntegrationTest {
     }
 
     @Test
-    void inputWithTmuxKeyName_appearsAsLiteralText() throws Exception {
+    void inputWithTmuxKeyName_appearsAsLiteralText() {
         var text = mcp()
             .body(createBody("mcp-keyname-test", "/tmp", "bash"))
             .when().post("/mcp")
@@ -136,19 +138,26 @@ class McpServerIntegrationTest {
 
         tmuxSessionId = extractSessionId(text);
         Assumptions.assumeTrue(tmuxSessionId != null);
-        Thread.sleep(300);
+        Await.until(() -> {
+            var t = mcp().body(getOutputBody(tmuxSessionId, 5))
+                .when().post("/mcp")
+                .then().statusCode(200)
+                .extract().<String>path("result.content[0].text");
+            return t != null && !t.isBlank();
+        }, "bash prompt to appear after session creation");
 
         mcp().body(sendInputBody(tmuxSessionId, "Escape"))
             .when().post("/mcp")
             .then().statusCode(200)
             .body("result.content[0].text", equalTo("Input sent."));
 
-        Thread.sleep(300);
-
-        mcp().body(getOutputBody(tmuxSessionId, 20))
-            .when().post("/mcp")
-            .then().statusCode(200)
-            .body("result.content[0].text", containsString("Escape"));
+        Await.until(() -> {
+            var t = mcp().body(getOutputBody(tmuxSessionId, 20))
+                .when().post("/mcp")
+                .then().statusCode(200)
+                .extract().<String>path("result.content[0].text");
+            return t != null && t.contains("Escape");
+        }, "'Escape' to appear in session output");
     }
 
     @Test

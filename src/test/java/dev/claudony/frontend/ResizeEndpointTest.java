@@ -1,5 +1,6 @@
 package dev.claudony.frontend;
 
+import dev.claudony.Await;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.*;
@@ -26,12 +27,14 @@ class ResizeEndpointTest {
 
     @Test
     @Order(1)
-    void resizeSessionReturns204() throws Exception {
+    void resizeSessionReturns204() {
         var sessionId = given().contentType("application/json")
             .body("{\"name\":\"resize-test-1\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
             .then().statusCode(201).extract().path("id");
-        Thread.sleep(200);
+        Await.until(() ->
+            given().when().get("/api/sessions/" + sessionId).then().extract().statusCode() == 200,
+            "session to be available before resize");
 
         given().contentType("application/json").when()
             .post("/api/sessions/" + sessionId + "/resize?cols=120&rows=40")
