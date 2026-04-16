@@ -231,4 +231,52 @@ class ClaudonyMcpToolsTest {
         // getServerInfo reads config — verify null-safety: output must not contain the string "null"
         assertThat(tools.getServerInfo()).doesNotContain("null");
     }
+
+    // ── openInTerminal paths ─────────────────────────────────────────────────────
+
+    @Test
+    void openInTerminal_sessionNotFound_returnsNotFoundMessage() {
+        var mockAdapter = Mockito.mock(TerminalAdapter.class);
+        Mockito.when(terminalFactory.resolve()).thenReturn(Optional.of(mockAdapter));
+        Mockito.when(serverClient.listSessions()).thenReturn(List.of()); // no sessions
+
+        assertThat(tools.openInTerminal("id-does-not-exist"))
+            .isEqualTo("Session not found.");
+    }
+
+    @Test
+    void openInTerminal_adapterThrowsIOException_returnsErrorMessage() throws Exception {
+        var now = Instant.now();
+        var mockAdapter = Mockito.mock(TerminalAdapter.class);
+        Mockito.when(terminalFactory.resolve()).thenReturn(Optional.of(mockAdapter));
+        Mockito.when(serverClient.listSessions()).thenReturn(List.of(
+            new SessionResponse("id-1", "claudony-test", "/tmp", "claude",
+                SessionStatus.IDLE, now, now,
+                "ws://localhost:7777/ws/id-1",
+                "http://localhost:7777/app/session/id-1",
+                null, null, null)));
+        Mockito.doThrow(new java.io.IOException("pipe broken"))
+            .when(mockAdapter).openSession(Mockito.anyString());
+
+        assertThat(tools.openInTerminal("id-1"))
+            .startsWith("Failed to open terminal:");
+    }
+
+    @Test
+    void openInTerminal_sessionFound_opensAdapterAndReturnsName() throws Exception {
+        var now = Instant.now();
+        var mockAdapter = Mockito.mock(TerminalAdapter.class);
+        Mockito.when(mockAdapter.name()).thenReturn("iTerm2");
+        Mockito.when(terminalFactory.resolve()).thenReturn(Optional.of(mockAdapter));
+        Mockito.when(serverClient.listSessions()).thenReturn(List.of(
+            new SessionResponse("id-1", "claudony-test", "/tmp", "claude",
+                SessionStatus.IDLE, now, now,
+                "ws://localhost:7777/ws/id-1",
+                "http://localhost:7777/app/session/id-1",
+                null, null, null)));
+        Mockito.doNothing().when(mockAdapter).openSession("claudony-test");
+
+        assertThat(tools.openInTerminal("id-1")).isEqualTo("Opened in iTerm2.");
+        Mockito.verify(mockAdapter).openSession("claudony-test");
+    }
 }
