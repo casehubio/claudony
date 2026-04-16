@@ -12,6 +12,7 @@ import jakarta.websocket.CloseReason;
 import org.junit.jupiter.api.*;
 import java.net.URI;
 import java.util.concurrent.*;
+import dev.claudony.Await;
 import dev.claudony.server.model.SessionStatus;
 import jakarta.websocket.Session;
 import java.time.Instant;
@@ -37,13 +38,27 @@ class TerminalWebSocketTest {
         registry.register(new dev.claudony.server.model.Session(
             "ws-test-id", TEST_SESSION, System.getProperty("user.home"),
             "bash", SessionStatus.IDLE, now, now));
-        Thread.sleep(300);
+        Await.until(() -> {
+            try { return !tmux.capturePane(TEST_SESSION, 5).isBlank(); }
+            catch (Exception e) { return false; }
+        }, "bash prompt to be ready in test session");
     }
 
     @AfterEach
     void cleanup() throws Exception {
         registry.remove("ws-test-id");
         if (tmux.sessionExists(TEST_SESSION)) tmux.killSession(TEST_SESSION);
+    }
+
+    /**
+     * Drains the initial history burst after connecting.
+     * The first message(s) are the history replay — wait until the queue
+     * goes quiet for one poll interval, signalling the burst is done.
+     */
+    private static void awaitHistoryBurst(LinkedBlockingQueue<String> msgs) throws InterruptedException {
+        var first = msgs.poll(2, TimeUnit.SECONDS);
+        if (first == null) throw new AssertionError("No history message received within 2s");
+        while (msgs.poll(20, TimeUnit.MILLISECONDS) != null) {}
     }
 
     /**
@@ -70,14 +85,13 @@ class TerminalWebSocketTest {
                 s.addMessageHandler(String.class, live::offer);
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
-        Thread.sleep(500);
+        awaitHistoryBurst(live);
         s1.getBasicRemote().sendText("echo CURSOR-SETUP\n");
         long d = System.currentTimeMillis() + 3000;
         while (System.currentTimeMillis() < d) {
             var c = live.poll(200, TimeUnit.MILLISECONDS); if (c != null && c.contains("CURSOR-SETUP")) break;
         }
         s1.close();
-        Thread.sleep(300);
 
         // Read pane cursor position from tmux (0-indexed)
         var curProc = new ProcessBuilder("tmux", "display-message", "-p", "-t", TEST_SESSION,
@@ -145,7 +159,7 @@ class TerminalWebSocketTest {
                 s.addMessageHandler(String.class, live1::offer);
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
-        Thread.sleep(500);
+        awaitHistoryBurst(live1);
         s1.getBasicRemote().sendText("echo INPUTTEST-SETUP\n");
         long d = System.currentTimeMillis() + 3000;
         while (System.currentTimeMillis() < d) {
@@ -153,7 +167,6 @@ class TerminalWebSocketTest {
             if (c != null && c.contains("INPUTTEST-SETUP")) break;
         }
         s1.close();
-        Thread.sleep(300);
 
         // Connect fresh, drain history
         var msgs = new LinkedBlockingQueue<String>();
@@ -164,8 +177,7 @@ class TerminalWebSocketTest {
         }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
 
         // Wait for and discard history burst (give extra time for pipe-pane \r\n flush too)
-        Thread.sleep(800);
-        while (msgs.poll(50, TimeUnit.MILLISECONDS) != null) {} // drain all pending
+        awaitHistoryBurst(msgs);
 
         // Now type a command — characters should echo at the prompt position
         s2.getBasicRemote().sendText("echo INPUTTEST-RESULT\n");
@@ -217,8 +229,8 @@ class TerminalWebSocketTest {
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
 
-        // Wait for pipe-pane to connect, then send a command to generate output
-        Thread.sleep(500);
+        // Wait for pipe-pane to connect (drain history burst), then send a command to generate output
+        awaitHistoryBurst(received);
         session.getBasicRemote().sendText("echo ws-pipe-test\n");
 
         // Collect output chunks for up to 3s and check for our marker
@@ -279,7 +291,7 @@ class TerminalWebSocketTest {
                 s.addMessageHandler(String.class, live::offer);
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
-        Thread.sleep(500);
+        awaitHistoryBurst(live);
         session1.getBasicRemote().sendText("printf 'MARK-A\\n\\nMARK-B\\n'\n");
 
         // Wait for MARK-B in live output (confirms both lines appeared in pane)
@@ -291,7 +303,6 @@ class TerminalWebSocketTest {
         }
         assertTrue(liveText.toString().contains("MARK-B"), "MARK-B must appear in live output. Got: " + liveText);
         session1.close();
-        Thread.sleep(300);
 
         // Second connection: collect history and verify blank line is preserved
         var history = new LinkedBlockingQueue<String>();
@@ -345,7 +356,7 @@ class TerminalWebSocketTest {
                 s.addMessageHandler(String.class, received::offer);
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
-        Thread.sleep(500);
+        awaitHistoryBurst(received);
         session1.getBasicRemote().sendText("echo history-replay-marker\n");
 
         // Wait for marker in live output
@@ -361,7 +372,6 @@ class TerminalWebSocketTest {
         assertTrue(live.toString().contains("history-replay-marker"),
             "Marker must appear in live output before testing history replay. Got: " + live);
         session1.close();
-        Thread.sleep(300);
 
         // Second connection: collect everything sent on connect (the history replay)
         var history = new LinkedBlockingQueue<String>();
@@ -433,19 +443,25 @@ class TerminalWebSocketTest {
             "bash", SessionStatus.IDLE, now, now));
 
         try {
-            Thread.sleep(500); // let the shell start fully
+            Await.until(() -> {
+                try { return !tmux.capturePane(extraSession, 5).isBlank(); }
+                catch (Exception e) { return false; }
+            }, "shell to start");
 
             // Set the window to 60 cols — narrower than the 80 we'll connect with.
             // resize-window works for detached sessions; resize-pane does not.
             new ProcessBuilder("tmux", "resize-window", "-t", extraSession, "-x", "60", "-y", "24")
                 .redirectErrorStream(true).start().waitFor();
-            Thread.sleep(200);
+            // waitFor() ensures the resize command completed; no extra sleep needed.
 
             // Write the 65-X line to the pane. At 60 cols it wraps; after resize-window
             // to 80 cols, tmux reflows it to a single line.
             new ProcessBuilder("tmux", "send-keys", "-t", extraSession, "echo " + XRUN, "Enter")
                 .redirectErrorStream(true).start().waitFor();
-            Thread.sleep(400); // let the output settle into the pane
+            Await.until(() -> {
+                try { return tmux.capturePane(extraSession, 20).contains("X"); }
+                catch (Exception e) { return false; }
+            }, "output to settle in pane");
 
             // Sanity: at 60 cols the X's must be split — confirms the pane is really narrow.
             var preCap = new ProcessBuilder("tmux", "capture-pane", "-t", extraSession, "-p")
@@ -502,17 +518,18 @@ class TerminalWebSocketTest {
         var cec = ClientEndpointConfig.Builder.create().build();
         var opened1 = new CountDownLatch(1);
         var opened2 = new CountDownLatch(1);
+        var msgs1 = new LinkedBlockingQueue<String>();
         var received2 = new LinkedBlockingQueue<String>();
 
         // First connection
         var session1 = container.connectToServer(new Endpoint() {
             @Override public void onOpen(Session s, EndpointConfig c) {
-                s.addMessageHandler(String.class, msg -> {});
+                s.addMessageHandler(String.class, msgs1::offer);
                 opened1.countDown();
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
         assertTrue(opened1.await(3, TimeUnit.SECONDS), "First connection should open");
-        Thread.sleep(300);
+        awaitHistoryBurst(msgs1);
 
         // Second connection: its pipe-pane replaces first connection's pipe
         var session2 = container.connectToServer(new Endpoint() {
@@ -522,7 +539,7 @@ class TerminalWebSocketTest {
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
         assertTrue(opened2.await(3, TimeUnit.SECONDS), "Second connection should open");
-        Thread.sleep(500);
+        awaitHistoryBurst(received2);
 
         // Second connection holds the active pipe — it should receive output
         session2.getBasicRemote().sendText("echo concurrent-test-marker\n");
