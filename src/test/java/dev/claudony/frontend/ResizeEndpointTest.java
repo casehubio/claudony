@@ -3,7 +3,8 @@ package dev.claudony.frontend;
 import dev.claudony.Await;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import jakarta.inject.Inject;
 import dev.claudony.server.SessionRegistry;
 import dev.claudony.server.TmuxService;
@@ -11,7 +12,6 @@ import static io.restassured.RestAssured.*;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ResizeEndpointTest {
 
     @Inject SessionRegistry registry;
@@ -26,7 +26,6 @@ class ResizeEndpointTest {
     }
 
     @Test
-    @Order(1)
     void resizeSessionReturns204() {
         var sessionId = given().contentType("application/json")
             .body("{\"name\":\"resize-test-1\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
@@ -42,7 +41,6 @@ class ResizeEndpointTest {
     }
 
     @Test
-    @Order(2)
     void resizeUnknownSessionReturns404() {
         given().contentType("application/json").when()
             .post("/api/sessions/does-not-exist/resize?cols=80&rows=24")

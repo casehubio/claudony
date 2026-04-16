@@ -3,13 +3,13 @@ package dev.claudony.server;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ServiceHealthTest {
 
     @Inject SessionRegistry registry;
@@ -24,14 +24,12 @@ class ServiceHealthTest {
     }
 
     @Test
-    @Order(1)
     void serviceHealthReturns404ForUnknownSession() {
         given().when().get("/api/sessions/nonexistent/service-health")
             .then().statusCode(404);
     }
 
     @Test
-    @Order(2)
     void serviceHealthReturnsArrayForKnownSession() {
         // Register a session directly — no real tmux needed for this endpoint
         var session = new dev.claudony.server.model.Session(
@@ -48,7 +46,6 @@ class ServiceHealthTest {
     }
 
     @Test
-    @Order(3)
     void serviceHealthReturnsOnlyUpPorts() {
         // The Quarkus test server itself runs on port 8081 — it will always be up
         var session = new dev.claudony.server.model.Session(

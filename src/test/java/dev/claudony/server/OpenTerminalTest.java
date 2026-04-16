@@ -6,7 +6,9 @@ import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.mockito.Mockito;
 import java.util.Optional;
 import static io.restassured.RestAssured.*;
@@ -14,7 +16,6 @@ import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class OpenTerminalTest {
 
     @InjectMock
@@ -38,7 +39,6 @@ class OpenTerminalTest {
     }
 
     @Test
-    @Order(1)
     void openTerminalReturns200WhenAdapterAvailable() throws Exception {
         var adapter = Mockito.mock(TerminalAdapter.class);
         Mockito.when(adapter.name()).thenReturn("iterm2");
@@ -61,7 +61,6 @@ class OpenTerminalTest {
     }
 
     @Test
-    @Order(2)
     void openTerminalReturns503WhenNoAdapterAvailable() {
         // terminalFactory.resolve() returns empty by default (set in @BeforeEach)
         var id = given().contentType("application/json")
@@ -77,7 +76,6 @@ class OpenTerminalTest {
     }
 
     @Test
-    @Order(3)
     void openTerminalReturns404ForUnknownSession() {
         given().contentType("application/json")
             .when().post("/api/sessions/nonexistent-id/open-terminal")

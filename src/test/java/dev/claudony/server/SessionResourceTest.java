@@ -2,7 +2,8 @@ package dev.claudony.server;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import jakarta.inject.Inject;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
@@ -10,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SessionResourceTest {
 
     @Inject SessionRegistry registry;
@@ -25,14 +25,12 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(1)
     void listSessionsReturnsEmptyArray() {
         given().when().get("/api/sessions")
             .then().statusCode(200).body("$", hasSize(0));
     }
 
     @Test
-    @Order(2)
     void createSessionReturns201WithSessionId() {
         given().contentType("application/json")
             .body("{\"name\":\"test-api\",\"workingDir\":\"/tmp\",\"command\":\"echo hello\"}")
@@ -44,7 +42,6 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(3)
     void getSessionById() {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-get\",\"workingDir\":\"/tmp\",\"command\":\"echo hi\"}")
@@ -56,7 +53,6 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(4)
     void deleteSessionReturns204() {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-del\",\"workingDir\":\"/tmp\",\"command\":\"echo bye\"}")
@@ -68,13 +64,11 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(5)
     void getUnknownSessionReturns404() {
         given().when().get("/api/sessions/does-not-exist").then().statusCode(404);
     }
 
     @Test
-    @Order(6)
     void renameSessionReturns200WithNewName() throws Exception {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-rename\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
@@ -92,7 +86,6 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(7)
     void createSessionWithDuplicateNameReturns409() {
         given().contentType("application/json")
             .body("{\"name\":\"test-dup\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
@@ -108,7 +101,6 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(8)
     void createSessionWithOverwriteReplacesExistingSession() {
         var originalId = given().contentType("application/json")
             .body("{\"name\":\"test-overwrite\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
@@ -133,7 +125,6 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(9)
     void overwriteWithNonExistentNameCreatesNormally() {
         given().contentType("application/json")
             .body("{\"name\":\"test-new-overwrite\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
@@ -144,7 +135,6 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(10)
     void resizeSessionReturns204() throws Exception {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-resize\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
@@ -157,7 +147,6 @@ class SessionResourceTest {
     }
 
     @Test
-    @Order(11)
     void renameSessionToExistingNameReturns409AndDoesNotUpdateRegistry() {
         var idA = given().contentType("application/json")
             .body("{\"name\":\"test-rename-conflict-a\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
