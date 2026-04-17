@@ -35,4 +35,16 @@ public class MeshResource {
     public MeshConfig config() {
         return new MeshConfig(config.meshRefreshStrategy(), config.meshRefreshInterval());
     }
+
+    @GET
+    @Path("/channels")
+    public List<QhorusMcpTools.ChannelDetail> channels() {
+        return qhorusMcpTools.listChannels();
+    }
+
+    @GET
+    @Path("/instances")
+    public List<QhorusMcpTools.InstanceInfo> instances() {
+        return qhorusMcpTools.listInstances(null);
+    }
 }

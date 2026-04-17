@@ -19,4 +19,22 @@ class MeshResourceTest {
             .body("strategy", equalTo("poll"))
             .body("interval", equalTo(3000));
     }
+
+    @Test
+    void meshChannels_returnsEmptyList() {
+        given().when().get("/api/mesh/channels")
+            .then()
+            .statusCode(200)
+            .contentType(containsString("application/json"))
+            .body("$", hasSize(0));
+    }
+
+    @Test
+    void meshInstances_returnsEmptyList() {
+        given().when().get("/api/mesh/instances")
+            .then()
+            .statusCode(200)
+            .contentType(containsString("application/json"))
+            .body("$", hasSize(0));
+    }
 }
