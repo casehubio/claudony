@@ -97,4 +97,26 @@ public class MeshResource {
 
         return combined.size() > limit ? combined.subList(0, limit) : combined;
     }
+
+    @GET
+    @Path("/events")
+    @Produces("text/event-stream")
+    public Multi<String> events() {
+        // Pushes a full mesh snapshot every refresh-interval milliseconds.
+        // Default strategy is poll; SSE is for deployments that prefer push.
+        long intervalMs = config.meshRefreshInterval();
+        return Multi.createFrom().ticks().every(Duration.ofMillis(intervalMs))
+                .map(tick -> {
+                    try {
+                        var snapshot = Map.of(
+                                "channels", qhorusMcpTools.listChannels(),
+                                "instances", qhorusMcpTools.listInstances(null),
+                                "feed", feed(100));
+                        return "data: " + mapper.writeValueAsString(snapshot) + "\n\n";
+                    } catch (Exception e) {
+                        LOG.debugf("SSE snapshot error: %s", e.getMessage());
+                        return "data: {}\n\n";
+                    }
+                });
+    }
 }

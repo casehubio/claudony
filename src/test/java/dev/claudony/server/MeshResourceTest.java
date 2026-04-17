@@ -53,4 +53,28 @@ class MeshResourceTest {
             .statusCode(200)
             .body("$", hasSize(0));
     }
+
+    @Test
+    void meshEvents_returnsEventStreamContentType() {
+        given().when().get("/api/mesh/events")
+            .then()
+            .statusCode(200)
+            .contentType(containsString("text/event-stream"));
+    }
+}
+
+@QuarkusTest
+class MeshResourceAuthTest {
+
+    @Test
+    void meshChannels_withoutAuth_returns401() {
+        given().when().get("/api/mesh/channels")
+            .then().statusCode(401);
+    }
+
+    @Test
+    void meshConfig_withoutAuth_returns401() {
+        given().when().get("/api/mesh/config")
+            .then().statusCode(401);
+    }
 }
