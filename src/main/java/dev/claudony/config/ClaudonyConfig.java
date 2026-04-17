@@ -60,6 +60,14 @@ public interface ClaudonyConfig {
     @WithDefault("Claudony")
     String name(); // human-readable instance name shown in fleet dashboard
 
+    @WithName("mesh.refresh-strategy")
+    @WithDefault("poll")
+    String meshRefreshStrategy();
+
+    @WithName("mesh.refresh-interval")
+    @WithDefault("3000")
+    int meshRefreshInterval();
+
     default boolean isServerMode() { return "server".equals(mode()); }
     default boolean isAgentMode()  { return "agent".equals(mode()); }
 }
