@@ -18,20 +18,20 @@ interjection (future). Read-only observation.
 Option A: right panel alongside the existing Fleet sidebar and session grid.
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  Claudony                                             [+ New Session]     │
-├──────────────┬────────────────────────────────┬──────────────────────────┤
-│  FLEET       │  SESSIONS                      │  MESH         [⊞][#][≡]⟵ │
-│              │                                │                          │
-│  ● peer-1    │  [session-a]  [session-b]      │  <active view>           │
-│  ● peer-2    │  [session-c]                   │                          │
-│              │                                │                          │
-└──────────────┴────────────────────────────────┴──────────────────────────┘
++--------------------------------------------------------------------------+
+|  Claudony                                             [+ New Session]     |
++--------------+--------------------------------+--------------------------+
+|  FLEET       |  SESSIONS                      |  MESH       [O][#][=]<  |
+|              |                                |                          |
+|  * peer-1    |  [session-a]  [session-b]      |  <active view>           |
+|  * peer-2    |  [session-c]                   |                          |
+|              |                                |                          |
++--------------+--------------------------------+--------------------------+
 ```
 
 The panel is **300px fixed width**, collapsible. Collapse animates via CSS
 `transition: width 0.2s`. Collapse/expand state persisted to `localStorage`.
-When collapsed, a slim `⊞` button appears at the right edge as a re-open affordance.
+When collapsed, a slim expand button appears at the right edge as a re-open affordance.
 
 ---
 
@@ -42,12 +42,12 @@ button is highlighted in teal. View selection persisted to `localStorage`.
 
 | Icon | View | Purpose |
 |---|---|---|
-| ⊞ | Overview | Presence strip + channel list + inline messages for selected channel (defaults to most recently active channel) |
-| # | Channel | Full message thread for one channel (dropdown to switch); fetches `/channels/{name}/timeline` on channel switch and on each poll cycle |
-| ≡ | Feed | Chronological stream of all messages across all channels |
+| Overview | Overview | Presence strip + channel list + inline messages for selected channel (defaults to most recently active channel) |
+| Channel | Channel | Full message thread for one channel (dropdown to switch); fetches `/channels/{name}/timeline` on channel switch and on each poll cycle |
+| Feed | Feed | Chronological stream of all messages across all channels |
 
 This is an **extensible view system** — new views can be added by registering a new
-renderer object and adding a button. The panel infrastructure doesn't care how many
+renderer object and adding a button. The panel infrastructure does not care how many
 views exist.
 
 ---
@@ -72,8 +72,35 @@ Two strategy implementations, same interface (`start()` / `stop()`):
 
 The frontend reads `/api/mesh/config` at startup to determine which strategy to wire up.
 
-Default is `poll` at 3 000 ms. `sse` is available for deployments where lower
+Default is `poll` at 3000 ms. `sse` is available for deployments where lower
 latency matters.
+
+---
+
+## Persistence and DB Abstraction
+
+**Qhorus owns all persistence.** `MeshResource` is read-only and never touches the
+database directly.
+
+Qhorus uses **Hibernate ORM with Panache** (entities: `Channel`, `Message`,
+`Instance`, `Capability`, `AgentMessageLedgerEntry`). Schema is created via Hibernate
+schema generation (`update` in dev, `drop-and-create` in test) — no Flyway.
+
+**`QhorusMcpTools` is the read facade.** It already has N+1-safe, batched read
+methods that return exactly what the dashboard needs. `MeshResource` delegates to
+it rather than writing new queries:
+
+| Dashboard need | Delegates to |
+|---|---|
+| Channel list | `tools.listChannels()` returns `List<ChannelDetail>` |
+| Online instances | `tools.listInstances(null)` returns `List<InstanceInfo>` |
+| Channel timeline | `tools.getChannelTimeline(name, null, limit)` |
+| Cross-channel feed | `tools.listEvents(null, null, limit, null, null)` |
+
+**V1 caution:** `getChannelTimeline` and `listEvents` return `List<Map<String,Object>>`
+(MCP-tool-shaped). These serialise fine to JSON, but if the MCP format changes the
+dashboard breaks. Acceptable for v1; a future pass would introduce typed DTOs in a
+shared module.
 
 ---
 
@@ -82,31 +109,28 @@ latency matters.
 **New file:** `src/main/java/dev/claudony/server/MeshResource.java`
 
 `@Path("/api/mesh")`, `@RolesAllowed("user")` (same auth as `SessionResource`).
-Injects Qhorus service beans directly via CDI — no MCP round-trip.
+Injects `QhorusMcpTools` and `ClaudonyConfig` — no query code in this class.
 
-**Response records** (defined inline or in a `model/` subpackage):
+**Response types:** `ChannelDetail` and `InstanceInfo` are existing Qhorus types
+(already Jackson-serialisable). `MeshConfig` is a local record. Timeline and feed
+return `List<Map<String,Object>>` from Qhorus directly.
 
 ```java
 record MeshConfig(String strategy, int interval) {}
-record ChannelSummary(String name, String purpose,
-                      int messageCount, int participantCount, Instant lastActivity) {}
-record InstanceSummary(String instanceId, String capabilities, Instant lastSeen) {}
-record MessageEntry(long id, String channel, String sender,
-                    String type, String content, Instant createdAt) {}
 ```
 
 **Endpoints:**
 
-| Method | Path | Returns | Notes |
+| Method | Path | Returns | Delegates to |
 |---|---|---|---|
 | GET | `/api/mesh/config` | `MeshConfig` | Reads `claudony.mesh.*` config |
-| GET | `/api/mesh/channels` | `List<ChannelSummary>` | Ordered by last activity desc |
-| GET | `/api/mesh/instances` | `List<InstanceSummary>` | Active in last 5 min |
-| GET | `/api/mesh/channels/{name}/timeline` | `List<MessageEntry>` | `?limit=50` (newest-last) |
-| GET | `/api/mesh/feed` | `List<MessageEntry>` | `?limit=100`, all channels, newest-last |
+| GET | `/api/mesh/channels` | `List<ChannelDetail>` | `tools.listChannels()` |
+| GET | `/api/mesh/instances` | `List<InstanceInfo>` | `tools.listInstances(null)` |
+| GET | `/api/mesh/channels/{name}/timeline` | `List<Map>` | `tools.getChannelTimeline(name, null, limit)` |
+| GET | `/api/mesh/feed` | `List<Map>` | `tools.listEvents(null, null, limit, null, null)` |
 | GET | `/api/mesh/events` | SSE stream | `text/event-stream`, `mesh-update` events |
 
-Unknown channel name in `/timeline` returns empty array (not 404).
+`?limit` defaults: timeline=50, feed=100. Unknown channel name returns empty array (not 404).
 
 **`ClaudonyConfig.java`** additions:
 ```java
@@ -117,6 +141,8 @@ String meshRefreshStrategy();
 int meshRefreshInterval();
 ```
 
+**Auth:** `@RolesAllowed("user")` on the class — same as `SessionResource`.
+
 ---
 
 ## Frontend
@@ -124,7 +150,7 @@ int meshRefreshInterval();
 **No changes to existing session or fleet code.** Mesh panel is fully additive.
 
 **`index.html`** — add `<aside id="mesh-panel">` as the third child of `.app-body`,
-plus `<button id="mesh-expand-btn">` outside `.app-body` for the collapsed state.
+plus a collapse expand button outside `.app-body` for the collapsed state.
 
 **`style.css`** — mesh panel layout classes:
 - `.mesh-panel` — `width: 300px`, `border-left: 1px solid var(--border)`, flex column, `transition: width 0.2s`
@@ -147,12 +173,16 @@ class MeshPanel {
   }
   update(data) { /* stores data, calls active view renderer */ }
   switchView(name) { /* saves to localStorage, calls renderer */ }
-  collapse() / expand() { /* toggles CSS class + localStorage */ }
+  // collapse() and expand() toggle CSS class + localStorage
 }
 
 class PollingMeshStrategy {
   async poll() {
-    const [channels, instances, feed] = await Promise.all([...]);
+    const [channels, instances, feed] = await Promise.all([
+      fetch('/api/mesh/channels').then(r => r.json()),
+      fetch('/api/mesh/instances').then(r => r.json()),
+      fetch('/api/mesh/feed?limit=100').then(r => r.json()),
+    ]);
     this.panel.update({ channels, instances, feed });
   }
 }
@@ -166,9 +196,9 @@ class SseMeshStrategy {
 }
 
 // Pure render functions — no state, just DOM
-const OverviewView = { render(container, data, panel) { ... } };
-const ChannelView  = { render(container, data, panel) { ... } };
-const FeedView     = { render(container, data, panel) { ... } };
+const OverviewView = { render(container, data, panel) { /* ... */ } };
+const ChannelView  = { render(container, data, panel) { /* ... */ } };
+const FeedView     = { render(container, data, panel) { /* ... */ } };
 ```
 
 **Empty states:** Each view renders a "No active channels" / "No agents online" /
@@ -206,9 +236,9 @@ New class, runs under `-Pe2e`. Four tests covering happy paths and critical beha
 
 | Test | What it verifies |
 |---|---|
-| `meshPanel_visibleOnDashboard` | Panel header with "MESH" and the three view buttons (⊞ # ≡) is visible after page load |
-| `meshPanel_collapseAndExpand` | Click ⟵ → panel gone, expand button visible; click expand → panel back. State survives page reload (localStorage). |
-| `meshPanel_viewSwitching_updatesActiveButton` | Click # → Channel button has active class; click ≡ → Feed active; click ⊞ → Overview active. View persists across reload. |
+| `meshPanel_visibleOnDashboard` | Panel header with "MESH" and the three view buttons is visible after page load |
+| `meshPanel_collapseAndExpand` | Click collapse button — panel gone, expand button visible; click expand — panel back. State survives page reload (localStorage). |
+| `meshPanel_viewSwitching_updatesActiveButton` | Click Channel button — active class moves; click Feed — Feed active; click Overview — Overview active. View persists across reload. |
 | `meshPanel_emptyState_showsMessageNotError` | With no agents active, each view shows a readable empty-state string, no JS errors in console |
 
 ### Test config additions — `application.properties`
@@ -253,3 +283,4 @@ Modified:
 - Cross-fleet Qhorus aggregation — future
 - Per-view Playwright tests with live message rendering — future (needs real agent activity)
 - SSE Playwright tests — future (different config profile)
+- Typed DTOs for timeline/feed responses — future (v1 uses Map<String,Object> from Qhorus)
