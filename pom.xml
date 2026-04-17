@@ -67,7 +67,7 @@
       <artifactId>quarkus-qhorus</artifactId>
       <version>1.0.0-SNAPSHOT</version>
     </dependency>
-    <!-- JDBC driver for Qhorus DB — H2 for dev/test, PostgreSQL for production -->
+    <!-- JDBC driver for Qhorus + ledger tables -->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jdbc-h2</artifactId>
