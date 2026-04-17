@@ -37,4 +37,20 @@ class MeshResourceTest {
             .contentType(containsString("application/json"))
             .body("$", hasSize(0));
     }
+
+    @Test
+    void meshTimeline_unknownChannel_returnsEmptyList() {
+        given().when().get("/api/mesh/channels/does-not-exist/timeline")
+            .then()
+            .statusCode(200)
+            .body("$", hasSize(0));
+    }
+
+    @Test
+    void meshFeed_returnsEmptyList() {
+        given().when().get("/api/mesh/feed")
+            .then()
+            .statusCode(200)
+            .body("$", hasSize(0));
+    }
 }
