@@ -422,3 +422,131 @@
         });
     });
 })();
+
+// ── Mesh Panel ───────────────────────────────────────────────────────────────
+
+class MeshPanel {
+    constructor() {
+        this.panel = document.getElementById('mesh-panel');
+        this.body = document.getElementById('mesh-body');
+        this.expandBtn = document.getElementById('mesh-expand-btn');
+        this.activeView = localStorage.getItem('mesh-view') || 'overview';
+        this.collapsed = localStorage.getItem('mesh-collapsed') === 'true';
+        this.data = { channels: [], instances: [], feed: [] };
+        this.strategy = null;
+    }
+
+    async init() {
+        this._wireButtons();
+        if (this.collapsed) this._applyCollapsed();
+        this._renderActiveView(); // show empty state immediately
+        try {
+            const cfg = await fetch('/api/mesh/config').then(r => r.json());
+            this.strategy = cfg.strategy === 'sse'
+                ? new SseMeshStrategy('/api/mesh/events', this)
+                : new PollingMeshStrategy('/api/mesh', cfg.interval, this);
+            this.strategy.start();
+        } catch (e) {
+            // Server not available — panel shows empty state, no crash
+        }
+    }
+
+    _wireButtons() {
+        document.getElementById('mesh-collapse-btn')
+            .addEventListener('click', () => this.collapse());
+        document.getElementById('mesh-expand-btn')
+            .addEventListener('click', () => this.expand());
+        document.querySelectorAll('.mesh-view-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.switchView(btn.dataset.view));
+        });
+        this._updateViewBtns();
+    }
+
+    _updateViewBtns() {
+        document.querySelectorAll('.mesh-view-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.view === this.activeView);
+        });
+    }
+
+    update(data) {
+        this.data = data;
+        this._renderActiveView();
+    }
+
+    switchView(name) {
+        this.activeView = name;
+        localStorage.setItem('mesh-view', name);
+        this._updateViewBtns();
+        this._renderActiveView();
+    }
+
+    _renderActiveView() {
+        const views = { overview: OverviewView, channel: ChannelView, feed: FeedView };
+        const view = views[this.activeView] || OverviewView;
+        view.render(this.body, this.data, this);
+    }
+
+    collapse() {
+        this.collapsed = true;
+        localStorage.setItem('mesh-collapsed', 'true');
+        this._applyCollapsed();
+    }
+
+    expand() {
+        this.collapsed = false;
+        localStorage.setItem('mesh-collapsed', 'false');
+        this.panel.classList.remove('collapsed');
+        this.expandBtn.style.display = 'none';
+    }
+
+    _applyCollapsed() {
+        this.panel.classList.add('collapsed');
+        this.expandBtn.style.display = '';
+    }
+}
+
+class PollingMeshStrategy {
+    constructor(baseUrl, interval, panel) {
+        this.baseUrl = baseUrl;
+        this.interval = interval;
+        this.panel = panel;
+        this.timer = null;
+    }
+
+    start() {
+        this._poll();
+        this.timer = setInterval(() => this._poll(), this.interval);
+    }
+
+    stop() { clearInterval(this.timer); }
+
+    async _poll() {
+        try {
+            const [channels, instances, feed] = await Promise.all([
+                fetch(this.baseUrl + '/channels').then(r => r.json()),
+                fetch(this.baseUrl + '/instances').then(r => r.json()),
+                fetch(this.baseUrl + '/feed?limit=100').then(r => r.json()),
+            ]);
+            this.panel.update({ channels, instances, feed });
+        } catch (e) {
+            // Silently degrade — panel keeps showing last data
+        }
+    }
+}
+
+class SseMeshStrategy {
+    constructor(url, panel) {
+        this.url = url;
+        this.panel = panel;
+        this.source = null;
+    }
+
+    start() {
+        this.source = new EventSource(this.url);
+        this.source.addEventListener('mesh-update', e => {
+            try { this.panel.update(JSON.parse(e.data)); } catch (_) {}
+        });
+    }
+
+    stop() { this.source?.close(); }
+}
