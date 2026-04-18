@@ -550,3 +550,113 @@ class SseMeshStrategy {
 
     stop() { this.source?.close(); }
 }
+
+// ── HTML Escaping ────────────────────────────────────────────────────────────
+
+function escapeHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
+// ── View Renderers ───────────────────────────────────────────────────────────
+
+const OverviewView = {
+    render(container, data, panel) {
+        const { channels, instances, feed } = data;
+        if (!channels.length && !instances.length) {
+            container.innerHTML = '<div class="mesh-empty">No active channels</div>';
+            return;
+        }
+        const presence = instances.length
+            ? instances.map(i => `<span class="mesh-instance">${escapeHtml(i.instanceId)}</span>`).join('')
+            : '<span class="mesh-dim">No agents online</span>';
+
+        const channelItems = channels.length
+            ? channels.map(ch => `
+                <div class="mesh-channel-item" onclick="meshPanel.switchView('channel')">
+                    <span class="mesh-channel-name">#${escapeHtml(ch.name)}</span>
+                    <span class="mesh-channel-count">${escapeHtml(ch.messageCount)}</span>
+                </div>`).join('')
+            : '<div class="mesh-dim">No channels</div>';
+
+        const recentMsgs = (feed || []).slice(0, 5).map(m =>
+            `<div class="mesh-msg">
+                <span class="mesh-sender">${escapeHtml(m.sender || m.agent_id || '?')}</span>
+                <span class="mesh-content">${escapeHtml(String(m.content || '').substring(0, 60))}</span>
+            </div>`
+        ).join('');
+
+        container.innerHTML = `
+            <div class="mesh-section">
+                <div class="mesh-label">ONLINE</div>
+                <div class="mesh-presence">${presence}</div>
+            </div>
+            <div class="mesh-section">
+                <div class="mesh-label">CHANNELS</div>
+                ${channelItems}
+            </div>
+            ${recentMsgs ? `<div class="mesh-section"><div class="mesh-label">RECENT</div>${recentMsgs}</div>` : ''}
+        `;
+    }
+};
+
+const ChannelView = {
+    _selected: null,
+    render(container, data, panel) {
+        const { channels, feed } = data;
+        if (!channels.length) {
+            container.innerHTML = '<div class="mesh-empty">No active channels</div>';
+            return;
+        }
+        if (!this._selected || !channels.find(c => c.name === this._selected)) {
+            this._selected = channels[0].name;
+        }
+        const opts = channels.map(ch =>
+            `<option value="${escapeHtml(ch.name)}" ${ch.name === this._selected ? 'selected' : ''}>#${escapeHtml(ch.name)}</option>`
+        ).join('');
+        const msgs = (feed || [])
+            .filter(m => m.channel === this._selected)
+            .map(m => `<div class="mesh-msg">
+                <span class="mesh-sender">${escapeHtml(m.sender || m.agent_id || '?')}</span>
+                <span class="mesh-content">${escapeHtml(String(m.content || '').substring(0, 80))}</span>
+            </div>`).join('') || '<div class="mesh-dim">No messages</div>';
+        container.innerHTML = `
+            <select class="mesh-channel-select"
+                onchange="ChannelView._selected=this.value; meshPanel._renderActiveView()">
+                ${opts}
+            </select>
+            <div class="mesh-timeline">${msgs}</div>
+        `;
+    }
+};
+
+const FeedView = {
+    render(container, data, panel) {
+        const { feed, instances } = data;
+        if (!feed || !feed.length) {
+            container.innerHTML = '<div class="mesh-empty">No recent activity</div>';
+            return;
+        }
+        const items = feed.slice(0, 50).map(m => `
+            <div class="mesh-feed-item">
+                <span class="mesh-dim">${escapeHtml(String(m.created_at || '').substring(11, 19))}</span>
+                <span class="mesh-channel-tag">#${escapeHtml(m.channel || '?')}</span>
+                <span class="mesh-sender">${escapeHtml(m.sender || m.agent_id || '?')}</span>
+                <span class="mesh-content">${escapeHtml(String(m.content || '').substring(0, 55))}</span>
+            </div>`
+        ).join('');
+        const presenceFooter = instances?.length
+            ? `<div class="mesh-presence-footer">${instances.map(i =>
+                `<span class="mesh-instance">&#9679; ${escapeHtml(i.instanceId)}</span>`).join('')}</div>`
+            : '';
+        container.innerHTML = `<div class="mesh-feed">${items}</div>${presenceFooter}`;
+    }
+};
+
+// ── Initialise ───────────────────────────────────────────────────────────────
+const meshPanel = new MeshPanel();
+meshPanel.init();
