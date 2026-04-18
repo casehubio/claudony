@@ -101,4 +101,11 @@ class StaticFilesTest {
         given().when().get("/icons/icon-192.svg").then().statusCode(200);
         given().when().get("/icons/icon-512.svg").then().statusCode(200);
     }
+
+    @Test
+    void dashboardContainsMeshPanel() {
+        given().when().get("/app/index.html")
+            .then().statusCode(200)
+            .body(containsString("id=\"mesh-panel\""));
+    }
 }

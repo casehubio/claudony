@@ -26,7 +26,20 @@
         </aside>
 
         <main id="session-grid"></main>
+        <aside id="mesh-panel">
+            <div class="mesh-header">
+                <span class="mesh-title">MESH</span>
+                <div class="mesh-view-switcher">
+                    <button class="mesh-view-btn active" data-view="overview" title="Overview">&#9678;</button>
+                    <button class="mesh-view-btn" data-view="channel" title="Channel">#</button>
+                    <button class="mesh-view-btn" data-view="feed" title="Feed">&#8801;</button>
+                </div>
+                <button class="mesh-collapse-btn" id="mesh-collapse-btn" title="Collapse">&larr;</button>
+            </div>
+            <div class="mesh-body" id="mesh-body"></div>
+        </aside>
     </div>
+    <button id="mesh-expand-btn" class="mesh-expand" title="Open Mesh panel" style="display:none">MESH</button>
 
     <!-- New Session dialog (unchanged content) -->
     <dialog id="new-session-dialog">
