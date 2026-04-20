@@ -434,10 +434,18 @@ class MeshPanel {
         this.collapsed = localStorage.getItem('mesh-collapsed') === 'true';
         this.data = { channels: [], instances: [], feed: [] };
         this.strategy = null;
+        this._dockChannel  = null;
+        this._dockType     = 'status';
+        this._dockChannelEl  = document.getElementById('mesh-dock-channel');
+        this._dockTypeEl     = document.getElementById('mesh-dock-type');
+        this._dockTextareaEl = document.getElementById('mesh-dock-textarea');
+        this._dockSendEl     = document.getElementById('mesh-dock-send');
+        this._dockErrorEl    = document.getElementById('mesh-dock-error');
     }
 
     async init() {
         this._wireButtons();
+        this._initDock();
         if (this.collapsed) this._applyCollapsed();
         this._renderActiveView(); // show empty state immediately
         try {
@@ -470,6 +478,7 @@ class MeshPanel {
 
     update(data) {
         this.data = data;
+        this._updateDockChannels();
         this._renderActiveView();
     }
 
@@ -503,6 +512,90 @@ class MeshPanel {
         this.panel.classList.add('collapsed');
         this.expandBtn.style.display = '';
     }
+
+    _initDock() {
+        this._dockType = this._dockTypeEl.value;   // sync from DOM in case of browser session restore
+        this._dockTypeEl.addEventListener('change', () => {
+            this._dockType = this._dockTypeEl.value;
+        });
+        this._dockChannelEl.addEventListener('change', () => {
+            this._dockChannel = this._dockChannelEl.value;
+        });
+        this._dockTextareaEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this._send();
+            }
+        });
+        this._dockSendEl.addEventListener('click', () => this._send());
+    }
+
+    _updateDockChannels() {
+        const channels = this.data.channels || [];
+        const hasChannels = channels.length > 0;
+
+        this._dockChannelEl.disabled = !hasChannels;
+        this._dockSendEl.disabled    = !hasChannels;
+
+        if (!hasChannels) {
+            this._dockChannelEl.innerHTML = '<option>— no channels —</option>';
+            this._dockChannel = null;
+            return;
+        }
+
+        // Sort by lastActivityAt descending (ISO-8601 strings sort lexicographically)
+        const sorted = [...channels].sort((a, b) =>
+            (b.lastActivityAt || '').localeCompare(a.lastActivityAt || ''));
+
+        // Preserve selected channel if still present; else default to most recently active
+        const names = sorted.map(c => c.name);
+        if (!this._dockChannel || !names.includes(this._dockChannel)) {
+            this._dockChannel = sorted[0].name;
+        }
+
+        this._dockChannelEl.innerHTML = sorted.map(c =>
+            `<option value="${escapeHtml(c.name)}" ${c.name === this._dockChannel ? 'selected' : ''}>#${escapeHtml(c.name)}</option>`
+        ).join('');
+    }
+
+    selectChannel(name) {
+        this._dockChannel = name;
+        if (this._dockChannelEl) {
+            this._dockChannelEl.value = name;
+        }
+    }
+
+    async _send() {
+        const content = this._dockTextareaEl.value.trim();
+        if (!content || !this._dockChannel) return;
+        this._dockSendEl.disabled = true;
+        try {
+            const resp = await fetch(
+                `/api/mesh/channels/${encodeURIComponent(this._dockChannel)}/messages`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content, type: this._dockType }),
+                }
+            );
+            if (!resp.ok) {
+                const text = await resp.text();
+                this._showDockError(text || `Send failed (${resp.status})`);
+                return;
+            }
+            this._dockTextareaEl.value = '';
+            this.strategy?.triggerPoll?.();
+        } catch (e) {
+            this._showDockError(e.message || 'Send failed');
+        } finally {
+            this._dockSendEl.disabled = false;
+        }
+    }
+
+    _showDockError(msg) {
+        this._dockErrorEl.textContent = msg;
+        setTimeout(() => { this._dockErrorEl.textContent = ''; }, 4000);
+    }
 }
 
 class PollingMeshStrategy {
@@ -519,6 +612,12 @@ class PollingMeshStrategy {
     }
 
     stop() { clearInterval(this.timer); }
+
+    triggerPoll() {
+        clearInterval(this.timer);
+        this._poll();
+        this.timer = setInterval(() => this._poll(), this.interval);
+    }
 
     async _poll() {
         try {
@@ -549,6 +648,8 @@ class SseMeshStrategy {
     }
 
     stop() { this.source?.close(); }
+
+    triggerPoll() { /* SSE is live — no action needed */ }
 }
 
 // ── HTML Escaping ────────────────────────────────────────────────────────────
@@ -577,7 +678,7 @@ const OverviewView = {
 
         const channelItems = channels.length
             ? channels.map(ch => `
-                <div class="mesh-channel-item" onclick="meshPanel.switchView('channel')">
+                <div class="mesh-channel-item" data-channel="${escapeHtml(ch.name)}">
                     <span class="mesh-channel-name">#${escapeHtml(ch.name)}</span>
                     <span class="mesh-channel-count">${escapeHtml(ch.messageCount)}</span>
                 </div>`).join('')
@@ -601,6 +702,12 @@ const OverviewView = {
             </div>
             ${recentMsgs ? `<div class="mesh-section"><div class="mesh-label">RECENT</div>${recentMsgs}</div>` : ''}
         `;
+        container.querySelectorAll('.mesh-channel-item[data-channel]').forEach(el => {
+            el.addEventListener('click', () => {
+                panel.selectChannel(el.dataset.channel);
+                panel.switchView('channel');
+            });
+        });
     }
 };
 
@@ -615,6 +722,7 @@ const ChannelView = {
         if (!this._selected || !channels.find(c => c.name === this._selected)) {
             this._selected = channels[0].name;
         }
+        meshPanel.selectChannel(this._selected);
         const opts = channels.map(ch =>
             `<option value="${escapeHtml(ch.name)}" ${ch.name === this._selected ? 'selected' : ''}>#${escapeHtml(ch.name)}</option>`
         ).join('');
@@ -626,7 +734,7 @@ const ChannelView = {
             </div>`).join('') || '<div class="mesh-dim">No messages</div>';
         container.innerHTML = `
             <select class="mesh-channel-select"
-                onchange="ChannelView._selected=this.value; meshPanel._renderActiveView()">
+                onchange="ChannelView._selected=this.value; meshPanel.selectChannel(this.value); meshPanel._renderActiveView()">
                 ${opts}
             </select>
             <div class="mesh-timeline">${msgs}</div>
@@ -644,7 +752,9 @@ const FeedView = {
         const items = feed.slice(0, 50).map(m => `
             <div class="mesh-feed-item">
                 <span class="mesh-dim">${escapeHtml(String(m.created_at || '').substring(11, 19))}</span>
-                <span class="mesh-channel-tag">#${escapeHtml(m.channel || '?')}</span>
+                <span class="mesh-channel-tag" style="cursor:pointer" data-channel="${escapeHtml(m.channel || '')}">
+                    #${escapeHtml(m.channel || '?')}
+                </span>
                 <span class="mesh-sender">${escapeHtml(m.sender || m.agent_id || '?')}</span>
                 <span class="mesh-content">${escapeHtml(String(m.content || '').substring(0, 55))}</span>
             </div>`
@@ -654,6 +764,9 @@ const FeedView = {
                 `<span class="mesh-instance">&#9679; ${escapeHtml(i.instanceId)}</span>`).join('')}</div>`
             : '';
         container.innerHTML = `<div class="mesh-feed">${items}</div>${presenceFooter}`;
+        container.querySelectorAll('.mesh-channel-tag[data-channel]').forEach(el => {
+            el.addEventListener('click', () => panel.selectChannel(el.dataset.channel));
+        });
     }
 };
 
