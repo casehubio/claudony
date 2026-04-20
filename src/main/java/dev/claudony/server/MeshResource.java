@@ -11,11 +11,14 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 
+import jakarta.ws.rs.core.Response;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Path("/api/mesh")
 @Produces(MediaType.APPLICATION_JSON)
@@ -30,6 +33,11 @@ public class MeshResource {
     @Inject ObjectMapper mapper;
 
     record MeshConfig(String strategy, int interval) {}
+
+    private static final Set<String> VALID_HUMAN_TYPES =
+            Set.of("request", "response", "status", "handoff", "done");
+
+    record PostMessageRequest(String content, String type) {}
 
     @GET
     @Path("/config")
@@ -118,5 +126,38 @@ public class MeshResource {
                         return "data: {}\n\n";
                     }
                 });
+    }
+
+    @POST
+    @Path("/channels/{name}/messages")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response postMessage(
+            @PathParam("name") String name,
+            PostMessageRequest req) {
+        if (req == null || req.content() == null || req.content().isBlank()) {
+            return Response.status(400).entity("content must not be blank").build();
+        }
+        String type = req.type() == null ? "status" : req.type().toLowerCase();
+        if (!VALID_HUMAN_TYPES.contains(type)) {
+            return Response.status(400).entity("invalid type: " + type).build();
+        }
+        try {
+            QhorusMcpTools.MessageResult result =
+                    qhorusMcpTools.sendMessage(name, "human", type, req.content(), null, null);
+            return Response.ok(result).build();
+        } catch (IllegalArgumentException e) {
+            // Not wrapped — returned directly (shouldn't happen due to @WrapBusinessError, but guard)
+            return Response.status(404).entity(e.getMessage()).build();
+        } catch (ToolCallException e) {
+            // @WrapBusinessError wraps using ToolCallException(Throwable cause) — check cause type
+            Throwable cause = e.getCause();
+            if (cause instanceof IllegalArgumentException) {
+                return Response.status(404).entity(cause.getMessage()).build();
+            }
+            String msg = cause != null ? cause.getMessage() : e.getMessage();
+            return Response.status(409).entity(msg).build();
+        } catch (IllegalStateException e) {
+            return Response.status(409).entity(e.getMessage()).build();
+        }
     }
 }

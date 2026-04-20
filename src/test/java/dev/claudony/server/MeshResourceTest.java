@@ -77,4 +77,15 @@ class MeshResourceAuthTest {
         given().when().get("/api/mesh/config")
             .then().statusCode(401);
     }
+
+    @Test
+    void postMessage_withoutAuth_returns401() {
+        given()
+            .contentType("application/json")
+            .body("{\"content\":\"hello\",\"type\":\"status\"}")
+        .when()
+            .post("/api/mesh/channels/any/messages")
+        .then()
+            .statusCode(401);
+    }
 }
