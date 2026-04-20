@@ -562,3 +562,66 @@ dialog select:focus { outline: none; border-color: var(--accent); }
     flex-wrap: wrap;
     gap: 6px;
 }
+
+/* ── Interjection Dock ──────────────────────────────────────────────────── */
+
+#mesh-dock {
+    border-top: 1px solid var(--border);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.mesh-dock-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.mesh-dock-controls select {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+}
+
+.mesh-dock-textarea {
+    width: 100%;
+    resize: none;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.mesh-dock-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mesh-dock-send {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.mesh-dock-send:disabled { opacity: 0.4; cursor: default; }
+
+.mesh-dock-error {
+    font-size: 0.7rem;
+    color: var(--error, #e57373);
+    flex: 1;
+}

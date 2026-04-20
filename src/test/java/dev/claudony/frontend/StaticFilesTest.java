@@ -108,4 +108,12 @@ class StaticFilesTest {
             .then().statusCode(200)
             .body(containsString("id=\"mesh-panel\""));
     }
+
+    @Test
+    void indexHtml_containsMeshDock() {
+        given().when().get("/app/index.html")
+            .then()
+            .statusCode(200)
+            .body(containsString("id=\"mesh-dock\""));
+    }
 }

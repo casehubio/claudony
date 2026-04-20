@@ -37,6 +37,26 @@
                 <button class="mesh-collapse-btn" id="mesh-collapse-btn" title="Collapse">&larr;</button>
             </div>
             <div class="mesh-body" id="mesh-body"></div>
+            <div id="mesh-dock">
+                <div class="mesh-dock-controls">
+                    <select id="mesh-dock-channel" disabled>
+                        <option>— no channels —</option>
+                    </select>
+                    <select id="mesh-dock-type">
+                        <option value="status">status</option>
+                        <option value="request">request</option>
+                        <option value="response">response</option>
+                        <option value="handoff">handoff</option>
+                        <option value="done">done</option>
+                    </select>
+                </div>
+                <textarea id="mesh-dock-textarea" class="mesh-dock-textarea"
+                    rows="2" placeholder="Type a message… (Enter to send)"></textarea>
+                <div class="mesh-dock-footer">
+                    <button id="mesh-dock-send" class="mesh-dock-send" disabled>Send</button>
+                    <span id="mesh-dock-error" class="mesh-dock-error"></span>
+                </div>
+            </div>
         </aside>
     </div>
     <button id="mesh-expand-btn" class="mesh-expand" title="Open Mesh panel" style="display:none">MESH</button>
