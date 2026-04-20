@@ -223,9 +223,9 @@ claudony.name=Claudony                  # instance name shown in fleet dashboard
 
 ## Test Count and Status
 
-**240 tests passing** across:
+**246 tests passing** across:
 - `SmokeTest` — basic health endpoint
-- `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput
+- `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
 - `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest + proxy resize), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest)
@@ -238,6 +238,8 @@ claudony.name=Claudony                  # instance name shown in fleet dashboard
 `ServerStartup.bootstrapRegistry()` is package-private to allow direct testing.
 Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in non-auth test classes.
 Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTest()` / `setClockForTest()` package-private hooks; `@AfterEach` cleanup is required to prevent state bleeding across `@QuarkusTest` classes, which share one app instance per test run.
+For HTTP-triggered DB state (where `@TestTransaction` can't roll back server-side transactions): inject `@Inject UserTransaction ut` and wrap Panache deletes in `ut.begin()`/`ut.commit()` in `@AfterEach`. See `MeshResourceInterjectionTest` for the pattern.
+`%test.quarkus.datasource.reactive=false` is required in `application.properties` when a transitive dependency pulls in `hibernate-reactive-panache` — without it, H2 tests fail to start entirely.
 
 ---
 
