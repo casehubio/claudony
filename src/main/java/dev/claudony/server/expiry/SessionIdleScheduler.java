@@ -37,10 +37,10 @@ public class SessionIdleScheduler {
             try {
                 expiryEvents.fire(new SessionExpiredEvent(session));
                 tmux.killSession(session.name());
+                registry.remove(session.id());
             } catch (Exception e) {
-                LOG.warnf("Could not kill session '%s': %s", session.name(), e.getMessage());
+                LOG.warnf("Could not expire session '%s': %s — registry entry preserved", session.name(), e.getMessage());
             }
-            registry.remove(session.id());
         }
     }
 }
