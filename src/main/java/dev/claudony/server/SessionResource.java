@@ -2,6 +2,7 @@ package dev.claudony.server;
 
 import dev.claudony.agent.terminal.TerminalAdapterFactory;
 import dev.claudony.config.ClaudonyConfig;
+import dev.claudony.server.expiry.ExpiryPolicyRegistry;
 import dev.claudony.server.fleet.FleetKeyClientFilter;
 import dev.claudony.server.fleet.PeerClient;
 import dev.claudony.server.fleet.PeerRegistry;
@@ -43,12 +44,13 @@ public class SessionResource {
     @Inject TmuxService tmux;
     @Inject TerminalAdapterFactory terminalFactory;
     @Inject PeerRegistry peerRegistry;
+    @Inject ExpiryPolicyRegistry policyRegistry;
 
     @GET
     public List<SessionResponse> list(@QueryParam("local") @DefaultValue("false") boolean localOnly) {
         // Local sessions — always returned
         var result = new ArrayList<>(registry.all().stream()
-                .map(s -> SessionResponse.from(s, config.port()))
+                .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
                 .toList());
 
         if (localOnly) return result;
@@ -106,7 +108,7 @@ public class SessionResource {
     @Path("/{id}")
     public Response get(@PathParam("id") String id) {
         return registry.find(id)
-                .map(s -> Response.ok(SessionResponse.from(s, config.port())).build())
+                .map(s -> Response.ok(SessionResponse.from(s, config.port(), resolvedPolicy(s))).build())
                 .orElse(Response.status(404).build());
     }
 
@@ -152,7 +154,7 @@ public class SessionResource {
             registry.register(session);
             LOG.infof("Created session '%s' (id=%s)", name, id);
             return Response.status(201)
-                    .entity(SessionResponse.from(session, config.port()))
+                    .entity(SessionResponse.from(session, config.port(), resolvedPolicy(session)))
                     .build();
         } catch (IOException | InterruptedException e) {
             LOG.errorf("Failed to create session '%s': %s", name, e.getMessage());
@@ -202,7 +204,7 @@ public class SessionResource {
                         session.command(), session.status(), session.createdAt(), Instant.now(),
                         session.expiryPolicy());
                 registry.register(renamed);
-                return Response.ok(SessionResponse.from(renamed, config.port())).build();
+                return Response.ok(SessionResponse.from(renamed, config.port(), resolvedPolicy(renamed))).build();
             } catch (IOException | InterruptedException e) {
                 LOG.errorf("Failed to rename session '%s': %s", session.name(), e.getMessage());
                 return Response.serverError().build();
@@ -363,6 +365,10 @@ public class SessionResource {
         } catch (IOException e) {
             return new PortStatus(port, false, 0);
         }
+    }
+
+    private String resolvedPolicy(Session session) {
+        return policyRegistry.resolve(session.expiryPolicy().orElse(null)).name();
     }
 
     private record RunResult(int exitCode, String stdout, String stderr) {

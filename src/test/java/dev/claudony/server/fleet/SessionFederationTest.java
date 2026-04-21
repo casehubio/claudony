@@ -52,7 +52,7 @@ class SessionFederationTest {
                 Instant.now(), Instant.now(),
                 "ws://unreachable-peer:7777/ws/fake-session-id",
                 "http://unreachable-peer:7777/app/session/fake-session-id",
-                null, null, null);
+                null, null, null, null); // 13th arg: expiryPolicy
         registry.updateCachedSessions("dead-peer-id", List.of(fakeSession));
 
         // Open the circuit (simulate 3 consecutive failures)
