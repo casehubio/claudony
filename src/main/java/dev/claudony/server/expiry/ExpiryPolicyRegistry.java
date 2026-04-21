@@ -36,7 +36,10 @@ public class ExpiryPolicyRegistry {
     public ExpiryPolicy resolve(String name) {
         if (name != null && policies.containsKey(name)) return policies.get(name);
         var fallback = policies.get(defaultPolicyName);
-        return fallback != null ? fallback : policies.values().iterator().next();
+        if (fallback != null) return fallback;
+        if (policies.isEmpty()) throw new IllegalStateException("No ExpiryPolicy beans registered");
+        LOG.warnf("Default policy '%s' not found; applying first available. Check configuration.", defaultPolicyName);
+        return policies.values().iterator().next();
     }
 
     public Set<String> availableNames() {

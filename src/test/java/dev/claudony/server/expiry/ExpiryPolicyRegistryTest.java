@@ -5,6 +5,8 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
+// NOTE: Requires TerminalOutputExpiryPolicy (Task 7) and StatusAwareExpiryPolicy (Task 8)
+// to be registered. Run only after those tasks are complete.
 @QuarkusTest
 class ExpiryPolicyRegistryTest {
 
