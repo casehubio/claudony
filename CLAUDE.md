@@ -223,10 +223,11 @@ claudony.name=Claudony                  # instance name shown in fleet dashboard
 
 ## Test Count and Status
 
-**246 tests passing** across:
+**273 tests passing** across:
 - `SmokeTest` — basic health endpoint
-- `server/` — TmuxService (real tmux), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest
+- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch())
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
+- `server/expiry/` — ExpiryPolicyRegistryTest, UserInteractionExpiryPolicyTest, TerminalOutputExpiryPolicyTest, StatusAwareExpiryPolicyTest, SessionIdleSchedulerTest
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
 - `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest + proxy resize), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
@@ -295,7 +296,7 @@ cd docs && bundle exec jekyll serve --baseurl ""
 
 ## What's Not Done Yet
 
-- Authentication — WebAuthn passkey + API key implemented; rate limiting and dev-login backdoor closed; **session expiry not yet implemented** (sessions are session cookies — expire on browser close; server restarts no longer invalidate sessions since encryption key is now persistent)
+- Authentication — WebAuthn passkey + API key implemented; rate limiting and dev-login backdoor closed; session expiry implemented (`SessionIdleScheduler` + pluggable `ExpiryPolicy`); session cookies expire on browser close; server restarts no longer invalidate sessions since encryption key is now persistent
 - GitHub PR/CI integration in dashboard (idea logged)
 - Docker sandbox per session (idea logged)
 - Windows Terminal or Linux terminal adapters beyond iTerm2 (interface is pluggable, no implementation)

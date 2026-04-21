@@ -78,6 +78,19 @@ Sessions live in tmux independently of the Quarkus process. On server restart, `
 - A cursor-positioning escape `ESC[row;colH` (derived from `tmux display-message #{cursor_y} #{cursor_x}`) is appended so xterm.js cursor lands at the pane cursor after replay — not at the last text line
 - The initial `\r\n` flush that pipe-pane sends on FIFO connect is swallowed (see BUGS-AND-ODDITIES #12) so it cannot move the cursor past the positioned point
 
+### Session Expiry
+
+Idle tmux sessions are cleaned up by `SessionIdleScheduler` (`@Scheduled every 5m`).
+Expiry logic is pluggable via the `ExpiryPolicy` CDI interface:
+
+| Policy | Name | Mechanism |
+|---|---|---|
+| `UserInteractionExpiryPolicy` | `user-interaction` | Checks `session.lastActive()` (default) |
+| `TerminalOutputExpiryPolicy` | `terminal-output` | Checks `tmux display-message #{window_activity}` (tmux 3.6a: use `window_activity`, not `pane_activity` — the latter is blank without an attached client) |
+| `StatusAwareExpiryPolicy` | `status-aware` | Never expires sessions where a non-shell process is running in the foreground |
+
+Global default: `claudony.session-expiry-policy=user-interaction`. Per-session override via `CreateSessionRequest.expiryPolicy`. On expiry: `SessionExpiredEvent` CDI event fired first (WebSocket observer sends `{"type":"session-expired"}` to any connected clients on a virtual thread), then tmux session killed and registry entry removed — only if kill succeeds. `session.lastActive` is bumped by `SessionRegistry.touch()` on: WebSocket open (after pipe-pane setup), WebSocket input, REST `POST /api/sessions/{id}/input`.
+
 ### MCP Transport: HTTP JSON-RPC
 
 The Agent exposes `POST /mcp` as a synchronous JSON-RPC endpoint. Claude Code connects to it as an MCP server via `--mcp-config`. HTTP transport is GraalVM-native compatible — no stdio subprocess needed. The `mcpServers` wrapper key in the config file is required (matches the `settings.json` schema); omitting it produces a silent schema validation error — no session is created.
@@ -244,7 +257,7 @@ Both created on server startup if absent.
 
 ## Testing
 
-**139 tests passing** (as of 2026-04-09). Three layers:
+**273 tests passing** (as of 2026-04-21). Three layers:
 - **Unit tests** — plain JUnit, no Quarkus container; stateful beans use `resetForTest()` + `@AfterEach`
 - **Integration tests** (`@QuarkusTest`) — full Quarkus context; all `@QuarkusTest` classes share one app instance
 - **E2E tests** — assert tmux session state (pane content, session existence), not Claude's output; LLM output is non-deterministic, tmux state is not
@@ -255,7 +268,6 @@ Both created on server startup if absent.
 
 - Dashboard redesign — apply Claudony colony theme (void-black, violet/green/magenta) to session cards and dashboard chrome
 - xterm.js theming — expose configurable presets; don't force the colony palette inside the terminal pane (users have strong preferences: Nord, Solarized, Dracula)
-- Session expiry — `Max-Age` cookies (currently session-scoped, expire on browser close)
 - Lifecycle hooks — scripts on session create/delete
 
 ---
@@ -325,7 +337,6 @@ This triple correlation is what makes the dashboard work — click a worker in t
 
 ## Open Questions
 
-- Session expiry: `Max-Age` requires intercepting Quarkus internal cookie issuance — is this worth doing vs accepting browser-close expiry?
 - xterm.js theming: URL params, settings UI, or user preference stored in credentials file?
 - Dashboard theme: user-configurable or fixed to the colony palette?
 - CLI wrapper: when does the binary get `claudony server` / `claudony agent` instead of `-Dclaudony.mode=...`?
