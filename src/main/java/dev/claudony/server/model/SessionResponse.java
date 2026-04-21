@@ -17,8 +17,9 @@ public record SessionResponse(
         String instanceUrl,   // null for local sessions; peer URL for remote sessions
         String instanceName,  // null for local sessions; peer name for remote sessions
         Boolean stale,        // null for local; true if from stale cache, false if live
-        String expiryPolicy) {
+        String expiryPolicy) { // null if unknown (e.g. peer running older binary)
 
+    /** Local session — fleet fields absent (NON_NULL serialization omits nulls). */
     public static SessionResponse from(Session session, int port, String effectivePolicy) {
         return new SessionResponse(
                 session.id(), session.name(), session.workingDir(), session.command(),
