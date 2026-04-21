@@ -1,6 +1,8 @@
 package dev.claudony.server;
 
+import dev.claudony.server.model.SessionExpiredEvent;
 import io.quarkus.websockets.next.*;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import java.io.*;
@@ -30,6 +32,12 @@ public class TerminalWebSocket {
     // connection.id() → FIFO path (for cleanup)
     private final ConcurrentHashMap<String, String> fifoPaths = new ConcurrentHashMap<>();
 
+    // connection.id() → session id (needed to touch registry on message)
+    private final ConcurrentHashMap<String, String> sessionIds = new ConcurrentHashMap<>();
+
+    // connection.id() → WebSocketConnection (needed to send expiry message)
+    private final ConcurrentHashMap<String, WebSocketConnection> connections = new ConcurrentHashMap<>();
+
     @OnOpen
     public void onOpen(WebSocketConnection connection) {
         var sessionId = connection.pathParam("id");
@@ -48,6 +56,9 @@ public class TerminalWebSocket {
         LOG.debugf("WebSocket open for session '%s' (id=%s) at %dx%d", tmuxName, sessionId, cols, rows);
 
         sessionNames.put(connection.id(), tmuxName);
+        sessionIds.put(connection.id(), sessionId);
+        connections.put(connection.id(), connection);
+        registry.touch(sessionId);
 
         try {
             // Step 1: Resize the tmux window FIRST, before capturing history.
@@ -193,6 +204,8 @@ public class TerminalWebSocket {
     public void onMessage(WebSocketConnection connection, String message) {
         var tmuxName = sessionNames.get(connection.id());
         if (tmuxName == null) return;
+        var sid = sessionIds.get(connection.id());
+        if (sid != null) registry.touch(sid);
         try {
             // -l sends text literally (no tmux key name lookup)
             // This handles plain text, control chars (\x03, \x04), and escape sequences
@@ -222,6 +235,18 @@ public class TerminalWebSocket {
         catch (NumberFormatException e) { return 0; }
     }
 
+    void onSessionExpired(@Observes SessionExpiredEvent event) {
+        var expiredName = event.session().name();
+        sessionNames.entrySet().stream()
+                .filter(e -> e.getValue().equals(expiredName))
+                .map(e -> connections.get(e.getKey()))
+                .filter(java.util.Objects::nonNull)
+                .forEach(conn -> {
+                    try { conn.sendTextAndAwait("{\"type\":\"session-expired\"}"); }
+                    catch (Exception ignored) {}
+                });
+    }
+
     private void cleanup(WebSocketConnection connection) {
         // Stop pipe-pane (calling pipe-pane with no command stops it)
         var tmuxName = sessionNames.remove(connection.id());
@@ -237,5 +262,7 @@ public class TerminalWebSocket {
         if (fifoPath != null) {
             try { Files.deleteIfExists(Path.of(fifoPath)); } catch (Exception ignored) {}
         }
+        sessionIds.remove(connection.id());
+        connections.remove(connection.id());
     }
 }

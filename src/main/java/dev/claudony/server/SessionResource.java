@@ -217,6 +217,7 @@ public class SessionResource {
         return registry.find(id).map(session -> {
             try {
                 tmux.sendKeys(session.name(), req.text());
+                registry.touch(id);
                 return Response.noContent().build();
             } catch (IOException | InterruptedException e) {
                 LOG.errorf("Failed to send input to session '%s': %s", session.name(), e.getMessage());
