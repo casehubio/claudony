@@ -36,7 +36,7 @@ class GitStatusTest {
         var session = new dev.claudony.server.model.Session(
             "test-git-unknown-id", "claudony-test-git-unknown", "unknown",
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
-            java.time.Instant.now(), java.time.Instant.now());
+            java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty());
         registry.register(session);
 
         given().when().get("/api/sessions/test-git-unknown-id/git-status")
@@ -50,7 +50,7 @@ class GitStatusTest {
         var session = new dev.claudony.server.model.Session(
             "test-git-nogit-id", "claudony-test-git-nogit", "/tmp",
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
-            java.time.Instant.now(), java.time.Instant.now());
+            java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty());
         registry.register(session);
 
         // /tmp is not a git repo
@@ -67,7 +67,7 @@ class GitStatusTest {
         var session = new dev.claudony.server.model.Session(
             "test-git-repo-id", "claudony-test-git-repo", projectDir,
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
-            java.time.Instant.now(), java.time.Instant.now());
+            java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty());
         registry.register(session);
 
         given().when().get("/api/sessions/test-git-repo-id/git-status")

@@ -37,7 +37,7 @@ class TerminalWebSocketTest {
         var now = Instant.now();
         registry.register(new dev.claudony.server.model.Session(
             "ws-test-id", TEST_SESSION, System.getProperty("user.home"),
-            "bash", SessionStatus.IDLE, now, now));
+            "bash", SessionStatus.IDLE, now, now, java.util.Optional.empty()));
         Await.until(() -> {
             try { return !tmux.capturePane(TEST_SESSION, 5).isBlank(); }
             catch (Exception e) { return false; }
@@ -440,7 +440,7 @@ class TerminalWebSocketTest {
         var now = Instant.now();
         registry.register(new dev.claudony.server.model.Session(
             extraId, extraSession, System.getProperty("user.home"),
-            "bash", SessionStatus.IDLE, now, now));
+            "bash", SessionStatus.IDLE, now, now, java.util.Optional.empty()));
 
         try {
             Await.until(() -> {

@@ -2,6 +2,7 @@ package dev.claudony.server.model;
 
 import org.junit.jupiter.api.Test;
 import java.time.Instant;
+import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SessionTest {
@@ -10,25 +11,39 @@ class SessionTest {
     void sessionHasRequiredFields() {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
-                "claude", SessionStatus.IDLE, now, now);
+                "claude", SessionStatus.IDLE, now, now, Optional.empty());
 
         assertEquals("id-1", session.id());
         assertEquals("myproject", session.name());
         assertEquals("/home/user/proj", session.workingDir());
         assertEquals("claude", session.command());
         assertEquals(SessionStatus.IDLE, session.status());
+        assertTrue(session.expiryPolicy().isEmpty());
     }
 
     @Test
-    void withStatusReturnsCopyWithUpdatedStatus() {
+    void withStatusReturnsCopyWithUpdatedStatusAndPreservesExpiryPolicy() {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
-                "claude", SessionStatus.IDLE, now, now);
+                "claude", SessionStatus.IDLE, now, now, Optional.of("terminal-output"));
 
         var updated = session.withStatus(SessionStatus.ACTIVE);
 
         assertEquals(SessionStatus.ACTIVE, updated.status());
         assertEquals("id-1", updated.id());
+        assertEquals(Optional.of("terminal-output"), updated.expiryPolicy());
+    }
+
+    @Test
+    void withLastActivePreservesExpiryPolicy() {
+        var now = Instant.now();
+        var session = new Session("id-1", "myproject", "/home/user/proj",
+                "claude", SessionStatus.IDLE, now, now, Optional.of("status-aware"));
+
+        var updated = session.withLastActive();
+
+        assertEquals(Optional.of("status-aware"), updated.expiryPolicy());
+        assertTrue(updated.lastActive().isAfter(now) || updated.lastActive().equals(now));
     }
 
     @Test

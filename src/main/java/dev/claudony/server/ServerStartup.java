@@ -70,7 +70,7 @@ public class ServerStartup {
                 registry.register(new Session(
                         UUID.randomUUID().toString(), name,
                         "unknown", config.claudeCommand(),
-                        SessionStatus.IDLE, now, now));
+                        SessionStatus.IDLE, now, now, java.util.Optional.empty()));
                 count++;
             }
             LOG.infof("Bootstrapped %d existing session(s) from tmux", count);

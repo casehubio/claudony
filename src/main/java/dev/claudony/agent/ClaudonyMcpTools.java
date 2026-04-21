@@ -68,7 +68,8 @@ public class ClaudonyMcpTools {
             final var req = new CreateSessionRequest(
                     name,
                     workingDir,
-                    (command != null && !command.isBlank()) ? command : null);
+                    (command != null && !command.isBlank()) ? command : null,
+                    null);
             final var s = server.createSession(req);
             return "Created '%s' (id=%s)\nBrowser: %s".formatted(s.name(), s.id(), s.browserUrl());
         } catch (WebApplicationException e) { return serverError(e); }

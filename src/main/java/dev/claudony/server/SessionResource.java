@@ -15,6 +15,7 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import java.io.OutputStream;
 import java.io.BufferedReader;
@@ -144,7 +145,8 @@ public class SessionResource {
             LOG.debugf("Could not create working directory '%s': %s", workingDir, e.getMessage());
         }
         var now = Instant.now();
-        var session = new Session(id, name, workingDir, command, SessionStatus.IDLE, now, now);
+        var session = new Session(id, name, workingDir, command, SessionStatus.IDLE, now, now,
+                Optional.ofNullable(req.expiryPolicy()));
         try {
             tmux.createSession(name, workingDir, command);
             registry.register(session);
@@ -197,7 +199,8 @@ public class SessionResource {
                     return Response.serverError().build();
                 }
                 var renamed = new Session(id, newTmuxName, session.workingDir(),
-                        session.command(), session.status(), session.createdAt(), Instant.now());
+                        session.command(), session.status(), session.createdAt(), Instant.now(),
+                        session.expiryPolicy());
                 registry.register(renamed);
                 return Response.ok(SessionResponse.from(renamed, config.port())).build();
             } catch (IOException | InterruptedException e) {

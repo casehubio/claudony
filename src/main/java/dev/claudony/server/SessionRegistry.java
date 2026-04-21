@@ -30,4 +30,8 @@ public class SessionRegistry {
     public void updateStatus(String id, SessionStatus status) {
         sessions.computeIfPresent(id, (k, s) -> s.withStatus(status));
     }
+
+    public void touch(String id) {
+        sessions.computeIfPresent(id, (k, s) -> s.withLastActive());
+    }
 }
