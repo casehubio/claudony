@@ -58,7 +58,6 @@ public class TerminalWebSocket {
         sessionNames.put(connection.id(), tmuxName);
         sessionIds.put(connection.id(), sessionId);
         connections.put(connection.id(), connection);
-        registry.touch(sessionId);
 
         try {
             // Step 1: Resize the tmux window FIRST, before capturing history.
@@ -192,6 +191,7 @@ public class TerminalWebSocket {
                     .redirectErrorStream(true).start();
             p.getInputStream().transferTo(OutputStream.nullOutputStream());
             p.waitFor();
+            registry.touch(sessionId);
 
         } catch (IOException | InterruptedException e) {
             LOG.errorf("Failed to set up pipe for session '%s': %s", tmuxName, e.getMessage());
@@ -241,10 +241,12 @@ public class TerminalWebSocket {
                 .filter(e -> e.getValue().equals(expiredName))
                 .map(e -> connections.get(e.getKey()))
                 .filter(java.util.Objects::nonNull)
-                .forEach(conn -> {
+                .forEach(conn -> Thread.ofVirtual().start(() -> {
                     try { conn.sendTextAndAwait("{\"type\":\"session-expired\"}"); }
-                    catch (Exception ignored) {}
-                });
+                    catch (Exception e) {
+                        LOG.debugf("Could not send session-expired to connection: %s", e.getMessage());
+                    }
+                }));
     }
 
     private void cleanup(WebSocketConnection connection) {
