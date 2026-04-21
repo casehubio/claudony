@@ -62,6 +62,16 @@ public class TmuxService {
         }
     }
 
+    public String displayMessage(String sessionName, String format)
+            throws IOException, InterruptedException {
+        // -t must precede -p format; tmux 3.6a rejects -p format -t target as "too many arguments"
+        var p = new ProcessBuilder("tmux", "display-message", "-t", sessionName, "-p", format)
+                .redirectErrorStream(false).start();
+        var output = new String(p.getInputStream().readAllBytes()).trim();
+        p.waitFor();
+        return output;
+    }
+
     public Process attachSession(String sessionName) throws IOException {
         var pb = new ProcessBuilder("tmux", "attach-session", "-t", sessionName);
         pb.redirectErrorStream(true);

@@ -56,6 +56,24 @@ class TmuxServiceTest {
     }
 
     @Test
+    void displayMessageReturnsWindowActivity() throws Exception {
+        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "echo hello");
+        Thread.sleep(300);
+        var activity = tmux.displayMessage(TEST_SESSION, "#{window_activity}");
+        assertFalse(activity.isBlank(), "window_activity should return a non-empty timestamp");
+        assertDoesNotThrow(() -> Long.parseLong(activity.trim()),
+                "window_activity should be a numeric Unix timestamp, got: " + activity);
+    }
+
+    @Test
+    void displayMessageReturnsPaneCurrentCommand() throws Exception {
+        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "sleep 10");
+        Thread.sleep(300);
+        var command = tmux.displayMessage(TEST_SESSION, "#{pane_current_command}");
+        assertFalse(command.isBlank());
+    }
+
+    @Test
     void sendKeysLiteralModeDoesNotInterpretTmuxKeyNames() throws Exception {
         tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "bash");
         // Wait for bash prompt before sending keys
