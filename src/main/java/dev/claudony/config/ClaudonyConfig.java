@@ -46,6 +46,10 @@ public interface ClaudonyConfig {
     @WithDefault("P7D")
     Duration sessionTimeout();
 
+    @WithName("session-expiry-policy")
+    @WithDefault("user-interaction")
+    String sessionExpiryPolicy();
+
     @WithName("fleet-key")
     Optional<String> fleetKey();
 

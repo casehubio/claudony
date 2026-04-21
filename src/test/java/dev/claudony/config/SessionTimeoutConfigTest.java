@@ -37,4 +37,9 @@ class SessionTimeoutConfigTest {
         // is unnecessary; 1H balances responsiveness with server load
         assertThat(webAuthnConfig.newCookieInterval()).isEqualTo(Duration.ofHours(1));
     }
+
+    @Test
+    void sessionExpiryPolicyDefaultsToUserInteraction() {
+        assertThat(claudonyConfig.sessionExpiryPolicy()).isEqualTo("user-interaction");
+    }
 }
