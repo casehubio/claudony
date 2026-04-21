@@ -13,6 +13,8 @@ import java.util.Set;
 public class StatusAwareExpiryPolicy implements ExpiryPolicy {
 
     private static final Logger LOG = Logger.getLogger(StatusAwareExpiryPolicy.class);
+    // Known interactive shells — everything else is treated as an active foreground process.
+    // Do NOT add app runtimes (node, python, java) here; those are not interactive shells.
     private static final Set<String> SHELL_COMMANDS = Set.of("bash", "zsh", "sh", "dash", "fish");
 
     @Inject TmuxService tmux;
