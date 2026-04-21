@@ -7,3 +7,4 @@
 | [2026-04-15-mdp02-tests-that-make-things-real.md](2026-04-15-mdp02-tests-that-make-things-real.md) | 2026-04-15 | Fleet Phase 2 dashboard panel, Playwright E2E infrastructure, PROXY resize fix — and the bug the first browser test found |
 | [2026-04-18-mdp01-phase-8-mesh-you-can-see.md](2026-04-18-mdp01-phase-8-mesh-you-can-see.md) | 2026-04-18 | Quarkus upgrade, Qhorus Phase 8 embedding, MCP hardening, and the Mesh observation panel — 47 tools, 240 tests |
 | [2026-04-20-mdp01-speaking-into-the-mesh.md](2026-04-20-mdp01-speaking-into-the-mesh.md) | 2026-04-20 | Human interjection dock: POST endpoint, ToolCallException cause inspection, CSS invisible-input bug, JS injection via onclick — 246 tests |
+| [2026-04-21-mdp01-sessions-dont-last-forever.md](2026-04-21-mdp01-sessions-dont-last-forever.md) | 2026-04-21 | Pluggable expiry policies via CDI @Any Instance, tmux pane_activity blank without client, registry.remove() atomicity bug — 273 tests |
