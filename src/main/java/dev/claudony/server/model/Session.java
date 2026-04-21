@@ -11,7 +11,7 @@ public record Session(
         SessionStatus status,
         Instant createdAt,
         Instant lastActive,
-        Optional<String> expiryPolicy) {
+        Optional<String> expiryPolicy) {  // internal only; never serialised — see SessionResponse for the API shape
 
     public Session withStatus(SessionStatus newStatus) {
         return new Session(id, name, workingDir, command, newStatus, createdAt, Instant.now(), expiryPolicy);

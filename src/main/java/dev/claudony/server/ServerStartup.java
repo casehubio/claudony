@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -70,7 +71,7 @@ public class ServerStartup {
                 registry.register(new Session(
                         UUID.randomUUID().toString(), name,
                         "unknown", config.claudeCommand(),
-                        SessionStatus.IDLE, now, now, java.util.Optional.empty()));
+                        SessionStatus.IDLE, now, now, Optional.empty()));
                 count++;
             }
             LOG.infof("Bootstrapped %d existing session(s) from tmux", count);
