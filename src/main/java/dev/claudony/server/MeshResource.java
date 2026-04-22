@@ -3,6 +3,7 @@ package dev.claudony.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.claudony.config.ClaudonyConfig;
 import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
+import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Multi;
 import io.quarkiverse.mcp.server.ToolCallException;
@@ -47,13 +48,13 @@ public class MeshResource {
 
     @GET
     @Path("/channels")
-    public List<QhorusMcpTools.ChannelDetail> channels() {
+    public List<QhorusMcpToolsBase.ChannelDetail> channels() {
         return qhorusMcpTools.listChannels();
     }
 
     @GET
     @Path("/instances")
-    public List<QhorusMcpTools.InstanceInfo> instances() {
+    public List<QhorusMcpToolsBase.InstanceInfo> instances() {
         return qhorusMcpTools.listInstances(null);
     }
 
@@ -76,13 +77,13 @@ public class MeshResource {
     @Path("/feed")
     public List<Map<String, Object>> feed(
             @QueryParam("limit") @DefaultValue("100") int limit) {
-        List<QhorusMcpTools.ChannelDetail> channels = qhorusMcpTools.listChannels();
+        List<QhorusMcpToolsBase.ChannelDetail> channels = qhorusMcpTools.listChannels();
         if (channels.isEmpty()) return List.of();
 
         int perChannel = Math.max(5, limit / channels.size());
         List<Map<String, Object>> combined = new ArrayList<>();
 
-        for (QhorusMcpTools.ChannelDetail ch : channels) {
+        for (QhorusMcpToolsBase.ChannelDetail ch : channels) {
             try {
                 List<Map<String, Object>> msgs = qhorusMcpTools.getChannelTimeline(
                         ch.name(), null, perChannel);
@@ -142,7 +143,7 @@ public class MeshResource {
             return Response.status(400).entity("invalid type: " + type).build();
         }
         try {
-            QhorusMcpTools.MessageResult result =
+            QhorusMcpToolsBase.MessageResult result =
                     qhorusMcpTools.sendMessage(name, "human", type, req.content(), null, null);
             return Response.ok(result).build();
         } catch (IllegalArgumentException e) {
