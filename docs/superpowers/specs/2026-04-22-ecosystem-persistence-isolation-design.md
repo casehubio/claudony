@@ -13,7 +13,7 @@ This spec establishes the persistence isolation convention for the Quarkus AI Ag
 - Qhorus currently uses the default datasource, which prevents Claudony from having its own JPA persistence without colliding with Qhorus's schema.
 - CaseHub (Phase B) will need its own persistence for cases, tasks, and lineage — it must not collide with Qhorus either.
 - For multi-node fleet operation, Qhorus needs to point at a shared network-accessible database (PostgreSQL). H2 `AUTO_SERVER` is single-machine only.
-- The architecture must not be tied to any specific backend — Redis and MongoDB must be drop-in alternatives via the existing Qhorus SPI, not afterthoughts.
+- The architecture must not be tied to any specific backend — Redis and MongoDB must be true drop-in alternatives via the Qhorus SPI, not afterthoughts.
 
 ---
 
@@ -43,7 +43,7 @@ Each library ships a JPA/JDBC reference implementation. Alternative backends (Re
 
 ### Named Persistence Unit
 
-Qhorus switches from the default datasource to a named persistence unit `qhorus`. All five JPA store implementations inject `@PersistenceUnit("qhorus")` EntityManagers instead of the default. Flyway is configured against the named datasource.
+Qhorus switches from the default datasource to a named persistence unit `qhorus`. JPA store implementations bind to this PU via Panache's package scanning — no explicit `@PersistenceUnit` injection needed in most stores. The exception is `AgentMessageLedgerEntryRepository`, which injects `EntityManager` directly and therefore requires `@PersistenceUnit("qhorus")`. Flyway is configured against the named datasource.
 
 **New Qhorus config properties (consumed by embedding application):**
 
@@ -54,7 +54,7 @@ quarkus.datasource.qhorus.jdbc.url=<url>
 
 # hibernate persistence unit — includes ledger package (see Ledger Inheritance Constraint below)
 quarkus.hibernate-orm.qhorus.datasource=qhorus
-quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime
+quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model
 
 # flyway — schema managed by Qhorus, run against named datasource
 quarkus.flyway.qhorus.migrate-at-start=true
@@ -67,13 +67,32 @@ quarkus.flyway.qhorus.locations=db/migration
 
 This is the pragmatic choice for now (Option A). The alternative — dropping the JPA inheritance and replacing it with a plain FK column — is a larger breaking change that belongs with quarkus-ledger's own named PU story, not here. An ADR records this coupling explicitly as a revisit marker for when quarkus-ledger defines its own PU.
 
-### SPI Completeness Audit
+### SPI Completeness — Six Store Interfaces Required
 
-Before this lands, Qhorus closes all bypass paths where MCP tool implementations call `EntityManager` or Panache directly rather than going through the five store interfaces (`ChannelStore`, `MessageStore`, `InstanceStore`, `DataStore`, `WatchdogStore`). Known bypasses include direct `Message.getEntityManager()` calls in the MCP tools — these are replaced with aggregate methods added to `MessageStore`. This is a hard requirement: Redis and MongoDB backends must be true drop-in alternatives, and any bypass that leaks a JPA assumption breaks that guarantee.
+The drop-in backend guarantee requires that **all** persistence goes through store interfaces. Currently there are five (`ChannelStore`, `MessageStore`, `InstanceStore`, `DataStore`, `WatchdogStore`), but `PendingReply` — the correlation-ID tracking entity for `wait_for_reply` — has no store interface. MCP tools access it directly through JPA. A Redis backend would need JPA present just for `wait_for_reply`, which breaks the drop-in guarantee.
+
+**`PendingReplyStore` is therefore in scope for this work as the sixth store interface.** `quarkus-qhorus-testing` ships a corresponding `InMemoryPendingReplyStore`.
+
+Additionally, all remaining bypass paths where MCP tool implementations call `EntityManager` or Panache directly are closed — replaced with aggregate methods on the appropriate store interface. Known bypasses include direct `Message.getEntityManager()` calls. This is a hard requirement: any bypass that leaks a JPA assumption breaks the Redis/MongoDB drop-in guarantee.
 
 ### Test Module
 
-`quarkus-qhorus-testing` is unchanged. `InMemory*Store` alternatives activate via `@Alternative @Priority(1)` and bypass the persistence unit entirely — embedding apps need zero datasource config for Qhorus data in tests.
+`quarkus-qhorus-testing` gains `InMemoryPendingReplyStore` alongside the existing five in-memory alternatives. All six activate via `@Alternative @Priority(1)` — embedding apps need no datasource config for Qhorus data in tests.
+
+---
+
+## Flyway Migration Version Ranges
+
+When multiple libraries are embedded in the same application, all Flyway migration scripts share a single classpath location (`db/migration`). Version numbers must not collide across libraries. The ecosystem reserves the following ranges:
+
+| Range       | Owner            | Notes                                      |
+|-------------|------------------|--------------------------------------------|
+| V1 – V999   | Qhorus           | Core Qhorus schema migrations              |
+| V1000 – V1999 | quarkus-ledger | Ledger entity schema migrations            |
+| V2000 – V2999 | CaseHub        | Reserved [Phase B] — not yet in use        |
+| V3000+      | Reserved         | For future ecosystem libraries             |
+
+**Note:** Qhorus currently has a V1003 migration. This sits within quarkus-ledger's reserved range and indicates a cross-schema dependency (Qhorus migration that must run after ledger tables are created). This is intentional but should be documented explicitly in Qhorus's migration history. CaseHub must start at V2000 and must not use V1xxx ranges.
 
 ---
 
@@ -83,7 +102,9 @@ CaseHub will follow the identical pattern when it implements persistence:
 
 - Named persistence unit: `casehub`
 - Config: `quarkus.datasource.casehub.*`, `quarkus.hibernate-orm.casehub.*`, `quarkus.flyway.casehub.*`
+- Flyway migrations start at V2000 (reserved range above)
 - Test module `quarkus-casehub-testing` ships `InMemory*Store` alternatives (same pattern as `quarkus-qhorus-testing`)
+- Store interfaces cover all persistence — no JPA/Panache bypass paths in tool or service implementations
 
 **No CaseHub code changes in this iteration.** The convention is established here so CaseHub implements it correctly from the start rather than retrofitting.
 
@@ -105,7 +126,7 @@ quarkus.hibernate-orm.database.generation=update
 quarkus.datasource.qhorus.db-kind=h2
 quarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:~/.claudony/qhorus;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE
 quarkus.hibernate-orm.qhorus.datasource=qhorus
-quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime.entity
+quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model
 quarkus.flyway.qhorus.migrate-at-start=true
 ```
 
@@ -113,9 +134,11 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ### Test Cleanup
 
-Add `quarkus-qhorus-testing` in test scope to `pom.xml`. Remove all `%test.quarkus.datasource.*` and `%test.quarkus.hibernate-orm.*` config — `InMemory*Store` alternatives activate automatically and Qhorus data needs no datasource config in tests. Whether the Hibernate ORM extension still initialises (because it remains on the classpath as a Qhorus transitive) needs verification during implementation; if it does, a minimal `%test.quarkus.datasource.qhorus.*` H2 in-memory config may still be required, but no real DB connection is used for Qhorus data. The `%test.quarkus.datasource.reactive=false` guard is removed or renamed accordingly.
+Add `quarkus-qhorus-testing` in test scope to `pom.xml`. Remove all `%test.quarkus.datasource.*` and `%test.quarkus.hibernate-orm.*` config — all six `InMemory*Store` alternatives activate automatically and Qhorus data needs no datasource config in tests.
 
-`MeshResourceInterjectionTest` currently uses `UserTransaction` + Panache deletes for cleanup. With `InMemory*Store` (which is `@ApplicationScoped` and shares state across tests in the same Quarkus instance), cleanup becomes a direct `@AfterEach` call to inject and clear the relevant InMemory*Store beans — the `UserTransaction` pattern is removed.
+**TBD during implementation:** `quarkus-hibernate-reactive-panache` is a transitive dependency of Qhorus that remains on the Claudony test classpath. Preventing Hibernate Reactive from booting in tests currently requires an explicit guard (`quarkus.datasource.reactive=false`, renamed to `quarkus.datasource.qhorus.reactive.enabled=false` or similar under the named datasource). Whether any such guard remains necessary with `InMemory*Store` active must be verified — some minimal config line is likely still required. The test strategy table below reflects this uncertainty.
+
+`MeshResourceInterjectionTest` currently uses `UserTransaction` + Panache deletes for `@AfterEach` cleanup. With `InMemory*Store` (`@ApplicationScoped`, state shared across tests in the same Quarkus instance), cleanup becomes a direct `@AfterEach` call to inject and clear the relevant `InMemory*Store` beans — the `UserTransaction` pattern is removed.
 
 ### PeerRegistry
 
@@ -147,7 +170,7 @@ All Claudony nodes in the fleet point at the same PostgreSQL instance. Qhorus ch
 
 ### Alternative Backends (Future)
 
-Redis and MongoDB are drop-in replacements via the Qhorus SPI. An implementor provides `@Alternative @Priority(2)` beans for all five store interfaces and configures the appropriate Quarkus extension (`quarkus-redis-client`, `quarkus-mongodb-client`). Claudony's `application.properties` changes; no Java code changes in Claudony or Qhorus.
+Redis and MongoDB are drop-in replacements via the Qhorus SPI. An implementor provides `@Alternative @Priority(2)` beans for all six store interfaces and configures the appropriate Quarkus extension (`quarkus-redis-client`, `quarkus-mongodb-client`). Claudony's `application.properties` changes; no Java code changes in Claudony or Qhorus.
 
 ---
 
@@ -155,7 +178,7 @@ Redis and MongoDB are drop-in replacements via the Qhorus SPI. An implementor pr
 
 | Context | Qhorus persistence | Config needed |
 |---|---|---|
-| Unit tests (`@QuarkusTest`) | `InMemory*Store` via `quarkus-qhorus-testing` | None |
+| Unit tests (`@QuarkusTest`) | All six `InMemory*Store` alternatives | TBD — likely a minimal reactive guard; verified during implementation |
 | Integration tests (real DB) | JPA stores against H2 in-memory | `%test.quarkus.datasource.qhorus.*` |
 | E2E tests (`-Pe2e`) | JPA stores against H2 file | Default dev config |
 | Production | JPA stores against PostgreSQL | Env-specific config |
@@ -170,8 +193,6 @@ The default test posture is no DB. Tests that need real persistence (verifying F
 - **CredentialStore** — file-based, local to each node, correct as-is
 - **Encryption key / fleet key** — plain file, correct as-is
 - **Session registry** — in-memory, intentionally volatile
-- **Qhorus SPI interfaces** — already backend-agnostic, no changes needed
-- **`quarkus-qhorus-testing` InMemory*Store implementations** — unchanged
 
 ---
 
@@ -181,3 +202,4 @@ The default test posture is no DB. Tests that need real persistence (verifying F
 - Named datasource support in Qhorus itself for Redis/MongoDB config — follows naturally when a store implementation is contributed
 - CaseHub persistence implementation — convention established here, implementation is Phase B
 - Claudony-owned JPA entities — no current need; default datasource remains unclaimed
+- quarkus-ledger named PU migration — tracked separately; the ADR records the coupling
