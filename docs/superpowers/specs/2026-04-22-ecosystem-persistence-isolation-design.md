@@ -52,17 +52,24 @@ Qhorus switches from the default datasource to a named persistence unit `qhorus`
 quarkus.datasource.qhorus.db-kind=<backend>
 quarkus.datasource.qhorus.jdbc.url=<url>
 
-# hibernate persistence unit
+# hibernate persistence unit — includes ledger package (see Ledger Inheritance Constraint below)
 quarkus.hibernate-orm.qhorus.datasource=qhorus
-quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime.entity
+quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime
 
 # flyway — schema managed by Qhorus, run against named datasource
 quarkus.flyway.qhorus.migrate-at-start=true
+quarkus.flyway.qhorus.locations=db/migration
 ```
+
+### Ledger Inheritance Constraint
+
+`AgentMessageLedgerEntry` extends `LedgerEntry` with `InheritanceType.JOINED`. JPA requires all entities in an inheritance hierarchy to share a single persistence unit. `LedgerEntry` lives in `io.quarkiverse.ledger.runtime.model`; `AgentMessageLedgerEntry` is in `io.quarkiverse.qhorus.runtime.ledger`. Both packages are therefore included in the `qhorus` persistence unit — `quarkus-ledger` entities are bound to the `qhorus` datasource as a consequence.
+
+This is the pragmatic choice for now (Option A). The alternative — dropping the JPA inheritance and replacing it with a plain FK column — is a larger breaking change that belongs with quarkus-ledger's own named PU story, not here. An ADR records this coupling explicitly as a revisit marker for when quarkus-ledger defines its own PU.
 
 ### SPI Completeness Audit
 
-Before this lands, Qhorus confirms that no calling code (tool implementations, MCP layer, scheduled jobs) leaks JDBC/JPA assumptions through the five store interfaces (`ChannelStore`, `MessageStore`, `InstanceStore`, `DataStore`, `WatchdogStore`). The `InMemory*Store` alternatives working transparently is strong evidence, but an explicit audit is required. Any leaks are fixed as part of this work.
+Before this lands, Qhorus closes all bypass paths where MCP tool implementations call `EntityManager` or Panache directly rather than going through the five store interfaces (`ChannelStore`, `MessageStore`, `InstanceStore`, `DataStore`, `WatchdogStore`). Known bypasses include direct `Message.getEntityManager()` calls in the MCP tools — these are replaced with aggregate methods added to `MessageStore`. This is a hard requirement: Redis and MongoDB backends must be true drop-in alternatives, and any bypass that leaks a JPA assumption breaks that guarantee.
 
 ### Test Module
 
