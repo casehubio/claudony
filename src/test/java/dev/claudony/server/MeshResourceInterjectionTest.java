@@ -1,12 +1,11 @@
 package dev.claudony.server;
 
-import io.quarkiverse.qhorus.runtime.channel.Channel;
-import io.quarkiverse.qhorus.runtime.message.Message;
 import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
+import io.quarkiverse.qhorus.testing.InMemoryChannelStore;
+import io.quarkiverse.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
-import jakarta.transaction.UserTransaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +19,8 @@ import static org.hamcrest.Matchers.*;
 class MeshResourceInterjectionTest {
 
     @Inject QhorusMcpTools tools;
-    @Inject UserTransaction ut;
+    @Inject InMemoryChannelStore channelStore;
+    @Inject InMemoryMessageStore messageStore;
 
     private String channelName;
 
@@ -31,14 +31,9 @@ class MeshResourceInterjectionTest {
     }
 
     @AfterEach
-    void deleteChannel() throws Exception {
-        ut.begin();
-        Channel ch = Channel.<Channel>find("name = ?1", channelName).firstResult();
-        if (ch != null) {
-            Message.delete("channelId = ?1", ch.id);
-            ch.delete();
-        }
-        ut.commit();
+    void cleanUp() {
+        messageStore.clear();
+        channelStore.clear();
     }
 
     @Test
