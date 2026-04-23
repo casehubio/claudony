@@ -190,13 +190,15 @@ graph TD
 
     WP --> CLP["ClaudonyProvisioner\n→ tmux session\n→ Claude CLI\n→ WebSocket terminal"]
     WP --> DP["DockerProvisioner\n→ container per worker\n→ isolated env\n→ resource limits"]
+    WP --> NP["NonoProvisioner\n→ kernel-enforced sandbox\n→ deny-by-default isolation\n→ cryptographic audit trail\n→ filesystem rollback"]
     WP --> RP["RemoteProvisioner\n→ API call to remote\n→ Claude on another machine\n→ distributed team"]
     WP --> HP["HumanProvisioner\n→ notification sent\n→ human picks up task\n→ same interface, different worker"]
 
     CLP --> W1["Claude in tmux"]
     DP --> W2["Claude in container"]
-    RP --> W3["Claude on Mac Mini"]
-    HP --> W4["Human via dashboard"]
+    NP --> W3["Claude in Nono sandbox"]
+    RP --> W4["Claude on Mac Mini"]
+    HP --> W5["Human via dashboard"]
 ```
 
 A Docker provisioner gives you isolated, reproducible, resource-bounded Claude workers — each case gets a clean environment with no cross-contamination. A remote provisioner distributes work across machines. A human provisioner makes humans first-class workers in the same coordination system.
@@ -568,15 +570,19 @@ A Claude instance detects a PR is open. It registers as a `planner` worker in Ca
 
 A user asks for deep research on a topic. CaseHub creates a case and the `WorkerProvisioner` spins up five Claude workers in parallel — two researchers, one fact-checker, one synthesiser, one editor. Workers use Qhorus channels to share partial findings (via `share_data`) and coordinate handoffs (via `send_message`). CaseHub's choreography engine gates the synthesiser until both researchers are done. The human watches five terminals and five channel conversations simultaneously, stepping in to refocus a researcher that has gone down a rabbit hole.
 
-### 3. Docker-Isolated Security Audit
+### 3. Kernel-Sandboxed Agent Execution (Nono)
+
+A Claude worker is provisioned via the `NonoProvisioner` — backed by [Nono](https://nono.sh/), a kernel-enforced AI agent sandbox using Landlock/Seatbelt with a deny-by-default model. The worker runs inside a cryptographically audited, network-filtered sandbox with filesystem rollback via content-addressed snapshots. The lineage entry for each worker includes the Nono audit trail hash, giving the system a tamper-evident record of exactly what the agent accessed, wrote, and executed. If the agent behaves unexpectedly, the rollback snapshot restores the prior state without manual intervention. This complements the `DockerProvisioner` — Docker provides coarse isolation at the container level; Nono provides fine-grained kernel-enforced isolation at the process level and works on macOS as well as Linux.
+
+### 4. Docker-Isolated Security Audit
 
 A sensitive codebase needs auditing. The `DockerProvisioner` is registered. CaseHub provisions each worker in its own isolated container — no shared filesystem, resource bounded, destroyed after the task completes. The Claudony dashboard observes container health alongside terminal output. The lineage records container metadata (image, resource usage) alongside the semantic work. No Claude worker touches the codebase outside its container.
 
-### 4. Human-as-Worker
+### 5. Human-as-Worker
 
 A case reaches a decision point that requires a human domain expert. CaseHub's `HumanProvisioner` sends a notification. The human opens the Claudony dashboard, sees the case context and full lineage, and accepts the task — now *they* are a worker in the choreography. They record a goal ("reviewing legal implications"), make a decision, record a transition ("approved with conditions — see shared-data: 'legal-sign-off'"). CaseHub continues. The human and Claude workers are indistinguishable from the coordination engine's perspective.
 
-### 5. Distributed Team, Distributed Claudes
+### 6. Distributed Team, Distributed Claudes
 
 An engineering team works across machines. Each developer runs Claudony locally. A central CaseHub instance (on a Mac Mini) coordinates work. A `RemoteProvisioner` dispatches tasks to Claude workers on different machines. Qhorus channels carry coordination. The team lead watches the unified dashboard — all workers, all terminals, all conversations — on their own machine. The lineage accumulates across the whole team's work.
 
@@ -649,7 +655,7 @@ graph BT
 | **B — Continued** | casehub-mcp tools, human interjection, goal/transition recording | Claudes are first-class workers with structured coordination |
 | **C — Protocol** | Clean MCP API with no Claudony coupling, optional `claudony_session_id` everywhere | Protocol is extractable, any Claude can connect |
 | **A — Extract** | casehub-mcp as standalone module, Qhorus standalone server | Non-Claudony Claudes participate, ecosystem broadens |
-| **Beyond** | DockerProvisioner, RemoteProvisioner, HumanProvisioner | Elastic, distributed, mixed human-AI teams |
+| **Beyond** | DockerProvisioner, NonoProvisioner, RemoteProvisioner, HumanProvisioner | Elastic, distributed, sandboxed, mixed human-AI teams |
 | **Learning** | PlanningStrategy reads lineage history, pattern hints in `pick_up_task` | System gets smarter with every case |
 | **Self-model** | Claude receives rich lineage context, adjusts self-declared capabilities | Agents become autonomous participants in their own improvement |
 
