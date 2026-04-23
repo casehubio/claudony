@@ -255,12 +255,32 @@ Both created on server startup if absent.
 
 ---
 
+## Persistence — Named Datasource for Qhorus
+
+Claudony uses a named datasource `qhorus` (configured via `quarkus.datasource.qhorus.*`) to segregate Qhorus schema from any Claudony-owned schema. Key config:
+
+```properties
+quarkus.datasource.qhorus.db-kind=h2
+quarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:~/.claudony/qhorus;...
+quarkus.hibernate-orm.qhorus.datasource=qhorus
+quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model
+quarkus.flyway.qhorus.migrate-at-start=true
+```
+
+Schema versioning is **Flyway-managed** — `database.generation` (Hibernate's auto-DDL) is not used. All Qhorus entities are in the `qhorus` persistence unit and route to Flyway for migrations.
+
+**For the future:** The named datasource is the foundation for multi-node PostgreSQL fleets. Each Claudony instance points to the same remote Qhorus database, sharing channels and messages while keeping individual tmux sessions local.
+
+---
+
 ## Testing
 
-**273 tests passing** (as of 2026-04-21). Three layers:
+**275 tests passing** (as of 2026-04-23, excluding failures due to pre-existing issues). Three layers:
 - **Unit tests** — plain JUnit, no Quarkus container; stateful beans use `resetForTest()` + `@AfterEach`
-- **Integration tests** (`@QuarkusTest`) — full Quarkus context; all `@QuarkusTest` classes share one app instance
+- **Integration tests** (`@QuarkusTest`) — full Quarkus context; all `@QuarkusTest` classes share one app instance; Qhorus data uses `InMemory*Store` implementations (from `quarkus-qhorus-testing` dependency), no real database needed
 - **E2E tests** — assert tmux session state (pane content, session existence), not Claude's output; LLM output is non-deterministic, tmux state is not
+
+**Test cleanup pattern (Qhorus data):** Use `@Inject InMemoryChannelStore` and `@Inject InMemoryMessageStore`, then call `clear()` in `@AfterEach` to reset state between tests. This replaces the earlier `UserTransaction` + Panache pattern and works with the InMemory store implementations.
 
 ---
 
@@ -293,7 +313,9 @@ When CaseHub gains its provider interfaces (see CaseHub DESIGN.md §10.x), Claud
 
 ### Embedding Qhorus
 
-Claudony will add `qhorus` as a Maven dependency. Qhorus's MCP tools join the Agent's MCP endpoint alongside Claudony's existing session tools.
+Claudony embeds `qhorus` as a Maven dependency. Qhorus's MCP tools join the Agent's MCP endpoint alongside Claudony's existing session tools.
+
+**Persistence isolation:** Qhorus uses a named datasource `qhorus` and Hibernate persistence unit to segregate its schema from any future Claudony-owned schema. The Store SPI (six interfaces: `ChannelStore`, `MessageStore`, `SharedDataStore`, `InstanceStore`, `SharedDataIndexStore`, `PendingReplyStore`) is implemented by both JPA and InMemory backends — tests use InMemory, production uses JPA. This allows clean multi-instance fleet scenarios in the future.
 
 **Design constraint:** The Agent's `McpServer` currently dispatches a hardcoded set of tools. It needs to become **composable** — multiple tool sources registered independently so Qhorus tools and future CaseHub MCP tools can be added without modifying `McpServer.java`. Plan for a registration mechanism (CDI `Instance<McpToolProvider>` or similar) rather than a growing dispatch table.
 

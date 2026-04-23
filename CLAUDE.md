@@ -215,15 +215,23 @@ claudony.name=Claudony                  # instance name shown in fleet dashboard
 # Production — optional; auto-generated and persisted to ~/.claudony/encryption-key on first run.
 # Set only if managing the key externally (secrets manager, etc.):
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
+
+# Qhorus persistence (named datasource, Flyway-managed schema)
+quarkus.datasource.qhorus.db-kind=h2
+quarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:~/.claudony/qhorus;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE
+quarkus.hibernate-orm.qhorus.datasource=qhorus
+quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model
+quarkus.flyway.qhorus.migrate-at-start=true
+# In future: change jdbc.url to PostgreSQL connection string for multi-instance fleet
 ```
 
-**Directory convention:** `~/.claudony/` holds config/credentials (hidden, system); `~/claudony-workspace/` is the default session working directory (visible, user-facing). Both are created on server startup.
+**Directory convention:** `~/.claudony/` holds config/credentials (hidden, system); `~/.claudony/qhorus` is the Qhorus H2 database (shared data for fleet); `~/claudony-workspace/` is the default session working directory (visible, user-facing). All are created on server startup.
 
 ---
 
 ## Test Count and Status
 
-**273 tests passing** across:
+**275 tests passing** (as of 2026-04-23, excluding pre-existing failures) across:
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch())
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
@@ -239,7 +247,7 @@ claudony.name=Claudony                  # instance name shown in fleet dashboard
 `ServerStartup.bootstrapRegistry()` is package-private to allow direct testing.
 Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in non-auth test classes.
 Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTest()` / `setClockForTest()` package-private hooks; `@AfterEach` cleanup is required to prevent state bleeding across `@QuarkusTest` classes, which share one app instance per test run.
-For HTTP-triggered DB state (where `@TestTransaction` can't roll back server-side transactions): inject `@Inject UserTransaction ut` and wrap Panache deletes in `ut.begin()`/`ut.commit()` in `@AfterEach`. See `MeshResourceInterjectionTest` for the pattern.
+**Qhorus test cleanup:** For Qhorus data (channels, messages, etc.): inject `@Inject InMemoryChannelStore channelStore` and `@Inject InMemoryMessageStore messageStore` (provided by the `quarkus-qhorus-testing` dependency), then call `clear()` on both in `@AfterEach`. This is cleaner than the earlier `UserTransaction` pattern and works with all InMemory store implementations. Example: `MeshResourceInterjectionTest`.
 `%test.quarkus.datasource.reactive=false` is required in `application.properties` when a transitive dependency pulls in `hibernate-reactive-panache` — without it, H2 tests fail to start entirely.
 
 ---
