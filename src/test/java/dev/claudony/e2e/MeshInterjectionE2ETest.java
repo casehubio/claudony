@@ -78,13 +78,15 @@ class MeshInterjectionE2ETest extends PlaywrightBase {
         assertThat(page.locator("#mesh-dock-textarea").isVisible()).isTrue();
         assertThat(page.locator("#mesh-dock-send").isVisible()).isTrue();
 
-        // Type select has the 5 required options
+        // Type select has the 7 required options (9-type taxonomy minus EVENT and FAILURE)
         var typeSelect = page.locator("#mesh-dock-type");
-        assertThat(((Number) typeSelect.evaluate("el => el.options.length")).intValue()).isEqualTo(5);
+        assertThat(((Number) typeSelect.evaluate("el => el.options.length")).intValue()).isEqualTo(7);
         assertThat(typeSelect.evaluate("el => el.options[0].value")).isEqualTo("status");
-        assertThat(typeSelect.evaluate("el => el.options[1].value")).isEqualTo("request");
-        assertThat(typeSelect.evaluate("el => el.options[2].value")).isEqualTo("response");
-        assertThat(typeSelect.evaluate("el => el.options[3].value")).isEqualTo("handoff");
-        assertThat(typeSelect.evaluate("el => el.options[4].value")).isEqualTo("done");
+        assertThat(typeSelect.evaluate("el => el.options[1].value")).isEqualTo("query");
+        assertThat(typeSelect.evaluate("el => el.options[2].value")).isEqualTo("command");
+        assertThat(typeSelect.evaluate("el => el.options[3].value")).isEqualTo("response");
+        assertThat(typeSelect.evaluate("el => el.options[4].value")).isEqualTo("decline");
+        assertThat(typeSelect.evaluate("el => el.options[5].value")).isEqualTo("handoff");
+        assertThat(typeSelect.evaluate("el => el.options[6].value")).isEqualTo("done");
     }
 }

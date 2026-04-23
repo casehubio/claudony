@@ -38,7 +38,7 @@ public class MeshResource {
     record MeshConfig(String strategy, int interval) {}
 
     private static final Set<String> VALID_HUMAN_TYPES =
-            Set.of("request", "response", "status", "handoff", "done");
+            Set.of("query", "command", "response", "status", "decline", "handoff", "done");
 
     record PostMessageRequest(String content, String type) {}
 
