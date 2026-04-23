@@ -6,7 +6,9 @@ import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
 import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.Uni;
 import io.quarkiverse.mcp.server.ToolCallException;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -113,20 +115,24 @@ public class MeshResource {
     public Multi<String> events() {
         // Pushes a full mesh snapshot every refresh-interval milliseconds.
         // Default strategy is poll; SSE is for deployments that prefer push.
+        // Snapshot building is dispatched to a worker thread — JPA operations
+        // (ledger writes, channel queries) are blocking and cannot run on the Vert.x I/O thread.
         long intervalMs = config.meshRefreshInterval();
         return Multi.createFrom().ticks().every(Duration.ofMillis(intervalMs))
-                .map(tick -> {
-                    try {
-                        var snapshot = Map.of(
-                                "channels", qhorusMcpTools.listChannels(),
-                                "instances", qhorusMcpTools.listInstances(null),
-                                "feed", feed(100));
-                        return "data: " + mapper.writeValueAsString(snapshot) + "\n\n";
-                    } catch (Exception e) {
-                        LOG.debugf("SSE snapshot error: %s", e.getMessage());
-                        return "data: {}\n\n";
-                    }
-                });
+                .onItem().transformToUniAndConcatenate(tick ->
+                    Uni.createFrom().item(() -> {
+                        try {
+                            var snapshot = Map.of(
+                                    "channels", qhorusMcpTools.listChannels(),
+                                    "instances", qhorusMcpTools.listInstances(null),
+                                    "feed", feed(100));
+                            return "data: " + mapper.writeValueAsString(snapshot) + "\n\n";
+                        } catch (Exception e) {
+                            LOG.debugf("SSE snapshot error: %s", e.getMessage());
+                            return "data: {}\n\n";
+                        }
+                    }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+                );
     }
 
     @POST

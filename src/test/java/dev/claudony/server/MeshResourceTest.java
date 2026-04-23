@@ -55,11 +55,28 @@ class MeshResourceTest {
     }
 
     @Test
-    void meshEvents_returnsEventStreamContentType() {
-        given().when().get("/api/mesh/events")
-            .then()
-            .statusCode(200)
-            .contentType(containsString("text/event-stream"));
+    void meshEvents_returnsEventStreamContentType() throws Exception {
+        // SSE streams never close naturally. Use raw HttpURLConnection to read
+        // just the response status and Content-Type header without blocking on body.
+        // @TestSecurity is applied by Quarkus at the application layer, so raw
+        // HTTP requests to the test server get the test identity automatically.
+        int port = io.restassured.RestAssured.port;
+        java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
+            new java.net.URL("http://localhost:" + port + "/api/mesh/events").openConnection();
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(500); // short read timeout — we only need headers
+        try {
+            int status = conn.getResponseCode(); // reads status line + headers
+            String contentType = conn.getHeaderField("Content-Type");
+            org.assertj.core.api.Assertions.assertThat(status).isEqualTo(200);
+            org.assertj.core.api.Assertions.assertThat(contentType).contains("text/event-stream");
+        } catch (java.net.SocketTimeoutException e) {
+            // If we get here, the server accepted the connection but didn't respond
+            // within 500ms — unexpected, re-throw
+            throw e;
+        } finally {
+            conn.disconnect();
+        }
     }
 }
 
