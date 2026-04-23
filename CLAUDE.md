@@ -249,6 +249,7 @@ Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in 
 Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTest()` / `setClockForTest()` package-private hooks; `@AfterEach` cleanup is required to prevent state bleeding across `@QuarkusTest` classes, which share one app instance per test run.
 **Qhorus test cleanup:** For Qhorus data (channels, messages, etc.): inject `@Inject InMemoryChannelStore channelStore` and `@Inject InMemoryMessageStore messageStore` (provided by the `quarkus-qhorus-testing` dependency), then call `clear()` on both in `@AfterEach`. This is cleaner than the earlier `UserTransaction` pattern and works with all InMemory store implementations. Example: `MeshResourceInterjectionTest`.
 `%test.quarkus.datasource.reactive=false` is required in `application.properties` when a transitive dependency pulls in `hibernate-reactive-panache` — without it, H2 tests fail to start entirely.
+`src/test/resources/application.properties` sets `quarkus.http.test-port=0` — assigns a random port per test run to prevent "Port already bound: 8081" when `mvn test` is run in quick succession (a lingering Surefire JVM from the previous run can hold the port).
 
 ---
 
