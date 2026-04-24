@@ -21,10 +21,13 @@ Two Quarkus modes from the same binary:
 ## Build and Test
 
 ```bash
-# Run all tests
+# Run all tests (all 3 modules)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test
 
-# Run specific test
+# Run only claudony-casehub integration tests
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl claudony-casehub
+
+# Run specific test (searches all modules)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Dtest=ClassName
 
 # Run real Claude E2E tests (requires claude CLI authenticated)
@@ -40,12 +43,12 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Pe2e -Dtest=PlaywrightSetupE
 # Run with visible browser (local debugging)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Pe2e -Dplaywright.headless=false -Dtest=DashboardE2ETest
 
-# JVM build
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn package -DskipTests
+# JVM build (app module only — runnable jar)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn package -DskipTests -pl claudony-app --also-make
 
 # Native image build (requires GraalVM)
 JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home \
-  mvn package -Pnative -DskipTests
+  mvn package -Pnative -DskipTests -pl claudony-app --also-make
 ```
 
 **Use `mvn` not `./mvnw`** — the maven wrapper is broken on this machine.
@@ -126,13 +129,29 @@ Virtual threads (`Thread.ofVirtual()`) work fine on Java 26 with release=21.
 
 ## Project Structure
 
+3-module Maven project: `claudony-core` (shared services), `claudony-casehub` (CaseHub SPI implementations), `claudony-app` (Quarkus application).
+
 ```
-src/main/java/dev/claudony/
+claudony-core/src/main/java/dev/claudony/
 ├── config/ClaudonyConfig.java          — all config properties
+└── server/
+    ├── model/                          — Session, SessionStatus, SessionExpiredEvent
+    ├── TmuxService.java                — ProcessBuilder wrappers for tmux commands
+    ├── SessionRegistry.java            — in-memory ConcurrentHashMap session store
+    └── expiry/                         — ExpiryPolicy SPI + implementations + scheduler
+
+claudony-casehub/src/main/java/dev/claudony/casehub/
+├── CaseHubConfig.java                  — @ConfigMapping for claudony.casehub.* properties
+├── WorkerCommandResolver.java          — capability→command lookup with default fallback
+├── CaseLineageQuery.java               — interface for prior worker queries (default: empty stub)
+├── EmptyCaseLineageQuery.java          — @DefaultBean no-op impl (swap for JPA impl when casehub DB configured)
+├── ClaudonyWorkerProvisioner.java      — WorkerProvisioner SPI: creates tmux sessions
+├── ClaudonyCaseChannelProvider.java    — CaseChannelProvider SPI: Qhorus-backed channels
+├── ClaudonyWorkerContextProvider.java  — WorkerContextProvider SPI: lineage + channel context
+└── ClaudonyWorkerStatusListener.java   — WorkerStatusListener SPI: lifecycle → SessionRegistry
+
+claudony-app/src/main/java/dev/claudony/
 ├── server/
-│   ├── model/                          — Session, SessionStatus, request/response records
-│   ├── TmuxService.java                — ProcessBuilder wrappers for tmux commands
-│   ├── SessionRegistry.java            — in-memory ConcurrentHashMap session store
 │   ├── SessionResource.java            — REST API /api/sessions
 │   ├── TerminalWebSocket.java          — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup.java              — startup health checks, directory creation, tmux bootstrap
@@ -161,13 +180,29 @@ src/main/java/dev/claudony/
         ├── ITerm2Adapter.java          — macOS AppleScript + tmux -CC
         └── TerminalAdapterFactory.java — auto-detection
 
-src/main/resources/META-INF/resources/  — static frontend served by Quarkus
+claudony-app/src/main/resources/META-INF/resources/  — static frontend served by Quarkus
 ├── manifest.json + sw.js              — PWA
 └── app/
     ├── index.html + dashboard.js      — session management dashboard
     ├── session.html + terminal.js     — xterm.js terminal view + iPad key bar
     └── style.css                      — shared dark theme
 ```
+
+### CaseHub integration
+
+Enabled via `claudony.casehub.enabled=true`. Add to `application.properties`:
+
+```properties
+claudony.casehub.enabled=true
+claudony.casehub.workers.commands.default=claude
+# claudony.casehub.workers.commands."code-reviewer"=claude --mcp http://localhost:7778/mcp
+claudony.casehub.workers.default-working-dir=~/claudony-workspace
+```
+
+`ClaudonyWorkerProvisioner` creates tmux sessions with prefix `claudony-worker-{uuid}`.
+`ClaudonyCaseChannelProvider` creates Qhorus channels named `case-{caseId}/{purpose}`.
+`ClaudonyWorkerContextProvider` queries `CaseLineageQuery` for prior workers. The default `EmptyCaseLineageQuery` returns empty — swap for a `CaseLedgerEntryRepository`-backed implementation when a casehub datasource is configured.
+`ClaudonyWorkerStatusListener` fires CDI `WorkerStalledEvent` on stall.
 
 ---
 
@@ -231,7 +266,16 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**275 tests passing** (as of 2026-04-23, excluding pre-existing failures) across:
+**307 tests passing** (as of 2026-04-24, excluding pre-existing failures): 32 in `claudony-casehub` + 275 in `claudony-app`.
+
+`claudony-casehub` tests:
+- `WorkerCommandResolverTest` — capability-to-command resolution, default fallback
+- `ClaudonyWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness
+- `ClaudonyCaseChannelProviderTest` — Qhorus channel creation, send, list filtering
+- `ClaudonyWorkerContextProviderTest` — lineage, channel, clean-start, missing caseId
+- `ClaudonyWorkerStatusListenerTest` — ACTIVE/IDLE/FAULTED lifecycle, stall event
+
+`claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint
 - `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch())
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
