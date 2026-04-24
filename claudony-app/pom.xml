@@ -21,6 +21,12 @@
       <artifactId>claudony-core</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- CaseHub integration (optional — enabled via claudony.casehub.enabled=true) -->
+    <dependency>
+      <groupId>dev.claudony</groupId>
+      <artifactId>claudony-casehub</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>io.quarkus</groupId>
