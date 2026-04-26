@@ -266,7 +266,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**331 tests passing** (as of 2026-04-26, excluding pre-existing failures): 35 in `claudony-casehub` + 296 in `claudony-app`.
+**334 tests passing** (as of 2026-04-26, excluding pre-existing failures): 38 in `claudony-casehub` + 296 in `claudony-app`.
 
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash
