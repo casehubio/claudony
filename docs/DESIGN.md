@@ -19,8 +19,22 @@ A single Quarkus binary operates in two modes:
 
 ## Component Structure
 
+Three Maven modules: `claudony-core` (shared services), `claudony-casehub` (optional CaseHub integration), `claudony-app` (Quarkus application).
+
 ```
-dev.claudony
+claudony-casehub — dev.claudony.casehub
+├── CaseHubConfig                   — @ConfigMapping for claudony.casehub.*
+├── WorkerCommandResolver           — capability→command lookup with default fallback
+├── CaseLineageQuery                — interface for prior-worker lineage queries
+├── EmptyCaseLineageQuery           — @DefaultBean stub (active when ledger not configured)
+├── JpaCaseLineageQuery             — @Alternative @Priority(1) — queries case_ledger_entry
+│                                     for WORKER_EXECUTION_COMPLETED events via qhorus PU
+├── ClaudonyWorkerProvisioner       — WorkerProvisioner SPI: creates tmux sessions
+├── ClaudonyCaseChannelProvider     — CaseChannelProvider SPI: Qhorus-backed channels
+├── ClaudonyWorkerContextProvider   — WorkerContextProvider SPI: lineage + channel context
+└── ClaudonyWorkerStatusListener    — WorkerStatusListener SPI: lifecycle → SessionRegistry
+
+dev.claudony — claudony-core + claudony-app
 ├── config/
 │   └── ClaudonyConfig          — all @ConfigProperty bindings
 ├── server/
@@ -294,34 +308,36 @@ Schema versioning is **Flyway-managed** — `database.generation` (Hibernate's a
 
 ---
 
-## Planned Ecosystem Integration
+## Ecosystem Integration
 
-> **Context:** Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem alongside **CaseHub** (orchestration/choreography engine) and **Qhorus** (agent communication mesh — `~/claude/qhorus`). Claudony depends on both; neither depends on Claudony. The canonical ecosystem design document lives in this repo at `docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md`
+> Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem alongside **CaseHub** (orchestration/choreography engine, `~/claude/casehub-engine`) and **Qhorus** (agent communication mesh, `~/claude/quarkus-qhorus`). The canonical ecosystem design document lives at `docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md`.
 
-This section describes what Claudony needs to prepare for. Not immediate work — design constraints to keep in mind.
+### CaseHub SPIs — Shipped
 
-### Implementing CaseHub's Four SPIs
-
-When CaseHub gains its provider interfaces (see CaseHub DESIGN.md §10.x), Claudony implements all four:
+All four CaseHub worker SPIs are implemented in the `claudony-casehub` module (enabled via `claudony.casehub.enabled=true`):
 
 | CaseHub SPI | Claudony Implementation | Uses |
 |---|---|---|
-| `WorkerProvisioner` | `ClaudonyWorkerProvisioner` | `TmuxService` + `SessionRegistry` to create/terminate Claude sessions |
-| `CaseChannelProvider` | `ClaudonyChannelProvider` | Qhorus client to open/close channels |
-| `WorkerContextProvider` | `ClaudonyWorkerContextProvider` | Builds Claude startup prompt with task, lineage, channel name |
-| `WorkerStatusListener` | `ClaudonyWorkerStatusListener` | Monitors tmux session lifecycle → updates CaseHub worker status |
+| `WorkerProvisioner` | `ClaudonyWorkerProvisioner` | `TmuxService` + `SessionRegistry` — creates/terminates Claude tmux sessions prefixed `claudony-worker-{uuid}` |
+| `CaseChannelProvider` | `ClaudonyCaseChannelProvider` | Qhorus client — opens channels named `case-{caseId}/{purpose}` |
+| `WorkerContextProvider` | `ClaudonyWorkerContextProvider` | Builds Claude startup prompt with task description, lineage, and channel name |
+| `WorkerStatusListener` | `ClaudonyWorkerStatusListener` | tmux session lifecycle → `SessionRegistry` status transitions + `WorkerStalledEvent` CDI event |
 
-**Design constraint:** `TmuxService` and `SessionRegistry` should remain unaware of CaseHub. The SPI implementations are thin wrappers over them — don't let CaseHub concepts leak into the core session management classes.
+**Lineage:** `JpaCaseLineageQuery` (`@Alternative @Priority(1)`) queries `case_ledger_entry` for `WORKER_EXECUTION_COMPLETED` events via the `qhorus` persistence unit. Returns empty until casehub-engine fires worker lifecycle `CaseLifecycleEvent`s — currently missing (tracked upstream).
 
-### Embedding Qhorus
+**CDI wiring:** `casehub-ledger`'s own CDI beans (`CaseLedgerEntryRepository`, `CaseLedgerEventCapture`) are excluded via `quarkus.arc.exclude-types` to avoid `LedgerEntryRepository` ambiguity with quarkus-ledger. Only `CaseLedgerEntry` (the JPA entity) is used directly.
 
-Claudony embeds `qhorus` as a Maven dependency. Qhorus's MCP tools join the Agent's MCP endpoint alongside Claudony's existing session tools.
+**Design constraint:** `TmuxService` and `SessionRegistry` remain unaware of CaseHub. SPI implementations are the sole coupling point.
 
-**Persistence isolation:** Qhorus uses a named datasource `qhorus` and Hibernate persistence unit to segregate its schema from any future Claudony-owned schema. The Store SPI (six interfaces: `ChannelStore`, `MessageStore`, `SharedDataStore`, `InstanceStore`, `SharedDataIndexStore`, `PendingReplyStore`) is implemented by both JPA and InMemory backends — tests use InMemory, production uses JPA. This allows clean multi-instance fleet scenarios in the future.
+### Qhorus — Shipped
 
-**Design constraint:** The Agent's `McpServer` currently dispatches a hardcoded set of tools. It needs to become **composable** — multiple tool sources registered independently so Qhorus tools and future CaseHub MCP tools can be added without modifying `McpServer.java`. Plan for a registration mechanism (CDI `Instance<McpToolProvider>` or similar) rather than a growing dispatch table.
+Qhorus is embedded as a Maven dependency. Its MCP tools join the Agent's MCP endpoint alongside Claudony's session tools. The named datasource `qhorus` (H2, `~/.claudony/qhorus`) is shared by Qhorus entities, the quarkus-ledger schema, and `CaseLedgerEntry` — all Flyway-managed.
 
-### Three-Panel Dashboard
+**Store SPI:** Six interfaces (`ChannelStore`, `MessageStore`, `SharedDataStore`, `InstanceStore`, `SharedDataIndexStore`, `PendingReplyStore`) — JPA in production, InMemory (`quarkus-qhorus-testing`) in tests.
+
+**Design constraint:** `McpServer` currently dispatches a hardcoded tool set. It must become composable (CDI `Instance<McpToolProvider>` or similar) before additional tool sources can be added cleanly.
+
+### Three-Panel Dashboard — Upcoming (#75)
 
 The dashboard evolves from its current session-card layout to a three-panel observatory:
 
@@ -335,27 +351,24 @@ The dashboard evolves from its current session-card layout to a three-panel obse
 └──────────────┴───────────────────────┴────────────────────────┘
 ```
 
-**Design constraint:** Don't bake the current layout into the dashboard JS in a way that's hard to extend. The terminal view (`session.html` / `terminal.js`) will become the centre panel. The left and right panels are new. Keep the terminal component self-contained so it can be composed into a wider layout without rewriting it.
+**Design constraint:** Keep `terminal.js` / `session.html` self-contained — it becomes the centre panel without requiring the side panels to exist. Left and right panels are additive.
 
-### Human Interjection
+### Human Interjection — Upcoming
 
-The side panel's channel conversation view includes a human input that posts to the Qhorus channel as a `human` sender. This is first-class — workers see it on their next `check_messages` or `wait_for_reply` cycle, and CaseHub records it in lineage as a `HumanDecision` node.
+The side panel includes a human input that posts to the Qhorus channel as a `human` sender. Workers see it on their next `check_messages` / `wait_for_reply` cycle; CaseHub records it in lineage as a `HumanDecision` node.
 
-**Design constraint:** The human sender needs a distinct visual treatment in the channel view (different from Claude agent messages). Plan for `sender_type: human | agent` on rendered messages.
+**Design constraint:** Human messages need distinct visual treatment from agent messages. Plan for `sender_type: human | agent` on rendered messages.
 
-### Worker ↔ Session ↔ Channel Correlation
+### Worker ↔ Session ↔ Channel Correlation — Upcoming
 
-When a Claudony session starts for a CaseHub task, Claudony automatically links:
-- tmux session ID ↔ CaseHub worker ID ↔ Qhorus channel name
-
-This triple correlation is what makes the dashboard work — click a worker in the case graph, see their terminal and their channel. The `Session` model will need to carry optional `caseWorkerId` and `qhorusChannel` fields.
+The triple link (tmux session ID ↔ CaseHub worker ID ↔ Qhorus channel name) is what makes the dashboard work — click a worker in the case graph, see their terminal and channel. Currently incomplete: `ClaudonyWorkerProvisioner.provision()` receives `caseId` from `ProvisionContext` but does not store it on `Session`. The `Session` model needs optional `caseWorkerId` and `qhorusChannel` fields before the case graph panel can function.
 
 ### Guard Rails
 
 - `TmuxService`, `SessionRegistry`, `TerminalWebSocket` — keep clean of CaseHub/Qhorus concepts
-- The SPI implementations are the coupling point, nothing else
-- `McpServer` dispatch must become composable before Qhorus tools are added
-- Terminal component must remain independently functional (no hard dependency on side panel existing)
+- SPI implementations are the coupling point, nothing else
+- `McpServer` dispatch must become composable before additional tool sources are added
+- Terminal component must remain independently functional (no hard dependency on side panels)
 
 ---
 
