@@ -263,9 +263,11 @@ Claudony uses a named datasource `qhorus` (configured via `quarkus.datasource.qh
 quarkus.datasource.qhorus.db-kind=h2
 quarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:~/.claudony/qhorus;...
 quarkus.hibernate-orm.qhorus.datasource=qhorus
-quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model
+quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model,io.casehub.ledger.model
 quarkus.flyway.qhorus.migrate-at-start=true
 ```
+
+**CDI exclusion:** `casehub-ledger` ships `CaseLedgerEntryRepository` and `CaseLedgerEventCapture` as CDI beans that conflict with the `LedgerEntryRepository` already enabled by `quarkus-ledger`. These are excluded via `quarkus.arc.exclude-types`; only `CaseLedgerEntry` (the JPA entity) is used — by `JpaCaseLineageQuery` in `claudony-casehub`.
 
 Schema versioning is **Flyway-managed** — `database.generation` (Hibernate's auto-DDL) is not used. All Qhorus entities are in the `qhorus` persistence unit and route to Flyway for migrations.
 
@@ -275,7 +277,7 @@ Schema versioning is **Flyway-managed** — `database.generation` (Hibernate's a
 
 ## Testing
 
-**275 tests passing** (as of 2026-04-23, excluding failures due to pre-existing issues). Three layers:
+**331 tests passing** (as of 2026-04-26, excluding failures due to pre-existing issues). Three layers:
 - **Unit tests** — plain JUnit, no Quarkus container; stateful beans use `resetForTest()` + `@AfterEach`
 - **Integration tests** (`@QuarkusTest`) — full Quarkus context; all `@QuarkusTest` classes share one app instance; Qhorus data uses `InMemory*Store` implementations (from `quarkus-qhorus-testing` dependency), no real database needed
 - **E2E tests** — assert tmux session state (pane content, session existence), not Claude's output; LLM output is non-deterministic, tmux state is not

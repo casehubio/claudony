@@ -255,7 +255,7 @@ claudony.name=Claudony                  # instance name shown in fleet dashboard
 quarkus.datasource.qhorus.db-kind=h2
 quarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:~/.claudony/qhorus;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE
 quarkus.hibernate-orm.qhorus.datasource=qhorus
-quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model
+quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model,io.casehub.ledger.model
 quarkus.flyway.qhorus.migrate-at-start=true
 # In future: change jdbc.url to PostgreSQL connection string for multi-instance fleet
 ```
@@ -266,7 +266,13 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**307 tests passing** (as of 2026-04-24, excluding pre-existing failures): 32 in `claudony-casehub` + 275 in `claudony-app`.
+**331 tests passing** (as of 2026-04-26, excluding pre-existing failures): 35 in `claudony-casehub` + 296 in `claudony-app`.
+
+**casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub-ledger -am \
+  -f /Users/mdproctor/dev/casehub-engine/pom.xml
+```
 
 `claudony-casehub` tests:
 - `WorkerCommandResolverTest` — capability-to-command resolution, default fallback
