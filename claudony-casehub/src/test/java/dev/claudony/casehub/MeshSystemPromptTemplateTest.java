@@ -210,6 +210,16 @@ class MeshSystemPromptTemplateTest {
         assertThat(prompt).contains("MESSAGE DISCIPLINE:");
     }
 
+    @Test
+    void reactive_normativeLayout_excludesOversightChannel() {
+        String prompt = MeshSystemPromptTemplate.generate(
+                WORKER_ID, CAPABILITY, CASE_ID, NORMATIVE_SPECS,
+                List.of(), MeshParticipationStrategy.MeshParticipation.REACTIVE).orElseThrow();
+
+        assertThat(prompt)
+                .doesNotContain("case-" + CASE_ID + "/oversight");
+    }
+
     // ── Correctness ───────────────────────────────────────────────────────
 
     @Test
