@@ -324,8 +324,11 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `ClaudonyCaseChannelProviderTest` — Qhorus channel creation, send, list filtering
 - `ClaudonyWorkerContextProviderTest` — lineage, channel, clean-start, missing caseId
 - `ClaudonyWorkerStatusListenerTest` — ACTIVE/IDLE/FAULTED lifecycle, stall event
-- `CaseChannelLayoutTest` — NormativeChannelLayout + SimpleLayout channel specs and semantics
-- `MeshParticipationStrategyTest` — ACTIVE/REACTIVE/SILENT strategy selection and context stamping
+- `NormativeChannelLayoutTest`, `SimpleLayoutTest` — channel specs, semantics, and allowedTypes for each layout
+- `MeshParticipationStrategyTest` — ACTIVE/REACTIVE/SILENT strategy, robustness, correctness
+- `WorkerSessionMappingTest` — role↔session bridge lookups
+- `WorkerLifecycleSequenceTest` — full SPI lifecycle + meshParticipation in context
+- `JpaCaseLineageQueryTest` — JPA lineage query against qhorus PU
 
 `claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint
