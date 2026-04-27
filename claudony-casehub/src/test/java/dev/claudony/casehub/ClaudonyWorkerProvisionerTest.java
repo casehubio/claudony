@@ -24,6 +24,7 @@ class ClaudonyWorkerProvisionerTest {
     private SessionRegistry registry;
     private ClaudonyWorkerContextProvider contextProvider;
     private WorkerCommandResolver resolver;
+    private WorkerSessionMapping sessionMapping;
     private ClaudonyWorkerProvisioner provisioner;
 
     @BeforeEach
@@ -31,8 +32,9 @@ class ClaudonyWorkerProvisionerTest {
         tmux = mock(TmuxService.class);
         registry = mock(SessionRegistry.class);
         contextProvider = mock(ClaudonyWorkerContextProvider.class);
+        sessionMapping = new WorkerSessionMapping();
         resolver = new WorkerCommandResolver(Map.of("code-reviewer", "claude", "default", "claude"));
-        provisioner = new ClaudonyWorkerProvisioner(true, tmux, registry, resolver, contextProvider, "/tmp/workers");
+        provisioner = new ClaudonyWorkerProvisioner(true, tmux, registry, resolver, contextProvider, sessionMapping, "/tmp/workers");
     }
 
     @Test
@@ -44,7 +46,8 @@ class ClaudonyWorkerProvisionerTest {
 
         Worker worker = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
 
-        assertThat(worker.getName()).isNotBlank();
+        // Worker name is now the role/task-type, not a UUID
+        assertThat(worker.getName()).isEqualTo("code-reviewer");
         verify(tmux).createSession(contains(ClaudonyWorkerProvisioner.SESSION_PREFIX), eq("/tmp/workers"), eq("claude"));
         verify(registry).register(any(Session.class));
     }
@@ -62,9 +65,22 @@ class ClaudonyWorkerProvisionerTest {
     }
 
     @Test
+    void provision_registersRoleToSessionMapping() throws Exception {
+        var caseId = UUID.randomUUID();
+        when(contextProvider.buildContext(anyString(), any())).thenReturn(
+                new WorkerContext("task", caseId, null, List.of(), PropagationContext.createRoot(), Map.of()));
+
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
+
+        // The mapping should resolve "code-reviewer" to a tmux session UUID
+        assertThat(sessionMapping.findByRole("code-reviewer")).isPresent();
+        assertThat(sessionMapping.findByCase(caseId.toString(), "code-reviewer")).isPresent();
+    }
+
+    @Test
     void provision_disabled_throwsProvisioningException() {
         var disabledProvisioner = new ClaudonyWorkerProvisioner(
-                false, tmux, registry, resolver, contextProvider, "/tmp");
+                false, tmux, registry, resolver, contextProvider, sessionMapping, "/tmp");
 
         assertThatThrownBy(() -> disabledProvisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
                 .isInstanceOf(ProvisioningException.class)

@@ -22,36 +22,51 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
     private final SessionRegistry registry;
     private final TmuxService tmux;
     private final Event<Object> events;
+    private final WorkerSessionMapping sessionMapping;
 
     @Inject
     public ClaudonyWorkerStatusListener(SessionRegistry registry, TmuxService tmux,
-                                         Event<Object> events) {
+                                         Event<Object> events, WorkerSessionMapping sessionMapping) {
         this.registry = registry;
         this.tmux = tmux;
         this.events = events;
+        this.sessionMapping = sessionMapping;
     }
 
     @Override
-    public void onWorkerStarted(String workerId, Map<String, String> sessionMeta) {
-        registry.find(workerId).ifPresent(session ->
-                registry.updateStatus(workerId, SessionStatus.ACTIVE));
-        LOG.debugf("Worker started: %s", workerId);
+    public void onWorkerStarted(String roleName, Map<String, String> sessionMeta) {
+        String caseId = sessionMeta != null ? sessionMeta.get("caseId") : null;
+        String sessionId = caseId != null
+                ? sessionMapping.findByCase(caseId, roleName)
+                        .orElseGet(() -> sessionMapping.findByRole(roleName).orElse(null))
+                : sessionMapping.findByRole(roleName).orElse(null);
+        if (sessionId != null) {
+            registry.updateStatus(sessionId, SessionStatus.ACTIVE);
+        }
+        LOG.debugf("Worker started: role=%s sessionId=%s", roleName, sessionId);
     }
 
     @Override
-    public void onWorkerCompleted(String workerId, WorkResult result) {
+    public void onWorkerCompleted(String roleName, WorkResult result) {
+        String sessionId = sessionMapping.findByRole(roleName).orElse(null);
+        if (sessionId == null) {
+            LOG.warnf("No session found for worker role: %s", roleName);
+            return;
+        }
         if (result.status() == WorkStatus.FAULTED) {
             try {
-                tmux.killSession(SESSION_PREFIX + workerId);
+                tmux.killSession(SESSION_PREFIX + sessionId);
             } catch (IOException | InterruptedException e) {
-                LOG.warnf("Could not kill faulted session for worker %s: %s", workerId, e.getMessage());
+                LOG.warnf("Could not kill faulted session for worker %s (session %s): %s",
+                        roleName, sessionId, e.getMessage());
             }
-            registry.remove(workerId);
+            registry.remove(sessionId);
+            sessionMapping.remove(roleName);
         } else {
-            registry.find(workerId).ifPresent(session ->
-                    registry.updateStatus(workerId, SessionStatus.IDLE));
+            registry.find(sessionId).ifPresent(session ->
+                    registry.updateStatus(sessionId, SessionStatus.IDLE));
         }
-        LOG.debugf("Worker completed: %s status=%s", workerId, result.status());
+        LOG.debugf("Worker completed: role=%s sessionId=%s status=%s", roleName, sessionId, result.status());
     }
 
     @Override

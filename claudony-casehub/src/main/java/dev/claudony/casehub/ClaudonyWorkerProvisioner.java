@@ -30,6 +30,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
     private final SessionRegistry registry;
     private final WorkerCommandResolver resolver;
     private final ClaudonyWorkerContextProvider contextProvider;
+    private final WorkerSessionMapping sessionMapping;
     private final String defaultWorkingDir;
 
     @Inject
@@ -38,20 +39,23 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
             TmuxService tmux,
             SessionRegistry registry,
             WorkerCommandResolver resolver,
-            ClaudonyWorkerContextProvider contextProvider) {
-        this(config.enabled(), tmux, registry, resolver, contextProvider,
+            ClaudonyWorkerContextProvider contextProvider,
+            WorkerSessionMapping sessionMapping) {
+        this(config.enabled(), tmux, registry, resolver, contextProvider, sessionMapping,
                 config.workers().defaultWorkingDir());
     }
 
     ClaudonyWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
                                WorkerCommandResolver resolver,
                                ClaudonyWorkerContextProvider contextProvider,
+                               WorkerSessionMapping sessionMapping,
                                String defaultWorkingDir) {
         this.enabled = enabled;
         this.tmux = tmux;
         this.registry = registry;
         this.resolver = resolver;
         this.contextProvider = contextProvider;
+        this.sessionMapping = sessionMapping;
         this.defaultWorkingDir = defaultWorkingDir;
     }
 
@@ -61,28 +65,33 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
             throw new ProvisioningException(
                     "CaseHub integration is disabled — set claudony.casehub.enabled=true");
         }
-        String workerId = UUID.randomUUID().toString();
+        // roleName = taskType from the case definition — used as Worker.name so
+        // WorkResultSubmitter can find the worker by name in the case definition.
+        // sessionId = UUID — unique tmux session identity, tracked separately.
+        String sessionId = UUID.randomUUID().toString();
+        String roleName = context.taskType() != null ? context.taskType() : capabilities.stream().findFirst().orElse("worker");
         String command = resolver.resolve(capabilities);
 
-        var task = WorkRequest.of(context.taskType(),
+        var task = WorkRequest.of(roleName,
                 Map.of("caseId", context.caseId() != null ? context.caseId().toString() : ""));
-        contextProvider.buildContext(workerId, task);
+        contextProvider.buildContext(sessionId, task);
 
-        String sessionName = SESSION_PREFIX + workerId;
+        String sessionName = SESSION_PREFIX + sessionId;
         try {
             tmux.createSession(sessionName, defaultWorkingDir, command);
         } catch (IOException | InterruptedException e) {
-            throw new ProvisioningException("Failed to create tmux session for worker " + workerId, e);
+            throw new ProvisioningException("Failed to create tmux session for worker " + sessionId, e);
         }
 
-        var session = new Session(workerId, sessionName, defaultWorkingDir, command,
+        var session = new Session(sessionId, sessionName, defaultWorkingDir, command,
                 SessionStatus.IDLE, Instant.now(), Instant.now(), Optional.empty());
         registry.register(session);
+        sessionMapping.register(roleName, context.caseId(), sessionId);
 
         List<Capability> capList = capabilities.stream()
                 .map(cap -> new Capability(cap, null, null))
                 .toList();
-        return new Worker(workerId, capList, ctx -> Map.of());
+        return new Worker(roleName, capList, ctx -> Map.of());
     }
 
     @Override

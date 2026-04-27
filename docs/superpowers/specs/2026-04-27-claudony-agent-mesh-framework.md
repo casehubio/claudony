@@ -702,7 +702,7 @@ Both tools should import the layered examples in this document as their canonica
 - `wait_for_reply(channelName, afterId)` — long-poll until reply or DONE arrives
 - `share_data(key, description, content)`
 - `get_shared_data(key)`
-- `list_ledger_entries(channelName, type_filter?, agent_id?, since?, after_id?)`
+- `list_ledger_entries(channelName, type_filter?, sender?, since?, after_id?)`
 - `create_channel(name, description, semantic, ...)`
 - `list_channels()`
 

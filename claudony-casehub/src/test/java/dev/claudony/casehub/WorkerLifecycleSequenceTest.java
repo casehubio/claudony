@@ -34,8 +34,9 @@ import static org.mockito.Mockito.*;
  */
 class WorkerLifecycleSequenceTest {
 
-    // Real registry — lets us assert actual state transitions, not just method calls.
+    // Real registry and mapping — lets us assert actual state transitions end-to-end.
     private final SessionRegistry registry = new SessionRegistry();
+    private final WorkerSessionMapping sessionMapping = new WorkerSessionMapping();
 
     private TmuxService tmux;
     private ClaudonyWorkerProvisioner provisioner;
@@ -52,78 +53,91 @@ class WorkerLifecycleSequenceTest {
         var contextProvider = mock(ClaudonyWorkerContextProvider.class);
 
         provisioner = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, resolver, contextProvider, "/workspace");
-        listener = new ClaudonyWorkerStatusListener(registry, tmux, events);
+                true, tmux, registry, resolver, contextProvider, sessionMapping, "/workspace");
+        listener = new ClaudonyWorkerStatusListener(registry, tmux, events, sessionMapping);
     }
 
     @Test
     void happyPath_provisionThenActiveIdleThenStall() throws Exception {
         final UUID caseId = UUID.randomUUID();
         final Worker worker = provisioner.provision(Set.of("default"), provisionContext(caseId));
-        final String workerId = worker.getName();
+        // Worker name is now the role/taskType ("code-reviewer"), not a UUID.
+        // The tmux session UUID is tracked internally via WorkerSessionMapping.
+        final String roleName = worker.getName();
+        final String sessionId = sessionMapping.findByRole(roleName).orElseThrow();
 
-        // After provision: session registered, starts IDLE
-        assertThat(registry.find(workerId)).isPresent();
-        assertThat(registry.find(workerId).get().status()).isEqualTo(SessionStatus.IDLE);
+        // After provision: session registered by UUID, starts IDLE
+        assertThat(registry.find(sessionId)).isPresent();
+        assertThat(registry.find(sessionId).get().status()).isEqualTo(SessionStatus.IDLE);
         verify(tmux).createSession(
                 contains(ClaudonyWorkerProvisioner.SESSION_PREFIX), anyString(), anyString());
 
-        // CaseEngine signals work has started → ACTIVE
-        listener.onWorkerStarted(workerId, Map.of());
-        assertThat(registry.find(workerId).get().status()).isEqualTo(SessionStatus.ACTIVE);
+        // CaseEngine signals work started → ACTIVE (passes caseId in sessionMeta)
+        listener.onWorkerStarted(roleName, Map.of("caseId", caseId.toString()));
+        assertThat(registry.find(sessionId).get().status()).isEqualTo(SessionStatus.ACTIVE);
 
         // CaseEngine signals work completed normally → back to IDLE, session kept
-        listener.onWorkerCompleted(workerId, WorkResult.completed("corr-1", Map.of(), workerId));
-        assertThat(registry.find(workerId).get().status()).isEqualTo(SessionStatus.IDLE);
-        assertThat(registry.find(workerId)).isPresent();
+        listener.onWorkerCompleted(roleName, WorkResult.completed("corr-1", Map.of(), roleName));
+        assertThat(registry.find(sessionId).get().status()).isEqualTo(SessionStatus.IDLE);
+        assertThat(registry.find(sessionId)).isPresent();
 
         // CaseEngine detects stall → event fired, tmux NOT killed (stall ≠ fault)
-        listener.onWorkerStalled(workerId);
-        verify(events).fire(new ClaudonyWorkerStatusListener.WorkerStalledEvent(workerId));
+        listener.onWorkerStalled(roleName);
+        verify(events).fire(new ClaudonyWorkerStatusListener.WorkerStalledEvent(roleName));
         verifyNoMoreInteractions(tmux); // no kill on stall
-        assertThat(registry.find(workerId)).isPresent();
+        assertThat(registry.find(sessionId)).isPresent();
     }
 
     @Test
     void faultPath_faultedWorkerIsKilledAndRemovedFromRegistry() throws Exception {
         final UUID caseId = UUID.randomUUID();
         final Worker worker = provisioner.provision(Set.of("default"), provisionContext(caseId));
-        final String workerId = worker.getName();
+        final String roleName = worker.getName();
+        final String sessionId = sessionMapping.findByRole(roleName).orElseThrow();
 
-        listener.onWorkerStarted(workerId, Map.of());
-        assertThat(registry.find(workerId).get().status()).isEqualTo(SessionStatus.ACTIVE);
+        listener.onWorkerStarted(roleName, Map.of("caseId", caseId.toString()));
+        assertThat(registry.find(sessionId).get().status()).isEqualTo(SessionStatus.ACTIVE);
 
-        // CaseEngine signals fault → session killed, removed from registry
-        listener.onWorkerCompleted(workerId, WorkResult.faulted("corr-1", workerId));
+        // CaseEngine signals fault → tmux session killed, registry cleared
+        listener.onWorkerCompleted(roleName, WorkResult.faulted("corr-1", roleName));
 
-        verify(tmux).killSession(ClaudonyWorkerStatusListener.SESSION_PREFIX + workerId);
-        assertThat(registry.find(workerId)).isEmpty();
+        verify(tmux).killSession(ClaudonyWorkerStatusListener.SESSION_PREFIX + sessionId);
+        assertThat(registry.find(sessionId)).isEmpty();
     }
 
     @Test
-    void twoWorkers_independentLifecycles_doNotInterfere() throws Exception {
+    void twoWorkers_differentRoles_independentLifecycles() throws Exception {
+        // Use two DIFFERENT roles — same-role concurrent workers are a known MVP limitation
         final UUID caseId = UUID.randomUUID();
         final Worker w1 = provisioner.provision(Set.of("default"), provisionContext(caseId));
-        final Worker w2 = provisioner.provision(Set.of("default"), provisionContext(caseId));
-        final String id1 = w1.getName();
-        final String id2 = w2.getName();
+        // Create a second worker with a different taskType
+        final ProvisionContext ctx2 = new ProvisionContext(caseId, "reviewer",
+                new io.casehub.api.model.WorkerContext("review", caseId, null, List.of(),
+                        io.casehub.api.context.PropagationContext.createRoot(), Map.of()),
+                io.casehub.api.context.PropagationContext.createRoot());
+        final Worker w2 = provisioner.provision(Set.of("default"), ctx2);
 
-        assertThat(id1).isNotEqualTo(id2);
+        final String role1 = w1.getName();   // "code-reviewer"
+        final String role2 = w2.getName();   // "reviewer"
+        final String sid1 = sessionMapping.findByRole(role1).orElseThrow();
+        final String sid2 = sessionMapping.findByRole(role2).orElseThrow();
+
+        assertThat(sid1).isNotEqualTo(sid2);
 
         // Start both
-        listener.onWorkerStarted(id1, Map.of());
-        listener.onWorkerStarted(id2, Map.of());
-        assertThat(registry.find(id1).get().status()).isEqualTo(SessionStatus.ACTIVE);
-        assertThat(registry.find(id2).get().status()).isEqualTo(SessionStatus.ACTIVE);
+        listener.onWorkerStarted(role1, Map.of("caseId", caseId.toString()));
+        listener.onWorkerStarted(role2, Map.of("caseId", caseId.toString()));
+        assertThat(registry.find(sid1).get().status()).isEqualTo(SessionStatus.ACTIVE);
+        assertThat(registry.find(sid2).get().status()).isEqualTo(SessionStatus.ACTIVE);
 
-        // Fault w1 — w2 must be unaffected
-        listener.onWorkerCompleted(id1, WorkResult.faulted("corr-1", id1));
-        assertThat(registry.find(id1)).isEmpty();
-        assertThat(registry.find(id2).get().status()).isEqualTo(SessionStatus.ACTIVE);
+        // Fault role1 — role2 must be unaffected
+        listener.onWorkerCompleted(role1, WorkResult.faulted("corr-1", role1));
+        assertThat(registry.find(sid1)).isEmpty();
+        assertThat(registry.find(sid2).get().status()).isEqualTo(SessionStatus.ACTIVE);
 
-        // Complete w2 normally
-        listener.onWorkerCompleted(id2, WorkResult.completed("corr-2", Map.of(), id2));
-        assertThat(registry.find(id2).get().status()).isEqualTo(SessionStatus.IDLE);
+        // Complete role2 normally
+        listener.onWorkerCompleted(role2, WorkResult.completed("corr-2", Map.of(), role2));
+        assertThat(registry.find(sid2).get().status()).isEqualTo(SessionStatus.IDLE);
     }
 
     private ProvisionContext provisionContext(final UUID caseId) {

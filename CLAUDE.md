@@ -336,7 +336,7 @@ Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTes
 
 Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem:
 
-- **CaseHub** (`~/claude/casehub`) — orchestration/choreography engine; defines SPIs that Claudony implements
+- **CaseHub** (`~/claude/casehub-engine`) — orchestration/choreography engine; defines SPIs that Claudony implements (`~/claude/casehub` is the retiring POC — do not use)
 - **Qhorus** (`~/claude/quarkus-qhorus`) — agent communication mesh; Claudony embeds it and provides the dashboard observation layer
 - **Claudony** (this project) — wires everything together; implements CaseHub SPIs, embeds Qhorus, hosts the unified dashboard
 
