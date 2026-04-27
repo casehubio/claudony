@@ -25,7 +25,7 @@ class ClaudonyCaseChannelProviderTest {
 
     private QhorusMcpToolsBase.ChannelDetail channelDetail(UUID channelId, String name) {
         return new QhorusMcpToolsBase.ChannelDetail(
-                channelId, name, "description", null, null, 0L, null, false, null, null, null, null);
+                channelId, name, "description", null, null, 0L, null, false, null, null, null, null, null);
     }
 
     private void stubCreateChannel(UUID caseId) {
