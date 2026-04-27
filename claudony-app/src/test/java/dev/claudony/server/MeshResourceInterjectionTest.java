@@ -92,4 +92,66 @@ class MeshResourceInterjectionTest {
         .then()
             .statusCode(404);
     }
+
+    @Test
+    void postMessage_eventType_isValid() {
+        // EVENT was added to VALID_HUMAN_TYPES — verify it is accepted (no deontic obligation)
+        given()
+            .contentType(JSON)
+            .body("{\"content\":\"tool call: read_file AuthService.java\",\"type\":\"event\"}")
+        .when()
+            .post("/api/mesh/channels/{name}/messages", channelName)
+        .then()
+            .statusCode(200)
+            .body("messageType", equalTo("EVENT"));
+    }
+
+    @Test
+    void timeline_afterCursor_returnsOnlyNewerMessages() {
+        // Post two messages, capture the first message's id, then fetch timeline with ?after
+        var firstId = given()
+            .contentType(JSON)
+            .body("{\"content\":\"first message\",\"type\":\"status\"}")
+        .when()
+            .post("/api/mesh/channels/{name}/messages", channelName)
+        .then()
+            .statusCode(200)
+            .extract().path("messageId");
+
+        given()
+            .contentType(JSON)
+            .body("{\"content\":\"second message\",\"type\":\"status\"}")
+        .when()
+            .post("/api/mesh/channels/{name}/messages", channelName)
+        .then()
+            .statusCode(200);
+
+        // ?after=firstId should return only the second message
+        given()
+        .when()
+            .get("/api/mesh/channels/{name}/timeline?after={id}", channelName, firstId)
+        .then()
+            .statusCode(200)
+            .body("$.size()", equalTo(1))
+            .body("[0].content", equalTo("second message"));
+    }
+
+    @Test
+    void timeline_afterCursorAtEnd_returnsEmpty() {
+        var lastId = given()
+            .contentType(JSON)
+            .body("{\"content\":\"only message\",\"type\":\"status\"}")
+        .when()
+            .post("/api/mesh/channels/{name}/messages", channelName)
+        .then()
+            .statusCode(200)
+            .extract().path("messageId");
+
+        given()
+        .when()
+            .get("/api/mesh/channels/{name}/timeline?after={id}", channelName, lastId)
+        .then()
+            .statusCode(200)
+            .body("$.size()", equalTo(0));
+    }
 }

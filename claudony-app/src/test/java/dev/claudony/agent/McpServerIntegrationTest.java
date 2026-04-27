@@ -234,7 +234,7 @@ class McpServerIntegrationTest {
                 """)
             .when().post("/mcp")
             .then().statusCode(200)
-            // 8 Claudony tools + 39 Qhorus tools = 47 total at the unified /mcp endpoint
+            // 8 Claudony tools + 41 Qhorus tools = 49 total at the unified /mcp endpoint
             .body("result.tools.size()", greaterThanOrEqualTo(8))
             .body("result.tools.name", hasItems(
                 "list_sessions", "create_session", "delete_session",
@@ -307,12 +307,12 @@ class McpServerIntegrationTest {
             .statusCode(200)
             // Claudony's 8 tools
             .body("result.tools.name", hasItems("list_sessions", "get_server_info"))
-            // Key Qhorus tools — confirms Phase 8 embedding is working
+            // Key Qhorus tools — confirms Qhorus embedding is working
             .body("result.tools.name", hasItems(
                 "send_message", "check_messages", "register",
-                "create_channel", "list_events", "get_channel_timeline"))
-            // 47 total: 8 Claudony + 39 Qhorus
-            .body("result.tools.size()", equalTo(47));
+                "create_channel", "list_ledger_entries", "get_channel_timeline"))
+            // 49 total: 8 Claudony + 41 Qhorus (count updated as Qhorus evolves)
+            .body("result.tools.size()", equalTo(49));
     }
 }
 
