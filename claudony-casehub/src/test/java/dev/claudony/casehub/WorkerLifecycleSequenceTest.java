@@ -6,8 +6,10 @@ import dev.claudony.server.model.SessionStatus;
 import io.casehub.api.context.PropagationContext;
 import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.model.Worker;
+import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkResult;
 import io.casehub.api.model.WorkerContext;
+import io.casehub.api.spi.CaseChannelProvider;
 import jakarta.enterprise.event.Event;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -138,6 +140,17 @@ class WorkerLifecycleSequenceTest {
         // Complete role2 normally
         listener.onWorkerCompleted(role2, WorkResult.completed("corr-2", Map.of(), role2));
         assertThat(registry.find(sid2).get().status()).isEqualTo(SessionStatus.IDLE);
+    }
+
+    @Test
+    void workerContext_alwaysContainsMeshParticipationKey() {
+        var contextProvider = new ClaudonyWorkerContextProvider(
+                mock(CaseLineageQuery.class), mock(CaseChannelProvider.class));
+
+        WorkerContext ctx = contextProvider.buildContext("worker-1",
+                WorkRequest.of("researcher", Map.of()));
+
+        assertThat(ctx.properties()).containsKey("meshParticipation");
     }
 
     private ProvisionContext provisionContext(final UUID caseId) {

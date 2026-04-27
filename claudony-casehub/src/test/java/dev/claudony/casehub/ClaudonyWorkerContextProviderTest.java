@@ -98,4 +98,116 @@ class ClaudonyWorkerContextProviderTest {
 
         assertThat(ctx.propagationContext()).isNotNull();
     }
+
+    // ── Happy path: all 3 strategies stamp correctly ──────────────────────
+
+    @Test
+    void buildContext_activeStrategy_stampsMeshParticipationActive() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ActiveParticipationStrategy());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("task", Map.of("caseId", caseId.toString())));
+
+        assertThat(ctx.properties()).containsEntry("meshParticipation", "ACTIVE");
+    }
+
+    @Test
+    void buildContext_reactiveStrategy_stampsMeshParticipationReactive() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ReactiveParticipationStrategy());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("task", Map.of("caseId", caseId.toString())));
+
+        assertThat(ctx.properties()).containsEntry("meshParticipation", "REACTIVE");
+    }
+
+    @Test
+    void buildContext_silentStrategy_stampsMeshParticipationSilent() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new SilentParticipationStrategy());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("task", Map.of("caseId", caseId.toString())));
+
+        assertThat(ctx.properties()).containsEntry("meshParticipation", "SILENT");
+    }
+
+    // ── Correctness: stamp present on every exit path ─────────────────────
+
+    @Test
+    void buildContext_cleanStart_meshParticipationStamped() {
+        var silentProvider = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new SilentParticipationStrategy());
+
+        WorkerContext ctx = silentProvider.buildContext("w1",
+                WorkRequest.of("task", Map.of("clean-start", true)));
+
+        assertThat(ctx.properties()).containsEntry("meshParticipation", "SILENT");
+        verifyNoInteractions(lineageQuery);
+        verifyNoInteractions(channelProvider);
+    }
+
+    @Test
+    void buildContext_missingCaseId_meshParticipationStamped() {
+        var silentProvider = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new SilentParticipationStrategy());
+
+        WorkerContext ctx = silentProvider.buildContext("w1",
+                WorkRequest.of("task", Map.of()));
+
+        assertThat(ctx.properties()).containsEntry("meshParticipation", "SILENT");
+    }
+
+    @Test
+    void buildContext_malformedCaseId_meshParticipationStamped() {
+        var silentProvider = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new SilentParticipationStrategy());
+
+        WorkerContext ctx = silentProvider.buildContext("w1",
+                WorkRequest.of("task", Map.of("caseId", "not-a-uuid")));
+
+        assertThat(ctx.properties()).containsEntry("meshParticipation", "SILENT");
+    }
+
+    @Test
+    void buildContext_meshParticipationValueIsEnumName() {
+        WorkerContext ctx = provider.buildContext("w1", WorkRequest.of("task", Map.of()));
+
+        assertThat(ctx.properties().get("meshParticipation"))
+                .isEqualTo(MeshParticipationStrategy.MeshParticipation.ACTIVE.name());
+    }
+
+    // ── Robustness: default constructor uses Active ────────────────────────
+
+    @Test
+    void defaultConstructor_usesActiveStrategy() {
+        WorkerContext ctx = provider.buildContext("w1",
+                WorkRequest.of("task", Map.of()));
+
+        assertThat(ctx.properties()).containsEntry("meshParticipation", "ACTIVE");
+    }
+
+    // ── Correctness: bad config throws at construction time ────────────────
+
+    @Test
+    void cdiConstructor_badMeshParticipationConfig_throwsIllegalArgumentException() {
+        CaseHubConfig config = mock(CaseHubConfig.class);
+        when(config.meshParticipation()).thenReturn("bogus");
+        when(config.channelLayout()).thenReturn("normative");
+
+        assertThatThrownBy(() -> new ClaudonyWorkerContextProvider(lineageQuery, channelProvider, config))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("bogus");
+    }
 }

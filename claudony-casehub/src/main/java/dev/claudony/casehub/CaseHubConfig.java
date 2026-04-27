@@ -15,6 +15,10 @@ public interface CaseHubConfig {
     @WithDefault("normative")
     String channelLayout();
 
+    @WithName("mesh-participation")
+    @WithDefault("active")
+    String meshParticipation();
+
     Workers workers();
 
     interface Workers {
