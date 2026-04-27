@@ -311,8 +311,8 @@ class McpServerIntegrationTest {
             .body("result.tools.name", hasItems(
                 "send_message", "check_messages", "register",
                 "create_channel", "list_ledger_entries", "get_channel_timeline"))
-            // 49 total: 8 Claudony + 41 Qhorus (count updated as Qhorus evolves)
-            .body("result.tools.size()", equalTo(49));
+            // 50 total: 8 Claudony + 42 Qhorus (count updated as Qhorus evolves)
+            .body("result.tools.size()", equalTo(50));
     }
 }
 

@@ -23,20 +23,31 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
     private final CaseLineageQuery lineageQuery;
     private final CaseChannelProvider channelProvider;
     private final MeshParticipationStrategy strategy;
+    private final CaseChannelLayout layout;
 
     @Inject
     public ClaudonyWorkerContextProvider(CaseLineageQuery lineageQuery,
                                           CaseChannelProvider channelProvider,
                                           CaseHubConfig config) {
-        this(lineageQuery, channelProvider, selectStrategy(config.meshParticipation()));
+        this(lineageQuery, channelProvider,
+                selectStrategy(config.meshParticipation()),
+                selectLayout(config.channelLayout()));
+    }
+
+    ClaudonyWorkerContextProvider(CaseLineageQuery lineageQuery,
+                                   CaseChannelProvider channelProvider,
+                                   MeshParticipationStrategy strategy,
+                                   CaseChannelLayout layout) {
+        this.lineageQuery = lineageQuery;
+        this.channelProvider = channelProvider;
+        this.strategy = strategy;
+        this.layout = layout;
     }
 
     ClaudonyWorkerContextProvider(CaseLineageQuery lineageQuery,
                                    CaseChannelProvider channelProvider,
                                    MeshParticipationStrategy strategy) {
-        this.lineageQuery = lineageQuery;
-        this.channelProvider = channelProvider;
-        this.strategy = strategy;
+        this(lineageQuery, channelProvider, strategy, new NormativeChannelLayout());
     }
 
     ClaudonyWorkerContextProvider(CaseLineageQuery lineageQuery,
@@ -78,6 +89,11 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
                 .findFirst()
                 .orElse(null);
 
+        List<CaseChannelLayout.ChannelSpec> channelSpecs = layout.channelsFor(caseId, null);
+        MeshSystemPromptTemplate.generate(workerId, task.capability(), caseId,
+                        channelSpecs, priorWorkers, participation)
+                .ifPresent(prompt -> props.put("systemPrompt", prompt));
+
         return new WorkerContext(task.capability(), caseId, channel, priorWorkers,
                 PropagationContext.createRoot(), props);
     }
@@ -90,6 +106,17 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
             default -> {
                 log.errorf("Unknown mesh-participation '%s' — valid values: active, reactive, silent", name);
                 throw new IllegalArgumentException("Unknown mesh participation: " + name);
+            }
+        };
+    }
+
+    private static CaseChannelLayout selectLayout(String name) {
+        return switch (name) {
+            case "normative" -> new NormativeChannelLayout();
+            case "simple" -> new SimpleLayout();
+            default -> {
+                log.errorf("Unknown channel-layout '%s' — valid values: normative, simple", name);
+                throw new IllegalArgumentException("Unknown channel layout: " + name);
             }
         };
     }

@@ -310,7 +310,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 ```
 Quarkus resolves `${quarkus.http.port}` to the actual assigned random port. Without this, the client silently connects to the default port (7777) and all such tests fail with `Connection refused`.
 
-**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 49 tools (8 Claudony + 41 Qhorus). Update when Qhorus ships new tools — the count changes with each Qhorus release.
+**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 50 tools (8 Claudony + 42 Qhorus). Update when Qhorus ships new tools — the count changes with each Qhorus release.
 
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash

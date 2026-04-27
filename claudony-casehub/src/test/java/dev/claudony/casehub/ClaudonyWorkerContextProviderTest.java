@@ -210,4 +210,120 @@ class ClaudonyWorkerContextProviderTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("bogus");
     }
+
+    // ── systemPrompt: presence and absence ───────────────────────────────
+
+    @Test
+    void buildContext_activeStrategy_withCaseId_systemPromptPresent() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ActiveParticipationStrategy(), new NormativeChannelLayout());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("researcher", Map.of("caseId", caseId.toString())));
+
+        assertThat(ctx.properties()).containsKey("systemPrompt");
+    }
+
+    @Test
+    void buildContext_silentStrategy_withCaseId_systemPromptAbsent() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new SilentParticipationStrategy(), new NormativeChannelLayout());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("researcher", Map.of("caseId", caseId.toString())));
+
+        assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
+    }
+
+    @Test
+    void buildContext_reactiveStrategy_withCaseId_systemPromptPresent() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ReactiveParticipationStrategy(), new NormativeChannelLayout());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("analyst", Map.of("caseId", caseId.toString())));
+
+        assertThat(ctx.properties()).containsKey("systemPrompt");
+    }
+
+    // ── systemPrompt: absent on early-exit paths ──────────────────────────
+
+    @Test
+    void buildContext_activeStrategy_cleanStart_systemPromptAbsent() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ActiveParticipationStrategy(), new NormativeChannelLayout());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("researcher", Map.of("clean-start", true)));
+
+        assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
+    }
+
+    @Test
+    void buildContext_activeStrategy_missingCaseId_systemPromptAbsent() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ActiveParticipationStrategy(), new NormativeChannelLayout());
+
+        WorkerContext ctx = p.buildContext("w1", WorkRequest.of("researcher", Map.of()));
+
+        assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
+    }
+
+    // ── systemPrompt: content correctness ────────────────────────────────
+
+    @Test
+    void buildContext_activeStrategy_systemPromptContainsCaseId() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ActiveParticipationStrategy(), new NormativeChannelLayout());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("researcher", Map.of("caseId", caseId.toString())));
+
+        String prompt = (String) ctx.properties().get("systemPrompt");
+        assertThat(prompt).contains(caseId.toString());
+    }
+
+    @Test
+    void buildContext_activeStrategy_systemPromptContainsCapability() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ActiveParticipationStrategy(), new NormativeChannelLayout());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("code-reviewer", Map.of("caseId", caseId.toString())));
+
+        String prompt = (String) ctx.properties().get("systemPrompt");
+        assertThat(prompt).contains("code-reviewer");
+    }
+
+    @Test
+    void buildContext_reactiveStrategy_systemPromptLacksStartupSection() {
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                new ReactiveParticipationStrategy(), new NormativeChannelLayout());
+        UUID caseId = UUID.randomUUID();
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
+
+        WorkerContext ctx = p.buildContext("w1",
+                WorkRequest.of("analyst", Map.of("caseId", caseId.toString())));
+
+        String prompt = (String) ctx.properties().get("systemPrompt");
+        assertThat(prompt)
+                .doesNotContain("STARTUP:")
+                .doesNotContain("register(\"");
+    }
 }
