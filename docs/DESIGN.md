@@ -291,7 +291,7 @@ Schema versioning is **Flyway-managed** — `database.generation` (Hibernate's a
 
 ## Testing
 
-**331 tests passing** (as of 2026-04-26, excluding failures due to pre-existing issues). Three layers:
+**339 tests passing** (as of 2026-04-27, excluding failures due to pre-existing issues). Three layers:
 - **Unit tests** — plain JUnit, no Quarkus container; stateful beans use `resetForTest()` + `@AfterEach`
 - **Integration tests** (`@QuarkusTest`) — full Quarkus context; all `@QuarkusTest` classes share one app instance; Qhorus data uses `InMemory*Store` implementations (from `quarkus-qhorus-testing` dependency), no real database needed
 - **E2E tests** — assert tmux session state (pane content, session existence), not Claude's output; LLM output is non-deterministic, tmux state is not
