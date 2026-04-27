@@ -6,9 +6,11 @@ import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
 import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
 public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
@@ -17,23 +19,24 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
     private static final String QHORUS_NAME_KEY = "qhorus-name";
 
     private final QhorusMcpTools qhorusMcpTools;
+    private final CaseChannelLayout layout;
+    private final ConcurrentHashMap<UUID, Map<String, CaseChannel>> caseChannels = new ConcurrentHashMap<>();
 
     @Inject
-    public ClaudonyCaseChannelProvider(QhorusMcpTools qhorusMcpTools) {
+    public ClaudonyCaseChannelProvider(QhorusMcpTools qhorusMcpTools, CaseHubConfig config) {
         this.qhorusMcpTools = qhorusMcpTools;
+        this.layout = selectLayout(config.channelLayout());
+    }
+
+    ClaudonyCaseChannelProvider(QhorusMcpTools qhorusMcpTools, CaseChannelLayout layout) {
+        this.qhorusMcpTools = qhorusMcpTools;
+        this.layout = layout;
     }
 
     @Override
     public CaseChannel openChannel(UUID caseId, String purpose) {
-        String channelName = CHANNEL_PREFIX + caseId + "/" + purpose;
-        QhorusMcpToolsBase.ChannelDetail detail =
-                qhorusMcpTools.createChannel(channelName, purpose, null, null);
-        return new CaseChannel(
-                detail.channelId().toString(),
-                detail.name(),
-                purpose,
-                "qhorus",
-                Map.of(QHORUS_NAME_KEY, detail.name()));
+        Map<String, CaseChannel> channels = caseChannels.computeIfAbsent(caseId, this::initializeLayout);
+        return channels.computeIfAbsent(purpose, p -> createQhorusChannel(caseId, p, null));
     }
 
     @Override
@@ -61,8 +64,37 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
                 .toList();
     }
 
+    private Map<String, CaseChannel> initializeLayout(UUID caseId) {
+        Map<String, CaseChannel> channels = new HashMap<>();
+        for (CaseChannelLayout.ChannelSpec spec : layout.channelsFor(caseId, null)) {
+            CaseChannel ch = createQhorusChannel(caseId, spec.purpose(), spec.semantic().name());
+            channels.put(spec.purpose(), ch);
+        }
+        return channels;
+    }
+
+    private CaseChannel createQhorusChannel(UUID caseId, String purpose, String semantic) {
+        String channelName = CHANNEL_PREFIX + caseId + "/" + purpose;
+        QhorusMcpToolsBase.ChannelDetail detail =
+                qhorusMcpTools.createChannel(channelName, purpose, semantic, null);
+        return new CaseChannel(
+                detail.channelId().toString(),
+                detail.name(),
+                purpose,
+                "qhorus",
+                Map.of(QHORUS_NAME_KEY, detail.name()));
+    }
+
     private String extractPurpose(String channelName, UUID caseId) {
         String prefix = CHANNEL_PREFIX + caseId + "/";
         return channelName.startsWith(prefix) ? channelName.substring(prefix.length()) : channelName;
+    }
+
+    private static CaseChannelLayout selectLayout(String name) {
+        return switch (name) {
+            case "normative" -> new NormativeChannelLayout();
+            case "simple" -> new SimpleLayout();
+            default -> throw new IllegalArgumentException("Unknown channel layout: " + name);
+        };
     }
 }

@@ -11,6 +11,10 @@ public interface CaseHubConfig {
     @WithDefault("false")
     boolean enabled();
 
+    @WithName("channel-layout")
+    @WithDefault("normative")
+    String channelLayout();
+
     Workers workers();
 
     interface Workers {

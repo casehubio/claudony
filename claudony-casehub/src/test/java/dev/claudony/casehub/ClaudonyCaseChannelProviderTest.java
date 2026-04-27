@@ -20,41 +20,108 @@ class ClaudonyCaseChannelProviderTest {
     @BeforeEach
     void setUp() {
         qhorusMcpTools = mock(QhorusMcpTools.class);
-        provider = new ClaudonyCaseChannelProvider(qhorusMcpTools);
+        provider = new ClaudonyCaseChannelProvider(qhorusMcpTools, new NormativeChannelLayout());
+    }
+
+    private QhorusMcpToolsBase.ChannelDetail channelDetail(UUID channelId, String name) {
+        return new QhorusMcpToolsBase.ChannelDetail(
+                channelId, name, "description", null, null, 0L, null, false, null, null, null, null);
+    }
+
+    private void stubCreateChannel(UUID caseId) {
+        when(qhorusMcpTools.createChannel(contains(caseId.toString()), anyString(), anyString(), isNull()))
+                .thenAnswer(inv -> channelDetail(UUID.randomUUID(), inv.getArgument(0)));
     }
 
     @Test
-    void openChannel_createsQhorusChannelAndReturnsCaseChannel() {
+    void openChannel_initializesAllLayoutChannels() {
         UUID caseId = UUID.randomUUID();
-        var channelDetail = channelDetail(UUID.randomUUID(), "case-" + caseId + "/coordination");
-        when(qhorusMcpTools.createChannel(anyString(), anyString(), isNull(), isNull()))
-                .thenReturn(channelDetail);
+        stubCreateChannel(caseId);
 
-        CaseChannel ch = provider.openChannel(caseId, "coordination");
+        provider.openChannel(caseId, "work");
+
+        // NormativeChannelLayout opens 3 channels on first touch
+        verify(qhorusMcpTools, times(3)).createChannel(anyString(), anyString(), anyString(), isNull());
+    }
+
+    @Test
+    void openChannel_returnsChannelMatchingRequestedPurpose() {
+        UUID caseId = UUID.randomUUID();
+        stubCreateChannel(caseId);
+
+        CaseChannel ch = provider.openChannel(caseId, "work");
 
         assertThat(ch).isNotNull();
+        assertThat(ch.purpose()).isEqualTo("work");
         assertThat(ch.backendType()).isEqualTo("qhorus");
-        assertThat(ch.purpose()).isEqualTo("coordination");
         assertThat(ch.properties()).containsKey("qhorus-name");
     }
 
     @Test
-    void openChannel_channelNameContainsCaseId() {
+    void openChannel_secondCallSameCaseId_hitsCache() {
         UUID caseId = UUID.randomUUID();
-        var channelDetail = channelDetail(UUID.randomUUID(), "case-" + caseId + "/coordination");
-        when(qhorusMcpTools.createChannel(anyString(), anyString(), isNull(), isNull()))
-                .thenReturn(channelDetail);
+        stubCreateChannel(caseId);
 
-        CaseChannel ch = provider.openChannel(caseId, "coordination");
+        provider.openChannel(caseId, "work");
+        provider.openChannel(caseId, "observe");
 
-        assertThat(ch.name()).contains(caseId.toString());
+        // Still only 3 createChannel calls total (initialised on first touch)
+        verify(qhorusMcpTools, times(3)).createChannel(anyString(), anyString(), anyString(), isNull());
+    }
+
+    @Test
+    void openChannel_differentCaseIds_initializeSeparately() {
+        UUID caseId1 = UUID.randomUUID();
+        UUID caseId2 = UUID.randomUUID();
+        stubCreateChannel(caseId1);
+        stubCreateChannel(caseId2);
+
+        provider.openChannel(caseId1, "work");
+        provider.openChannel(caseId2, "work");
+
+        verify(qhorusMcpTools, times(6)).createChannel(anyString(), anyString(), anyString(), isNull());
+    }
+
+    @Test
+    void openChannel_purposeNotInLayout_createsAdHocChannel() {
+        UUID caseId = UUID.randomUUID();
+        stubCreateChannel(caseId);
+        // Also stub for ad-hoc (null semantic)
+        when(qhorusMcpTools.createChannel(contains(caseId.toString()), anyString(), isNull(), isNull()))
+                .thenAnswer(inv -> channelDetail(UUID.randomUUID(), inv.getArgument(0)));
+
+        CaseChannel ch = provider.openChannel(caseId, "custom-purpose");
+
+        assertThat(ch.purpose()).isEqualTo("custom-purpose");
+        // 3 layout channels + 1 ad-hoc
+        verify(qhorusMcpTools, times(4)).createChannel(anyString(), anyString(), any(), isNull());
+    }
+
+    @Test
+    void openChannel_channelNameContainsCaseIdAndPurpose() {
+        UUID caseId = UUID.randomUUID();
+        stubCreateChannel(caseId);
+
+        provider.openChannel(caseId, "work");
+
+        verify(qhorusMcpTools).createChannel(eq("case-" + caseId + "/work"), anyString(), anyString(), isNull());
+    }
+
+    @Test
+    void openChannel_passesSemanticToQhorus() {
+        UUID caseId = UUID.randomUUID();
+        stubCreateChannel(caseId);
+
+        provider.openChannel(caseId, "work");
+
+        verify(qhorusMcpTools).createChannel(contains("/work"), anyString(), eq("APPEND"), isNull());
     }
 
     @Test
     void postToChannel_sendsViaQhorus() {
         UUID caseId = UUID.randomUUID();
-        String channelName = "case-" + caseId + "/coordination";
-        CaseChannel ch = new CaseChannel("ch-id", channelName, "coordination", "qhorus",
+        String channelName = "case-" + caseId + "/work";
+        CaseChannel ch = new CaseChannel("ch-id", channelName, "work", "qhorus",
                 Map.of("qhorus-name", channelName));
 
         provider.postToChannel(ch, "alice", "hello");
@@ -95,10 +162,5 @@ class ClaudonyCaseChannelProviderTest {
         assertThatNoException().isThrownBy(() -> provider.postToChannel(ch, "alice", "hello"));
         verify(qhorusMcpTools).sendMessage(eq("ch-id"), eq("alice"), anyString(),
                 eq("hello"), isNull(), isNull());
-    }
-
-    private QhorusMcpToolsBase.ChannelDetail channelDetail(UUID channelId, String name) {
-        return new QhorusMcpToolsBase.ChannelDetail(
-                channelId, name, "description", null, null, 0L, null, false, null, null, null, null);
     }
 }
