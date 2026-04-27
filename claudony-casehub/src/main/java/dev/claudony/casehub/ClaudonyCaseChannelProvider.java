@@ -6,15 +6,16 @@ import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
 import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
 
+    private static final Logger log = Logger.getLogger(ClaudonyCaseChannelProvider.class);
     private static final String CHANNEL_PREFIX = "case-";
     private static final String QHORUS_NAME_KEY = "qhorus-name";
 
@@ -65,7 +66,7 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
     }
 
     private Map<String, CaseChannel> initializeLayout(UUID caseId) {
-        Map<String, CaseChannel> channels = new HashMap<>();
+        Map<String, CaseChannel> channels = new ConcurrentHashMap<>();
         for (CaseChannelLayout.ChannelSpec spec : layout.channelsFor(caseId, null)) {
             CaseChannel ch = createQhorusChannel(caseId, spec.purpose(), spec.semantic().name());
             channels.put(spec.purpose(), ch);
@@ -94,7 +95,10 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
         return switch (name) {
             case "normative" -> new NormativeChannelLayout();
             case "simple" -> new SimpleLayout();
-            default -> throw new IllegalArgumentException("Unknown channel layout: " + name);
+            default -> {
+                log.errorf("Unknown channel-layout '%s' — valid values: normative, simple", name);
+                throw new IllegalArgumentException("Unknown channel layout: " + name);
+            }
         };
     }
 }

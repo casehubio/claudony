@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface CaseChannelLayout {
 
+    /** @param definition the case definition; may be {@code null} if not available at channel-open time */
     List<ChannelSpec> channelsFor(UUID caseId, CaseDefinition definition);
 
     record ChannelSpec(
