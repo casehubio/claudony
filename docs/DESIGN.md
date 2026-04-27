@@ -32,7 +32,18 @@ claudony-casehub — dev.claudony.casehub
 ├── ClaudonyWorkerProvisioner       — WorkerProvisioner SPI: creates tmux sessions
 ├── ClaudonyCaseChannelProvider     — CaseChannelProvider SPI: Qhorus-backed channels
 ├── ClaudonyWorkerContextProvider   — WorkerContextProvider SPI: lineage + channel context
-└── ClaudonyWorkerStatusListener    — WorkerStatusListener SPI: lifecycle → SessionRegistry
+├── ClaudonyWorkerStatusListener    — WorkerStatusListener SPI: lifecycle → SessionRegistry
+├── WorkerSessionMapping            — role↔session bridge (caseId:role→sessionId; role→sessionId fallback)
+├── CaseChannelLayout               — SPI: List<ChannelSpec> channelsFor(caseId, definition)
+│                                     ChannelSpec: purpose, ChannelSemantic, allowedTypes, description
+├── NormativeChannelLayout          — default: work (APPEND, all types) / observe (APPEND, EVENT) /
+│                                     oversight (APPEND, QUERY+COMMAND)
+├── SimpleLayout                    — 2-channel: work + observe only (no human oversight)
+├── MeshParticipationStrategy       — SPI: MeshParticipation strategyFor(workerId, context)
+│                                     MeshParticipation enum: ACTIVE | REACTIVE | SILENT
+├── ActiveParticipationStrategy     — default: register + STATUS + periodic check_messages
+├── ReactiveParticipationStrategy   — engage only when directly addressed; skip registration
+└── SilentParticipationStrategy     — no mesh participation
 
 dev.claudony — claudony-core + claudony-app
 ├── config/
@@ -291,7 +302,7 @@ Schema versioning is **Flyway-managed** — `database.generation` (Hibernate's a
 
 ## Testing
 
-**339 tests passing** (as of 2026-04-27, excluding failures due to pre-existing issues). Three layers:
+**377 tests passing** (as of 2026-04-27, all modules). Three layers:
 - **Unit tests** — plain JUnit, no Quarkus container; stateful beans use `resetForTest()` + `@AfterEach`
 - **Integration tests** (`@QuarkusTest`) — full Quarkus context; all `@QuarkusTest` classes share one app instance; Qhorus data uses `InMemory*Store` implementations (from `quarkus-qhorus-testing` dependency), no real database needed
 - **E2E tests** — assert tmux session state (pane content, session existence), not Claude's output; LLM output is non-deterministic, tmux state is not
@@ -319,8 +330,8 @@ All four CaseHub worker SPIs are implemented in the `claudony-casehub` module (e
 | CaseHub SPI | Claudony Implementation | Uses |
 |---|---|---|
 | `WorkerProvisioner` | `ClaudonyWorkerProvisioner` | `TmuxService` + `SessionRegistry` — creates/terminates Claude tmux sessions prefixed `claudony-worker-{uuid}` |
-| `CaseChannelProvider` | `ClaudonyCaseChannelProvider` | Qhorus client — opens channels named `case-{caseId}/{purpose}` |
-| `WorkerContextProvider` | `ClaudonyWorkerContextProvider` | Builds Claude startup prompt with task description, lineage, and channel name |
+| `CaseChannelProvider` | `ClaudonyCaseChannelProvider` | Opens all channels defined by `CaseChannelLayout` on first touch (init-on-first-touch cache). Default: `NormativeChannelLayout` — work/observe/oversight channels, APPEND. Config: `claudony.casehub.channel-layout=normative\|simple` |
+| `WorkerContextProvider` | `ClaudonyWorkerContextProvider` | Builds worker context: task, lineage, channel, and `meshParticipation` stamped from `MeshParticipationStrategy`. Config: `claudony.casehub.mesh-participation=active\|reactive\|silent` |
 | `WorkerStatusListener` | `ClaudonyWorkerStatusListener` | tmux session lifecycle → `SessionRegistry` status transitions + `WorkerStalledEvent` CDI event |
 
 **Lineage:** `JpaCaseLineageQuery` (`@Alternative @Priority(1)`) queries `case_ledger_entry` for `WORKER_EXECUTION_COMPLETED` events via the `qhorus` persistence unit. Returns empty until casehub-engine fires worker lifecycle `CaseLifecycleEvent`s — currently missing (tracked upstream).
@@ -362,6 +373,32 @@ The side panel includes a human input that posts to the Qhorus channel as a `hum
 ### Worker ↔ Session ↔ Channel Correlation — Upcoming
 
 The triple link (tmux session ID ↔ CaseHub worker ID ↔ Qhorus channel name) is what makes the dashboard work — click a worker in the case graph, see their terminal and channel. Currently incomplete: `ClaudonyWorkerProvisioner.provision()` receives `caseId` from `ProvisionContext` but does not store it on `Session`. The `Session` model needs optional `caseWorkerId` and `qhorusChannel` fields before the case graph panel can function.
+
+### Agent Mesh — Shipped (partial, epic #86)
+
+Two SPIs control how Claudony-managed Claude agents engage with the Qhorus mesh:
+
+**`CaseChannelLayout`** — defines *what channels* open when a case starts. Built-in:
+- `NormativeChannelLayout` (default): `case-{id}/work` (all types), `case-{id}/observe` (EVENT only), `case-{id}/oversight` (QUERY+COMMAND)
+- `SimpleLayout`: `case-{id}/work` + `case-{id}/observe` only (no human oversight channel)
+
+**`MeshParticipationStrategy`** — defines *how* a worker engages at startup. Built-in:
+- `ActiveParticipationStrategy` (default): register → announce → check messages periodically
+- `ReactiveParticipationStrategy`: no registration; engage only when directly addressed
+- `SilentParticipationStrategy`: no mesh participation
+
+Both selected via config:
+
+```properties
+claudony.casehub.channel-layout=normative      # normative | simple
+claudony.casehub.mesh-participation=active     # active | reactive | silent
+```
+
+`WorkerContext.properties["meshParticipation"]` is always present — "ACTIVE", "REACTIVE", or "SILENT". The system prompt template (epic #86, issue #89) reads this to decide whether to include mesh startup instructions.
+
+**`WorkerSessionMapping`** — bridges CaseHub role names to Claudony tmux session UUIDs. Two maps: `caseId:role→sessionId` (precise) and `role→sessionId` (fallback). Limitation: concurrent same-role workers across cases (#93, upstream engine change needed).
+
+**Outstanding:** System prompt template (#89), `MeshParticipationStrategy.strategyFor()` currently receives `null` for `context` since the context isn't yet built at strategy-call time.
 
 ### Guard Rails
 
