@@ -146,4 +146,224 @@
     overlay.addEventListener('click', function (e) {
         if (e.target === overlay) closeCompose();
     });
+
+    // ── Channel panel ─────────────────────────────────────────────────────────
+
+    var chPanel      = document.getElementById('channel-panel');
+    var chSelect     = document.getElementById('ch-select');
+    var chFeed       = document.getElementById('ch-feed');
+    var chInput      = document.getElementById('ch-input');
+    var chTypeSelect = document.getElementById('ch-type-select');
+    var chSendBtn    = document.getElementById('ch-send-btn');
+    var chError      = document.getElementById('ch-error');
+    var chToggleBtn  = document.getElementById('ch-toggle-btn');
+    var chCloseBtn   = document.getElementById('ch-close-btn');
+
+    var chSelectedName = null;
+    var chLastId       = 0;
+    var chPollTimer    = null;
+    var POLL_MS        = 3000;
+
+    // Normative type badge classes (Layer 1 — illocutionary act)
+    var MSG_BADGE_LABELS = {
+        query:    'QUERY',
+        command:  'COMMAND',
+        response: 'RESPONSE',
+        status:   'STATUS',
+        decline:  'DECLINE',
+        handoff:  'HANDOFF',
+        done:     'DONE',
+        failure:  'FAILURE',
+        event:    'EVENT'
+    };
+
+    // Terminal types (obligation discharged/cancelled — mark visually distinct)
+    var TERMINAL_TYPES = { decline: 1, handoff: 1, done: 1, failure: 1 };
+
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function formatTime(iso) {
+        if (!iso) return '';
+        try {
+            var d = new Date(iso);
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        } catch (e) { return ''; }
+    }
+
+    function renderMessage(entry) {
+        var el = document.createElement('div');
+        el.className = 'ch-msg';
+
+        if (entry.type === 'EVENT') {
+            el.classList.add('ch-msg-event');
+            var agentId = escHtml(entry.agent_id || 'system');
+            var toolName = entry.tool_name ? ' · ' + escHtml(entry.tool_name) : '';
+            el.innerHTML =
+                '<div class="ch-msg-meta">' +
+                    '<span class="msg-badge msg-event">EVENT</span>' +
+                    '<span class="ch-msg-sender ch-sender-agent">' + agentId + '</span>' +
+                    '<span class="ch-msg-time">' + formatTime(entry.created_at) + '</span>' +
+                '</div>' +
+                '<div class="ch-msg-content">' + escHtml(entry.content || toolName || '') + '</div>';
+        } else {
+            var mtype = (entry.message_type || 'unknown').toLowerCase();
+            var label = MSG_BADGE_LABELS[mtype] || mtype.toUpperCase();
+            var sender = entry.sender || '';
+            var isHuman = sender === 'human' || sender.indexOf('human') === 0;
+            var isTerminal = TERMINAL_TYPES[mtype];
+
+            if (isHuman)   el.classList.add('ch-msg-human');
+            if (isTerminal) el.classList.add('ch-msg-terminal');
+
+            el.innerHTML =
+                '<div class="ch-msg-meta">' +
+                    '<span class="msg-badge msg-' + escHtml(mtype) + '">' + label + '</span>' +
+                    '<span class="ch-msg-sender ' + (isHuman ? 'ch-sender-human' : 'ch-sender-agent') + '">' +
+                        escHtml(sender) +
+                    '</span>' +
+                    '<span class="ch-msg-time">' + formatTime(entry.created_at) + '</span>' +
+                '</div>' +
+                '<div class="ch-msg-content">' + escHtml(entry.content || '') + '</div>';
+        }
+        return el;
+    }
+
+    function appendMessages(entries) {
+        var wasAtBottom = chFeed.scrollHeight - chFeed.scrollTop <= chFeed.clientHeight + 4;
+        entries.forEach(function (entry) {
+            chFeed.appendChild(renderMessage(entry));
+            if (entry.id && entry.id > chLastId) chLastId = entry.id;
+        });
+        if (wasAtBottom) chFeed.scrollTop = chFeed.scrollHeight;
+    }
+
+    function pollChannel() {
+        if (!chSelectedName) return;
+        var url = '/api/mesh/channels/' + encodeURIComponent(chSelectedName) +
+                  '/timeline?limit=50' + (chLastId ? '&after=' + chLastId : '');
+        fetch(url).then(function (r) {
+            if (!r.ok) return;
+            return r.json();
+        }).then(function (entries) {
+            if (entries && entries.length) appendMessages(entries);
+        }).catch(function () {});
+        chPollTimer = setTimeout(pollChannel, POLL_MS);
+    }
+
+    function selectChannel(name) {
+        clearTimeout(chPollTimer);
+        chSelectedName = name || null;
+        chLastId = 0;
+        chFeed.innerHTML = '';
+        chError.textContent = '';
+        chSendBtn.disabled = !name;
+
+        if (!name) return;
+
+        // Load initial history then start polling
+        var url = '/api/mesh/channels/' + encodeURIComponent(name) + '/timeline?limit=100';
+        fetch(url).then(function (r) { return r.json(); }).then(function (entries) {
+            if (entries && entries.length) {
+                appendMessages(entries);
+            } else {
+                var empty = document.createElement('div');
+                empty.className = 'ch-empty';
+                empty.textContent = 'No messages yet.';
+                chFeed.appendChild(empty);
+            }
+        }).catch(function () {}).finally(function () {
+            chPollTimer = setTimeout(pollChannel, POLL_MS);
+        });
+    }
+
+    function loadChannels() {
+        fetch('/api/mesh/channels').then(function (r) { return r.json(); }).then(function (channels) {
+            // Prefer channels matching the session name pattern
+            channels.sort(function (a, b) { return a.name.localeCompare(b.name); });
+            channels.forEach(function (ch) {
+                var opt = document.createElement('option');
+                opt.value = ch.name;
+                opt.textContent = ch.name + (ch.message_count ? ' (' + ch.message_count + ')' : '');
+                chSelect.appendChild(opt);
+            });
+            // Auto-select if channel name passed in URL
+            var preselect = params.get('channel');
+            if (preselect) {
+                chSelect.value = preselect;
+                selectChannel(preselect);
+                openPanel();
+            }
+        }).catch(function () {});
+    }
+
+    function openPanel() {
+        chPanel.classList.remove('collapsed');
+        loadChannels();
+    }
+
+    function closePanel() {
+        chPanel.classList.add('collapsed');
+        clearTimeout(chPollTimer);
+    }
+
+    chToggleBtn.addEventListener('click', function () {
+        if (chPanel.classList.contains('collapsed')) {
+            openPanel();
+        } else {
+            closePanel();
+        }
+    });
+
+    chCloseBtn.addEventListener('click', closePanel);
+
+    chSelect.addEventListener('change', function () {
+        selectChannel(chSelect.value || null);
+    });
+
+    chInput.addEventListener('input', function () {
+        chSendBtn.disabled = !chSelectedName || !chInput.value.trim();
+    });
+
+    chInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            chSendBtn.click();
+        }
+    });
+
+    chSendBtn.addEventListener('click', function () {
+        var content = chInput.value.trim();
+        var type = chTypeSelect.value;
+        if (!content || !chSelectedName) return;
+
+        chSendBtn.disabled = true;
+        chError.textContent = '';
+
+        fetch('/api/mesh/channels/' + encodeURIComponent(chSelectedName) + '/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content, type: type })
+        }).then(function (r) {
+            if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.status); });
+            chInput.value = '';
+            chSendBtn.disabled = true;
+        }).catch(function (err) {
+            chError.textContent = err.message || 'Send failed.';
+            chSendBtn.disabled = false;
+        });
+    });
+
+    // Ctrl+K toggles the channel panel
+    document.addEventListener('keydown', function (e) {
+        if (e.ctrlKey && e.key === 'k') {
+            e.preventDefault();
+            chToggleBtn.click();
+        }
+    });
 })();

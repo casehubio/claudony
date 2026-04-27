@@ -38,7 +38,7 @@ public class MeshResource {
     record MeshConfig(String strategy, int interval) {}
 
     private static final Set<String> VALID_HUMAN_TYPES =
-            Set.of("query", "command", "response", "status", "decline", "handoff", "done");
+            Set.of("query", "command", "response", "status", "decline", "handoff", "done", "event");
 
     record PostMessageRequest(String content, String type) {}
 
@@ -64,9 +64,10 @@ public class MeshResource {
     @Path("/channels/{name}/timeline")
     public List<Map<String, Object>> timeline(
             @PathParam("name") String name,
+            @QueryParam("after") Long after,
             @QueryParam("limit") @DefaultValue("50") int limit) {
         try {
-            return qhorusMcpTools.getChannelTimeline(name, null, limit);
+            return qhorusMcpTools.getChannelTimeline(name, after, limit);
         } catch (IllegalArgumentException | ToolCallException e) {
             // QhorusMcpTools @WrapBusinessError wraps IllegalArgumentException (unknown channel)
             // and IllegalStateException (paused/ACL-blocked) into ToolCallException before

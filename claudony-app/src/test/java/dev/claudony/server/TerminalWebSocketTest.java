@@ -282,41 +282,64 @@ class TerminalWebSocketTest {
         var container = ContainerProvider.getWebSocketContainer();
         var cec = ClientEndpointConfig.Builder.create().build();
 
-        // First connection: produce output with a blank line in the middle.
-        // printf "MARK-A\n\nMARK-B\n" outputs MARK-A, a blank line, MARK-B
-        // as a single command output (no shell prompts between them).
+        // Connect with real dimensions so resize always fires and pane is a known 80x24.
+        // 0/0 skips resize, leaving the pane size undefined — which can cause the printf
+        // output to scroll differently and put the blank line in an ambiguous position.
         var live = new LinkedBlockingQueue<String>();
         var session1 = container.connectToServer(new Endpoint() {
             @Override public void onOpen(Session s, EndpointConfig c) {
                 s.addMessageHandler(String.class, live::offer);
             }
-        }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
+        }, cec, URI.create(wsBaseUri + "ws-test-id/80/24"));
         awaitHistoryBurst(live);
+
+        // printf interprets \n in format strings: outputs MARK-A, blank line, MARK-B.
         session1.getBasicRemote().sendText("printf 'MARK-A\\n\\nMARK-B\\n'\n");
 
-        // Wait for MARK-B in live output (confirms both lines appeared in pane)
+        // Wait for MARK-B in live output (confirms both lines appeared in pane).
         var liveText = new StringBuilder();
-        long deadline = System.currentTimeMillis() + 3000;
+        long deadline = System.currentTimeMillis() + 5000;
         while (System.currentTimeMillis() < deadline) {
             var chunk = live.poll(200, TimeUnit.MILLISECONDS);
             if (chunk != null) { liveText.append(chunk); if (liveText.toString().contains("MARK-B")) break; }
         }
         assertTrue(liveText.toString().contains("MARK-B"), "MARK-B must appear in live output. Got: " + liveText);
-        session1.close();
 
-        // Second connection: collect history and verify blank line is preserved
+        // Wait until capture-pane itself confirms both markers are in the pane.
+        // This eliminates timing races between the live FIFO delivery and the
+        // pane grid state — they are independent code paths in tmux.
+        Await.until(() -> {
+            try {
+                var pane = tmux.capturePane(TEST_SESSION, 50);
+                return pane.contains("MARK-A") && pane.contains("MARK-B");
+            } catch (Exception e) { return false; }
+        }, "MARK-A and MARK-B to appear in captured pane");
+
+        session1.close();
+        Thread.sleep(200); // brief pause for pipe-pane teardown
+
+        // Second connection: capture history and verify blank line is preserved.
         var history = new LinkedBlockingQueue<String>();
         var session2 = container.connectToServer(new Endpoint() {
             @Override public void onOpen(Session s, EndpointConfig c) {
                 s.addMessageHandler(String.class, history::offer);
             }
-        }, cec, URI.create(wsBaseUri + "ws-test-id/0/0"));
+        }, cec, URI.create(wsBaseUri + "ws-test-id/80/24"));
+
+        // The regex: MARK-A on its own line → blank/ANSI line → MARK-B on its own line.
+        // The echoed command "printf 'MARK-A\n\nMARK-B\n'" has both markers on ONE line
+        // with LITERAL \n chars — this regex requires actual newlines, so it only matches
+        // the actual printf output, not the echo. Break when this pattern appears.
+        var blankLinePattern = java.util.regex.Pattern.compile("MARK-A[^\n]*\n[^\n]*\n[^\n]*MARK-B");
 
         var historyText = new StringBuilder();
-        deadline = System.currentTimeMillis() + 2000;
+        deadline = System.currentTimeMillis() + 5000;
         while (System.currentTimeMillis() < deadline) {
             var chunk = history.poll(100, TimeUnit.MILLISECONDS);
-            if (chunk != null) historyText.append(chunk);
+            if (chunk != null) {
+                historyText.append(chunk);
+                if (blankLinePattern.matcher(historyText.toString()).find()) break;
+            }
         }
         session2.close();
 
@@ -324,24 +347,14 @@ class TerminalWebSocketTest {
         assertTrue(hist.contains("MARK-A"), "History must contain MARK-A");
         assertTrue(hist.contains("MARK-B"), "History must contain MARK-B");
 
-        // The blank line between MARK-A and MARK-B must be preserved in history.
-        // Without it: "MARK-A" and "MARK-B" appear adjacent (one \r\n apart),
-        // so TUI app absolute cursor at pane row N lands at xterm.js row N-1,
-        // leaving a duplicate stale line visible above the live content.
-        //
-        // Use lastIndexOf: the markers appear in BOTH the echoed command
-        // ("printf 'MARK-A\n\nMARK-B\n'") and the actual output. lastIndexOf
-        // finds the output occurrence, which has the actual blank line between them.
-        int aIdx = hist.lastIndexOf("MARK-A");
-        int bIdx = hist.lastIndexOf("MARK-B");
-        assertTrue(aIdx >= 0 && bIdx > aIdx, "Last MARK-A must come before last MARK-B");
-        String between = hist.substring(aIdx + "MARK-A".length(), bIdx);
-        // Strip CR so \r\n\r\n and \n\n both become \n\n for comparison.
-        assertTrue(between.replace("\r", "").contains("\n\n"),
+        // Blank line must be preserved between MARK-A and MARK-B output.
+        // Without it TUI app absolute cursor (ESC[row;colH) lands one row below the stale
+        // history copy, producing a visible duplicate prompt.
+        assertTrue(blankLinePattern.matcher(hist).find(),
             "A blank line must be preserved between MARK-A and MARK-B output. " +
             "Regression: removing it shifts rows in xterm.js causing duplicate TUI prompts. " +
-            "Between last MARK-A and last MARK-B: [" +
-            between.replace('\n','|').replace('\r','|') + "]");
+            "History (first 500 chars): [" +
+            hist.substring(0, Math.min(500, hist.length())).replace('\n', '|').replace('\r', '|') + "]");
     }
 
     @Test

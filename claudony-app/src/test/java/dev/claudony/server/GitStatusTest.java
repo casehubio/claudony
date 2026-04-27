@@ -75,6 +75,6 @@ class GitStatusTest {
             .statusCode(200)
             .body("gitRepo", equalTo(true))
             .body("branch", not(emptyOrNullString()))
-            .body("githubRepo", equalTo("mdproctor/claudony"));
+            .body("githubRepo", equalTo("casehubio/claudony"));
     }
 }

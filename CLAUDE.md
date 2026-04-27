@@ -266,12 +266,12 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**334 tests passing** (as of 2026-04-26, excluding pre-existing failures): 38 in `claudony-casehub` + 296 in `claudony-app`.
+**334 tests passing** (as of 2026-04-27): 38 in `claudony-casehub` + 296 in `claudony-app`. One known failure: `McpServerIntegrationTest` (5 tests) requires a real server on port 7777 — not suitable for unit test runs.
 
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub-ledger -am \
-  -f /Users/mdproctor/dev/casehub-engine/pom.xml
+  -f /Users/mdproctor/claude/casehub-engine/pom.xml
 ```
 
 `claudony-casehub` tests:

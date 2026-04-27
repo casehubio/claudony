@@ -1,5 +1,6 @@
 package dev.claudony.server.fleet;
 
+import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
@@ -18,8 +19,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 @QuarkusTest
 class ProxyWebSocketTest {
 
-    private static final String WS_BASE = "ws://localhost:8081";
+    @TestHTTPResource("/ws/proxy/")
+    URI wsProxyBase;
+
     private static final String API_KEY = "test-api-key-do-not-use-in-prod";
+
+    private URI wsProxy(String path) {
+        // TestHTTPResource gives http://...; convert to ws://
+        String base = wsProxyBase.toString().replaceFirst("^http", "ws");
+        return URI.create(base + path);
+    }
 
     @Inject PeerRegistry registry;
 
@@ -41,7 +50,7 @@ class ProxyWebSocketTest {
                 .newWebSocketBuilder()
                 .header("X-Api-Key", API_KEY)
                 .buildAsync(
-                        URI.create(WS_BASE + "/ws/proxy/unknown-peer-id/any-session/80/24"),
+                        wsProxy("unknown-peer-id/any-session/80/24"),
                         new WebSocket.Listener() {
                             @Override
                             public CompletionStage<?> onClose(WebSocket ws, int code, String reason) {
@@ -70,7 +79,7 @@ class ProxyWebSocketTest {
             HttpClient.newHttpClient()
                     .newWebSocketBuilder()
                     .buildAsync(
-                            URI.create(WS_BASE + "/ws/proxy/any-peer/any-session/80/24"),
+                            wsProxy("any-peer/any-session/80/24"),
                             new WebSocket.Listener() {
                                 @Override
                                 public CompletionStage<?> onClose(WebSocket ws, int code, String reason) {
@@ -105,7 +114,7 @@ class ProxyWebSocketTest {
                 .newWebSocketBuilder()
                 .header("X-Api-Key", API_KEY)
                 .buildAsync(
-                        URI.create(WS_BASE + "/ws/proxy/proxy-test-peer/any-session/80/24"),
+                        wsProxy("proxy-test-peer/any-session/80/24"),
                         new WebSocket.Listener() {
                             @Override
                             public CompletionStage<?> onClose(WebSocket ws, int code, String reason) {
