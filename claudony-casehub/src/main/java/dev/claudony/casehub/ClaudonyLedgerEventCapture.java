@@ -2,7 +2,7 @@ package dev.claudony.casehub;
 
 import io.casehub.engine.internal.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
-import io.quarkiverse.ledger.runtime.model.ActorType;
+import io.quarkiverse.ledger.runtime.model.ActorTypeResolver;
 import io.quarkiverse.ledger.runtime.model.LedgerEntryType;
 import io.quarkiverse.ledger.runtime.persistence.LedgerPersistenceUnit;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -62,7 +62,7 @@ public class ClaudonyLedgerEventCapture {
             entry.eventType = event.eventType();
             entry.caseStatus = event.caseStatus();
             entry.actorId = event.actorId() != null ? event.actorId() : "system";
-            entry.actorType = deriveActorType(event.actorId());
+            entry.actorType = ActorTypeResolver.resolve(event.actorId());
             entry.actorRole = event.actorRole() != null ? event.actorRole() : "System";
             entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
@@ -87,16 +87,4 @@ public class ClaudonyLedgerEventCapture {
         return result == null ? 1 : result + 1;
     }
 
-    private ActorType deriveActorType(String actorId) {
-        if (actorId == null) {
-            return ActorType.SYSTEM;
-        }
-        if (actorId.contains(":") || actorId.contains("@")) {
-            return ActorType.AGENT;
-        }
-        if (actorId.equals("system")) {
-            return ActorType.SYSTEM;
-        }
-        return ActorType.HUMAN;
-    }
 }
