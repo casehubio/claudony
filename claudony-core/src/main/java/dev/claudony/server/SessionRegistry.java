@@ -5,6 +5,8 @@ import dev.claudony.server.model.SessionStatus;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Comparator;
+import java.util.List;
 
 @ApplicationScoped
 public class SessionRegistry {
@@ -33,5 +35,12 @@ public class SessionRegistry {
 
     public void touch(String id) {
         sessions.computeIfPresent(id, (k, s) -> s.withLastActive());
+    }
+
+    public List<Session> findByCaseId(String caseId) {
+        return sessions.values().stream()
+                .filter(s -> s.caseId().map(caseId::equals).orElse(false))
+                .sorted(Comparator.comparing(Session::createdAt))
+                .toList();
     }
 }

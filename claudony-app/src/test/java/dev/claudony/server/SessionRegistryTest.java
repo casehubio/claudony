@@ -6,7 +6,9 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.*;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
@@ -79,5 +81,41 @@ class SessionRegistryTest {
     @Test
     void touchOnUnknownIdIsNoOp() {
         registry.touch("nonexistent-id"); // must not throw
+    }
+
+    @Test
+    void findByCaseId_returnsSessionsWithMatchingCaseId() {
+        var now = Instant.now();
+        var s1 = new Session("s1", "w1", "/tmp", "claude", SessionStatus.IDLE,
+                now.minusSeconds(10), now.minusSeconds(10), Optional.empty(),
+                Optional.of("case-x"), Optional.of("researcher"));
+        var s2 = new Session("s2", "w2", "/tmp", "claude", SessionStatus.ACTIVE,
+                now, now, Optional.empty(),
+                Optional.of("case-x"), Optional.of("coder"));
+        var s3 = new Session("s3", "w3", "/tmp", "claude", SessionStatus.IDLE,
+                now, now, Optional.empty(),
+                Optional.of("case-y"), Optional.of("reviewer"));
+        registry.register(s1);
+        registry.register(s2);
+        registry.register(s3);
+
+        var result = registry.findByCaseId("case-x");
+        assertThat(result).hasSize(2)
+                .extracting(Session::id)
+                .containsExactly("s1", "s2"); // ordered by createdAt
+    }
+
+    @Test
+    void findByCaseId_returnsEmptyForUnknownCaseId() {
+        assertTrue(registry.findByCaseId("nonexistent-case").isEmpty());
+    }
+
+    @Test
+    void findByCaseId_excludesSessionsWithNoCaseId() {
+        var now = Instant.now();
+        var standalone = new Session("s-alone", "w1", "/tmp", "claude", SessionStatus.IDLE,
+                now, now, Optional.empty(), Optional.empty(), Optional.empty());
+        registry.register(standalone);
+        assertTrue(registry.findByCaseId("case-z").isEmpty());
     }
 }

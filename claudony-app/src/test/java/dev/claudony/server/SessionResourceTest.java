@@ -1,10 +1,14 @@
 package dev.claudony.server;
 
+import dev.claudony.server.model.Session;
+import dev.claudony.server.model.SessionStatus;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import jakarta.inject.Inject;
+import java.time.Instant;
+import java.util.Optional;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -167,6 +171,24 @@ class SessionResourceTest {
         // Registry must still reflect B's original name
         given().when().get("/api/sessions/" + idB)
             .then().statusCode(200).body("name", equalTo("claudony-test-rename-conflict-b"));
+    }
+
+    @Test
+    @TestSecurity(user = "test", roles = "user")
+    void sessionResponseIncludesCaseIdAndRoleName() throws Exception {
+        var now = Instant.now();
+        var session = new Session("case-session-id", "claudony-test-case", "/tmp", "claude",
+                SessionStatus.IDLE, now, now, Optional.empty(),
+                Optional.of("test-case-123"), Optional.of("researcher"));
+        registry.register(session);
+
+        var response = given().get("/api/sessions/case-session-id").then()
+                .statusCode(200).extract().asString();
+
+        assertTrue(response.contains("\"caseId\":\"test-case-123\""), "caseId missing: " + response);
+        assertTrue(response.contains("\"roleName\":\"researcher\""), "roleName missing: " + response);
+
+        registry.remove("case-session-id");
     }
 
 }
