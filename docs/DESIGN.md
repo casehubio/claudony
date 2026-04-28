@@ -52,10 +52,11 @@ dev.claudony — claudony-core + claudony-app
 ├── config/
 │   └── ClaudonyConfig          — all @ConfigProperty bindings
 ├── server/
-│   ├── model/                  — Session, SessionStatus, request/response records
+│   ├── model/                  — Session (+ caseId, roleName for CaseHub workers),
+│   │                             SessionStatus, SessionResponse, request records
 │   ├── TmuxService             — ProcessBuilder wrappers for tmux commands
-│   ├── SessionRegistry         — in-memory ConcurrentHashMap session store
-│   ├── SessionResource         — REST /api/sessions (CRUD + resize)
+│   ├── SessionRegistry         — in-memory ConcurrentHashMap; findByCaseId() for case worker queries
+│   ├── SessionResource         — REST /api/sessions (CRUD + resize + ?caseId= filter)
 │   ├── TerminalWebSocket       — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup           — startup health checks, tmux bootstrap
 │   └── auth/
@@ -79,7 +80,9 @@ dev.claudony — claudony-core + claudony-app
 │       └── TerminalAdapterFactory — auto-detection (iterm2 | none)
 └── (frontend — served from META-INF/resources/)
     ├── dashboard               — session card list; PR/CI badges; service health badges
-    ├── terminal view           — xterm.js; compose overlay for multi-line input
+    ├── terminal view           — xterm.js; compose overlay for multi-line input;
+    │                             session.html has three-panel layout: case workers
+    │                             (left), terminal (centre), channel panel (right)
     └── auth pages              — WebAuthn registration/login flows
 ```
 
@@ -305,7 +308,7 @@ Schema versioning is **Flyway-managed** — `database.generation` (Hibernate's a
 
 ## Testing
 
-**407 tests passing** (as of 2026-04-27, all modules). Three layers:
+**419 tests passing** (as of 2026-04-28, all modules). Three layers:
 - **Unit tests** — plain JUnit, no Quarkus container; stateful beans use `resetForTest()` + `@AfterEach`
 - **Integration tests** (`@QuarkusTest`) — full Quarkus context; all `@QuarkusTest` classes share one app instance; Qhorus data uses `InMemory*Store` implementations (from `quarkus-qhorus-testing` dependency), no real database needed
 - **E2E tests** — assert tmux session state (pane content, session existence), not Claude's output; LLM output is non-deterministic, tmux state is not
@@ -373,9 +376,9 @@ The side panel includes a human input that posts to the Qhorus channel as a `hum
 
 **Design constraint:** Human messages need distinct visual treatment from agent messages. Plan for `sender_type: human | agent` on rendered messages.
 
-### Worker ↔ Session ↔ Channel Correlation — Upcoming
+### Worker ↔ Session ↔ Channel Correlation — Partial (#76 shipped)
 
-The triple link (tmux session ID ↔ CaseHub worker ID ↔ Qhorus channel name) is what makes the dashboard work — click a worker in the case graph, see their terminal and channel. Currently incomplete: `ClaudonyWorkerProvisioner.provision()` receives `caseId` from `ProvisionContext` but does not store it on `Session`. The `Session` model needs optional `caseWorkerId` and `qhorusChannel` fields before the case graph panel can function.
+The triple link (tmux session ID ↔ CaseHub worker ID ↔ Qhorus channel name) is what makes the dashboard work — click a worker in the case graph, see their terminal and channel. `Session` now carries `caseId` and `roleName` (stamped by `ClaudonyWorkerProvisioner.provision()`), and `SessionRegistry.findByCaseId()` retrieves workers ordered by `createdAt`. `GET /api/sessions?caseId=` exposes this to the UI. The case worker panel in `session.html` displays the worker list and supports click-to-switch. Remaining: the full case graph with transitions, and the `qhorusChannel` link from session to Qhorus.
 
 ### Agent Mesh — Shipped (partial, epic #86)
 

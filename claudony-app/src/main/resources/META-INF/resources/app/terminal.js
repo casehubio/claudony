@@ -376,8 +376,19 @@
     var activeCaseId     = null;
     var casePoller;
 
-    function openCasePanel() { casePanel.classList.remove('collapsed'); }
-    function closeCasePanel() { casePanel.classList.add('collapsed'); }
+    function openCasePanel() {
+        casePanel.classList.remove('collapsed');
+        if (activeCaseId && !casePoller) {
+            pollWorkers();
+            casePoller = setInterval(pollWorkers, 3000);
+        }
+    }
+
+    function closeCasePanel() {
+        clearInterval(casePoller);
+        casePoller = null;
+        casePanel.classList.add('collapsed');
+    }
 
     workersToggleBtn.addEventListener('click', function () {
         if (casePanel.classList.contains('collapsed')) openCasePanel();
@@ -463,4 +474,8 @@
         .catch(function () {
             showCasePlaceholder('No case assigned.');
         });
+
+    window.addEventListener('beforeunload', function () {
+        if (casePoller) clearInterval(casePoller);
+    });
 })();

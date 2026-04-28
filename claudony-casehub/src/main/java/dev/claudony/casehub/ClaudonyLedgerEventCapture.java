@@ -62,7 +62,7 @@ public class ClaudonyLedgerEventCapture {
             entry.eventType = event.eventType();
             entry.caseStatus = event.caseStatus();
             entry.actorId = event.actorId() != null ? event.actorId() : "system";
-            entry.actorType = ActorTypeResolver.resolve(event.actorId());
+            entry.actorType = ActorTypeResolver.resolve(entry.actorId);
             entry.actorRole = event.actorRole() != null ? event.actorRole() : "System";
             entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 

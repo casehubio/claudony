@@ -160,9 +160,12 @@ Virtual threads (`Thread.ofVirtual()`) work fine on Java 26 with release=21.
 claudony-core/src/main/java/dev/claudony/
 ├── config/ClaudonyConfig.java          — all config properties
 └── server/
-    ├── model/                          — Session, SessionStatus, SessionExpiredEvent
+    ├── model/                          — Session (id, name, workingDir, command, status, createdAt,
+    │                                       lastActive, expiryPolicy, caseId, roleName),
+    │                                       SessionStatus, SessionExpiredEvent
     ├── TmuxService.java                — ProcessBuilder wrappers for tmux commands
-    ├── SessionRegistry.java            — in-memory ConcurrentHashMap session store
+    ├── SessionRegistry.java            — in-memory ConcurrentHashMap session store;
+                                            findByCaseId(caseId) returns workers ordered by createdAt
     └── expiry/                         — ExpiryPolicy SPI + implementations + scheduler
 
 claudony-casehub/src/main/java/dev/claudony/casehub/
@@ -304,7 +307,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**409 tests passing** (as of 2026-04-28, all modules): 118 in `claudony-casehub` + 291 in `claudony-app`. Zero failures, zero errors.
+**419 tests passing** (as of 2026-04-28, all modules): 119 in `claudony-casehub` + 300 in `claudony-app`. Zero failures, zero errors.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -322,7 +325,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 
 `claudony-casehub` tests:
 - `WorkerCommandResolverTest` — capability-to-command resolution, default fallback
-- `ClaudonyWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness
+- `ClaudonyWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness, caseId/roleName stamped
 - `ClaudonyCaseChannelProviderTest` — Qhorus channel creation, send, list filtering
 - `ClaudonyWorkerContextProviderTest` — lineage, channel, clean-start, missing caseId
 - `ClaudonyWorkerStatusListenerTest` — ACTIVE/IDLE/FAULTED lifecycle, stall event
@@ -335,7 +338,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 
 `claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint
-- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry, SessionResource, TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch())
+- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch())
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
 - `server/expiry/` — ExpiryPolicyRegistryTest, UserInteractionExpiryPolicyTest, TerminalOutputExpiryPolicyTest, StatusAwareExpiryPolicyTest, SessionIdleSchedulerTest
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
@@ -343,7 +346,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — CDI event→ledger→lineage round-trip: fires CaseLifecycleEvent, verifies ClaudonyLedgerEventCapture writes and JpaCaseLineageQuery reads back WorkerSummary
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
-- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (8: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
+- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (8: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K), CaseWorkerPanelE2ETest (3: standalone placeholder, CaseHub auto-expand + worker list, click-to-switch) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
 
 **Browser test hook convention:** JavaScript that should only run during Playwright tests is gated behind `window.__CLAUDONY_TEST_MODE__`. Tests set it via `page.addInitScript("window.__CLAUDONY_TEST_MODE__ = true;")` before navigation. Never expose test hooks unconditionally.
 
