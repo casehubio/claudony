@@ -649,7 +649,14 @@
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-core,claudony-casehub,claudony-app --also-make -Dtest=SessionRegistryTest -Dsurefire.failIfNoSpecifiedTests=false)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make -Dtest=SessionResourceTest#sessionResponseIncludesCaseIdAndRoleName -Dsurefire.failIfNoSpecifiedTests=false)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make -Dtest=SessionResourceTest -Dsurefire.failIfNoSpecifiedTests=false)",
-      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make)"
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-casehub -Dtest=ClaudonyWorkerProvisionerTest#provision_stampsSessionWithCaseIdAndRoleName)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dtest=SessionResourceTest#listByCaseId_returnsOnlyMatchingSessions)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app -Dtest=SessionResourceTest#listByCaseId_returnsOnlyMatchingSessions)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make -Dtest=SessionResourceTest#listByCaseId_returnsOnlyMatchingSessions)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SessionResourceTest#listByCaseId_returnsOnlyMatchingSessions)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SessionResourceTest)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app -Dtest=SessionResourceTest)"
     ]
   }
 }

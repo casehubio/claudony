@@ -47,7 +47,15 @@ public class SessionResource {
     @Inject ExpiryPolicyRegistry policyRegistry;
 
     @GET
-    public List<SessionResponse> list(@QueryParam("local") @DefaultValue("false") boolean localOnly) {
+    public List<SessionResponse> list(
+            @QueryParam("local") @DefaultValue("false") boolean localOnly,
+            @QueryParam("caseId") String caseId) {
+        if (caseId != null) {
+            return registry.findByCaseId(caseId).stream()
+                    .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
+                    .toList();
+        }
+
         // Local sessions — always returned
         var result = new ArrayList<>(registry.all().stream()
                 .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
