@@ -657,7 +657,11 @@
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SessionResourceTest#listByCaseId_returnsOnlyMatchingSessions)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SessionResourceTest)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app -Dtest=SessionResourceTest)",
-      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app -Dtest=StaticFilesTest)"
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app -Dtest=StaticFilesTest)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn clean test -pl claudony-app -Dtest=StaticFilesTest -q)",
+      "Bash(env)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn help:describe -Dplugin=org.apache.maven.plugins:maven-compiler-plugin)",
+      "Bash(node -c claudony-app/src/main/resources/META-INF/resources/app/terminal.js)"
     ]
   }
 }
