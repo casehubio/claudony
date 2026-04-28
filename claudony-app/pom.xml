@@ -58,6 +58,14 @@
       <version>0.2-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
+    <!-- casehub-testing: in-memory CaseInstanceRepository + TestCaseMetaModelRepository +
+         WorkResultSubmitter for QuarkusTest-based CaseHub integration tests -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-testing</artifactId>
+      <version>0.2-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
     <!-- JDBC driver for Qhorus + ledger tables -->
     <dependency>
       <groupId>io.quarkus</groupId>

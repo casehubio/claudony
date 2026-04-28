@@ -34,7 +34,7 @@ public class JpaCaseLineageQuery implements CaseLineageQuery {
     public List<WorkerSummary> findCompletedWorkers(UUID caseId) {
         List<CaseLedgerEntry> completed = em.createQuery(
                         "SELECT e FROM CaseLedgerEntry e " +
-                        "WHERE e.caseId = :caseId AND e.eventType = 'WORKER_EXECUTION_COMPLETED' " +
+                        "WHERE e.caseId = :caseId AND e.eventType = 'WorkerExecutionCompleted' " +
                         "ORDER BY e.occurredAt ASC",
                         CaseLedgerEntry.class)
                 .setParameter("caseId", caseId)
@@ -55,7 +55,7 @@ public class JpaCaseLineageQuery implements CaseLineageQuery {
         return em.createQuery(
                         "SELECT e.occurredAt FROM CaseLedgerEntry e " +
                         "WHERE e.caseId = :caseId AND e.actorId = :actorId " +
-                        "AND e.eventType = 'WORKER_EXECUTION_STARTED' AND e.occurredAt <= :before " +
+                        "AND e.eventType = 'WorkerExecutionStarted' AND e.occurredAt <= :before " +
                         "ORDER BY e.occurredAt DESC",
                         Instant.class)
                 .setParameter("caseId", caseId)

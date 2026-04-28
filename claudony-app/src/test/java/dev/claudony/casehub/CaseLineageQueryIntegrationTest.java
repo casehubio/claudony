@@ -44,8 +44,8 @@ class CaseLineageQueryIntegrationTest {
         final Instant startedAt = Instant.now().minus(10, ChronoUnit.MINUTES).truncatedTo(ChronoUnit.MILLIS);
         final Instant completedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-        persist(caseId, workerId, "WORKER_EXECUTION_STARTED", 1, startedAt);
-        persist(caseId, workerId, "WORKER_EXECUTION_COMPLETED", 2, completedAt);
+        persist(caseId, workerId, "WorkerExecutionStarted", 1, startedAt);
+        persist(caseId, workerId, "WorkerExecutionCompleted", 2, completedAt);
         em.flush();
 
         List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
@@ -73,10 +73,10 @@ class CaseLineageQueryIntegrationTest {
         final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         // Worker 1: started AND completed
-        persist(caseId, "worker-done", "WORKER_EXECUTION_STARTED", 1, now.minus(5, ChronoUnit.MINUTES));
-        persist(caseId, "worker-done", "WORKER_EXECUTION_COMPLETED", 2, now);
+        persist(caseId, "worker-done", "WorkerExecutionStarted", 1, now.minus(5, ChronoUnit.MINUTES));
+        persist(caseId, "worker-done", "WorkerExecutionCompleted", 2, now);
         // Worker 2: only started — must NOT appear
-        persist(caseId, "worker-running", "WORKER_EXECUTION_STARTED", 3, now.minus(2, ChronoUnit.MINUTES));
+        persist(caseId, "worker-running", "WorkerExecutionStarted", 3, now.minus(2, ChronoUnit.MINUTES));
         em.flush();
 
         List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
@@ -91,10 +91,10 @@ class CaseLineageQueryIntegrationTest {
         final UUID caseId = UUID.randomUUID();
         final Instant base = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-        persist(caseId, "worker-first",  "WORKER_EXECUTION_STARTED",   1, base.minus(20, ChronoUnit.MINUTES));
-        persist(caseId, "worker-first",  "WORKER_EXECUTION_COMPLETED",  2, base.minus(10, ChronoUnit.MINUTES));
-        persist(caseId, "worker-second", "WORKER_EXECUTION_STARTED",    3, base.minus(8, ChronoUnit.MINUTES));
-        persist(caseId, "worker-second", "WORKER_EXECUTION_COMPLETED",  4, base);
+        persist(caseId, "worker-first",  "WorkerExecutionStarted",   1, base.minus(20, ChronoUnit.MINUTES));
+        persist(caseId, "worker-first",  "WorkerExecutionCompleted",  2, base.minus(10, ChronoUnit.MINUTES));
+        persist(caseId, "worker-second", "WorkerExecutionStarted",    3, base.minus(8, ChronoUnit.MINUTES));
+        persist(caseId, "worker-second", "WorkerExecutionCompleted",  4, base);
         em.flush();
 
         List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
@@ -111,7 +111,7 @@ class CaseLineageQueryIntegrationTest {
         final Instant completedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         // Only a COMPLETED entry — no corresponding STARTED entry
-        persist(caseId, "worker-x", "WORKER_EXECUTION_COMPLETED", 1, completedAt);
+        persist(caseId, "worker-x", "WorkerExecutionCompleted", 1, completedAt);
         em.flush();
 
         List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);

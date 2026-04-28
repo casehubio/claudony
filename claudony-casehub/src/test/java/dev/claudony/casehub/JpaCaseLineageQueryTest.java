@@ -36,7 +36,7 @@ class JpaCaseLineageQueryTest {
 
     @Test
     void returnsEmptyWhenNoLedgerEntries() {
-        when(em.createQuery(contains("WORKER_EXECUTION_COMPLETED"), eq(CaseLedgerEntry.class)))
+        when(em.createQuery(contains("WorkerExecutionCompleted"), eq(CaseLedgerEntry.class)))
                 .thenReturn(entryQuery);
         when(entryQuery.setParameter(anyString(), any())).thenReturn(entryQuery);
         when(entryQuery.getResultList()).thenReturn(List.of());
@@ -60,12 +60,12 @@ class JpaCaseLineageQueryTest {
         completed.eventType = "WORKER_EXECUTION_COMPLETED";
         completed.occurredAt = completedAt;
 
-        when(em.createQuery(contains("WORKER_EXECUTION_COMPLETED"), eq(CaseLedgerEntry.class)))
+        when(em.createQuery(contains("WorkerExecutionCompleted"), eq(CaseLedgerEntry.class)))
                 .thenReturn(entryQuery);
         when(entryQuery.setParameter(anyString(), any())).thenReturn(entryQuery);
         when(entryQuery.getResultList()).thenReturn(List.of(completed));
 
-        when(em.createQuery(contains("WORKER_EXECUTION_STARTED"), eq(Instant.class)))
+        when(em.createQuery(contains("WorkerExecutionStarted"), eq(Instant.class)))
                 .thenReturn(instantQuery);
         when(instantQuery.setParameter(anyString(), any())).thenReturn(instantQuery);
         when(instantQuery.setMaxResults(1)).thenReturn(instantQuery);
@@ -95,12 +95,12 @@ class JpaCaseLineageQueryTest {
         completed.eventType = "WORKER_EXECUTION_COMPLETED";
         completed.occurredAt = completedAt;
 
-        when(em.createQuery(contains("WORKER_EXECUTION_COMPLETED"), eq(CaseLedgerEntry.class)))
+        when(em.createQuery(contains("WorkerExecutionCompleted"), eq(CaseLedgerEntry.class)))
                 .thenReturn(entryQuery);
         when(entryQuery.setParameter(anyString(), any())).thenReturn(entryQuery);
         when(entryQuery.getResultList()).thenReturn(List.of(completed));
 
-        when(em.createQuery(contains("WORKER_EXECUTION_STARTED"), eq(Instant.class)))
+        when(em.createQuery(contains("WorkerExecutionStarted"), eq(Instant.class)))
                 .thenReturn(instantQuery);
         when(instantQuery.setParameter(anyString(), any())).thenReturn(instantQuery);
         when(instantQuery.setMaxResults(1)).thenReturn(instantQuery);
