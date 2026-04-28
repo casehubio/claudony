@@ -17,7 +17,9 @@ public record SessionResponse(
         String instanceUrl,   // null for local sessions; peer URL for remote sessions
         String instanceName,  // null for local sessions; peer name for remote sessions
         Boolean stale,        // null for local; true if from stale cache, false if live
-        String expiryPolicy) { // null if unknown (e.g. peer running older binary)
+        String expiryPolicy,  // null if unknown (e.g. peer running older binary)
+        String caseId,        // null for standalone sessions
+        String roleName) {    // null for standalone sessions
 
     /** Local session — fleet fields absent (NON_NULL serialization omits nulls). */
     public static SessionResponse from(Session session, int port, String effectivePolicy) {
@@ -26,13 +28,16 @@ public record SessionResponse(
                 session.status(), session.createdAt(), session.lastActive(),
                 "ws://localhost:" + port + "/ws/" + session.id(),
                 "http://localhost:" + port + "/app/session/" + session.id(),
-                null, null, null, effectivePolicy);
+                null, null, null, effectivePolicy,
+                session.caseId().orElse(null),
+                session.roleName().orElse(null));
     }
 
     /** Remote session from a peer — preserves the wsUrl/browserUrl pointing to the peer instance. */
     public SessionResponse withInstance(String peerUrl, String peerName, boolean isStale) {
         return new SessionResponse(
                 id, name, workingDir, command, status, createdAt, lastActive,
-                wsUrl, browserUrl, peerUrl, peerName, isStale, expiryPolicy);
+                wsUrl, browserUrl, peerUrl, peerName, isStale, expiryPolicy,
+                caseId, roleName);
     }
 }
