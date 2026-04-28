@@ -148,7 +148,7 @@ public class SessionResource {
         }
         var now = Instant.now();
         var session = new Session(id, name, workingDir, command, SessionStatus.IDLE, now, now,
-                Optional.ofNullable(req.expiryPolicy()));
+                Optional.ofNullable(req.expiryPolicy()), Optional.empty(), Optional.empty());
         try {
             tmux.createSession(name, workingDir, command);
             registry.register(session);
@@ -202,7 +202,7 @@ public class SessionResource {
                 }
                 var renamed = new Session(id, newTmuxName, session.workingDir(),
                         session.command(), session.status(), session.createdAt(), Instant.now(),
-                        session.expiryPolicy());
+                        session.expiryPolicy(), session.caseId(), session.roleName());
                 registry.register(renamed);
                 return Response.ok(SessionResponse.from(renamed, config.port(), resolvedPolicy(renamed))).build();
             } catch (IOException | InterruptedException e) {

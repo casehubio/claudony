@@ -67,6 +67,6 @@ class StatusAwareExpiryPolicyTest {
 
     private Session session(String name, Instant lastActive) {
         var now = Instant.now();
-        return new Session("id", name, "/tmp", "bash", SessionStatus.IDLE, now, lastActive, Optional.empty());
+        return new Session("id", name, "/tmp", "bash", SessionStatus.IDLE, now, lastActive, Optional.empty(), Optional.empty(), Optional.empty());
     }
 }

@@ -45,6 +45,6 @@ class UserInteractionExpiryPolicyTest {
     private Session sessionWith(Instant lastActive) {
         var now = Instant.now();
         return new Session("id", "name", "/tmp", "claude",
-                SessionStatus.IDLE, now, lastActive, Optional.empty());
+                SessionStatus.IDLE, now, lastActive, Optional.empty(), Optional.empty(), Optional.empty());
     }
 }

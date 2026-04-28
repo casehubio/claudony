@@ -35,7 +35,8 @@ class ServiceHealthTest {
         var session = new dev.claudony.server.model.Session(
             "test-svc-id", "claudony-test-svc", "/tmp",
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
-            java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty());
+            java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty(),
+            java.util.Optional.empty(), java.util.Optional.empty());
         registry.register(session);
 
         // Returns a JSON array (may be empty if no services are running on test ports)
@@ -51,7 +52,8 @@ class ServiceHealthTest {
         var session = new dev.claudony.server.model.Session(
             "test-svc-up-id", "claudony-test-svc-up", "/tmp",
             "bash", dev.claudony.server.model.SessionStatus.IDLE,
-            java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty());
+            java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty(),
+            java.util.Optional.empty(), java.util.Optional.empty());
         registry.register(session);
 
         // All returned entries must have up=true

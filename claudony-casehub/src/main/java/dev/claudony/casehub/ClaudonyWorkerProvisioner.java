@@ -84,7 +84,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         }
 
         var session = new Session(sessionId, sessionName, defaultWorkingDir, command,
-                SessionStatus.IDLE, Instant.now(), Instant.now(), Optional.empty());
+                SessionStatus.IDLE, Instant.now(), Instant.now(), Optional.empty(), Optional.empty(), Optional.empty());
         registry.register(session);
         sessionMapping.register(roleName, context.caseId(), sessionId);
 

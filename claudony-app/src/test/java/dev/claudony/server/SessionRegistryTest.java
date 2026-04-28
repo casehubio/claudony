@@ -28,7 +28,7 @@ class SessionRegistryTest {
     @Test
     void registerAndFindSession() {
         var now = Instant.now();
-        var session = new Session("id-1", "proj", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty());
+        var session = new Session("id-1", "proj", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty());
         registry.register(session);
         var found = registry.find("id-1");
         assertTrue(found.isPresent());
@@ -38,7 +38,7 @@ class SessionRegistryTest {
     @Test
     void removeSession() {
         var now = Instant.now();
-        registry.register(new Session("id-2", "proj2", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty()));
+        registry.register(new Session("id-2", "proj2", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty()));
         registry.remove("id-2");
         assertTrue(registry.find("id-2").isEmpty());
     }
@@ -46,15 +46,15 @@ class SessionRegistryTest {
     @Test
     void allReturnsAllSessions() {
         var now = Instant.now();
-        registry.register(new Session("id-3", "a", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty()));
-        registry.register(new Session("id-4", "b", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty()));
+        registry.register(new Session("id-3", "a", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty()));
+        registry.register(new Session("id-4", "b", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty()));
         assertEquals(2, registry.all().size());
     }
 
     @Test
     void updateSessionStatus() {
         var now = Instant.now();
-        registry.register(new Session("id-5", "proj", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty()));
+        registry.register(new Session("id-5", "proj", "/tmp", "claude", SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty()));
         registry.updateStatus("id-5", SessionStatus.ACTIVE);
         var updated = registry.find("id-5");
         assertTrue(updated.isPresent());
@@ -65,7 +65,7 @@ class SessionRegistryTest {
     void touchUpdatesLastActive() throws InterruptedException {
         var past = Instant.now().minusSeconds(60);
         registry.register(new Session("id-touch", "proj", "/tmp", "claude",
-                SessionStatus.IDLE, past, past, Optional.empty()));
+                SessionStatus.IDLE, past, past, Optional.empty(), Optional.empty(), Optional.empty()));
 
         Thread.sleep(10);
         registry.touch("id-touch");

@@ -111,6 +111,6 @@ class ClaudonyWorkerStatusListenerTest {
 
     private Session session(String id, SessionStatus status) {
         return new Session(id, ClaudonyWorkerStatusListener.SESSION_PREFIX + id, "/tmp", "claude",
-                status, Instant.now(), Instant.now(), Optional.empty());
+                status, Instant.now(), Instant.now(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 }

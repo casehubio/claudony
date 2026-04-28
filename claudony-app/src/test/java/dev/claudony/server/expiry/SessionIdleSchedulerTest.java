@@ -46,7 +46,7 @@ class SessionIdleSchedulerTest {
         tmux.createSession(EXPIRED_TMUX, System.getProperty("user.home"), "bash");
         var now = Instant.now();
         var session = new Session("exp-id", EXPIRED_TMUX, "/tmp", "bash",
-                SessionStatus.IDLE, now, now.minus(Duration.ofDays(8)), Optional.empty());
+                SessionStatus.IDLE, now, now.minus(Duration.ofDays(8)), Optional.empty(), Optional.empty(), Optional.empty());
         registry.register(session);
 
         scheduler.expiryCheck();
@@ -60,7 +60,7 @@ class SessionIdleSchedulerTest {
         tmux.createSession(ACTIVE_TMUX, System.getProperty("user.home"), "bash");
         var now = Instant.now();
         var session = new Session("active-id", ACTIVE_TMUX, "/tmp", "bash",
-                SessionStatus.IDLE, now, now, Optional.empty());
+                SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty());
         registry.register(session);
 
         scheduler.expiryCheck();
@@ -74,7 +74,7 @@ class SessionIdleSchedulerTest {
         tmux.createSession(EXPIRED_TMUX, System.getProperty("user.home"), "bash");
         var now = Instant.now();
         var session = new Session("evt-id", EXPIRED_TMUX, "/tmp", "bash",
-                SessionStatus.IDLE, now, now.minus(Duration.ofDays(8)), Optional.empty());
+                SessionStatus.IDLE, now, now.minus(Duration.ofDays(8)), Optional.empty(), Optional.empty(), Optional.empty());
         registry.register(session);
 
         scheduler.expiryCheck();
@@ -91,7 +91,7 @@ class SessionIdleSchedulerTest {
         var now = Instant.now();
         var session = new Session("pol-id", EXPIRED_TMUX, "/tmp", "bash",
                 SessionStatus.IDLE, now, now.minus(Duration.ofDays(8)),
-                Optional.of("terminal-output")); // policy override
+                Optional.of("terminal-output"), Optional.empty(), Optional.empty()); // policy override
         registry.register(session);
 
         scheduler.expiryCheck();

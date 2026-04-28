@@ -71,7 +71,7 @@ public class ServerStartup {
                 registry.register(new Session(
                         UUID.randomUUID().toString(), name,
                         "unknown", config.claudeCommand(),
-                        SessionStatus.IDLE, now, now, Optional.empty()));
+                        SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty()));
                 count++;
             }
             LOG.infof("Bootstrapped %d existing session(s) from tmux", count);

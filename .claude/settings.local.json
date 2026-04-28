@@ -632,7 +632,13 @@
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn clean test-compile)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn surefire:test -pl claudony-app)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dexcludes=\"**/CaseEngineRoundTripTest.java,**/TestResearcherCase.java\")",
-      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dexcludes=\"**/CaseEngineRoundTripTest.java,**/TestResearcherCase.java,**/ChannelPanelE2ETest.java\")"
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dexcludes=\"**/CaseEngineRoundTripTest.java,**/TestResearcherCase.java,**/ChannelPanelE2ETest.java\")",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dtest=SmokeTest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) python3 /Users/mdproctor/claude/claudony/scripts/validate_document.py /Users/mdproctor/claude/claudony/CLAUDE.md)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app -Dtest=SessionTest)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app --also-make -Dtest=SessionTest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-core,claudony-app -Dtest=SessionTest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -pl claudony-app -Dtest=SessionTest -Dsurefire.failIfNoSpecifiedTests=false)"
     ]
   }
 }

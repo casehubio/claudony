@@ -11,7 +11,7 @@ class SessionTest {
     void sessionHasRequiredFields() {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
-                "claude", SessionStatus.IDLE, now, now, Optional.empty());
+                "claude", SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty());
 
         assertEquals("id-1", session.id());
         assertEquals("myproject", session.name());
@@ -25,7 +25,7 @@ class SessionTest {
     void withStatusReturnsCopyWithUpdatedStatusAndPreservesExpiryPolicy() {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
-                "claude", SessionStatus.IDLE, now, now, Optional.of("terminal-output"));
+                "claude", SessionStatus.IDLE, now, now, Optional.of("terminal-output"), Optional.empty(), Optional.empty());
 
         var updated = session.withStatus(SessionStatus.ACTIVE);
 
@@ -38,7 +38,7 @@ class SessionTest {
     void withLastActivePreservesExpiryPolicy() {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
-                "claude", SessionStatus.IDLE, now, now, Optional.of("status-aware"));
+                "claude", SessionStatus.IDLE, now, now, Optional.of("status-aware"), Optional.empty(), Optional.empty());
 
         var updated = session.withLastActive();
 
@@ -51,5 +51,37 @@ class SessionTest {
         assertNotNull(SessionStatus.valueOf("ACTIVE"));
         assertNotNull(SessionStatus.valueOf("WAITING"));
         assertNotNull(SessionStatus.valueOf("IDLE"));
+    }
+
+    @Test
+    void caseIdAndRoleNameDefaultToEmpty() {
+        var now = Instant.now();
+        var session = new Session("id-1", "myproject", "/home/user/proj",
+                "claude", SessionStatus.IDLE, now, now, Optional.empty(),
+                Optional.empty(), Optional.empty());
+        assertTrue(session.caseId().isEmpty());
+        assertTrue(session.roleName().isEmpty());
+    }
+
+    @Test
+    void withStatusPreservesCaseIdAndRoleName() {
+        var now = Instant.now();
+        var session = new Session("id-1", "myproject", "/home/user/proj",
+                "claude", SessionStatus.IDLE, now, now, Optional.empty(),
+                Optional.of("case-abc"), Optional.of("researcher"));
+        var updated = session.withStatus(SessionStatus.ACTIVE);
+        assertEquals(Optional.of("case-abc"), updated.caseId());
+        assertEquals(Optional.of("researcher"), updated.roleName());
+    }
+
+    @Test
+    void withLastActivePreservesCaseIdAndRoleName() {
+        var now = Instant.now();
+        var session = new Session("id-1", "myproject", "/home/user/proj",
+                "claude", SessionStatus.IDLE, now, now, Optional.empty(),
+                Optional.of("case-abc"), Optional.of("coder"));
+        var updated = session.withLastActive();
+        assertEquals(Optional.of("case-abc"), updated.caseId());
+        assertEquals(Optional.of("coder"), updated.roleName());
     }
 }
