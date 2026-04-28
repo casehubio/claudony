@@ -703,7 +703,9 @@ Both tools should import the layered examples in this document as their canonica
 - `share_data(key, description, content)`
 - `get_shared_data(key)`
 - `list_ledger_entries(channelName, type_filter?, sender?, since?, after_id?)`
-- `create_channel(name, description, semantic, ...)`
+- `create_channel(name, description, semantic, barrier_contributors?, allowed_writers?, admin_instances?, rate_limit_per_channel?, rate_limit_per_instance?, allowed_types?)`
+
+**`allowed_types`** — Pass `"EVENT"` when creating the observe channel; `"QUERY,COMMAND"` for the oversight channel. Enforced server-side by `MessageTypePolicy` SPI.
 - `list_channels()`
 
 **Claudony configuration:**
