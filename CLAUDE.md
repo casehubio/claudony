@@ -172,7 +172,7 @@ claudony-casehub/src/main/java/dev/claudony/casehub/
 ├── EmptyCaseLineageQuery.java          — @DefaultBean no-op impl (swap for JPA impl when casehub DB configured)
 ├── ClaudonyWorkerProvisioner.java      — WorkerProvisioner SPI: creates tmux sessions
 ├── ClaudonyCaseChannelProvider.java    — CaseChannelProvider SPI: Qhorus-backed channels
-├── ClaudonyWorkerContextProvider.java  — WorkerContextProvider SPI: lineage + channel context
+├── ClaudonyWorkerContextProvider.java  — WorkerContextProvider SPI: lineage + channel context + systemPrompt
 ├── ClaudonyWorkerStatusListener.java   — WorkerStatusListener SPI: lifecycle → SessionRegistry
 ├── WorkerSessionMapping.java           — role↔session bridge: caseId:role→sessionId + role→sessionId fallback
 ├── JpaCaseLineageQuery.java            — @Alternative @Priority(1): queries case_ledger_entry via qhorus PU
@@ -182,7 +182,8 @@ claudony-casehub/src/main/java/dev/claudony/casehub/
 ├── MeshParticipationStrategy.java      — SPI: controls mesh engagement; MeshParticipation enum (ACTIVE/REACTIVE/SILENT)
 ├── ActiveParticipationStrategy.java    — default: register + STATUS + periodic check_messages
 ├── ReactiveParticipationStrategy.java  — engage only when directly addressed
-└── SilentParticipationStrategy.java    — no mesh participation
+├── SilentParticipationStrategy.java    — no mesh participation
+└── MeshSystemPromptTemplate.java       — package-private: generates ACTIVE/REACTIVE/SILENT prompt from channels + prior workers
 
 claudony-app/src/main/java/dev/claudony/
 ├── server/
@@ -302,7 +303,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**377 tests passing** (as of 2026-04-27, all modules): 91 in `claudony-casehub` + 286 in `claudony-app`. Zero failures, zero errors.
+**407 tests passing** (as of 2026-04-27, all modules): 117 in `claudony-casehub` + 290 in `claudony-app`. Zero failures, zero errors.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -328,6 +329,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `MeshParticipationStrategyTest` — ACTIVE/REACTIVE/SILENT strategy, robustness, correctness
 - `WorkerSessionMappingTest` — role↔session bridge lookups
 - `WorkerLifecycleSequenceTest` — full SPI lifecycle + meshParticipation in context
+- `MeshSystemPromptTemplateTest` — 18 unit tests: ACTIVE/REACTIVE full templates, SILENT omitted, channel names, prior workers, correctness
 - `JpaCaseLineageQueryTest` — JPA lineage query against qhorus PU
 
 `claudony-app` tests (in `claudony-app/`):
@@ -338,7 +340,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
 - `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest + proxy resize), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
-- `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile)
+- `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
 - `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
 
