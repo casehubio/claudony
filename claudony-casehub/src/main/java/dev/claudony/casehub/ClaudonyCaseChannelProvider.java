@@ -26,7 +26,12 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
     @Inject
     public ClaudonyCaseChannelProvider(QhorusMcpTools qhorusMcpTools, CaseHubConfig config) {
         this.qhorusMcpTools = qhorusMcpTools;
-        this.layout = selectLayout(config.channelLayout());
+        try {
+            this.layout = CaseChannelLayout.named(config.channelLayout());
+        } catch (IllegalArgumentException e) {
+            log.errorf("Unknown channel-layout '%s' — valid values: normative, simple", config.channelLayout());
+            throw e;
+        }
     }
 
     ClaudonyCaseChannelProvider(QhorusMcpTools qhorusMcpTools, CaseChannelLayout layout) {
@@ -91,14 +96,4 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
         return channelName.startsWith(prefix) ? channelName.substring(prefix.length()) : channelName;
     }
 
-    private static CaseChannelLayout selectLayout(String name) {
-        return switch (name) {
-            case "normative" -> new NormativeChannelLayout();
-            case "simple" -> new SimpleLayout();
-            default -> {
-                log.errorf("Unknown channel-layout '%s' — valid values: normative, simple", name);
-                throw new IllegalArgumentException("Unknown channel layout: " + name);
-            }
-        };
-    }
 }

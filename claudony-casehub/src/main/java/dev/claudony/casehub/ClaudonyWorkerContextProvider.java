@@ -31,7 +31,7 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
                                           CaseHubConfig config) {
         this(lineageQuery, channelProvider,
                 selectStrategy(config.meshParticipation()),
-                selectLayout(config.channelLayout()));
+                CaseChannelLayout.named(config.channelLayout()));
     }
 
     ClaudonyWorkerContextProvider(CaseLineageQuery lineageQuery,
@@ -110,14 +110,4 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
         };
     }
 
-    private static CaseChannelLayout selectLayout(String name) {
-        return switch (name) {
-            case "normative" -> new NormativeChannelLayout();
-            case "simple" -> new SimpleLayout();
-            default -> {
-                log.errorf("Unknown channel-layout '%s' — valid values: normative, simple", name);
-                throw new IllegalArgumentException("Unknown channel layout: " + name);
-            }
-        };
-    }
 }

@@ -220,6 +220,16 @@ class MeshSystemPromptTemplateTest {
                 .doesNotContain("case-" + CASE_ID + "/oversight");
     }
 
+    @Test
+    void reactive_emptyChannelSpecs_returnsPromptWithoutChannels() {
+        Optional<String> result = MeshSystemPromptTemplate.generate(
+                WORKER_ID, CAPABILITY, CASE_ID, List.of(),
+                List.of(), MeshParticipationStrategy.MeshParticipation.REACTIVE);
+
+        assertThat(result).isPresent();
+        assertThat(result.get()).doesNotContain("STARTUP:");
+    }
+
     // ── Correctness ───────────────────────────────────────────────────────
 
     @Test

@@ -12,6 +12,14 @@ public interface CaseChannelLayout {
     /** @param definition the case definition; may be {@code null} if not available at channel-open time */
     List<ChannelSpec> channelsFor(UUID caseId, CaseDefinition definition);
 
+    static CaseChannelLayout named(String configValue) {
+        return switch (configValue) {
+            case "normative" -> new NormativeChannelLayout();
+            case "simple" -> new SimpleLayout();
+            default -> throw new IllegalArgumentException("Unknown channel layout: " + configValue);
+        };
+    }
+
     record ChannelSpec(
             String purpose,
             ChannelSemantic semantic,

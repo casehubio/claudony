@@ -45,10 +45,9 @@ class MeshSystemPromptTemplate {
     private static String buildReactive(String capability, UUID caseId,
                                          List<CaseChannelLayout.ChannelSpec> channelSpecs,
                                          List<WorkerSummary> priorWorkers) {
-        List<CaseChannelLayout.ChannelSpec> workOnly = channelSpecs.stream()
-                .filter(s -> s.purpose().equals("work"))
+        List<CaseChannelLayout.ChannelSpec> channelsToShow = channelSpecs.stream()
+                .filter(s -> !s.purpose().equals("oversight"))
                 .toList();
-        List<CaseChannelLayout.ChannelSpec> channelsToShow = workOnly.isEmpty() ? channelSpecs : workOnly;
 
         return "You are a Claudony-managed agent working on case " + caseId + ".\n\n"
                 + "ROLE: " + capability + "\n\n"

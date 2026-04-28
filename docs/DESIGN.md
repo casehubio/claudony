@@ -46,7 +46,7 @@ claudony-casehub — dev.claudony.casehub
 ├── SilentParticipationStrategy     — no mesh participation
 └── MeshSystemPromptTemplate        — package-private: generates ACTIVE full template, REACTIVE reduced,
                                      SILENT returns empty. Channel names from CaseChannelLayout; prior
-                                     workers from JpaCaseLineageQuery. Stored in WorkerContext.properties["systemPrompt"]
+                                     workers from CaseLineageQuery. Stored in WorkerContext.properties["systemPrompt"]
 
 dev.claudony — claudony-core + claudony-app
 ├── config/
