@@ -15,10 +15,18 @@
         <span id="session-name">Session</span>
         <span id="status-badge" class="badge idle">connecting</span>
         <button id="compose-btn" class="compose-btn" title="Compose text (Ctrl+G)">Compose</button>
+        <button id="workers-toggle-btn" class="compose-btn" title="Toggle workers panel">Workers</button>
         <button id="ch-toggle-btn" class="compose-btn" title="Toggle channel panel (Ctrl+K)">Channels</button>
     </header>
 
     <div id="session-layout">
+        <aside id="case-panel" class="case-panel collapsed" aria-label="Case workers">
+            <div class="case-panel-header">
+                <span class="case-panel-title">Workers</span>
+                <button id="case-close-btn" class="ch-close-btn" title="Close">&#10005;</button>
+            </div>
+            <div id="case-worker-list" class="case-worker-list"></div>
+        </aside>
         <div id="terminal-container"></div>
 
         <aside id="channel-panel" class="channel-panel collapsed" aria-label="Qhorus channel">

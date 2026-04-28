@@ -366,4 +366,101 @@
             chToggleBtn.click();
         }
     });
+
+    // ── Case worker panel ─────────────────────────────────────────────────────
+
+    var casePanel        = document.getElementById('case-panel');
+    var caseWorkerList   = document.getElementById('case-worker-list');
+    var caseCloseBtn     = document.getElementById('case-close-btn');
+    var workersToggleBtn = document.getElementById('workers-toggle-btn');
+    var activeCaseId     = null;
+    var casePoller;
+
+    function openCasePanel() { casePanel.classList.remove('collapsed'); }
+    function closeCasePanel() { casePanel.classList.add('collapsed'); }
+
+    workersToggleBtn.addEventListener('click', function () {
+        if (casePanel.classList.contains('collapsed')) openCasePanel();
+        else closeCasePanel();
+    });
+    caseCloseBtn.addEventListener('click', closeCasePanel);
+
+    function workerTimeAgo(iso) {
+        var diff = Date.now() - new Date(iso).getTime();
+        var m = Math.floor(diff / 60000);
+        if (m < 1) return 'now';
+        if (m < 60) return m + 'm';
+        return Math.floor(m / 60) + 'h';
+    }
+
+    function workerDisplayName(w) {
+        return w.roleName || w.name.replace(/^claudony-worker-/, '').replace(/^claudony-/, '');
+    }
+
+    function renderWorkers(workers) {
+        caseWorkerList.innerHTML = '';
+        if (!workers || workers.length === 0) {
+            var ph = document.createElement('div');
+            ph.className = 'case-panel-placeholder';
+            ph.textContent = 'No workers found.';
+            caseWorkerList.appendChild(ph);
+            return;
+        }
+        workers.forEach(function (w) {
+            var row = document.createElement('div');
+            var status = (w.status || 'idle').toLowerCase();
+            row.className = 'case-worker-row' + (w.id === sessionId ? ' active-worker' : '');
+            row.innerHTML =
+                '<span class="worker-status-dot ' + status + '"></span>' +
+                '<span class="case-worker-name">' + workerDisplayName(w) + '</span>' +
+                '<span class="case-worker-time">' + workerTimeAgo(w.createdAt) + '</span>';
+            row.addEventListener('click', function () {
+                if (w.id === sessionId) return;
+                switchToWorker(w.id, workerDisplayName(w));
+            });
+            caseWorkerList.appendChild(row);
+        });
+    }
+
+    function pollWorkers() {
+        if (!activeCaseId) return;
+        fetch('/api/sessions?caseId=' + encodeURIComponent(activeCaseId))
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(renderWorkers)
+            .catch(function () {});
+    }
+
+    function switchToWorker(newSessionId, newName) {
+        sessionId = newSessionId;
+        sessionName = newName;
+        document.getElementById('session-name').textContent = newName;
+        history.replaceState(null, '',
+            '?id=' + newSessionId + '&name=' + encodeURIComponent(newName));
+        clearTimeout(reconnectTimer);
+        if (ws) { ws.close(); } else { connect(); }
+    }
+
+    function showCasePlaceholder(text) {
+        var ph = document.createElement('div');
+        ph.className = 'case-panel-placeholder';
+        ph.textContent = text;
+        caseWorkerList.appendChild(ph);
+    }
+
+    // Fetch current session to get caseId, then start panel
+    fetch('/api/sessions/' + sessionId)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (session) {
+            if (session && session.caseId) {
+                activeCaseId = session.caseId;
+                openCasePanel();
+                pollWorkers();
+                casePoller = setInterval(pollWorkers, 3000);
+            } else {
+                showCasePlaceholder('No case assigned.');
+            }
+        })
+        .catch(function () {
+            showCasePlaceholder('No case assigned.');
+        });
 })();
