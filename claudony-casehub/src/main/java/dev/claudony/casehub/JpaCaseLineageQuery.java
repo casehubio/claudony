@@ -9,6 +9,7 @@ import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import jakarta.transaction.Transactional.TxType;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -30,7 +31,7 @@ public class JpaCaseLineageQuery implements CaseLineageQuery {
     EntityManager em;
 
     @Override
-    @Transactional
+    @Transactional(TxType.SUPPORTS)
     public List<WorkerSummary> findCompletedWorkers(UUID caseId) {
         List<CaseLedgerEntry> completed = em.createQuery(
                         "SELECT e FROM CaseLedgerEntry e " +

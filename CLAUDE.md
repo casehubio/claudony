@@ -183,7 +183,8 @@ claudony-casehub/src/main/java/dev/claudony/casehub/
 ├── ActiveParticipationStrategy.java    — default: register + STATUS + periodic check_messages
 ├── ReactiveParticipationStrategy.java  — engage only when directly addressed
 ├── SilentParticipationStrategy.java    — no mesh participation
-└── MeshSystemPromptTemplate.java       — package-private: generates ACTIVE/REACTIVE/SILENT prompt from channels + prior workers
+├── MeshSystemPromptTemplate.java       — package-private: generates ACTIVE/REACTIVE/SILENT prompt from channels + prior workers
+└── ClaudonyLedgerEventCapture.java     — @ObservesAsync CaseLifecycleEvent → writes CaseLedgerEntry via @LedgerPersistenceUnit EM
 
 claudony-app/src/main/java/dev/claudony/
 ├── server/
@@ -303,7 +304,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**407 tests passing** (as of 2026-04-27, all modules): 117 in `claudony-casehub` + 290 in `claudony-app`. Zero failures, zero errors.
+**409 tests passing** (as of 2026-04-28, all modules): 118 in `claudony-casehub` + 291 in `claudony-app`. Zero failures, zero errors.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -340,9 +341,9 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
 - `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest + proxy resize), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
-- `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT
+- `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — CDI event→ledger→lineage round-trip: fires CaseLifecycleEvent, verifies ClaudonyLedgerEventCapture writes and JpaCaseLineageQuery reads back WorkerSummary
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
-- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
+- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (8: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
 
 **Browser test hook convention:** JavaScript that should only run during Playwright tests is gated behind `window.__CLAUDONY_TEST_MODE__`. Tests set it via `page.addInitScript("window.__CLAUDONY_TEST_MODE__ = true;")` before navigation. Never expose test hooks unconditionally.
 
@@ -350,6 +351,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in non-auth test classes.
 Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTest()` / `setClockForTest()` package-private hooks; `@AfterEach` cleanup is required to prevent state bleeding across `@QuarkusTest` classes, which share one app instance per test run.
 **Qhorus test cleanup:** For Qhorus data (channels, messages, etc.): inject `@Inject InMemoryChannelStore channelStore` and `@Inject InMemoryMessageStore messageStore` (provided by the `quarkus-qhorus-testing` dependency), then call `clear()` on both in `@AfterEach`. This is cleaner than the earlier `UserTransaction` pattern and works with all InMemory store implementations. Example: `MeshResourceInterjectionTest`.
+**casehub-testing CDI isolation:** Adding `casehub-testing` to the test classpath requires `quarkus.index-dependency.casehub-testing.*` in `application.properties`. When indexed, casehub-engine's no-op SPI beans (`NoOpWorkerProvisioner` etc.) are `@ApplicationScoped` and collide with Claudony's own SPI implementations — add `quarkus.arc.exclude-types` listing each no-op class individually (wildcard `io.casehub.engine.internal.worker.*` exclusion breaks internal engine beans). Upstream fix needed: casehub-engine should use `@DefaultBean` for no-ops.
 `%test.quarkus.datasource.reactive=false` is required in `application.properties` when a transitive dependency pulls in `hibernate-reactive-panache` — without it, H2 tests fail to start entirely.
 `src/test/resources/application.properties` sets `quarkus.http.test-port=0` — assigns a random port per test run to prevent "Port already bound: 8081" when `mvn test` is run in quick succession (a lingering Surefire JVM from the previous run can hold the port).
 
