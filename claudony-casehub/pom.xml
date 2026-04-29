@@ -38,14 +38,14 @@
         <!-- CaseHub SPI interfaces -->
         <dependency>
             <groupId>io.casehub</groupId>
-            <artifactId>api</artifactId>
+            <artifactId>casehub-engine-api</artifactId>
             <version>0.2-SNAPSHOT</version>
         </dependency>
 
         <!-- CaseHub ledger for WorkerContextProvider lineage queries -->
         <dependency>
             <groupId>io.casehub</groupId>
-            <artifactId>casehub-ledger</artifactId>
+            <artifactId>casehub-engine-ledger</artifactId>
             <version>0.2-SNAPSHOT</version>
         </dependency>
 
