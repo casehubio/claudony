@@ -357,6 +357,7 @@ Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTes
 **casehub-testing CDI isolation:** Adding `casehub-testing` to the test classpath requires `quarkus.index-dependency.casehub-testing.*` in `application.properties`. When indexed, casehub-engine's no-op SPI beans (`NoOpWorkerProvisioner` etc.) are `@ApplicationScoped` and collide with Claudony's own SPI implementations — add `quarkus.arc.exclude-types` listing each no-op class individually (wildcard `io.casehub.engine.internal.worker.*` exclusion breaks internal engine beans). Upstream fix needed: casehub-engine should use `@DefaultBean` for no-ops.
 `%test.quarkus.datasource.reactive=false` is required in `application.properties` when a transitive dependency pulls in `hibernate-reactive-panache` — without it, H2 tests fail to start entirely.
 `src/test/resources/application.properties` sets `quarkus.http.test-port=0` — assigns a random port per test run to prevent "Port already bound: 8081" when `mvn test` is run in quick succession (a lingering Surefire JVM from the previous run can hold the port).
+**Playwright E2E base URL:** All E2E test classes extend `PlaywrightBase`. `BASE_URL` is resolved in `@BeforeAll` via `ConfigProvider.getConfig().getValue("test.url", String.class)` — Quarkus sets `test.url` to the actual bound URL after server startup. Do **not** hardcode `"http://localhost:8081"` or use a `static final` field — it breaks with random ports.
 
 ---
 
