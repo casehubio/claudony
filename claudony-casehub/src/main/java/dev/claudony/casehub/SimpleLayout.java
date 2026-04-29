@@ -1,8 +1,8 @@
 package dev.claudony.casehub;
 
 import io.casehub.api.model.CaseDefinition;
-import io.quarkiverse.qhorus.runtime.channel.ChannelSemantic;
-import io.quarkiverse.qhorus.runtime.message.MessageType;
+import io.quarkiverse.qhorus.api.channel.ChannelSemantic;
+import io.quarkiverse.qhorus.api.message.MessageType;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;

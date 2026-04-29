@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import io.casehub.engine.internal.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
-import io.quarkiverse.ledger.runtime.model.ActorType;
-import io.quarkiverse.ledger.runtime.model.LedgerEntryType;
+import io.quarkiverse.ledger.api.model.ActorType;
+import io.quarkiverse.ledger.api.model.LedgerEntryType;
 import io.quarkiverse.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;

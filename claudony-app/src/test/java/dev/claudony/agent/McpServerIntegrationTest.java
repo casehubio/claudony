@@ -309,7 +309,7 @@ class McpServerIntegrationTest {
             .body("result.tools.name", hasItems("list_sessions", "get_server_info"))
             // Key Qhorus tools — confirms Qhorus embedding is working
             .body("result.tools.name", hasItems(
-                "send_message", "check_messages", "register",
+                "check_messages", "register", "list_pending_commitments",
                 "create_channel", "list_ledger_entries", "get_channel_timeline"))
             // 50 total: 8 Claudony + 42 Qhorus (count updated as Qhorus evolves)
             .body("result.tools.size()", equalTo(50));
