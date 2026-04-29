@@ -50,41 +50,38 @@ public class ClaudonyLedgerEventCapture {
             return;
         }
 
-        try {
-            int seq = nextSequenceNumber(event.caseId());
+        int seq = nextSequenceNumber(event.caseId());
 
-            CaseLedgerEntry entry = new CaseLedgerEntry();
-            entry.caseId = event.caseId();
-            entry.subjectId = event.caseId();
-            entry.sequenceNumber = seq;
-            entry.entryType = LedgerEntryType.EVENT;
-            entry.commandType = event.commandType();
-            entry.eventType = event.eventType();
-            entry.caseStatus = event.caseStatus();
-            entry.actorId = event.actorId() != null ? event.actorId() : "system";
-            entry.actorType = ActorTypeResolver.resolve(entry.actorId);
-            entry.actorRole = event.actorRole() != null ? event.actorRole() : "System";
-            entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        CaseLedgerEntry entry = new CaseLedgerEntry();
+        entry.caseId = event.caseId();
+        entry.subjectId = event.caseId();
+        entry.sequenceNumber = seq;
+        entry.entryType = LedgerEntryType.EVENT;
+        entry.commandType = event.commandType();
+        entry.eventType = event.eventType();
+        entry.caseStatus = event.caseStatus();
+        entry.actorId = event.actorId() != null ? event.actorId() : "system";
+        entry.actorType = ActorTypeResolver.resolve(entry.actorId);
+        entry.actorRole = event.actorRole() != null ? event.actorRole() : "System";
+        entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
-            em.persist(entry);
-            em.flush();
+        em.persist(entry);
+        em.flush();
 
-            LOG.debugf("Ledger entry written: caseId=%s seq=%d event=%s actor=%s",
-                    event.caseId(), seq, event.eventType(), entry.actorId);
-
-        } catch (Exception e) {
-            LOG.errorf(e, "Failed to write ledger entry: caseId=%s event=%s",
-                    event.caseId(), event.eventType());
-        }
+        LOG.debugf("Ledger entry written: caseId=%s seq=%d event=%s actor=%s",
+                event.caseId(), seq, event.eventType(), entry.actorId);
     }
 
     private int nextSequenceNumber(UUID caseId) {
-        var result = em.createQuery(
-                        "SELECT MAX(e.sequenceNumber) FROM CaseLedgerEntry e WHERE e.caseId = :caseId",
-                        Integer.class)
+        return em.createQuery(
+                        "SELECT e FROM CaseLedgerEntry e WHERE e.subjectId = :caseId ORDER BY e.sequenceNumber DESC",
+                        CaseLedgerEntry.class)
                 .setParameter("caseId", caseId)
-                .getSingleResult();
-        return result == null ? 1 : result + 1;
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst()
+                .map(e -> e.sequenceNumber + 1)
+                .orElse(1);
     }
 
 }
