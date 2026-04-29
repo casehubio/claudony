@@ -1,6 +1,7 @@
 package dev.claudony.e2e;
 
 import com.microsoft.playwright.*;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -28,14 +29,22 @@ public abstract class PlaywrightBase {
     protected BrowserContext context;
     protected Page page;
 
-    /** Base URL for the Quarkus test server. */
-    protected static final String BASE_URL = "http://localhost:8081";
+    /**
+     * Base URL for the Quarkus test server.
+     *
+     * <p>Initialised in {@link #launchBrowser()} from the {@code test.url} MicroProfile Config
+     * value, which Quarkus sets to the actual bound URL after startup (correct even when
+     * {@code quarkus.http.test-port=0} assigns a random port). Do not read this before
+     * {@code @BeforeAll} — it will be null.
+     */
+    protected static String BASE_URL;
 
     /** Test API key — matches %test.claudony.agent.api-key in application.properties. */
     protected static final String API_KEY = "test-api-key-do-not-use-in-prod";
 
     @BeforeAll
     static void launchBrowser() {
+        BASE_URL = ConfigProvider.getConfig().getValue("test.url", String.class);
         playwright = Playwright.create();
         var headless = Boolean.parseBoolean(System.getProperty("playwright.headless", "true"));
         browser = playwright.chromium().launch(
