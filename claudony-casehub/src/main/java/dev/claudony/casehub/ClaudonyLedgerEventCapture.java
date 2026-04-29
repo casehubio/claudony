@@ -2,13 +2,14 @@ package dev.claudony.casehub;
 
 import io.casehub.engine.internal.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
-import io.quarkiverse.ledger.runtime.model.ActorTypeResolver;
-import io.quarkiverse.ledger.runtime.model.LedgerEntryType;
+import io.quarkiverse.ledger.api.model.ActorTypeResolver;
+import io.quarkiverse.ledger.api.model.LedgerEntryType;
 import io.quarkiverse.ledger.runtime.persistence.LedgerPersistenceUnit;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
 
 import java.time.Instant;
@@ -73,15 +74,14 @@ public class ClaudonyLedgerEventCapture {
     }
 
     private int nextSequenceNumber(UUID caseId) {
-        return em.createQuery(
+        var results = em.createQuery(
                         "SELECT e FROM CaseLedgerEntry e WHERE e.subjectId = :caseId ORDER BY e.sequenceNumber DESC",
                         CaseLedgerEntry.class)
                 .setParameter("caseId", caseId)
+                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                 .setMaxResults(1)
-                .getResultStream()
-                .findFirst()
-                .map(e -> e.sequenceNumber + 1)
-                .orElse(1);
+                .getResultList();
+        return results.isEmpty() ? 1 : results.get(0).sequenceNumber + 1;
     }
 
 }
