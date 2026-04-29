@@ -307,7 +307,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**419 tests passing** (as of 2026-04-28, all modules): 119 in `claudony-casehub` + 300 in `claudony-app`. Zero failures, zero errors.
+**425 tests passing** (as of 2026-04-29, all modules): 119 in `claudony-casehub` + 306 in `claudony-app`. Zero failures, zero errors.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -344,7 +344,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
 - `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest + proxy resize), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
-- `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — CDI event→ledger→lineage round-trip: fires CaseLifecycleEvent, verifies ClaudonyLedgerEventCapture writes and JpaCaseLineageQuery reads back WorkerSummary
+- `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — CDI event→ledger→lineage round-trip: fires CaseLifecycleEvent, verifies ClaudonyLedgerEventCapture writes and JpaCaseLineageQuery reads back WorkerSummary; `ClaudonyLedgerEventCaptureTest` — 6 tests: happy path fields, sequence increment per case, sequence independence, null guards (2), worker event type
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
 - `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (8: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K), CaseWorkerPanelE2ETest (3: standalone placeholder, CaseHub auto-expand + worker list, click-to-switch) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
 
@@ -421,7 +421,7 @@ cd docs && bundle exec jekyll serve --baseurl ""
 ## Work Tracking
 
 **Issue tracking:** enabled
-**GitHub repo:** mdproctor/claudony
+**GitHub repo:** casehubio/claudony
 **Changelog:** GitHub Releases (run `gh release create --generate-notes` at milestones)
 
 **Automatic behaviours (Claude follows these at all times in this project):**
