@@ -55,6 +55,16 @@
             <artifactId>quarkus-qhorus</artifactId>
             <version>0.2-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.qhorus</groupId>
+            <artifactId>quarkus-qhorus-api</artifactId>
+            <version>0.2-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.ledger</groupId>
+            <artifactId>quarkus-ledger-api</artifactId>
+            <version>0.2-SNAPSHOT</version>
+        </dependency>
 
         <!-- CDI -->
         <dependency>
