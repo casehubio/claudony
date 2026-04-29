@@ -661,7 +661,26 @@
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn clean test -pl claudony-app -Dtest=StaticFilesTest -q)",
       "Bash(env)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn help:describe -Dplugin=org.apache.maven.plugins:maven-compiler-plugin)",
-      "Bash(node -c claudony-app/src/main/resources/META-INF/resources/app/terminal.js)"
+      "Bash(node -c claudony-app/src/main/resources/META-INF/resources/app/terminal.js)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dtest=CaseWorkerPanelE2ETest)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-app -Dtest=CaseWorkerPanelE2ETest)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dtest=CaseWorkerPanelE2ETest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dtest=PlaywrightSetupE2ETest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dtest=PlaywrightSetupE2ETest,DashboardE2ETest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dtest=PlaywrightSetupE2ETest,DashboardE2ETest,TerminalPageE2ETest,ChannelPanelE2ETest,CaseWorkerPanelE2ETest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dsurefire.failIfNoSpecifiedTests=false -Dtest=PlaywrightSetupE2ETest)",
+      "Bash(unzip -l /Users/mdproctor/.m2/repository/io/quarkus/quarkus-junit5/3.27.2/quarkus-junit5-3.27.2.jar)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dtest=ChannelPanelE2ETest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dtest=PlaywrightSetupE2ETest,DashboardE2ETest,TerminalPageE2ETest,CaseWorkerPanelE2ETest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -pl claudony-core,claudony-casehub,claudony-app -Dtest=ChannelPanelE2ETest)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -Dtest=ChannelPanelE2ETest -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Pe2e -Dsurefire.failIfNoSpecifiedTests=false -Dtest=ChannelPanelE2ETest)",
+      "Bash(awk '{print $1}')",
+      "Bash(bc)",
+      "Bash(awk -F'Tests run: ' '{sum+=$2} END {print sum}')",
+      "Bash(xargs -I{} sh -c 'cd /tmp && jar xf {} && find . -name \"CaseLedgerEntry.java\" 2>/dev/null')",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dtest=ClaudonyLedgerEventCaptureTest -pl claudony-app --also-make)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dtest=ClaudonyLedgerEventCaptureTest -pl claudony-app --also-make -Dsurefire.failIfNoSpecifiedTests=false)"
     ]
   }
 }

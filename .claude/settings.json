@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn *)",
+      "Bash(/opt/homebrew/bin/mvn *)",
+      "Bash(JAVA_HOME=* mvn *)",
+      "Bash(JAVA_HOME=* /opt/homebrew/bin/mvn *)",
+      "Bash(TESTCONTAINERS_RYUK_DISABLED=true mvn *)",
+      "Bash(TESTCONTAINERS_RYUK_DISABLED=true /opt/homebrew/bin/mvn *)",
+      "Bash(JAVA_HOME=$(/usr/libexec/java_home *)",
+      "Bash(python3 scripts/claude-skill *)",
+      "Bash(scripts/mvn-test *)",
+      "Bash(open -a *)",
+      "Bash(curl -s *)",
+      "Bash(curl -fsSL *)"
+    ],
+    "additionalDirectories": [
+      "/Users/mdproctor/claude"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}

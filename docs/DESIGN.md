@@ -327,7 +327,7 @@ Schema versioning is **Flyway-managed** — `database.generation` (Hibernate's a
 
 ## Ecosystem Integration
 
-> Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem alongside **CaseHub** (orchestration/choreography engine, `~/claude/casehub-engine`) and **Qhorus** (agent communication mesh, `~/claude/quarkus-qhorus`). The canonical ecosystem design document lives at `docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md`.
+> Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem alongside **CaseHub** (orchestration/choreography engine, `~/claude/casehub/engine`) and **Qhorus** (agent communication mesh, `~/claude/quarkus-qhorus`). The canonical ecosystem design document lives at `docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md`.
 
 ### CaseHub SPIs — Shipped
 
