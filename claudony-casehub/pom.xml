@@ -16,12 +16,10 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- casehub-ledger:0.2-SNAPSHOT was built against quarkus-ledger:1.0.0-SNAPSHOT
-                 (the old version before it was renamed/renumbered to 0.2-SNAPSHOT).
-                 Override the transitive to the version we have in the local repo. -->
+            <!-- casehub-ledger:0.2-SNAPSHOT — pin to ensure consistent version -->
             <dependency>
-                <groupId>io.quarkiverse.ledger</groupId>
-                <artifactId>quarkus-ledger</artifactId>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-ledger</artifactId>
                 <version>0.2-SNAPSHOT</version>
             </dependency>
         </dependencies>
@@ -61,8 +59,8 @@
             <version>0.2-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>io.quarkiverse.ledger</groupId>
-            <artifactId>quarkus-ledger-api</artifactId>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-ledger-api</artifactId>
             <version>0.2-SNAPSHOT</version>
         </dependency>
 

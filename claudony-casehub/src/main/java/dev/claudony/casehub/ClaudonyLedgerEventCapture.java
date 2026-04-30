@@ -2,9 +2,9 @@ package dev.claudony.casehub;
 
 import io.casehub.engine.internal.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
-import io.quarkiverse.ledger.api.model.ActorTypeResolver;
-import io.quarkiverse.ledger.api.model.LedgerEntryType;
-import io.quarkiverse.ledger.runtime.persistence.LedgerPersistenceUnit;
+import io.casehub.ledger.api.model.ActorTypeResolver;
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
@@ -24,7 +24,7 @@ import org.jboss.logging.Logger;
  * <p>This is Claudony's replacement for {@code CaseLedgerEventCapture} from the
  * casehub-ledger module. The original bean is excluded from CDI
  * ({@code quarkus.arc.exclude-types} in application.properties) because it injects
- * {@code CaseLedgerEntryRepository} which conflicts with the quarkus-ledger
+ * {@code CaseLedgerEntryRepository} which conflicts with the casehub-ledger
  * {@code LedgerEntryRepository} registered by the platform.
  *
  * <p>This implementation writes directly to the {@code case_ledger_entry} table via the

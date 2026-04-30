@@ -2,7 +2,7 @@ package dev.claudony.casehub;
 
 import io.casehub.api.model.WorkerSummary;
 import io.casehub.ledger.model.CaseLedgerEntry;
-import io.quarkiverse.ledger.runtime.persistence.LedgerPersistenceUnit;
+import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;

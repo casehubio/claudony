@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import io.casehub.engine.internal.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
-import io.quarkiverse.ledger.api.model.ActorType;
-import io.quarkiverse.ledger.api.model.LedgerEntryType;
-import io.quarkiverse.ledger.runtime.persistence.LedgerPersistenceUnit;
+import io.casehub.ledger.api.model.ActorType;
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
  * (verified here) is identical; the fix eliminates the window where two concurrent threads both
  * read MAX=N before either writes N+1.
  *
- * Refs casehubio/quarkus-ledger#72
+ * Refs casehubio/casehub-ledger#72
  */
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")

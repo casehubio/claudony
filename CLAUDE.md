@@ -17,9 +17,9 @@ https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/claud
 ```
 
 **Other repo deep-dives** (fetch the relevant ones when your implementation touches their domain):
-- quarkus-ledger: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/quarkus-ledger.md`
-- quarkus-work: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/quarkus-work.md`
-- quarkus-qhorus: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/quarkus-qhorus.md`
+- casehub-ledger: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-ledger.md`
+- casehub-work: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-work.md`
+- casehub-qhorus: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-qhorus.md`
 - casehub-engine: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-engine.md`
 - casehub-connectors: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-connectors.md`
 
@@ -296,7 +296,7 @@ claudony.name=Claudony                  # instance name shown in fleet dashboard
 quarkus.datasource.qhorus.db-kind=h2
 quarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:~/.claudony/qhorus;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE
 quarkus.hibernate-orm.qhorus.datasource=qhorus
-quarkus.hibernate-orm.qhorus.packages=io.quarkiverse.qhorus.runtime,io.quarkiverse.ledger.runtime.model,io.casehub.ledger.model
+quarkus.hibernate-orm.qhorus.packages=io.casehub.qhorus.runtime,io.casehub.ledger.runtime.model,io.casehub.ledger.model
 quarkus.flyway.qhorus.migrate-at-start=true
 # In future: change jdbc.url to PostgreSQL connection string for multi-instance fleet
 ```
@@ -320,7 +320,7 @@ Quarkus resolves `${quarkus.http.port}` to the actual assigned random port. With
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub-ledger -am \
-  -f /Users/mdproctor/claude/casehub-engine/pom.xml
+  -f /Users/mdproctor/claude/casehub/engine/pom.xml
 ```
 
 `claudony-casehub` tests:
@@ -353,7 +353,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 `ServerStartup.bootstrapRegistry()` is package-private to allow direct testing.
 Auth tests use `@TestSecurity(user = "test", roles = "user")` to bypass auth in non-auth test classes.
 Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTest()` / `setClockForTest()` package-private hooks; `@AfterEach` cleanup is required to prevent state bleeding across `@QuarkusTest` classes, which share one app instance per test run.
-**Qhorus test cleanup:** For Qhorus data (channels, messages, etc.): inject `@Inject InMemoryChannelStore channelStore` and `@Inject InMemoryMessageStore messageStore` (provided by the `quarkus-qhorus-testing` dependency), then call `clear()` on both in `@AfterEach`. This is cleaner than the earlier `UserTransaction` pattern and works with all InMemory store implementations. Example: `MeshResourceInterjectionTest`.
+**Qhorus test cleanup:** For Qhorus data (channels, messages, etc.): inject `@Inject InMemoryChannelStore channelStore` and `@Inject InMemoryMessageStore messageStore` (provided by the `casehub-qhorus-testing` dependency), then call `clear()` on both in `@AfterEach`. This is cleaner than the earlier `UserTransaction` pattern and works with all InMemory store implementations. Example: `MeshResourceInterjectionTest`.
 **casehub-testing CDI isolation:** Adding `casehub-testing` to the test classpath requires `quarkus.index-dependency.casehub-testing.*` in `application.properties`. When indexed, casehub-engine's no-op SPI beans (`NoOpWorkerProvisioner` etc.) are `@ApplicationScoped` and collide with Claudony's own SPI implementations — add `quarkus.arc.exclude-types` listing each no-op class individually (wildcard `io.casehub.engine.internal.worker.*` exclusion breaks internal engine beans). Upstream fix needed: casehub-engine should use `@DefaultBean` for no-ops.
 `%test.quarkus.datasource.reactive=false` is required in `application.properties` when a transitive dependency pulls in `hibernate-reactive-panache` — without it, H2 tests fail to start entirely.
 `src/test/resources/application.properties` sets `quarkus.http.test-port=0` — assigns a random port per test run to prevent "Port already bound: 8081" when `mvn test` is run in quick succession (a lingering Surefire JVM from the previous run can hold the port).
@@ -370,14 +370,14 @@ Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTes
 Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem:
 
 - **CaseHub** (`~/claude/casehub/engine`) — orchestration/choreography engine; defines SPIs that Claudony implements (`~/claude/casehub-poc` is the retiring POC — do not use)
-- **Qhorus** (`~/claude/quarkus-qhorus`) — agent communication mesh; Claudony embeds it and provides the dashboard observation layer
+- **Qhorus** (`~/claude/casehub/qhorus`) — agent communication mesh; Claudony embeds it and provides the dashboard observation layer
 - **Claudony** (this project) — wires everything together; implements CaseHub SPIs, embeds Qhorus, hosts the unified dashboard
 
 The canonical ecosystem design document lives here in this repo. It is the master architectural blueprint for all three projects — covering project topology, SPI contracts, MCP tool surfaces, choreography/orchestration use cases, the unified observer dashboard, human-in-the-loop interjection, and the B→C→A build roadmap.
 
 Load it when working on: CaseHub SPI implementations, Qhorus embedding, the unified MCP endpoint, the three-panel dashboard, or any cross-project architectural decisions:
 
-@/Users/mdproctor/claude/claudony/docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md
+@/Users/mdproctor/claude/casehub/claudony/docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md
 
 ---
 
@@ -454,5 +454,5 @@ All casehubio projects align on these conventions:
 ```
 CI must use `server-id: github` + `GITHUB_TOKEN` in `actions/setup-java`.
 
-**Cross-project SNAPSHOT versions:** `quarkus-ledger` and `quarkus-work` modules are `0.2-SNAPSHOT` resolved from GitHub Packages. Declare in `pom.xml` properties and `<dependencyManagement>` — no hardcoded versions in submodule poms.
+**Cross-project SNAPSHOT versions:** `casehub-ledger` and `casehub-work` modules are `0.2-SNAPSHOT` resolved from GitHub Packages. Declare in `pom.xml` properties and `<dependencyManagement>` — no hardcoded versions in submodule poms.
 
