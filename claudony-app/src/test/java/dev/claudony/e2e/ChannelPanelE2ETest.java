@@ -2,9 +2,9 @@ package dev.claudony.e2e;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.RequestOptions;
-import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
-import io.quarkiverse.qhorus.testing.InMemoryChannelStore;
-import io.quarkiverse.qhorus.testing.InMemoryMessageStore;
+import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
+import io.casehub.qhorus.testing.InMemoryChannelStore;
+import io.casehub.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;

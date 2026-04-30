@@ -1,8 +1,8 @@
 package dev.claudony.casehub;
 
 import io.casehub.api.model.WorkerSummary;
-import io.quarkiverse.qhorus.api.channel.ChannelSemantic;
-import io.quarkiverse.qhorus.api.message.MessageType;
+import io.casehub.qhorus.api.channel.ChannelSemantic;
+import io.casehub.qhorus.api.message.MessageType;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

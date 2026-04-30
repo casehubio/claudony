@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 public class SessionResource {
 
     private static final Logger LOG = Logger.getLogger(SessionResource.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Inject ClaudonyConfig config;
     @Inject SessionRegistry registry;
@@ -409,8 +410,7 @@ public class SessionResource {
     }
 
     private GitStatusResponse.PrInfo parsePrInfo(String json) throws IOException {
-        var mapper = new ObjectMapper();
-        var node = mapper.readTree(json);
+        var node = MAPPER.readTree(json);
         int number = node.path("number").asInt();
         var title = node.path("title").asText();
         var url = node.path("url").asText();

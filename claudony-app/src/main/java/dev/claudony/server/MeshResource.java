@@ -2,8 +2,8 @@ package dev.claudony.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.claudony.config.ClaudonyConfig;
-import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
-import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpToolsBase;
+import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
+import io.casehub.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;

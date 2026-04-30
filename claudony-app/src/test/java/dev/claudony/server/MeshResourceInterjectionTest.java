@@ -1,8 +1,8 @@
 package dev.claudony.server;
 
-import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
-import io.quarkiverse.qhorus.testing.InMemoryChannelStore;
-import io.quarkiverse.qhorus.testing.InMemoryMessageStore;
+import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
+import io.casehub.qhorus.testing.InMemoryChannelStore;
+import io.casehub.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;

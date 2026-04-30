@@ -680,7 +680,10 @@
       "Bash(awk -F'Tests run: ' '{sum+=$2} END {print sum}')",
       "Bash(xargs -I{} sh -c 'cd /tmp && jar xf {} && find . -name \"CaseLedgerEntry.java\" 2>/dev/null')",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dtest=ClaudonyLedgerEventCaptureTest -pl claudony-app --also-make)",
-      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dtest=ClaudonyLedgerEventCaptureTest -pl claudony-app --also-make -Dsurefire.failIfNoSpecifiedTests=false)"
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dtest=ClaudonyLedgerEventCaptureTest -pl claudony-app --also-make -Dsurefire.failIfNoSpecifiedTests=false)",
+      "Bash(rm -rf /Users/mdproctor/claude/claudony/.git/worktrees/agent-a9c19d97ee6b63d45)",
+      "Bash(rm -rf /Users/mdproctor/claude/claudony/.git/worktrees/agent-ad325f407739d86f1)",
+      "Bash(awk *)"
     ]
   }
 }

@@ -2,8 +2,8 @@ package dev.claudony.casehub;
 
 import io.casehub.api.model.CaseChannel;
 import io.casehub.api.spi.CaseChannelProvider;
-import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpTools;
-import io.quarkiverse.qhorus.runtime.mcp.QhorusMcpToolsBase;
+import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
+import io.casehub.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.List;

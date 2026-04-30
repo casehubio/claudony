@@ -1,7 +1,7 @@
 package dev.claudony.casehub;
 
-import io.quarkiverse.qhorus.api.channel.ChannelSemantic;
-import io.quarkiverse.qhorus.api.message.MessageType;
+import io.casehub.qhorus.api.channel.ChannelSemantic;
+import io.casehub.qhorus.api.message.MessageType;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;

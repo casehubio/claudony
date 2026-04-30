@@ -14,17 +14,6 @@
     <name>Claudony :: CaseHub Integration</name>
     <description>Optional CaseHub SPI implementations for Claudony</description>
 
-    <dependencyManagement>
-        <dependencies>
-            <!-- casehub-ledger:0.2-SNAPSHOT — pin to ensure consistent version -->
-            <dependency>
-                <groupId>io.casehub</groupId>
-                <artifactId>casehub-ledger</artifactId>
-                <version>0.2-SNAPSHOT</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
         <!-- Claudony core services -->
         <dependency>
@@ -37,31 +26,26 @@
         <dependency>
             <groupId>io.casehub</groupId>
             <artifactId>casehub-engine-api</artifactId>
-            <version>0.2-SNAPSHOT</version>
         </dependency>
 
         <!-- CaseHub ledger for WorkerContextProvider lineage queries -->
         <dependency>
             <groupId>io.casehub</groupId>
             <artifactId>casehub-engine-ledger</artifactId>
-            <version>0.2-SNAPSHOT</version>
         </dependency>
 
         <!-- Qhorus tools for CaseChannelProvider -->
         <dependency>
-            <groupId>io.quarkiverse.qhorus</groupId>
-            <artifactId>quarkus-qhorus</artifactId>
-            <version>0.2-SNAPSHOT</version>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-qhorus</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.quarkiverse.qhorus</groupId>
-            <artifactId>quarkus-qhorus-api</artifactId>
-            <version>0.2-SNAPSHOT</version>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-qhorus-api</artifactId>
         </dependency>
         <dependency>
             <groupId>io.casehub</groupId>
             <artifactId>casehub-ledger-api</artifactId>
-            <version>0.2-SNAPSHOT</version>
         </dependency>
 
         <!-- CDI -->
@@ -88,9 +72,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.quarkiverse.qhorus</groupId>
-            <artifactId>quarkus-qhorus-testing</artifactId>
-            <version>0.2-SNAPSHOT</version>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-qhorus-testing</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

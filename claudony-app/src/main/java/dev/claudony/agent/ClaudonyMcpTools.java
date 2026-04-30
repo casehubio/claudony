@@ -27,7 +27,7 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
  *
  * <p>
  * Migrated from hand-rolled {@code McpServer.java} (deleted) to enable the
- * quarkus-qhorus embedding — once Qhorus is added as a dependency its 38 tools
+ * casehub-qhorus embedding — once Qhorus is added as a dependency its 38 tools
  * auto-register on the same /mcp endpoint alongside these 8.
  */
 @ApplicationScoped

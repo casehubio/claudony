@@ -8,20 +8,20 @@ The protocol asks: Does this already exist elsewhere? Is this the right repo for
 
 **Platform architecture (fetch before any implementation decision):**
 ```
-https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/PLATFORM.md
+https://raw.githubusercontent.com/casehubio/parent/main/docs/PLATFORM.md
 ```
 
 **This repo's deep-dive:**
 ```
-https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/claudony.md
+https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/claudony.md
 ```
 
 **Other repo deep-dives** (fetch the relevant ones when your implementation touches their domain):
-- casehub-ledger: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-ledger.md`
-- casehub-work: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-work.md`
-- casehub-qhorus: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-qhorus.md`
-- casehub-engine: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-engine.md`
-- casehub-connectors: `https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/casehub-connectors.md`
+- casehub-ledger: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-ledger.md`
+- casehub-work: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-work.md`
+- casehub-qhorus: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-qhorus.md`
+- casehub-engine: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-engine.md`
+- casehub-connectors: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-connectors.md`
 
 ---
 
@@ -29,7 +29,7 @@ https://raw.githubusercontent.com/casehubio/casehub-parent/main/docs/repos/claud
 
 **Type:** java
 
-**Stack:** Java 21 (on Java 26 JVM), Quarkus 3.9.5, GraalVM 25 (native image), tmux, xterm.js
+**Stack:** Java 21 (on Java 26 JVM), Quarkus 3.32.2, GraalVM 25 (native image), tmux, xterm.js
 
 ---
 
@@ -437,6 +437,8 @@ cd docs && bundle exec jekyll serve --baseurl ""
 - **All commits should reference an issue** — `Refs #N` (ongoing) or `Closes #N` (done).
   If the user explicitly says to skip ("commit as is", "no issue"), ask once to confirm
   before proceeding — it must be a deliberate choice, not a default.
+  **Exception:** housekeeping commits (consistency passes, doc fixes, dependency bumps, health-check fixes) may omit issue links when no issue naturally applies. These should still use conventional commit format: `docs:`, `chore:`, `fix(deps):`, etc.
+  **Commit scope examples:** `fix(auth): ...`, `feat(mcp): ...`, `docs(design): ...`, `chore(deps): ...`, `test(e2e): ...`, `refactor(sessions): ...`
 
 ## Ecosystem Conventions
 

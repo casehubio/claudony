@@ -1,10 +1,13 @@
-name: CI
+name: Build and Publish
 
 on:
+  repository_dispatch:
+    types: [upstream-published]
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -25,7 +28,7 @@ jobs:
           server-username: GITHUB_ACTOR
           server-password: GITHUB_TOKEN
 
-      - name: Build
-        run: mvn --batch-mode package -DskipTests
+      - name: Build and test
+        run: mvn --batch-mode verify
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

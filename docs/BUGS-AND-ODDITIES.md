@@ -409,3 +409,32 @@ quarkus.webauthn.login-page=/auth/login
 
 **Discoverable via:** `javap io.quarkus.security.webauthn.WebAuthnRunTimeConfig` —
 `loginPage()` method is on the config interface. Not prominently documented.
+
+---
+
+## 20. casehub-qhorus 0.2-SNAPSHOT — `casehub.qhorus.*` Config Validation Failures
+
+**Symptom:** Tests fail at Quarkus augmentation with:
+```
+SRCFG00050: casehub.qhorus.a2a.enabled ... does not map to any root
+SRCFG00050: casehub.qhorus.cleanup.pending-reply-check-seconds ... does not map to any root
+```
+
+**Root cause:** casehub-qhorus 0.2-SNAPSHOT bundles an `application.properties` inside
+its JAR with `casehub.qhorus.*` defaults. Quarkus 3.32.2 strict config validation rejects
+any property that doesn't map to a registered `@ConfigMapping` root. The casehub-qhorus
+extension descriptor doesn't register the `@ConfigMapping` for `casehub.qhorus.*` in
+a way that Quarkus augmentation picks up during test runs.
+
+**Workaround (in test `application.properties`):**
+```properties
+smallrye.config.mapping.validate-unknown=false
+```
+
+**Permanent fix:** casehub-qhorus needs to properly register its `@ConfigMapping` root
+via its Quarkus extension deployment artifact, or remove the bundled `application.properties`
+defaults and require explicit configuration.
+
+**Scope:** Test-only (`smallrye.config.mapping.validate-unknown=false` is in
+`src/test/resources/application.properties`). Production startup is not affected
+because it doesn't hit strict augmentation-time validation.

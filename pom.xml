@@ -22,6 +22,7 @@
     <quarkus.platform.version>3.32.2</quarkus.platform.version>
     <quarkus-mcp-server.version>1.11.1</quarkus-mcp-server.version>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
+    <casehub.version>0.2-SNAPSHOT</casehub.version>
   </properties>
 
   <dependencyManagement>
@@ -32,6 +33,42 @@
         <version>${quarkus.platform.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <!-- CaseHub ecosystem — all components versioned together -->
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-engine-api</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-engine-ledger</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-qhorus</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-qhorus-api</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-qhorus-testing</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-ledger-api</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-ledger</artifactId>
+        <version>${casehub.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -70,6 +107,11 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>io.smallrye</groupId>
+          <artifactId>jandex-maven-plugin</artifactId>
+          <version>3.1.2</version>
         </plugin>
       </plugins>
     </pluginManagement>
