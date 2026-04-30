@@ -442,6 +442,8 @@ cd docs && bundle exec jekyll serve --baseurl ""
 
 All casehubio projects align on these conventions:
 
+**Publishing strategy:** All casehub components (casehub-ledger, Qhorus, casehub-engine, Claudony, etc.) are sub-projects of the casehubio GitHub org. They are **not** submitted to Quarkiverse. Existing `io.quarkiverse.*` package names in dependencies are legacy naming — new casehub components use `io.casehub.*` conventions. Do not propose Quarkiverse publication for any casehub component.
+
 **Quarkus version:** All projects use `3.32.2`. When bumping, bump all projects together.
 
 **GitHub Packages — dependency resolution:** Add to `pom.xml` `<repositories>`:
