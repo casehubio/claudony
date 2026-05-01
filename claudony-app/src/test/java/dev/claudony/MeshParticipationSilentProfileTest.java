@@ -33,7 +33,7 @@ class MeshParticipationSilentProfileTest {
 
     @Test
     void silentConfig_stampsParticipationSilent() {
-        WorkerContext ctx = provider.buildContext("integration-worker",
+        WorkerContext ctx = provider.buildContext("integration-worker", null,
                 WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.properties())

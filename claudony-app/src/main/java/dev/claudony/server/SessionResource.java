@@ -1,6 +1,7 @@
 package dev.claudony.server;
 
 import dev.claudony.agent.terminal.TerminalAdapterFactory;
+import dev.claudony.casehub.CaseLineageQuery;
 import dev.claudony.config.ClaudonyConfig;
 import dev.claudony.server.expiry.ExpiryPolicyRegistry;
 import dev.claudony.server.fleet.FleetKeyClientFilter;
@@ -46,6 +47,7 @@ public class SessionResource {
     @Inject TerminalAdapterFactory terminalFactory;
     @Inject PeerRegistry peerRegistry;
     @Inject ExpiryPolicyRegistry policyRegistry;
+    @Inject CaseLineageQuery lineageQuery;
 
     @GET
     public List<SessionResponse> list(
@@ -118,6 +120,25 @@ public class SessionResource {
     public Response get(@PathParam("id") String id) {
         return registry.find(id)
                 .map(s -> Response.ok(SessionResponse.from(s, config.port(), resolvedPolicy(s))).build())
+                .orElse(Response.status(404).build());
+    }
+
+    @GET
+    @Path("/{id}/lineage")
+    public Response getLineage(@PathParam("id") String id) {
+        return registry.find(id)
+                .map(session -> {
+                    if (session.caseId().isEmpty()) {
+                        return Response.ok(List.of()).build();
+                    }
+                    UUID caseUuid;
+                    try {
+                        caseUuid = UUID.fromString(session.caseId().get());
+                    } catch (IllegalArgumentException e) {
+                        return Response.ok(List.of()).build();
+                    }
+                    return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)).build();
+                })
                 .orElse(Response.status(404).build());
     }
 

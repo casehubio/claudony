@@ -35,8 +35,8 @@ class SystemPromptSilentProfileTest {
     @Test
     void silentConfig_systemPromptAbsent() {
         UUID caseId = UUID.randomUUID();
-        WorkerContext ctx = provider.buildContext("integration-worker",
-                WorkRequest.of("researcher", Map.of("caseId", caseId.toString())));
+        WorkerContext ctx = provider.buildContext("integration-worker", caseId,
+                WorkRequest.of("researcher", Map.of()));
 
         assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
     }

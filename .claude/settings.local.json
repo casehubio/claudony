@@ -683,7 +683,18 @@
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn test -Dtest=ClaudonyLedgerEventCaptureTest -pl claudony-app --also-make -Dsurefire.failIfNoSpecifiedTests=false)",
       "Bash(rm -rf /Users/mdproctor/claude/claudony/.git/worktrees/agent-a9c19d97ee6b63d45)",
       "Bash(rm -rf /Users/mdproctor/claude/claudony/.git/worktrees/agent-ad325f407739d86f1)",
-      "Bash(awk *)"
+      "Bash(awk *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:node-projects.github.io)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "WebFetch(domain:dockview.dev)",
+      "mcp__intellij__get_project_modules",
+      "mcp__intellij-index__ide_index_status",
+      "mcp__intellij__get_all_open_file_paths",
+      "mcp__intellij__get_repositories",
+      "Bash(jar -tf ~/.m2/repository/io/casehub/casehub-api/0.2-SNAPSHOT/casehub-api-0.2-SNAPSHOT.jar)",
+      "Bash(jar -tf ~/.m2/repository/io/casehub/casehub-engine-api/0.2-SNAPSHOT/casehub-engine-api-0.2-SNAPSHOT.jar)",
+      "mcp__intellij__replace_text_in_file"
     ]
   }
 }

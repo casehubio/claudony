@@ -72,9 +72,8 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         String roleName = context.taskType() != null ? context.taskType() : capabilities.stream().findFirst().orElse("worker");
         String command = resolver.resolve(capabilities);
 
-        var task = WorkRequest.of(roleName,
-                Map.of("caseId", context.caseId() != null ? context.caseId().toString() : ""));
-        contextProvider.buildContext(sessionId, task);
+        var task = WorkRequest.of(roleName, Map.of());
+        contextProvider.buildContext(sessionId, context.caseId(), task);
 
         String sessionName = SESSION_PREFIX + sessionId;
         try {

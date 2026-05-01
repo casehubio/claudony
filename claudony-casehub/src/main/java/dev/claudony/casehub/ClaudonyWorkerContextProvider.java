@@ -56,7 +56,7 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
     }
 
     @Override
-    public WorkerContext buildContext(String workerId, WorkRequest task) {
+    public WorkerContext buildContext(String workerId, UUID caseId, WorkRequest task) {
         MeshParticipationStrategy.MeshParticipation participation =
                 strategy.strategyFor(workerId, null);
 
@@ -65,22 +65,13 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
 
         if (Boolean.TRUE.equals(task.input().get("clean-start"))) {
             props.put("clean-start", true);
-            return new WorkerContext(task.capability(), null, null, List.of(),
-                    PropagationContext.createRoot(), props);
+            return new WorkerContext(task.capability(), null, List.of(),
+                    List.of(), PropagationContext.createRoot(), props);
         }
 
-        String caseIdStr = (String) task.input().get("caseId");
-        if (caseIdStr == null || caseIdStr.isBlank()) {
-            return new WorkerContext(task.capability(), null, null, List.of(),
-                    PropagationContext.createRoot(), props);
-        }
-
-        UUID caseId;
-        try {
-            caseId = UUID.fromString(caseIdStr);
-        } catch (IllegalArgumentException e) {
-            return new WorkerContext(task.capability(), null, null, List.of(),
-                    PropagationContext.createRoot(), props);
+        if (caseId == null) {
+            return new WorkerContext(task.capability(), null, List.of(),
+                    List.of(), PropagationContext.createRoot(), props);
         }
 
         List<WorkerSummary> priorWorkers = lineageQuery.findCompletedWorkers(caseId);
@@ -94,8 +85,9 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
                         channelSpecs, priorWorkers, participation)
                 .ifPresent(prompt -> props.put("systemPrompt", prompt));
 
-        return new WorkerContext(task.capability(), caseId, channel, priorWorkers,
-                PropagationContext.createRoot(), props);
+        return new WorkerContext(task.capability(), caseId,
+                channel != null ? List.of(channel) : List.of(),
+                priorWorkers, PropagationContext.createRoot(), props);
     }
 
     private static MeshParticipationStrategy selectStrategy(String name) {

@@ -23,7 +23,7 @@ class MeshParticipationIntegrationTest {
 
     @Test
     void defaultConfig_stampsActiveParticipation() {
-        WorkerContext ctx = provider.buildContext("integration-worker",
+        WorkerContext ctx = provider.buildContext("integration-worker", null,
                 WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.properties())
@@ -32,8 +32,8 @@ class MeshParticipationIntegrationTest {
 
     @Test
     void defaultConfig_meshParticipationKeyAlwaysPresent() {
-        WorkerContext ctx = provider.buildContext("integration-worker",
-                WorkRequest.of("researcher", Map.of("caseId", "not-a-uuid")));
+        WorkerContext ctx = provider.buildContext("integration-worker", null,
+                WorkRequest.of("researcher", Map.of()));
 
         assertThat(ctx.properties()).containsKey("meshParticipation");
     }

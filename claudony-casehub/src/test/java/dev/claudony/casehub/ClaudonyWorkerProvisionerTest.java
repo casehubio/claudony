@@ -41,7 +41,7 @@ class ClaudonyWorkerProvisionerTest {
     @Test
     void provision_createsSessionAndRegistersWorker() throws Exception {
         var caseId = UUID.randomUUID();
-        when(contextProvider.buildContext(anyString(), any())).thenReturn(
+        when(contextProvider.buildContext(anyString(), any(), any())).thenReturn(
                 new WorkerContext("refactor auth", caseId, null, List.of(),
                         PropagationContext.createRoot(), Map.of()));
 
@@ -56,7 +56,7 @@ class ClaudonyWorkerProvisionerTest {
     @Test
     void provision_returnsWorkerWithRequestedCapabilities() throws Exception {
         var caseId = UUID.randomUUID();
-        when(contextProvider.buildContext(anyString(), any())).thenReturn(
+        when(contextProvider.buildContext(anyString(), any(), any())).thenReturn(
                 new WorkerContext("task", caseId, null, List.of(), PropagationContext.createRoot(), Map.of()));
 
         Worker worker = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
@@ -68,7 +68,7 @@ class ClaudonyWorkerProvisionerTest {
     @Test
     void provision_registersRoleToSessionMapping() throws Exception {
         var caseId = UUID.randomUUID();
-        when(contextProvider.buildContext(anyString(), any())).thenReturn(
+        when(contextProvider.buildContext(anyString(), any(), any())).thenReturn(
                 new WorkerContext("task", caseId, null, List.of(), PropagationContext.createRoot(), Map.of()));
 
         provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
@@ -90,7 +90,7 @@ class ClaudonyWorkerProvisionerTest {
 
     @Test
     void provision_tmuxFails_throwsProvisioningException() throws Exception {
-        when(contextProvider.buildContext(anyString(), any())).thenReturn(
+        when(contextProvider.buildContext(anyString(), any(), any())).thenReturn(
                 new WorkerContext("task", null, null, List.of(), PropagationContext.createRoot(), Map.of()));
         doThrow(new java.io.IOException("tmux not found")).when(tmux)
                 .createSession(anyString(), anyString(), anyString());
@@ -103,7 +103,7 @@ class ClaudonyWorkerProvisionerTest {
     @Test
     void provision_stampsSessionWithCaseIdAndRoleName() throws Exception {
         var caseId = UUID.randomUUID();
-        when(contextProvider.buildContext(anyString(), any())).thenReturn(
+        when(contextProvider.buildContext(anyString(), any(), any())).thenReturn(
                 new WorkerContext("code-reviewer", caseId, null, List.of(),
                         PropagationContext.createRoot(), Map.of()));
 

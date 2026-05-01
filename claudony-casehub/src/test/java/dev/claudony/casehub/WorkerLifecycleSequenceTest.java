@@ -147,7 +147,7 @@ class WorkerLifecycleSequenceTest {
         var contextProvider = new ClaudonyWorkerContextProvider(
                 mock(CaseLineageQuery.class), mock(CaseChannelProvider.class));
 
-        WorkerContext ctx = contextProvider.buildContext("worker-1",
+        WorkerContext ctx = contextProvider.buildContext("worker-1", null,
                 WorkRequest.of("researcher", Map.of()));
 
         assertThat(ctx.properties()).containsKey("meshParticipation");

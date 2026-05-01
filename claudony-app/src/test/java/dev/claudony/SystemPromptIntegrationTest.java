@@ -21,8 +21,8 @@ class SystemPromptIntegrationTest {
     @Test
     void defaultConfig_activeStrategy_systemPromptPresent() {
         UUID caseId = UUID.randomUUID();
-        WorkerContext ctx = provider.buildContext("integration-worker",
-                WorkRequest.of("researcher", Map.of("caseId", caseId.toString())));
+        WorkerContext ctx = provider.buildContext("integration-worker", caseId,
+                WorkRequest.of("researcher", Map.of()));
 
         assertThat(ctx.properties()).containsKey("systemPrompt");
     }
@@ -30,8 +30,8 @@ class SystemPromptIntegrationTest {
     @Test
     void defaultConfig_systemPromptContainsCaseId() {
         UUID caseId = UUID.randomUUID();
-        WorkerContext ctx = provider.buildContext("integration-worker",
-                WorkRequest.of("researcher", Map.of("caseId", caseId.toString())));
+        WorkerContext ctx = provider.buildContext("integration-worker", caseId,
+                WorkRequest.of("researcher", Map.of()));
 
         String prompt = (String) ctx.properties().get("systemPrompt");
         assertThat(prompt).contains(caseId.toString());
@@ -40,8 +40,8 @@ class SystemPromptIntegrationTest {
     @Test
     void defaultConfig_systemPromptContainsStartupSection() {
         UUID caseId = UUID.randomUUID();
-        WorkerContext ctx = provider.buildContext("integration-worker",
-                WorkRequest.of("researcher", Map.of("caseId", caseId.toString())));
+        WorkerContext ctx = provider.buildContext("integration-worker", caseId,
+                WorkRequest.of("researcher", Map.of()));
 
         String prompt = (String) ctx.properties().get("systemPrompt");
         assertThat(prompt).contains("STARTUP:");
