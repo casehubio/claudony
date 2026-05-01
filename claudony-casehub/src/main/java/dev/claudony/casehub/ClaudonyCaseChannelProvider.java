@@ -2,14 +2,17 @@ package dev.claudony.casehub;
 
 import io.casehub.api.model.CaseChannel;
 import io.casehub.api.spi.CaseChannelProvider;
+import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
 import io.casehub.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -42,7 +45,7 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
     @Override
     public CaseChannel openChannel(UUID caseId, String purpose) {
         Map<String, CaseChannel> channels = caseChannels.computeIfAbsent(caseId, this::initializeLayout);
-        return channels.computeIfAbsent(purpose, p -> createQhorusChannel(caseId, p, null));
+        return channels.computeIfAbsent(purpose, p -> createQhorusChannel(caseId, p, null, null));
     }
 
     @Override
@@ -73,22 +76,28 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
     private Map<String, CaseChannel> initializeLayout(UUID caseId) {
         Map<String, CaseChannel> channels = new ConcurrentHashMap<>();
         for (CaseChannelLayout.ChannelSpec spec : layout.channelsFor(caseId, null)) {
-            CaseChannel ch = createQhorusChannel(caseId, spec.purpose(), spec.semantic().name());
+            String allowedTypes = toAllowedTypesString(spec.allowedTypes());
+            CaseChannel ch = createQhorusChannel(caseId, spec.purpose(), spec.semantic().name(), allowedTypes);
             channels.put(spec.purpose(), ch);
         }
         return channels;
     }
 
-    private CaseChannel createQhorusChannel(UUID caseId, String purpose, String semantic) {
+    private CaseChannel createQhorusChannel(UUID caseId, String purpose, String semantic, String allowedTypes) {
         String channelName = CHANNEL_PREFIX + caseId + "/" + purpose;
         QhorusMcpToolsBase.ChannelDetail detail =
-                qhorusMcpTools.createChannel(channelName, purpose, semantic, null, null, null, null, null, null);
+                qhorusMcpTools.createChannel(channelName, purpose, semantic, null, null, null, null, null, allowedTypes);
         return new CaseChannel(
                 detail.channelId().toString(),
                 detail.name(),
                 purpose,
                 "qhorus",
                 Map.of(QHORUS_NAME_KEY, detail.name()));
+    }
+
+    private static String toAllowedTypesString(Set<MessageType> types) {
+        if (types == null || types.isEmpty()) return null;
+        return types.stream().map(MessageType::name).sorted().collect(Collectors.joining(","));
     }
 
     private String extractPurpose(String channelName, UUID caseId) {

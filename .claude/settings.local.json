@@ -708,7 +708,11 @@
       "Bash(jar -xf ~/.m2/repository/io/quarkiverse/mcp/quarkus-mcp-server-core/1.11.1/quarkus-mcp-server-core-1.11.1.jar)",
       "Bash(jar -xf ~/.m2/repository/io/casehub/casehub-qhorus/0.2-SNAPSHOT/casehub-qhorus-0.2-SNAPSHOT.jar -C /tmp/qhorus-inspect/)",
       "Bash(mkdir -p /tmp/qhorus-inspect)",
-      "Bash(jar -xf ~/.m2/repository/io/casehub/casehub-qhorus/0.2-SNAPSHOT/casehub-qhorus-0.2-SNAPSHOT.jar)"
+      "Bash(jar -xf ~/.m2/repository/io/casehub/casehub-qhorus/0.2-SNAPSHOT/casehub-qhorus-0.2-SNAPSHOT.jar)",
+      "Bash(/opt/homebrew/bin/node *)",
+      "Bash(jar -tf ~/.m2/repository/io/casehub/casehub-qhorus-testing/0.2-SNAPSHOT/casehub-qhorus-testing-0.2-SNAPSHOT.jar)",
+      "Bash(jar -xf ~/.m2/repository/io/casehub/casehub-qhorus-testing/0.2-SNAPSHOT/casehub-qhorus-testing-0.2-SNAPSHOT.jar)",
+      "mcp__intellij__read_file"
     ]
   }
 }

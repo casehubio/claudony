@@ -31,7 +31,7 @@ class ClaudonyCaseChannelProviderTest {
     private void stubCreateChannel(UUID caseId) {
         when(qhorusMcpTools.createChannel(
                 contains(caseId.toString()), anyString(), anyString(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+                isNull(), isNull(), isNull(), isNull(), isNull(), any()))
                 .thenAnswer(inv -> channelDetail(UUID.randomUUID(), inv.getArgument(0)));
     }
 
@@ -45,7 +45,7 @@ class ClaudonyCaseChannelProviderTest {
         // NormativeChannelLayout opens 3 channels on first touch
         verify(qhorusMcpTools, times(3)).createChannel(
                 anyString(), anyString(), anyString(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any());
     }
 
     @Test
@@ -72,7 +72,7 @@ class ClaudonyCaseChannelProviderTest {
         // Still only 3 createChannel calls total (initialised on first touch)
         verify(qhorusMcpTools, times(3)).createChannel(
                 anyString(), anyString(), anyString(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any());
     }
 
     @Test
@@ -87,14 +87,14 @@ class ClaudonyCaseChannelProviderTest {
 
         verify(qhorusMcpTools, times(6)).createChannel(
                 anyString(), anyString(), anyString(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any());
     }
 
     @Test
     void openChannel_purposeNotInLayout_createsAdHocChannel() {
         UUID caseId = UUID.randomUUID();
         stubCreateChannel(caseId);
-        // Also stub for ad-hoc (null semantic)
+        // Also stub for ad-hoc (null semantic, null allowedTypes)
         when(qhorusMcpTools.createChannel(
                 contains(caseId.toString()), anyString(), isNull(),
                 isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
@@ -106,7 +106,7 @@ class ClaudonyCaseChannelProviderTest {
         // 3 layout channels + 1 ad-hoc
         verify(qhorusMcpTools, times(4)).createChannel(
                 anyString(), anyString(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any());
     }
 
     @Test
@@ -116,9 +116,23 @@ class ClaudonyCaseChannelProviderTest {
 
         provider.openChannel(caseId, "work");
 
+        // work channel has null allowedTypes (all message types permitted)
         verify(qhorusMcpTools).createChannel(
                 eq("case-" + caseId + "/work"), anyString(), anyString(),
                 isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    void openChannel_oversightChannel_passesAllowedTypes() {
+        UUID caseId = UUID.randomUUID();
+        stubCreateChannel(caseId);
+
+        provider.openChannel(caseId, "oversight");
+
+        // oversight channel: NormativeChannelLayout restricts to COMMAND,QUERY (sorted)
+        verify(qhorusMcpTools).createChannel(
+                contains("/oversight"), anyString(), anyString(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), eq("COMMAND,QUERY"));
     }
 
     @Test
@@ -130,7 +144,7 @@ class ClaudonyCaseChannelProviderTest {
 
         verify(qhorusMcpTools).createChannel(
                 contains("/work"), anyString(), eq("APPEND"),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any());
     }
 
     @Test

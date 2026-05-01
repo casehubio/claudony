@@ -193,6 +193,44 @@
     // Terminal types (obligation discharged/cancelled — mark visually distinct)
     var TERMINAL_TYPES = { decline: 1, handoff: 1, done: 1, failure: 1 };
 
+    // Channel → permitted types (null = all permitted). Populated in loadChannels().
+    var chChannelAllowedTypes = {};
+
+    // Canonical type option order (COMMAND first — default for human interjection)
+    var TYPE_OPTIONS = [
+        { value: 'command',  label: 'COMMAND — directive' },
+        { value: 'query',    label: 'QUERY — request info' },
+        { value: 'status',   label: 'STATUS — update' },
+        { value: 'response', label: 'RESPONSE — answer' },
+        { value: 'done',     label: 'DONE — completed' },
+        { value: 'decline',  label: 'DECLINE — refuse' },
+        { value: 'handoff',  label: 'HANDOFF — delegate' },
+        { value: 'event',    label: 'EVENT — observation' }
+    ];
+
+    function updateTypeSelectForChannel(channelName) {
+        var allowed = channelName ? chChannelAllowedTypes[channelName] : null;
+        var permitted = allowed
+            ? allowed.toLowerCase().split(',').map(function (t) { return t.trim(); })
+            : null;
+        var current = chTypeSelect.value;
+        chTypeSelect.innerHTML = '';
+        TYPE_OPTIONS.forEach(function (opt) {
+            if (!permitted || permitted.indexOf(opt.value) !== -1) {
+                var o = document.createElement('option');
+                o.value = opt.value;
+                o.textContent = opt.label;
+                chTypeSelect.appendChild(o);
+            }
+        });
+        // Restore selection if still available; otherwise default to first option
+        if (chTypeSelect.querySelector('option[value="' + current + '"]')) {
+            chTypeSelect.value = current;
+        } else {
+            chTypeSelect.value = chTypeSelect.options[0] ? chTypeSelect.options[0].value : 'command';
+        }
+    }
+
     function escHtml(s) {
         return String(s)
             .replace(/&/g, '&amp;')
@@ -318,14 +356,19 @@
         if (entry.type === 'EVENT') {
             el.classList.add('ch-msg-event');
             var agentId = escHtml(entry.agent_id || 'system');
-            var toolName = entry.tool_name ? ' · ' + escHtml(entry.tool_name) : '';
+            // EVENTs: content is null by design — telemetry lives in dedicated fields
+            var parts = [];
+            if (entry.tool_name) parts.push(escHtml(entry.tool_name));
+            if (entry.duration_ms != null) parts.push(escHtml(String(entry.duration_ms)) + 'ms');
+            if (entry.token_count != null) parts.push(escHtml(String(entry.token_count)) + 'tok');
+            var eventDetail = parts.join(' · ') || '—';
             el.innerHTML =
                 '<div class="ch-msg-meta">' +
                     '<span class="msg-badge msg-event">EVENT</span>' +
                     '<span class="ch-msg-sender ch-sender-agent">' + agentId + '</span>' +
                     '<span class="ch-msg-time">' + formatTime(entry.created_at) + '</span>' +
                 '</div>' +
-                '<div class="ch-msg-content">' + escHtml(entry.content || toolName || '') + '</div>';
+                '<div class="ch-msg-content">' + eventDetail + '</div>';
         } else {
             var mtype = (entry.message_type || 'unknown').toLowerCase();
             var label = MSG_BADGE_LABELS[mtype] || mtype.toUpperCase();
@@ -378,6 +421,7 @@
         chFeed.innerHTML = '';
         chError.textContent = '';
         chSendBtn.disabled = !name;
+        updateTypeSelectForChannel(name || null);
 
         if (!name) return;
 
@@ -400,8 +444,10 @@
     function loadChannels() {
         fetch('/api/mesh/channels').then(function (r) { return r.json(); }).then(function (channels) {
             channels.sort(function (a, b) { return a.name.localeCompare(b.name); });
+            chChannelAllowedTypes = {};
             chSelect.innerHTML = '<option value="">— select channel —</option>';
             channels.forEach(function (ch) {
+                chChannelAllowedTypes[ch.name] = ch.allowedTypes || null;
                 var opt = document.createElement('option');
                 opt.value = ch.name;
                 opt.textContent = ch.name + (ch.message_count ? ' (' + ch.message_count + ')' : '');
