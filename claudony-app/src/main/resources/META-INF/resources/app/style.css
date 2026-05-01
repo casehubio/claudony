@@ -323,6 +323,88 @@ body.terminal-page { display: flex; flex-direction: column; height: 100vh; overf
     font-style: italic;
 }
 
+/* ── Case context header (injected when session has caseId) ────────────── */
+
+.ch-case-header {
+    border-bottom: 1px solid var(--border);
+    padding: 6px 10px 4px;
+    flex-shrink: 0;
+}
+.ch-case-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.ch-case-role {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ch-case-elapsed {
+    font-size: 11px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+.ch-lineage-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    padding: 2px 0;
+    font-size: 11px;
+    color: var(--text-dim);
+    user-select: none;
+}
+.ch-lineage-toggle:hover { color: var(--text); }
+.ch-lineage-chevron {
+    font-size: 9px;
+    transition: transform 0.15s ease;
+    display: inline-block;
+}
+
+/* ── Lineage section (collapsible) ─────────────────────────────────────── */
+
+.ch-lineage {
+    border-bottom: 1px solid var(--border);
+    padding: 4px 10px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.ch-lineage.ch-lineage-hidden { display: none; }
+.ch-lineage-empty {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-style: italic;
+    padding: 2px 0;
+}
+.ch-lineage-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border);
+}
+.ch-lineage-row:last-child { border-bottom: none; }
+.ch-lineage-name {
+    color: var(--active);
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ch-lineage-time {
+    color: var(--text-dim);
+    flex-shrink: 0;
+    font-family: var(--mono);
+}
+
 .key-bar {
     display: flex; gap: 4px; padding: 8px;
     background: var(--surface); border-top: 1px solid var(--border);
