@@ -135,6 +135,8 @@ public class SessionResource {
                     try {
                         caseUuid = UUID.fromString(session.caseId().get());
                     } catch (IllegalArgumentException e) {
+                        LOG.warnf("Session '%s' has non-UUID caseId '%s' — returning empty lineage",
+                                id, session.caseId().get());
                         return Response.ok(List.of()).build();
                     }
                     return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)).build();

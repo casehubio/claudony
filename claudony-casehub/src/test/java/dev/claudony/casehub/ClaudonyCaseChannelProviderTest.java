@@ -29,7 +29,9 @@ class ClaudonyCaseChannelProviderTest {
     }
 
     private void stubCreateChannel(UUID caseId) {
-        when(qhorusMcpTools.createChannel(contains(caseId.toString()), anyString(), anyString(), isNull()))
+        when(qhorusMcpTools.createChannel(
+                contains(caseId.toString()), anyString(), anyString(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenAnswer(inv -> channelDetail(UUID.randomUUID(), inv.getArgument(0)));
     }
 
@@ -41,7 +43,9 @@ class ClaudonyCaseChannelProviderTest {
         provider.openChannel(caseId, "work");
 
         // NormativeChannelLayout opens 3 channels on first touch
-        verify(qhorusMcpTools, times(3)).createChannel(anyString(), anyString(), anyString(), isNull());
+        verify(qhorusMcpTools, times(3)).createChannel(
+                anyString(), anyString(), anyString(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -66,7 +70,9 @@ class ClaudonyCaseChannelProviderTest {
         provider.openChannel(caseId, "observe");
 
         // Still only 3 createChannel calls total (initialised on first touch)
-        verify(qhorusMcpTools, times(3)).createChannel(anyString(), anyString(), anyString(), isNull());
+        verify(qhorusMcpTools, times(3)).createChannel(
+                anyString(), anyString(), anyString(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -79,7 +85,9 @@ class ClaudonyCaseChannelProviderTest {
         provider.openChannel(caseId1, "work");
         provider.openChannel(caseId2, "work");
 
-        verify(qhorusMcpTools, times(6)).createChannel(anyString(), anyString(), anyString(), isNull());
+        verify(qhorusMcpTools, times(6)).createChannel(
+                anyString(), anyString(), anyString(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -87,14 +95,18 @@ class ClaudonyCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreateChannel(caseId);
         // Also stub for ad-hoc (null semantic)
-        when(qhorusMcpTools.createChannel(contains(caseId.toString()), anyString(), isNull(), isNull()))
+        when(qhorusMcpTools.createChannel(
+                contains(caseId.toString()), anyString(), isNull(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenAnswer(inv -> channelDetail(UUID.randomUUID(), inv.getArgument(0)));
 
         CaseChannel ch = provider.openChannel(caseId, "custom-purpose");
 
         assertThat(ch.purpose()).isEqualTo("custom-purpose");
         // 3 layout channels + 1 ad-hoc
-        verify(qhorusMcpTools, times(4)).createChannel(anyString(), anyString(), any(), isNull());
+        verify(qhorusMcpTools, times(4)).createChannel(
+                anyString(), anyString(), any(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -104,7 +116,9 @@ class ClaudonyCaseChannelProviderTest {
 
         provider.openChannel(caseId, "work");
 
-        verify(qhorusMcpTools).createChannel(eq("case-" + caseId + "/work"), anyString(), anyString(), isNull());
+        verify(qhorusMcpTools).createChannel(
+                eq("case-" + caseId + "/work"), anyString(), anyString(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -114,7 +128,9 @@ class ClaudonyCaseChannelProviderTest {
 
         provider.openChannel(caseId, "work");
 
-        verify(qhorusMcpTools).createChannel(contains("/work"), anyString(), eq("APPEND"), isNull());
+        verify(qhorusMcpTools).createChannel(
+                contains("/work"), anyString(), eq("APPEND"),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -126,8 +142,9 @@ class ClaudonyCaseChannelProviderTest {
 
         provider.postToChannel(ch, "alice", "hello");
 
-        verify(qhorusMcpTools).sendMessage(eq(channelName), eq("alice"), anyString(),
-                eq("hello"), isNull(), isNull());
+        verify(qhorusMcpTools).sendMessage(
+                eq(channelName), eq("alice"), anyString(), eq("hello"),
+                isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -160,7 +177,8 @@ class ClaudonyCaseChannelProviderTest {
     void postToChannel_missingQhorusName_fallsBackToChannelId() {
         CaseChannel ch = new CaseChannel("ch-id", "channel", "purpose", "qhorus", Map.of());
         assertThatNoException().isThrownBy(() -> provider.postToChannel(ch, "alice", "hello"));
-        verify(qhorusMcpTools).sendMessage(eq("ch-id"), eq("alice"), anyString(),
-                eq("hello"), isNull(), isNull());
+        verify(qhorusMcpTools).sendMessage(
+                eq("ch-id"), eq("alice"), anyString(), eq("hello"),
+                isNull(), isNull(), isNull(), isNull(), isNull());
     }
 }

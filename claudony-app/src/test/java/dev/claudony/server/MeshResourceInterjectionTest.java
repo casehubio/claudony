@@ -27,7 +27,7 @@ class MeshResourceInterjectionTest {
     @BeforeEach
     void createChannel() {
         channelName = "test-interjection-" + System.nanoTime();
-        tools.createChannel(channelName, "test channel for interjection", "APPEND", null);
+        tools.createChannel(channelName, "test channel for interjection", "APPEND", null, null, null, null, null, null);
     }
 
     @AfterEach

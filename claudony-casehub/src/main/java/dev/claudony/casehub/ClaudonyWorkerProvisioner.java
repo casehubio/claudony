@@ -7,7 +7,6 @@ import dev.claudony.server.model.SessionStatus;
 import io.casehub.api.model.Capability;
 import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.model.Worker;
-import io.casehub.api.model.WorkRequest;
 import io.casehub.api.spi.ProvisioningException;
 import io.casehub.api.spi.WorkerProvisioner;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -71,9 +70,6 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         String sessionId = UUID.randomUUID().toString();
         String roleName = context.taskType() != null ? context.taskType() : capabilities.stream().findFirst().orElse("worker");
         String command = resolver.resolve(capabilities);
-
-        var task = WorkRequest.of(roleName, Map.of());
-        contextProvider.buildContext(sessionId, context.caseId(), task);
 
         String sessionName = SESSION_PREFIX + sessionId;
         try {

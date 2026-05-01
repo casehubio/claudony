@@ -151,7 +151,7 @@ public class MeshResource {
         }
         try {
             QhorusMcpToolsBase.MessageResult result =
-                    qhorusMcpTools.sendMessage(name, "human", type, req.content(), null, null);
+                    qhorusMcpTools.sendMessage(name, "human", type, req.content(), null, null, null, null, null);
             return Response.ok(result).build();
         } catch (IllegalArgumentException e) {
             // Not wrapped — returned directly (shouldn't happen due to @WrapBusinessError, but guard)

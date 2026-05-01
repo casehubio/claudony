@@ -48,7 +48,7 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
     @Override
     public void postToChannel(CaseChannel channel, String from, String content) {
         String qhorusName = (String) channel.properties().getOrDefault(QHORUS_NAME_KEY, channel.id());
-        qhorusMcpTools.sendMessage(qhorusName, from, "status", content, null, null);
+        qhorusMcpTools.sendMessage(qhorusName, from, "status", content, null, null, null, null, null);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
     private CaseChannel createQhorusChannel(UUID caseId, String purpose, String semantic) {
         String channelName = CHANNEL_PREFIX + caseId + "/" + purpose;
         QhorusMcpToolsBase.ChannelDetail detail =
-                qhorusMcpTools.createChannel(channelName, purpose, semantic, null);
+                qhorusMcpTools.createChannel(channelName, purpose, semantic, null, null, null, null, null, null);
         return new CaseChannel(
                 detail.channelId().toString(),
                 detail.name(),

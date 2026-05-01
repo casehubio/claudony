@@ -170,17 +170,6 @@ class ClaudonyWorkerContextProviderTest {
     }
 
     @Test
-    void buildContext_nullCaseId_meshParticipationStamped() {
-        var silentProvider = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
-                new SilentParticipationStrategy());
-
-        WorkerContext ctx = silentProvider.buildContext("w1", null,
-                WorkRequest.of("task", Map.of()));
-
-        assertThat(ctx.properties()).containsEntry("meshParticipation", "SILENT");
-    }
-
-    @Test
     void buildContext_meshParticipationValueIsEnumName() {
         WorkerContext ctx = provider.buildContext("w1", null, WorkRequest.of("task", Map.of()));
 

@@ -38,7 +38,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     @BeforeEach
     void createChannel() {
         channelName = "ch-panel-e2e-" + System.nanoTime();
-        tools.createChannel(channelName, "E2E test channel", "APPEND", null);
+        tools.createChannel(channelName, "E2E test channel", "APPEND", null, null, null, null, null, null);
     }
 
     @AfterEach

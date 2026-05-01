@@ -40,7 +40,7 @@ class SessionLineageResourceTest {
                 .body("$", hasSize(0));          // EmptyCaseLineageQuery returns []
     }
 
-    // ── No caseId: session without caseId → 200 empty list
+    // ── No caseId: session without caseId → 200 empty list (early exit, lineageQuery not called)
 
     @Test
     void sessionWithoutCaseId_returns200EmptyList() {

@@ -694,7 +694,21 @@
       "mcp__intellij__get_repositories",
       "Bash(jar -tf ~/.m2/repository/io/casehub/casehub-api/0.2-SNAPSHOT/casehub-api-0.2-SNAPSHOT.jar)",
       "Bash(jar -tf ~/.m2/repository/io/casehub/casehub-engine-api/0.2-SNAPSHOT/casehub-engine-api-0.2-SNAPSHOT.jar)",
-      "mcp__intellij__replace_text_in_file"
+      "mcp__intellij__replace_text_in_file",
+      "mcp__intellij__search_in_files_by_text",
+      "mcp__intellij__search_in_files_by_regex",
+      "mcp__intellij__get_symbol_info",
+      "Bash(jar -tf ~/.m2/repository/io/casehub/casehub-qhorus-runtime/0.2-SNAPSHOT/casehub-qhorus-runtime-0.2-SNAPSHOT.jar)",
+      "Bash(jar -tf ~/.m2/repository/io/casehub/casehub-qhorus/0.2-SNAPSHOT/casehub-qhorus-0.2-SNAPSHOT.jar)",
+      "Bash(jar -xf ~/.m2/repository/io/casehub/casehub-qhorus/0.2-SNAPSHOT/casehub-qhorus-0.2-SNAPSHOT.jar META-INF/jandex.idx -C /tmp/qhorus-jandex/)",
+      "WebFetch(domain:spec.modelcontextprotocol.io)",
+      "Bash(jar -tf ~/.m2/repository/io/quarkiverse/mcp/quarkus-mcp-server-core-deployment/1.11.1/quarkus-mcp-server-core-deployment-1.11.1.jar)",
+      "Bash(jar -tf ~/.m2/repository/io/quarkiverse/mcp/quarkus-mcp-server-core/1.11.1/quarkus-mcp-server-core-1.11.1.jar)",
+      "Bash(jar -xf ~/.m2/repository/io/quarkiverse/mcp/quarkus-mcp-server-core-deployment/1.11.1/quarkus-mcp-server-core-deployment-1.11.1.jar)",
+      "Bash(jar -xf ~/.m2/repository/io/quarkiverse/mcp/quarkus-mcp-server-core/1.11.1/quarkus-mcp-server-core-1.11.1.jar)",
+      "Bash(jar -xf ~/.m2/repository/io/casehub/casehub-qhorus/0.2-SNAPSHOT/casehub-qhorus-0.2-SNAPSHOT.jar -C /tmp/qhorus-inspect/)",
+      "Bash(mkdir -p /tmp/qhorus-inspect)",
+      "Bash(jar -xf ~/.m2/repository/io/casehub/casehub-qhorus/0.2-SNAPSHOT/casehub-qhorus-0.2-SNAPSHOT.jar)"
     ]
   }
 }
