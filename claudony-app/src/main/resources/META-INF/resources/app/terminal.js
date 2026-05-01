@@ -164,6 +164,19 @@
     var chPollTimer    = null;
     var POLL_MS        = 3000;
 
+    // Case context state (populated from session fetch)
+    var sessionCaseId    = null;
+    var sessionRoleName  = null;
+    var sessionStatus    = null;
+    var sessionCreatedAt = null;
+
+    // Case context DOM references (created dynamically)
+    var chCaseHeaderEl  = null;
+    var chLineageEl     = null;
+    var lineageExpanded = false;
+    var lineagePollTimer = null;
+    var elapsedTicker    = null;
+
     // Normative type badge classes (Layer 1 — illocutionary act)
     var MSG_BADGE_LABELS = {
         query:    'QUERY',
@@ -194,6 +207,108 @@
             var d = new Date(iso);
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         } catch (e) { return ''; }
+    }
+
+    function caseElapsed(fromMs) {
+        var diffM = Math.floor((Date.now() - fromMs) / 60000);
+        if (diffM < 1) return '<1m';
+        if (diffM < 60) return diffM + 'm';
+        return Math.floor(diffM / 60) + 'h ' + (diffM % 60) + 'm';
+    }
+
+    function renderCaseHeader() {
+        if (chCaseHeaderEl) chCaseHeaderEl.remove();
+        chCaseHeaderEl = document.createElement('div');
+        chCaseHeaderEl.className = 'ch-case-header';
+
+        var role = sessionRoleName ? sessionRoleName.replace(/^claudony-worker-/, '') : '—';
+        var status = (sessionStatus || 'idle').toLowerCase();
+        var elapsed = sessionCreatedAt ? caseElapsed(sessionCreatedAt.getTime()) : '—';
+
+        chCaseHeaderEl.innerHTML =
+            '<div class="ch-case-info">' +
+                '<span class="ch-case-role">' + escHtml(role) + '</span>' +
+                '<span class="worker-status-dot ' + escHtml(status) + '"></span>' +
+                '<span class="ch-case-elapsed">' + escHtml(elapsed) + '</span>' +
+            '</div>' +
+            '<div class="ch-lineage-toggle">' +
+                '<span class="ch-lineage-chevron">▶</span>' +
+                '<span class="ch-lineage-count">Loading…</span>' +
+            '</div>';
+
+        chPanel.insertBefore(chCaseHeaderEl, chFeed);
+
+        chCaseHeaderEl.querySelector('.ch-lineage-toggle').addEventListener('click', toggleLineage);
+
+        if (elapsedTicker) clearInterval(elapsedTicker);
+        elapsedTicker = setInterval(function () {
+            var el = chCaseHeaderEl && chCaseHeaderEl.querySelector('.ch-case-elapsed');
+            if (el && sessionCreatedAt) el.textContent = caseElapsed(sessionCreatedAt.getTime());
+        }, 30000);
+    }
+
+    function toggleLineage() {
+        lineageExpanded = !lineageExpanded;
+        if (chLineageEl) chLineageEl.classList.toggle('ch-lineage-hidden', !lineageExpanded);
+        var chevron = chCaseHeaderEl && chCaseHeaderEl.querySelector('.ch-lineage-chevron');
+        if (chevron) chevron.style.transform = lineageExpanded ? 'rotate(90deg)' : '';
+    }
+
+    function renderLineage(workers) {
+        var countEl = chCaseHeaderEl && chCaseHeaderEl.querySelector('.ch-lineage-count');
+        var n = workers.length;
+        if (countEl) countEl.textContent = n + ' prior worker' + (n === 1 ? '' : 's');
+
+        if (chLineageEl) chLineageEl.remove();
+        chLineageEl = document.createElement('div');
+        chLineageEl.className = 'ch-lineage ch-lineage-hidden';
+
+        if (n === 0) {
+            chLineageEl.innerHTML = '<div class="ch-lineage-empty">No prior workers</div>';
+        } else {
+            workers.forEach(function (w) {
+                var row = document.createElement('div');
+                row.className = 'ch-lineage-row';
+                var name = (w.workerName || w.workerId || '?').replace(/^claudony-worker-/, '');
+                var start = w.startedAt
+                    ? new Date(w.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '?';
+                var end = w.completedAt
+                    ? new Date(w.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '?';
+                var durMs = (w.startedAt && w.completedAt)
+                    ? new Date(w.completedAt) - new Date(w.startedAt) : 0;
+                var dur = durMs > 0 ? Math.ceil(durMs / 60000) + 'm' : '?';
+                row.innerHTML =
+                    '<span class="ch-lineage-name">' + escHtml(name) + '</span>' +
+                    '<span class="ch-lineage-time">' + escHtml(start) + '→' + escHtml(end) +
+                        ' (' + escHtml(dur) + ')</span>';
+                chLineageEl.appendChild(row);
+            });
+        }
+        chPanel.insertBefore(chLineageEl, chFeed);
+        if (lineageExpanded) chLineageEl.classList.remove('ch-lineage-hidden');
+    }
+
+    function loadLineage() {
+        fetch('/api/sessions/' + sessionId + '/lineage')
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(renderLineage)
+            .catch(function () { renderLineage([]); });
+        if (lineagePollTimer) clearTimeout(lineagePollTimer);
+        lineagePollTimer = setTimeout(loadLineage, 60000);
+    }
+
+    function selectCaseChannel(caseId) {
+        var prefix = 'case-' + caseId + '/';
+        var opts = Array.from(chSelect.options);
+        var workOpt = opts.find(function (o) { return o.value === prefix + 'work'; });
+        var anyOpt  = opts.find(function (o) { return o.value.indexOf(prefix) === 0; });
+        var target  = workOpt || anyOpt;
+        if (target) {
+            chSelect.value = target.value;
+            selectChannel(target.value);
+        }
     }
 
     function renderMessage(entry) {
@@ -284,32 +399,43 @@
 
     function loadChannels() {
         fetch('/api/mesh/channels').then(function (r) { return r.json(); }).then(function (channels) {
-            // Prefer channels matching the session name pattern
             channels.sort(function (a, b) { return a.name.localeCompare(b.name); });
+            chSelect.innerHTML = '<option value="">— select channel —</option>';
             channels.forEach(function (ch) {
                 var opt = document.createElement('option');
                 opt.value = ch.name;
                 opt.textContent = ch.name + (ch.message_count ? ' (' + ch.message_count + ')' : '');
                 chSelect.appendChild(opt);
             });
-            // Auto-select if channel name passed in URL
+            // Priority 1: URL ?channel= preselect (opens panel if not already open)
             var preselect = params.get('channel');
             if (preselect) {
                 chSelect.value = preselect;
                 selectChannel(preselect);
-                openPanel();
+                if (chPanel.classList.contains('collapsed')) openPanel();
+                return;
+            }
+            // Priority 2: Case channel auto-select (panel already open)
+            if (sessionCaseId) {
+                selectCaseChannel(sessionCaseId);
             }
         }).catch(function () {});
     }
 
     function openPanel() {
         chPanel.classList.remove('collapsed');
+        if (sessionCaseId && !chCaseHeaderEl) {
+            renderCaseHeader();
+            loadLineage();
+        }
         loadChannels();
     }
 
     function closePanel() {
         chPanel.classList.add('collapsed');
         clearTimeout(chPollTimer);
+        clearTimeout(lineagePollTimer);
+        clearInterval(elapsedTicker);
     }
 
     chToggleBtn.addEventListener('click', function () {
@@ -463,7 +589,16 @@
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (session) {
             if (session && session.caseId) {
-                activeCaseId = session.caseId;
+                activeCaseId    = session.caseId;
+                sessionCaseId   = session.caseId;
+                sessionRoleName = session.roleName || null;
+                sessionStatus   = session.status  || null;
+                sessionCreatedAt = session.createdAt ? new Date(session.createdAt) : null;
+                // If channel panel is already open, render case header now
+                if (!chPanel.classList.contains('collapsed') && !chCaseHeaderEl) {
+                    renderCaseHeader();
+                    loadLineage();
+                }
                 openCasePanel();
                 pollWorkers();
                 casePoller = setInterval(pollWorkers, 3000);
@@ -477,5 +612,7 @@
 
     window.addEventListener('beforeunload', function () {
         if (casePoller) clearInterval(casePoller);
+        clearTimeout(lineagePollTimer);
+        clearInterval(elapsedTicker);
     });
 })();

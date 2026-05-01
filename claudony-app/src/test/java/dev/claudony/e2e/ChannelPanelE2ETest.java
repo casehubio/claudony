@@ -2,6 +2,7 @@ package dev.claudony.e2e;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.RequestOptions;
+import com.microsoft.playwright.options.WaitForSelectorState;
 import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
@@ -114,7 +115,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
         // Wait for the dropdown to contain at least one option (polls /api/mesh/channels)
         page.locator("#ch-select option[value='" + channelName + "']").waitFor(
-                new Locator.WaitForOptions().setTimeout(5000));
+                new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED).setTimeout(5000));
 
         // The test channel must appear in the dropdown (at least once)
         assertThat(page.locator("#ch-select option").count()).isGreaterThanOrEqualTo(1);
@@ -200,7 +201,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
         // Wait for channel to be selected (send button should become enabled after channel select)
         page.locator("#ch-select option[value='" + channelName + "']").waitFor(
-                new Locator.WaitForOptions().setTimeout(5000));
+                new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED).setTimeout(5000));
 
         // Manually select the channel if not already selected by auto-select
         page.evaluate("() => { " +
@@ -208,6 +209,9 @@ class ChannelPanelE2ETest extends PlaywrightBase {
                 "sel.value = '" + channelName + "'; " +
                 "sel.dispatchEvent(new Event('change')); " +
                 "}");
+
+        // Select status type — content is rendered in feed for status messages
+        page.locator("#ch-type-select").selectOption("status");
 
         // Wait for send button to be enabled (happens after channel is selected and input has content)
         var input = page.locator("#ch-input");
