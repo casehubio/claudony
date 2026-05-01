@@ -55,11 +55,7 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
         this(lineageQuery, channelProvider, new ActiveParticipationStrategy());
     }
 
-    // Satisfies casehub-engine SPI pre-#220 (2-arg); remove once engine#220 merges to main
-    public WorkerContext buildContext(String workerId, WorkRequest task) {
-        return buildContext(workerId, null, task);
-    }
-
+    @Override
     public WorkerContext buildContext(String workerId, UUID caseId, WorkRequest task) {
         MeshParticipationStrategy.MeshParticipation participation =
                 strategy.strategyFor(workerId, null);
