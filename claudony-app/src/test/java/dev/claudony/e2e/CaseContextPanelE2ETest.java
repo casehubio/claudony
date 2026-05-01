@@ -94,8 +94,8 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
         page.navigate(BASE_URL + "/app/session.html?id=ctx-standalone&name=standalone");
         openChannelPanel();
 
-        // Give JS time to settle
-        page.waitForTimeout(1000);
+        // Wait for session fetch + channel load to complete before asserting absence
+        page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE);
 
         assertThat(page.locator(".ch-case-header").count())
                 .as("No case header for standalone session")

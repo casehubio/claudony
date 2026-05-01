@@ -384,9 +384,13 @@ The dashboard evolves from its current session-card layout to a three-panel obse
 
 **Design constraint:** Keep `terminal.js` / `session.html` self-contained — it becomes the centre panel without requiring the side panels to exist. Left and right panels are additive.
 
-### Human Interjection — Upcoming
+### Case Context Panel — Shipped (#77)
 
-The side panel includes a human input that posts to the Qhorus channel as a `human` sender. Workers see it on their next `check_messages` / `wait_for_reply` cycle; CaseHub records it in lineage as a `HumanDecision` node.
+The right channel panel is case-aware. When the session carries a `caseId`, a case-context section is injected above the message feed showing the worker role, session status, and elapsed time. A collapsible lineage row lists prior completed workers (fetched from `GET /api/sessions/{id}/lineage` → `CaseLineageQuery`, polled every 60 s). On panel open the panel auto-selects the `case-{caseId}/work` Qhorus channel.
+
+Human interjection uses the existing send dock — it posts to the Qhorus channel as `sender = "human"`. Workers see it on their next `check_messages` / `wait_for_reply` cycle. Human messages are visually distinct (amber colour, `ch-sender-human` class).
+
+**Implementation note:** `GET /api/sessions/{id}/lineage` is served by `SessionResource` which injects `CaseLineageQuery`. The `EmptyCaseLineageQuery` `@DefaultBean` returns `[]` until casehub-engine fires `WorkerExecutionStarted`/`Completed` events that `JpaCaseLineageQuery` can query.
 
 **Design constraint:** Human messages need distinct visual treatment from agent messages. Plan for `sender_type: human | agent` on rendered messages.
 

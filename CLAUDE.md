@@ -191,7 +191,7 @@ claudony-casehub/src/main/java/dev/claudony/casehub/
 
 claudony-app/src/main/java/dev/claudony/
 ├── server/
-│   ├── SessionResource.java            — REST API /api/sessions
+│   ├── SessionResource.java            — REST API /api/sessions (+ GET /{id}/lineage → CaseLineageQuery)
 │   ├── TerminalWebSocket.java          — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup.java              — startup health checks, directory creation, tmux bootstrap
 │   ├── fleet/
@@ -223,7 +223,9 @@ claudony-app/src/main/resources/META-INF/resources/  — static frontend served 
 ├── manifest.json + sw.js              — PWA
 └── app/
     ├── index.html + dashboard.js      — session management dashboard
-    ├── session.html + terminal.js     — xterm.js terminal view + iPad key bar
+    ├── session.html + terminal.js     — xterm.js terminal view + iPad key bar;
+    │                                    when session.caseId set: case context panel
+    │                                    (role, status, elapsed, lineage, channel auto-select)
     └── style.css                      — shared dark theme
 ```
 
@@ -307,7 +309,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**425 tests passing** (as of 2026-04-29, all modules): 119 in `claudony-casehub` + 306 in `claudony-app`. Zero failures, zero errors.
+**428 tests passing** (as of 2026-05-01, all modules): 118 in `claudony-casehub` + 310 in `claudony-app`. Zero failures, zero errors.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -315,7 +317,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 ```
 Quarkus resolves `${quarkus.http.port}` to the actual assigned random port. Without this, the client silently connects to the default port (7777) and all such tests fail with `Connection refused`.
 
-**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 50 tools (8 Claudony + 42 Qhorus). Update when Qhorus ships new tools — the count changes with each Qhorus release.
+**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 57 tools (8 Claudony + 49 Qhorus). Update when Qhorus ships new tools — the count changes with each Qhorus release. `quarkus.mcp.server.tools.page-size=0` in `application.properties` disables the default 50-tool pagination cap; the long-term fix (separate endpoints) is tracked in #105.
 
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash
@@ -338,7 +340,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 
 `claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint
-- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch())
+- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test), SessionLineageResourceTest (4 tests: happy path, no caseId, 404, non-UUID caseId robustness), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch())
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
 - `server/expiry/` — ExpiryPolicyRegistryTest, UserInteractionExpiryPolicyTest, TerminalOutputExpiryPolicyTest, StatusAwareExpiryPolicyTest, SessionIdleSchedulerTest
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
@@ -346,7 +348,9 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — CDI event→ledger→lineage round-trip: fires CaseLifecycleEvent, verifies ClaudonyLedgerEventCapture writes and JpaCaseLineageQuery reads back WorkerSummary; `ClaudonyLedgerEventCaptureTest` — 6 tests: happy path fields, sequence increment per case, sequence independence, null guards (2), worker event type
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
-- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (8: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K), CaseWorkerPanelE2ETest (3: standalone placeholder, CaseHub auto-expand + worker list, click-to-switch) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
+- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (8: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K), CaseWorkerPanelE2ETest (3: standalone placeholder, CaseHub auto-expand + worker list, click-to-switch), CaseContextPanelE2ETest (4: case header with role/status, no header for standalone, lineage toggle expand/collapse, channel auto-select) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
+
+**Playwright `<option>` element visibility:** Playwright 1.52+ considers `<option>` elements inside a `<select>` as "hidden" (zero rendered dimensions). Use `waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED))` instead of the default (`visible`) when waiting for options to be added to a dropdown. Default `waitFor()` will timeout even when the option is in the DOM.
 
 **Browser test hook convention:** JavaScript that should only run during Playwright tests is gated behind `window.__CLAUDONY_TEST_MODE__`. Tests set it via `page.addInitScript("window.__CLAUDONY_TEST_MODE__ = true;")` before navigation. Never expose test hooks unconditionally.
 
