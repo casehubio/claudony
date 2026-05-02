@@ -55,18 +55,7 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
         this(lineageQuery, channelProvider, new ActiveParticipationStrategy());
     }
 
-    // Satisfies published engine-api (pre-PR #224): caseId via task.input().
-    // Remove once engine-api with buildContext(String, UUID, WorkRequest) is on GitHub Packages.
-    public WorkerContext buildContext(String workerId, WorkRequest task) {
-        String caseIdStr = (String) task.input().get("caseId");
-        UUID caseId = null;
-        if (caseIdStr != null && !caseIdStr.isBlank()) {
-            try { caseId = UUID.fromString(caseIdStr); } catch (IllegalArgumentException ignored) {}
-        }
-        return buildContext(workerId, caseId, task);
-    }
-
-    // Satisfies engine-api post-PR #224 (caseId promoted to first-class parameter).
+    @Override
     public WorkerContext buildContext(String workerId, UUID caseId, WorkRequest task) {
         MeshParticipationStrategy.MeshParticipation participation =
                 strategy.strategyFor(workerId, null);
