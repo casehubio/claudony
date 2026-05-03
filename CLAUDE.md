@@ -309,7 +309,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**450 tests passing** (as of 2026-05-03, all modules): 140 in `claudony-casehub` + 313 in `claudony-app`. Zero failures, zero errors.
+**455 tests passing** (as of 2026-05-04, all modules): 140 in `claudony-casehub` + 318 in `claudony-app`. Zero failures, zero errors.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
