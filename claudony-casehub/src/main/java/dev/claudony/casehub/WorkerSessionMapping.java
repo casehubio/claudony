@@ -25,8 +25,15 @@ public class WorkerSessionMapping {
     // fallback key: roleName → sessionId (last registered wins)
     private final ConcurrentHashMap<String, String> byRole = new ConcurrentHashMap<>();
 
+    // reverse key: sessionId → roleName
+    private final ConcurrentHashMap<String, String> bySession = new ConcurrentHashMap<>();
+
     void register(final String roleName, final UUID caseId, final String sessionId) {
-        byRole.put(roleName, sessionId);
+        String previousSessionId = byRole.put(roleName, sessionId);
+        if (previousSessionId != null) {
+            bySession.remove(previousSessionId);
+        }
+        bySession.put(sessionId, roleName);
         if (caseId != null) {
             byCase.put(caseId + ":" + roleName, sessionId);
         }
@@ -40,8 +47,15 @@ public class WorkerSessionMapping {
         return Optional.ofNullable(byRole.get(roleName));
     }
 
+    Optional<String> findBySessionId(final String sessionId) {
+        return Optional.ofNullable(bySession.get(sessionId));
+    }
+
     void remove(final String roleName) {
-        byRole.remove(roleName);
+        String sessionId = byRole.remove(roleName);
+        if (sessionId != null) {
+            bySession.remove(sessionId);
+        }
         byCase.entrySet().removeIf(e -> e.getKey().endsWith(":" + roleName));
     }
 }

@@ -80,6 +80,15 @@ class WorkerSessionMappingTest {
     }
 
     @Test
+    void reregistration_cleansUpOldBySessionEntry() {
+        mapping.register("summariser", null, "session-old");
+        mapping.register("summariser", null, "session-new");
+
+        assertThat(mapping.findBySessionId("session-old")).isEmpty();
+        assertThat(mapping.findBySessionId("session-new")).contains("summariser");
+    }
+
+    @Test
     void differentRoles_doNotInterfere() {
         UUID caseId = UUID.randomUUID();
         mapping.register("role-a", caseId, "session-a");
@@ -89,6 +98,27 @@ class WorkerSessionMappingTest {
         assertThat(mapping.findByRole("role-b")).contains("session-b");
         assertThat(mapping.findByCase(caseId.toString(), "role-a")).contains("session-a");
         assertThat(mapping.findByCase(caseId.toString(), "role-b")).contains("session-b");
+    }
+
+    @Test
+    void findBySessionId_returnsRoleName() {
+        mapping.register("analyst", null, "session-uuid-6");
+        assertThat(mapping.findBySessionId("session-uuid-6")).contains("analyst");
+    }
+
+    @Test
+    void findBySessionId_unknownSession_returnsEmpty() {
+        assertThat(mapping.findBySessionId("no-such-session")).isEmpty();
+    }
+
+    @Test
+    void remove_clearsReverseMap() {
+        UUID caseId = UUID.randomUUID();
+        mapping.register("editor", caseId, "session-uuid-7");
+
+        mapping.remove("editor");
+
+        assertThat(mapping.findBySessionId("session-uuid-7")).isEmpty();
     }
 
     @Test
