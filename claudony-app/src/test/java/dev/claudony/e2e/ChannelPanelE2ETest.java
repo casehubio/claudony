@@ -289,4 +289,117 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         assertThat(page.locator("#channel-panel").getAttribute("class"))
                 .contains("collapsed");
     }
+
+    // ── AC 9: EVENT message renders with badge and telemetry fields ───────────
+
+    @Test
+    void eventMessage_rendersWithEventBadgeAndTelemetryFields() {
+        // EVENT messages carry telemetry as JSON content; content field itself is null by design
+        tools.sendMessage(channelName, "system", "event",
+                "{\"tool_name\":\"read_file\",\"duration_ms\":250,\"token_count\":150}",
+                null, null, null, null, null);
+
+        navigateToSessionPageWithChannel();
+        openPanel();
+
+        page.locator("#ch-feed .ch-msg").first().waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // EVENT message gets the ch-msg-event CSS class
+        assertThat(page.locator("#ch-feed .ch-msg-event").count()).isGreaterThanOrEqualTo(1);
+
+        // EVENT badge is shown
+        var badge = page.locator("#ch-feed .msg-event").first();
+        assertThat(badge.textContent()).isEqualTo("EVENT");
+
+        // Telemetry fields are rendered (tool_name · duration_ms · token_count)
+        var feedText = page.locator("#ch-feed").textContent();
+        assertThat(feedText).contains("read_file");
+        assertThat(feedText).contains("250ms");
+        assertThat(feedText).contains("150tok");
+    }
+
+    @Test
+    void eventMessage_withMissingTelemetryFields_rendersDash() {
+        // EVENT with no tool_name/duration_ms/token_count falls back to '—'
+        tools.sendMessage(channelName, "system", "event", "{}", null, null, null, null, null);
+
+        navigateToSessionPageWithChannel();
+        openPanel();
+
+        page.locator("#ch-feed .ch-msg-event").first().waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        var feedText = page.locator("#ch-feed").textContent();
+        assertThat(feedText).contains("—");
+    }
+
+    // ── AC 10: interjection dock defaults to COMMAND type ─────────────────────
+
+    @Test
+    void interjectionDock_defaultTypeIsCommand() {
+        navigateToSessionPage();
+        openPanel();
+
+        // Before selecting any channel, the type dropdown default must be 'command'
+        var defaultType = (String) page.evaluate(
+                "() => document.getElementById('ch-type-select').value");
+        assertThat(defaultType).isEqualTo("command");
+    }
+
+    // ── AC 11: type dropdown filters to channel's allowedTypes ────────────────
+
+    @Test
+    void interjectionDock_typeDropdown_filteredToChannelAllowedTypes() {
+        // Create a channel restricted to COMMAND and QUERY only
+        String restrictedChannel = "restricted-" + System.nanoTime();
+        tools.createChannel(restrictedChannel, "Governance channel", "APPEND",
+                null, null, null, null, null, "COMMAND,QUERY");
+
+        page.navigate(BASE_URL + "/app/session.html?id=fake-session-id&name=test-session");
+        openPanel();
+
+        // Wait for restricted channel to appear in dropdown
+        page.locator("#ch-select option[value='" + restrictedChannel + "']").waitFor(
+                new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED).setTimeout(5000));
+
+        // Select the restricted channel — triggers updateTypeSelectForChannel
+        page.evaluate("() => { " +
+                "var sel = document.getElementById('ch-select'); " +
+                "sel.value = '" + restrictedChannel + "'; " +
+                "sel.dispatchEvent(new Event('change')); " +
+                "}");
+
+        // Type dropdown must only contain COMMAND and QUERY
+        var optionValues = page.locator("#ch-type-select option").allTextContents();
+        assertThat(optionValues).hasSize(2);
+        assertThat(optionValues).anyMatch(s -> s.contains("COMMAND"));
+        assertThat(optionValues).anyMatch(s -> s.contains("QUERY"));
+        assertThat(optionValues).noneMatch(s -> s.contains("STATUS"));
+        assertThat(optionValues).noneMatch(s -> s.contains("EVENT"));
+    }
+
+    @Test
+    void interjectionDock_openChannel_showsAllTypes() {
+        // channelName was created with null allowedTypes — all 8 types should be available
+        page.navigate(BASE_URL + "/app/session.html?id=fake-session-id&name=test-session");
+        openPanel();
+
+        page.locator("#ch-select option[value='" + channelName + "']").waitFor(
+                new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED).setTimeout(5000));
+
+        page.evaluate("() => { " +
+                "var sel = document.getElementById('ch-select'); " +
+                "sel.value = '" + channelName + "'; " +
+                "sel.dispatchEvent(new Event('change')); " +
+                "}");
+
+        var optionValues = page.locator("#ch-type-select option").allTextContents();
+        assertThat(optionValues).hasSize(8);
+        assertThat(optionValues).anyMatch(s -> s.contains("COMMAND"));
+        assertThat(optionValues).anyMatch(s -> s.contains("QUERY"));
+        assertThat(optionValues).anyMatch(s -> s.contains("STATUS"));
+        assertThat(optionValues).anyMatch(s -> s.contains("EVENT"));
+        assertThat(optionValues).anyMatch(s -> s.contains("HANDOFF"));
+    }
 }
