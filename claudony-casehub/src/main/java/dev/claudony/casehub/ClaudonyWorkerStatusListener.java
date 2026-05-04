@@ -48,7 +48,11 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
 
     @Override
     public void onWorkerCompleted(String roleName, WorkResult result) {
-        String sessionId = sessionMapping.findByRole(roleName).orElse(null);
+        // Use precise caseId:role lookup when caseId is available; fall back to byRole otherwise
+        String sessionId = result.caseId() != null
+                ? sessionMapping.findByCase(result.caseId().toString(), roleName)
+                        .orElseGet(() -> sessionMapping.findByRole(roleName).orElse(null))
+                : sessionMapping.findByRole(roleName).orElse(null);
         if (sessionId == null) {
             LOG.warnf("No session found for worker role: %s", roleName);
             return;
@@ -66,7 +70,8 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
             registry.find(sessionId).ifPresent(session ->
                     registry.updateStatus(sessionId, SessionStatus.IDLE));
         }
-        LOG.debugf("Worker completed: role=%s sessionId=%s status=%s", roleName, sessionId, result.status());
+        LOG.debugf("Worker completed: role=%s sessionId=%s status=%s caseId=%s",
+                roleName, sessionId, result.status(), result.caseId());
     }
 
     @Override

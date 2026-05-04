@@ -104,6 +104,55 @@ class ClaudonyWorkerStatusListenerTest {
     }
 
     @Test
+    void onWorkerCompleted_withCaseId_usesPreciseLookup() {
+        var caseId = java.util.UUID.randomUUID();
+        sessionMapping.register("analyst", caseId, "session-analyst-precise");
+        when(registry.find("session-analyst-precise"))
+                .thenReturn(Optional.of(session("session-analyst-precise", SessionStatus.ACTIVE)));
+        var result = WorkResult.completed("corr-1", java.util.Map.of(), "analyst", caseId);
+
+        listener.onWorkerCompleted("analyst", result);
+
+        verify(registry).updateStatus("session-analyst-precise", SessionStatus.IDLE);
+    }
+
+    @Test
+    void onWorkerCompleted_concurrentSameRole_correctSessionUpdated() {
+        // Two concurrent "code-reviewer" workers on different cases
+        var caseA = java.util.UUID.randomUUID();
+        var caseB = java.util.UUID.randomUUID();
+        sessionMapping.register("code-reviewer", caseA, "session-cr-case-a");
+        sessionMapping.register("code-reviewer", caseB, "session-cr-case-b");
+
+        when(registry.find("session-cr-case-a"))
+                .thenReturn(Optional.of(session("session-cr-case-a", SessionStatus.ACTIVE)));
+        when(registry.find("session-cr-case-b"))
+                .thenReturn(Optional.of(session("session-cr-case-b", SessionStatus.ACTIVE)));
+
+        // Case A completes
+        listener.onWorkerCompleted("code-reviewer", WorkResult.completed("corr-a", java.util.Map.of(), "code-reviewer", caseA));
+        verify(registry).updateStatus("session-cr-case-a", SessionStatus.IDLE);
+        verify(registry, never()).updateStatus("session-cr-case-b", SessionStatus.IDLE);
+
+        // Case B completes
+        listener.onWorkerCompleted("code-reviewer", WorkResult.completed("corr-b", java.util.Map.of(), "code-reviewer", caseB));
+        verify(registry).updateStatus("session-cr-case-b", SessionStatus.IDLE);
+    }
+
+    @Test
+    void onWorkerCompleted_withNullCaseId_fallsBackToByRole() {
+        // No caseId in result — falls back to byRole (legacy/external callers)
+        sessionMapping.register("writer", null, "session-writer-1");
+        when(registry.find("session-writer-1"))
+                .thenReturn(Optional.of(session("session-writer-1", SessionStatus.ACTIVE)));
+        var result = WorkResult.completed("corr-1", java.util.Map.of(), "writer");
+
+        listener.onWorkerCompleted("writer", result);
+
+        verify(registry).updateStatus("session-writer-1", SessionStatus.IDLE);
+    }
+
+    @Test
     void onWorkerStalled_doesNotTerminateSession() throws Exception {
         listener.onWorkerStalled("worker-stalled");
         verifyNoInteractions(tmux);
