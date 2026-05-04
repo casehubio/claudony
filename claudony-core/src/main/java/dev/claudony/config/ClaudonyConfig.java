@@ -72,6 +72,14 @@ public interface ClaudonyConfig {
     @WithDefault("3000")
     int meshRefreshInterval();
 
+    @WithName("case-worker-update")
+    @WithDefault("hybrid")
+    String caseWorkerUpdate();
+
+    @WithName("case-worker-heartbeat-ms")
+    @WithDefault("30000")
+    long caseWorkerHeartbeatMs();
+
     default boolean isServerMode() { return "server".equals(mode()); }
     default boolean isAgentMode()  { return "agent".equals(mode()); }
 }
