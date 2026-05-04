@@ -373,8 +373,12 @@
             var mtype = (entry.message_type || 'unknown').toLowerCase();
             var label = MSG_BADGE_LABELS[mtype] || mtype.toUpperCase();
             var sender = entry.sender || '';
-            var isHuman = sender === 'human' || sender.indexOf('human') === 0;
+            var isHuman = sender === 'human' || sender.indexOf('human:') === 0;
             var isTerminal = TERMINAL_TYPES[mtype];
+            // Display the username part — strip the "human:" routing prefix
+            var displaySender = isHuman && sender.indexOf('human:') === 0
+                ? sender.slice(6) || 'human'
+                : sender;
 
             if (isHuman)   el.classList.add('ch-msg-human');
             if (isTerminal) el.classList.add('ch-msg-terminal');
@@ -383,7 +387,7 @@
                 '<div class="ch-msg-meta">' +
                     '<span class="msg-badge msg-' + escHtml(mtype) + '">' + label + '</span>' +
                     '<span class="ch-msg-sender ' + (isHuman ? 'ch-sender-human' : 'ch-sender-agent') + '">' +
-                        escHtml(sender) +
+                        escHtml(displaySender) +
                     '</span>' +
                     '<span class="ch-msg-time">' + formatTime(entry.created_at) + '</span>' +
                 '</div>' +

@@ -5,6 +5,7 @@ import dev.claudony.config.ClaudonyConfig;
 import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
 import io.casehub.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import io.quarkus.security.Authenticated;
+import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import io.quarkiverse.mcp.server.ToolCallException;
@@ -31,9 +32,9 @@ public class MeshResource {
     private static final Logger LOG = Logger.getLogger(MeshResource.class);
 
     @Inject ClaudonyConfig config;
-    // Used by channels/instances/feed/events endpoints added in Tasks 3–5
     @Inject QhorusMcpTools qhorusMcpTools;
     @Inject ObjectMapper mapper;
+    @Inject SecurityIdentity securityIdentity;
 
     record MeshConfig(String strategy, int interval) {}
 
@@ -149,9 +150,10 @@ public class MeshResource {
         if (!VALID_HUMAN_TYPES.contains(type)) {
             return Response.status(400).entity("invalid type: " + type).build();
         }
+        String sender = "human:" + securityIdentity.getPrincipal().getName();
         try {
             QhorusMcpToolsBase.MessageResult result =
-                    qhorusMcpTools.sendMessage(name, "human", type, req.content(), null, null, null, null, null);
+                    qhorusMcpTools.sendMessage(name, sender, type, req.content(), null, null, null, null, null);
             return Response.ok(result).build();
         } catch (IllegalArgumentException e) {
             // Not wrapped — returned directly (shouldn't happen due to @WrapBusinessError, but guard)

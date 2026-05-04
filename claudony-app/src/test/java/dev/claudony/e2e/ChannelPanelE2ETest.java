@@ -176,7 +176,8 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
     @Test
     void humanSender_hasHumanSenderClass() {
-        // Messages posted via REST API are stamped with sender = "human"
+        // API key auth gives principal "agent" → sender stored as "human:agent".
+        // The panel strips "human:" and displays just the username ("agent").
         postMessage("human priority message", "status");
 
         navigateToSessionPageWithChannel();
@@ -186,10 +187,15 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         page.locator("#ch-feed .ch-msg").first().waitFor(
                 new Locator.WaitForOptions().setTimeout(5000));
 
-        // The sender span must carry the ch-sender-human class
+        // Any "human:…" sender gets the ch-sender-human styling class
         var humanSenders = page.locator("#ch-feed .ch-sender-human");
         assertThat(humanSenders.count()).isGreaterThanOrEqualTo(1);
-        assertThat(humanSenders.first().textContent()).isEqualTo("human");
+
+        // "human:" prefix is stripped — only the username is shown
+        var senderText = humanSenders.first().textContent();
+        assertThat(senderText).doesNotContain("human:");
+        assertThat(senderText).isNotBlank();
+        assertThat(senderText).isEqualTo("agent");
     }
 
     // ── AC 6: post message via interjection dock ──────────────────────────────

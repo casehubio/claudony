@@ -45,7 +45,8 @@ class MeshResourceInterjectionTest {
             .post("/api/mesh/channels/{name}/messages", channelName)
         .then()
             .statusCode(200)
-            .body("sender", equalTo("human"))
+            // sender encodes the authenticated principal: "human:<username>"
+            .body("sender", equalTo("human:test"))
             .body("channelName", equalTo(channelName))
             .body("messageType", equalTo("STATUS"))
             .body("messageId", notNullValue());
@@ -56,8 +57,33 @@ class MeshResourceInterjectionTest {
             .get("/api/mesh/channels/{name}/timeline", channelName)
         .then()
             .statusCode(200)
-            .body("[0].sender", equalTo("human"))
+            .body("[0].sender", equalTo("human:test"))
             .body("[0].content", equalTo("prioritise security"));
+    }
+
+    @Test
+    @TestSecurity(user = "alice", roles = "user")
+    void postMessage_differentUsers_produceDistinctSenders() {
+        given()
+            .contentType(JSON)
+            .body("{\"content\":\"alice's directive\",\"type\":\"command\"}")
+        .when()
+            .post("/api/mesh/channels/{name}/messages", channelName)
+        .then()
+            .statusCode(200)
+            .body("sender", equalTo("human:alice"));
+    }
+
+    @Test
+    void postMessage_senderHasHumanPrefix() {
+        given()
+            .contentType(JSON)
+            .body("{\"content\":\"any message\",\"type\":\"status\"}")
+        .when()
+            .post("/api/mesh/channels/{name}/messages", channelName)
+        .then()
+            .statusCode(200)
+            .body("sender", startsWith("human:"));
     }
 
     @Test
