@@ -1,5 +1,6 @@
 package dev.claudony.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.claudony.agent.terminal.TerminalAdapterFactory;
 import dev.claudony.casehub.CaseLineageQuery;
 import dev.claudony.config.ClaudonyConfig;
@@ -9,6 +10,7 @@ import dev.claudony.server.fleet.PeerClient;
 import dev.claudony.server.fleet.PeerRegistry;
 import dev.claudony.server.model.*;
 import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
@@ -48,6 +50,7 @@ public class SessionResource {
     @Inject PeerRegistry peerRegistry;
     @Inject ExpiryPolicyRegistry policyRegistry;
     @Inject CaseLineageQuery lineageQuery;
+    @Inject CaseEventBroadcaster caseEventBroadcaster;
 
     @GET
     public List<SessionResponse> list(
@@ -142,6 +145,28 @@ public class SessionResource {
                     return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)).build();
                 })
                 .orElse(Response.status(404).build());
+    }
+
+    @GET
+    @Path("/{id}/case-events")
+    @Produces("text/event-stream")
+    public Multi<String> caseEvents(@PathParam("id") String id) {
+        var session = registry.find(id)
+                .orElseThrow(() -> new NotFoundException("Session not found: " + id));
+        String caseId = session.caseId()
+                .orElseThrow(() -> new NotFoundException("Session " + id + " has no caseId"));
+        return caseEventBroadcaster.subscribe(caseId, () -> buildCaseSnapshot(caseId));
+    }
+
+    private String buildCaseSnapshot(String caseId) {
+        try {
+            var workers = registry.findByCaseId(caseId).stream()
+                    .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
+                    .toList();
+            return "data: " + MAPPER.writeValueAsString(workers) + "\n\n";
+        } catch (JsonProcessingException e) {
+            return "data: []\n\n";
+        }
     }
 
     @POST
