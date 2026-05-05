@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 public class SessionResource {
 
     private static final Logger LOG = Logger.getLogger(SessionResource.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Inject ClaudonyConfig config;
     @Inject SessionRegistry registry;
@@ -51,6 +50,7 @@ public class SessionResource {
     @Inject ExpiryPolicyRegistry policyRegistry;
     @Inject CaseLineageQuery lineageQuery;
     @Inject CaseEventBroadcaster caseEventBroadcaster;
+    @Inject ObjectMapper MAPPER;
 
     @GET
     public List<SessionResponse> list(
@@ -163,9 +163,10 @@ public class SessionResource {
             var workers = registry.findByCaseId(caseId).stream()
                     .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
                     .toList();
-            return "data: " + MAPPER.writeValueAsString(workers) + "\n\n";
+            return MAPPER.writeValueAsString(workers);
         } catch (JsonProcessingException e) {
-            return "data: []\n\n";
+            LOG.warnf("buildCaseSnapshot serialization error for caseId=%s: %s", caseId, e.getMessage());
+            return "[]";
         }
     }
 
