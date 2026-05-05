@@ -1,27 +1,81 @@
+# claudony Workspace
+
+**Project repo:** /Users/mdproctor/claude/casehub/claudony
+**Workspace type:** public
+
+## Session Start
+
+Run `add-dir /Users/mdproctor/claude/casehub/claudony` before any other work.
+
+## Artifact Locations
+
+| Skill | Writes to |
+|-------|-----------|
+| brainstorming (specs) | `specs/` |
+| writing-plans (plans) | `plans/` |
+| handover | `HANDOFF.md` |
+| idea-log | `IDEAS.md` |
+| design-snapshot | `snapshots/` |
+| java-update-design / update-primary-doc | `design/JOURNAL.md` (created by `epic`) |
+| adr | `adr/` |
+| write-blog | `blog/` |
+
+## Structure
+
+- `HANDOFF.md` — session handover (single file, overwritten each session)
+- `IDEAS.md` — idea log (single file)
+- `specs/` — brainstorming / design specs (superpowers output)
+- `plans/` — implementation plans (superpowers output)
+- `snapshots/` — design snapshots with INDEX.md (auto-pruned, max 10)
+- `adr/` — architecture decision records with INDEX.md
+- `blog/` — project diary entries with INDEX.md
+- `design/` — epic journal (created by `epic` at branch start)
+
+## Rules
+
+- All methodology artifacts go here, not in the project repo
+- Promotion to project repo is always explicit — never automatic
+- Workspace branches mirror project branches — switch both together
+
+## Routing
+
+| Artifact   | Destination | Notes |
+|------------|-------------|-------|
+| adr        | workspace   | |
+| blog       | workspace   | |
+| design     | workspace   | |
+| snapshots  | workspace   | |
+| specs      | workspace   | |
+| handover   | workspace   | |
+
+---
+
 # Claudony — Claude Code Project Guide
 
 ## Platform Context
 
 This repo is one component of the casehubio multi-repo platform. **Before implementing anything — any feature, SPI, data model, or abstraction — run the Platform Coherence Protocol.**
 
+> **Platform docs:** Paths below are local (use `Read`). If the path does not exist — standalone clone on another machine — replace `/Users/mdproctor/claude/casehub/parent/docs/` with `https://raw.githubusercontent.com/casehubio/parent/main/docs/` and use `WebFetch`.
+
 The protocol asks: Does this already exist elsewhere? Is this the right repo for it? Does this create a consolidation opportunity? Is this consistent with how the platform handles the same concern in other repos?
 
 **Platform architecture (fetch before any implementation decision):**
 ```
-https://raw.githubusercontent.com/casehubio/parent/main/docs/PLATFORM.md
+/Users/mdproctor/claude/casehub/parent/docs/PLATFORM.md
 ```
 
 **This repo's deep-dive:**
 ```
-https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/claudony.md
+/Users/mdproctor/claude/casehub/parent/docs/repos/claudony.md
 ```
 
 **Other repo deep-dives** (fetch the relevant ones when your implementation touches their domain):
-- casehub-ledger: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-ledger.md`
-- casehub-work: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-work.md`
-- casehub-qhorus: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-qhorus.md`
-- casehub-engine: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-engine.md`
-- casehub-connectors: `https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/casehub-connectors.md`
+- casehub-ledger: `/Users/mdproctor/claude/casehub/parent/docs/repos/casehub-ledger.md`
+- casehub-work: `/Users/mdproctor/claude/casehub/parent/docs/repos/casehub-work.md`
+- casehub-qhorus: `/Users/mdproctor/claude/casehub/parent/docs/repos/casehub-qhorus.md`
+- casehub-engine: `/Users/mdproctor/claude/casehub/parent/docs/repos/casehub-engine.md`
+- casehub-connectors: `/Users/mdproctor/claude/casehub/parent/docs/repos/casehub-connectors.md`
 
 ---
 
@@ -432,6 +486,19 @@ cd docs && bundle exec jekyll serve --baseurl ""
 - GitHub PR/CI integration in dashboard (idea logged)
 - Docker sandbox per session (idea logged)
 - Windows Terminal or Linux terminal adapters beyond iTerm2 (interface is pluggable, no implementation)
+
+---
+
+## Project Artifacts
+
+Paths that are project content (not workspace noise). Skills use this to avoid
+filtering or dropping commits that touch these paths.
+
+| Path | What it is |
+|------|------------|
+| `CLAUDE.md` | Project conventions (build, test, naming) |
+| `docs/adr/` | Architecture decision records |
+| `docs/DESIGN.md` | Design document |
 
 ## Work Tracking
 
