@@ -57,7 +57,15 @@ dev.claudony — claudony-core + claudony-app
 │   │                             SessionStatus, SessionResponse, request records
 │   ├── TmuxService             — ProcessBuilder wrappers for tmux commands
 │   ├── SessionRegistry         — in-memory ConcurrentHashMap; findByCaseId() for case worker queries
-│   ├── SessionResource         — REST /api/sessions (CRUD + resize + ?caseId= filter)
+│   ├── WorkerCaseLifecycleEvent — CDI event bridging casehub→app (avoids circular dep)
+│   ├── SessionResource         — REST /api/sessions (CRUD + resize + ?caseId= filter;
+│   │                             GET /api/sessions/{id}/case-events SSE stream)
+│   ├── CaseWorkerUpdateStrategy — SPI: events-only | hybrid | registry-hooks
+│   ├── CaseEventBroadcaster    — @ApplicationScoped SSE fan-out; observes WorkerCaseLifecycleEvent
+│   ├── strategy/
+│   │   ├── EventsOnlyStrategy  — emits on lifecycle events only
+│   │   ├── HybridStrategy      — events + configurable heartbeat (default 30s)
+│   │   └── RegistryHooksStrategy — fires on any SessionRegistry mutation
 │   ├── TerminalWebSocket       — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup           — startup health checks, tmux bootstrap
 │   └── auth/
@@ -395,9 +403,11 @@ Human interjection uses the existing send dock — it posts to the Qhorus channe
 
 **Design constraint:** Human messages need distinct visual treatment from agent messages. Plan for `sender_type: human | agent` on rendered messages.
 
-### Worker ↔ Session ↔ Channel Correlation — Partial (#76 shipped)
+### Worker ↔ Session ↔ Channel Correlation — Partial (#76 shipped, #104 SSE shipped)
 
-The triple link (tmux session ID ↔ CaseHub worker ID ↔ Qhorus channel name) is what makes the dashboard work — click a worker in the case graph, see their terminal and channel. `Session` now carries `caseId` and `roleName` (stamped by `ClaudonyWorkerProvisioner.provision()`), and `SessionRegistry.findByCaseId()` retrieves workers ordered by `createdAt`. `GET /api/sessions?caseId=` exposes this to the UI. The case worker panel in `session.html` displays the worker list and supports click-to-switch. Remaining: the full case graph with transitions, and the `qhorusChannel` link from session to Qhorus.
+The triple link (tmux session ID ↔ CaseHub worker ID ↔ Qhorus channel name) is what makes the dashboard work — click a worker in the case graph, see their terminal and channel. `Session` now carries `caseId` and `roleName` (stamped by `ClaudonyWorkerProvisioner.provision()`), and `SessionRegistry.findByCaseId()` retrieves workers ordered by `createdAt`. `GET /api/sessions?caseId=` exposes this to the UI. The case worker panel in `session.html` displays the worker list and supports click-to-switch.
+
+**SSE push (#104):** `GET /api/sessions/{id}/case-events` is an SSE stream. `CaseEventBroadcaster` fans out `WorkerCaseLifecycleEvent` CDI events to all connected SSE subscribers for a case. Strategy is pluggable via `CaseWorkerUpdateStrategy` SPI (events-only | hybrid | registry-hooks). Default: hybrid (events + 30s heartbeat). The frontend uses `EventSource` — no polling. Remaining: the full case graph with transitions, and the `qhorusChannel` link from session to Qhorus.
 
 ### Agent Mesh — Shipped (partial, epic #86)
 

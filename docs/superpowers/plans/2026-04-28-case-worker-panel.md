@@ -1,5 +1,9 @@
 # Case Worker Panel Implementation Plan
 
+> **Note (2026-05-05):** The 3-second polling described in this plan was replaced by SSE push in #104.
+> See `docs/superpowers/specs/2026-05-05-sse-case-worker-panel.md` and
+> `docs/superpowers/plans/2026-05-05-sse-case-worker-panel.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a left panel to `session.html` that shows CaseHub worker teammates and lets you click to switch terminals, with a placeholder for standalone sessions.

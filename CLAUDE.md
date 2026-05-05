@@ -165,7 +165,8 @@ claudony-core/src/main/java/dev/claudony/
     │                                       SessionStatus, SessionExpiredEvent
     ├── TmuxService.java                — ProcessBuilder wrappers for tmux commands
     ├── SessionRegistry.java            — in-memory ConcurrentHashMap session store;
-                                            findByCaseId(caseId) returns workers ordered by createdAt
+    │                                       findByCaseId(caseId) returns workers ordered by createdAt
+    ├── WorkerCaseLifecycleEvent.java   — CDI event bridging casehub→app (avoids circular dep)
     └── expiry/                         — ExpiryPolicy SPI + implementations + scheduler
 
 claudony-casehub/src/main/java/dev/claudony/casehub/
@@ -191,9 +192,16 @@ claudony-casehub/src/main/java/dev/claudony/casehub/
 
 claudony-app/src/main/java/dev/claudony/
 ├── server/
-│   ├── SessionResource.java            — REST API /api/sessions (+ GET /{id}/lineage → CaseLineageQuery)
+│   ├── SessionResource.java            — REST API /api/sessions (+ GET /{id}/lineage → CaseLineageQuery;
+│   │                                       GET /api/sessions/{id}/case-events SSE stream)
 │   ├── TerminalWebSocket.java          — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup.java              — startup health checks, directory creation, tmux bootstrap
+│   ├── CaseWorkerUpdateStrategy.java   — SPI: events-only | hybrid | registry-hooks
+│   ├── CaseEventBroadcaster.java       — @ApplicationScoped SSE fan-out; observes WorkerCaseLifecycleEvent
+│   ├── strategy/
+│   │   ├── EventsOnlyStrategy.java     — emits on lifecycle events only
+│   │   ├── HybridStrategy.java         — events + configurable heartbeat (default 30s)
+│   │   └── RegistryHooksStrategy.java  — fires on any SessionRegistry mutation
 │   ├── fleet/
 │   │   ├── PeerRegistry.java           — authoritative peer list, circuit breaker, atomic peers.json persistence
 │   │   ├── PeerHealthScheduler.java    — @Scheduled health check loop, per-peer virtual thread
@@ -290,6 +298,8 @@ claudony.fleet-key=                     # shared secret for peer-to-peer API cal
 claudony.peers=                         # comma-separated peer URLs for static discovery (e.g. http://mac-mini:7777)
 claudony.mdns-discovery=false           # enable mDNS auto-discovery on LAN (scaffold; full impl follow-on)
 claudony.name=Claudony                  # instance name shown in fleet dashboard
+claudony.case-worker-update=hybrid      # events-only | hybrid | registry-hooks
+claudony.case-worker-heartbeat-ms=30000 # heartbeat interval for hybrid strategy
 # Production — optional; auto-generated and persisted to ~/.claudony/encryption-key on first run.
 # Set only if managing the key externally (secrets manager, etc.):
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
@@ -309,7 +319,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**458 tests passing** (as of 2026-05-04, all modules): 140 in `claudony-casehub` + 318 in `claudony-app`. Zero failures, zero errors.
+**474 tests passing** (as of 2026-05-05, all modules): 4 in `claudony-core` + 134 in `claudony-casehub` + 336 in `claudony-app`. 2 pre-existing failures unrelated to current work: `McpServerIntegrationTest.toolsList_includesQhorusTools` (Qhorus shipped 2 new tools — expected 57, got 59; update the assertion) and `GitStatusTest.gitStatusDetectsGitRepoAndBranch` (local git remote is `mdproctor/claudony`, test expects `casehubio/claudony`).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -317,7 +327,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 ```
 Quarkus resolves `${quarkus.http.port}` to the actual assigned random port. Without this, the client silently connects to the default port (7777) and all such tests fail with `Connection refused`.
 
-**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 57 tools (8 Claudony + 49 Qhorus). Update when Qhorus ships new tools — the count changes with each Qhorus release. `quarkus.mcp.server.tools.page-size=0` in `application.properties` disables the default 50-tool pagination cap; the long-term fix (separate endpoints) is tracked in #105.
+**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 59 tools (8 Claudony + 51 Qhorus) — update this assertion and the count here when Qhorus ships new tools; the count changes with each Qhorus release. `quarkus.mcp.server.tools.page-size=0` in `application.properties` disables the default 50-tool pagination cap; the long-term fix (separate endpoints) is tracked in #105.
 
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash
@@ -340,7 +350,8 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 
 `claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint
-- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test), SessionLineageResourceTest (4 tests: happy path, no caseId, 404, non-UUID caseId robustness), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch())
+- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test; case-events SSE endpoint), SessionLineageResourceTest (4 tests: happy path, no caseId, 404, non-UUID caseId robustness), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch()), CaseEventBroadcasterTest (5 tests: events-only, hybrid heartbeat, registry-hooks, SSE fan-out, EventSource close)
+- `server/strategy/` — EventsOnlyStrategyTest (5 unit tests), HybridStrategyTest (4 unit tests)
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
 - `server/expiry/` — ExpiryPolicyRegistryTest, UserInteractionExpiryPolicyTest, TerminalOutputExpiryPolicyTest, StatusAwareExpiryPolicyTest, SessionIdleSchedulerTest
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
@@ -348,7 +359,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — CDI event→ledger→lineage round-trip: fires CaseLifecycleEvent, verifies ClaudonyLedgerEventCapture writes and JpaCaseLineageQuery reads back WorkerSummary; `ClaudonyLedgerEventCaptureTest` — 6 tests: happy path fields, sequence increment per case, sequence independence, null guards (2), worker event type
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
-- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (8: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K), CaseWorkerPanelE2ETest (3: standalone placeholder, CaseHub auto-expand + worker list, click-to-switch), CaseContextPanelE2ETest (4: case header with role/status, no header for standalone, lineage toggle expand/collapse, channel auto-select) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
+- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (8: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K), CaseWorkerPanelE2ETest (7: standalone placeholder, CaseHub auto-expand + worker list, click-to-switch, regression guard SSE, initial SSE snapshot, SSE push update, EventSource close), CaseContextPanelE2ETest (4: case header with role/status, no header for standalone, lineage toggle expand/collapse, channel auto-select) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
 
 **Playwright `<option>` element visibility:** Playwright 1.52+ considers `<option>` elements inside a `<select>` as "hidden" (zero rendered dimensions). Use `waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED))` instead of the default (`visible`) when waiting for options to be added to a dropdown. Default `waitFor()` will timeout even when the option is in the DOM.
 
