@@ -116,7 +116,7 @@ class WorkerLifecycleSequenceTest {
         final ProvisionContext ctx2 = new ProvisionContext(caseId, "reviewer",
                 new io.casehub.api.model.WorkerContext("review", caseId, null, List.of(),
                         io.casehub.api.context.PropagationContext.createRoot(), Map.of()),
-                io.casehub.api.context.PropagationContext.createRoot());
+                io.casehub.api.context.PropagationContext.createRoot(), null, null);
         final Worker w2 = provisioner.provision(Set.of("default"), ctx2);
 
         final String role1 = w1.getName();   // "code-reviewer"
@@ -156,6 +156,6 @@ class WorkerLifecycleSequenceTest {
     private ProvisionContext provisionContext(final UUID caseId) {
         final var wc = new WorkerContext(
                 "task", caseId, null, List.of(), PropagationContext.createRoot(), Map.of());
-        return new ProvisionContext(caseId, "default", wc, PropagationContext.createRoot());
+        return new ProvisionContext(caseId, "default", wc, PropagationContext.createRoot(), null, null);
     }
 }

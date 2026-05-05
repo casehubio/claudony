@@ -141,6 +141,6 @@ class ClaudonyWorkerProvisionerTest {
     private ProvisionContext provisionContext(UUID caseId) {
         var wc = new WorkerContext("task", caseId, null, List.of(),
                 PropagationContext.createRoot(), Map.of());
-        return new ProvisionContext(caseId, "code-reviewer", wc, PropagationContext.createRoot());
+        return new ProvisionContext(caseId, "code-reviewer", wc, PropagationContext.createRoot(), null, null);
     }
 }
