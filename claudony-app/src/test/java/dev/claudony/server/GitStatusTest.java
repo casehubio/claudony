@@ -78,6 +78,7 @@ class GitStatusTest {
             .statusCode(200)
             .body("gitRepo", equalTo(true))
             .body("branch", not(emptyOrNullString()))
-            .body("githubRepo", equalTo("casehubio/claudony"));
+            // Accept any fork: casehubio/claudony or mdproctor/claudony
+            .body("githubRepo", endsWith("/claudony"));
     }
 }

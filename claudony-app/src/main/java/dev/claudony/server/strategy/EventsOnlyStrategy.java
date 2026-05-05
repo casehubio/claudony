@@ -16,6 +16,9 @@ public class EventsOnlyStrategy implements CaseWorkerUpdateStrategy {
 
     // Package-private for testing and subclass access (HybridStrategy, RegistryHooksStrategy)
     final ConcurrentHashMap<String, List<MultiEmitter<String>>> emitters = new ConcurrentHashMap<>();
+    // Last-registered snapshotFn per caseId wins. This is safe because all subscribers for a
+    // case use the same snapshot producer (SessionResource.buildCaseSnapshot), so overwriting
+    // is idempotent. Do not use this strategy if multiple distinct producers exist per case.
     final ConcurrentHashMap<String, Supplier<String>> snapshotFns = new ConcurrentHashMap<>();
 
     @Override

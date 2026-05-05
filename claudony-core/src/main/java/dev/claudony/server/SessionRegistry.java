@@ -35,6 +35,7 @@ public class SessionRegistry {
 
     public void updateStatus(String id, SessionStatus status) {
         sessions.computeIfPresent(id, (k, s) -> s.withStatus(status));
+        // notifyListeners is a no-op if id is absent (null guard in the helper)
         notifyListeners(id);
     }
 
