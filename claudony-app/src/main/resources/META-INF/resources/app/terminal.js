@@ -550,20 +550,32 @@
     var caseCloseBtn     = document.getElementById('case-close-btn');
     var workersToggleBtn = document.getElementById('workers-toggle-btn');
     var activeCaseId     = null;
-    var casePoller;
+    var caseEventSource = null;
 
     function openCasePanel() {
         casePanel.classList.remove('collapsed');
-        if (activeCaseId && !casePoller) {
-            pollWorkers();
-            casePoller = setInterval(pollWorkers, 3000);
-        }
+        if (activeCaseId && !caseEventSource) connectCaseEvents();
     }
 
     function closeCasePanel() {
-        clearInterval(casePoller);
-        casePoller = null;
         casePanel.classList.add('collapsed');
+        if (caseEventSource) { caseEventSource.close(); caseEventSource = null; }
+    }
+
+    function connectCaseEvents() {
+        if (caseEventSource) { caseEventSource.close(); }
+        caseEventSource = new EventSource('/api/sessions/' + sessionId + '/case-events');
+        caseEventSource.onmessage = function(e) {
+            renderWorkers(JSON.parse(e.data));
+        };
+        caseEventSource.onerror = function() {
+            // EventSource reconnects automatically on network error — no manual retry needed.
+            // onerror fires on reconnect attempts; do not close here.
+        };
+        // Test mode hook for E2E verification
+        if (window.__CLAUDONY_TEST_MODE__) {
+            window._caseEventSource = caseEventSource;
+        }
     }
 
     workersToggleBtn.addEventListener('click', function () {
@@ -609,20 +621,14 @@
         });
     }
 
-    function pollWorkers() {
-        if (!activeCaseId) return;
-        fetch('/api/sessions?caseId=' + encodeURIComponent(activeCaseId))
-            .then(function (r) { return r.ok ? r.json() : []; })
-            .then(renderWorkers)
-            .catch(function () {});
-    }
-
     function switchToWorker(newSessionId, newName) {
         sessionId = newSessionId;
         sessionName = newName;
         document.getElementById('session-name').textContent = newName;
         history.replaceState(null, '',
             '?id=' + newSessionId + '&name=' + encodeURIComponent(newName));
+        if (caseEventSource) { caseEventSource.close(); caseEventSource = null; }
+        if (activeCaseId) connectCaseEvents(); // reconnect for new session (same case)
         clearTimeout(reconnectTimer);
         if (ws) { ws.close(); } else { connect(); }
     }
@@ -650,8 +656,6 @@
                     loadLineage();
                 }
                 openCasePanel();
-                pollWorkers();
-                casePoller = setInterval(pollWorkers, 3000);
             } else {
                 showCasePlaceholder('No case assigned.');
             }
@@ -661,7 +665,7 @@
         });
 
     window.addEventListener('beforeunload', function () {
-        if (casePoller) clearInterval(casePoller);
+        if (caseEventSource) caseEventSource.close();
         clearTimeout(lineagePollTimer);
         clearInterval(elapsedTicker);
     });
