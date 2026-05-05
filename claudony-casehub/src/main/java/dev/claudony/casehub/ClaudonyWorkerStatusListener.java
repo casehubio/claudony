@@ -2,6 +2,7 @@ package dev.claudony.casehub;
 
 import dev.claudony.server.SessionRegistry;
 import dev.claudony.server.TmuxService;
+import dev.claudony.server.WorkerCaseLifecycleEvent;
 import dev.claudony.server.model.SessionStatus;
 import io.casehub.api.model.WorkResult;
 import io.casehub.api.model.WorkStatus;
@@ -43,6 +44,9 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
         if (sessionId != null) {
             registry.updateStatus(sessionId, SessionStatus.ACTIVE);
         }
+        if (caseId != null) {
+            events.fire(new WorkerCaseLifecycleEvent(caseId));
+        }
         LOG.debugf("Worker started: role=%s sessionId=%s", roleName, sessionId);
     }
 
@@ -70,6 +74,9 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
             registry.find(sessionId).ifPresent(session ->
                     registry.updateStatus(sessionId, SessionStatus.IDLE));
         }
+        if (result.caseId() != null) {
+            events.fire(new WorkerCaseLifecycleEvent(result.caseId().toString()));
+        }
         LOG.debugf("Worker completed: role=%s sessionId=%s status=%s caseId=%s",
                 roleName, sessionId, result.status(), result.caseId());
     }
@@ -78,6 +85,10 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
     public void onWorkerStalled(String workerId) {
         LOG.warnf("Worker stalled: %s", workerId);
         events.fire(new WorkerStalledEvent(workerId));
+        sessionMapping.findByRole(workerId)
+                .flatMap(registry::find)
+                .flatMap(s -> s.caseId())
+                .ifPresent(caseId -> events.fire(new WorkerCaseLifecycleEvent(caseId)));
     }
 
     public record WorkerStalledEvent(String workerId) {}

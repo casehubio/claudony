@@ -2,6 +2,7 @@ package dev.claudony.casehub;
 
 import dev.claudony.server.SessionRegistry;
 import dev.claudony.server.TmuxService;
+import dev.claudony.server.WorkerCaseLifecycleEvent;
 import dev.claudony.server.model.Session;
 import dev.claudony.server.model.SessionStatus;
 import io.casehub.api.model.WorkResult;
@@ -19,6 +20,7 @@ class ClaudonyWorkerStatusListenerTest {
     private SessionRegistry registry;
     private TmuxService tmux;
     private WorkerSessionMapping sessionMapping;
+    private Event<Object> events;
     private ClaudonyWorkerStatusListener listener;
 
     @BeforeEach
@@ -27,7 +29,7 @@ class ClaudonyWorkerStatusListenerTest {
         registry = mock(SessionRegistry.class);
         tmux = mock(TmuxService.class);
         sessionMapping = new WorkerSessionMapping();
-        Event<Object> events = mock(Event.class);
+        events = mock(Event.class);
         listener = new ClaudonyWorkerStatusListener(registry, tmux, events, sessionMapping);
     }
 
@@ -156,6 +158,42 @@ class ClaudonyWorkerStatusListenerTest {
     void onWorkerStalled_doesNotTerminateSession() throws Exception {
         listener.onWorkerStalled("worker-stalled");
         verifyNoInteractions(tmux);
+    }
+
+    @Test
+    void onWorkerStarted_firesCaseLifecycleEvent_whenCaseIdPresent() {
+        var caseId = java.util.UUID.randomUUID();
+        sessionMapping.register("analyst", caseId, "session-uuid-event-test");
+        var firedEvents = new java.util.ArrayList<WorkerCaseLifecycleEvent>();
+        doAnswer(inv -> { firedEvents.add(inv.getArgument(0)); return null; })
+                .when(events).fire(any(WorkerCaseLifecycleEvent.class));
+
+        listener.onWorkerStarted("analyst", java.util.Map.of("caseId", caseId.toString()));
+
+        assertThat(firedEvents).hasSize(1);
+        assertThat(firedEvents.get(0).caseId()).isEqualTo(caseId.toString());
+    }
+
+    @Test
+    void onWorkerCompleted_firesCaseLifecycleEvent_whenCaseIdPresent() {
+        var caseId = java.util.UUID.randomUUID();
+        sessionMapping.register("analyst", caseId, "session-uuid-event-2");
+        var firedEvents = new java.util.ArrayList<WorkerCaseLifecycleEvent>();
+        doAnswer(inv -> { firedEvents.add(inv.getArgument(0)); return null; })
+                .when(events).fire(any(WorkerCaseLifecycleEvent.class));
+
+        listener.onWorkerCompleted("analyst",
+                WorkResult.completed("corr", java.util.Map.of(), "analyst", caseId));
+
+        assertThat(firedEvents).hasSize(1);
+        assertThat(firedEvents.get(0).caseId()).isEqualTo(caseId.toString());
+    }
+
+    @Test
+    void onWorkerStarted_doesNotFireEvent_whenNoCaseId() {
+        sessionMapping.register("analyst", null, "session-no-case");
+        listener.onWorkerStarted("analyst", java.util.Map.of());
+        verify(events, never()).fire(any(WorkerCaseLifecycleEvent.class));
     }
 
     private Session session(String id, SessionStatus status) {
