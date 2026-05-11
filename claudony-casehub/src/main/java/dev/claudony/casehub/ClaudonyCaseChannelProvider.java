@@ -49,9 +49,15 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
     }
 
     @Override
-    public void postToChannel(CaseChannel channel, String from, String content) {
+    public void postToChannel(CaseChannel channel, String from, String content, io.casehub.qhorus.api.message.MessageType type) {
         String qhorusName = (String) channel.properties().getOrDefault(QHORUS_NAME_KEY, channel.id());
-        qhorusMcpTools.sendMessage(qhorusName, from, "status", content, null, null, null, null, null);
+        String messageType = type != null ? type.name().toLowerCase() : "status";
+        qhorusMcpTools.sendMessage(qhorusName, from, messageType, content, null, null, null, null, null);
+    }
+
+    @Override
+    public void postToChannel(CaseChannel channel, String from, String content) {
+        postToChannel(channel, from, content, null);
     }
 
     @Override
