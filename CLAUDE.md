@@ -31,6 +31,17 @@ Run `add-dir /Users/mdproctor/claude/casehub/claudony` before any other work.
 - `blog/` — project diary entries with INDEX.md
 - `design/` — epic journal (created by `epic` at branch start)
 
+## Git Discipline
+
+Two git repositories are active in every session:
+- **Workspace** (`/Users/mdproctor/claude/public/casehub/claudony`) — methodology artifacts: handover, blog, specs, plans, ADRs
+- **Project repo** (`/Users/mdproctor/claude/casehub/claudony`) — source code
+
+Before any git operation, run `git rev-parse --show-toplevel` to confirm which repo is currently active. Do not assume — the session may have opened in either. cd to the correct repo before staging:
+- Source code commits → project repo
+- Methodology artifacts → workspace
+
+
 ## Rules
 
 - All methodology artifacts go here, not in the project repo
@@ -373,7 +384,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**478 tests passing** (as of 2026-05-12, all modules): 4 in `claudony-core` + 134 in `claudony-casehub` + 340 in `claudony-app`. Zero failures, zero errors.
+**479 tests passing** (as of 2026-05-12, all modules): 4 in `claudony-core` + 134 in `claudony-casehub` + 341 in `claudony-app`. Zero failures, zero errors.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -404,7 +415,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 
 `claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint
-- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test; case-events SSE endpoint), SessionLineageResourceTest (4 tests: happy path, no caseId, 404, non-UUID caseId robustness), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch()), CaseEventBroadcasterTest (5 tests: events-only, hybrid heartbeat, registry-hooks, SSE fan-out, EventSource close), RegistryHooksStrategyIntegrationTest (3 tests: strategy type, updateStatus push, remove push — profile: registry-hooks), HybridDefaultConfigTest (1 test: strategy type is hybrid — profile: hybrid)
+- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test; case-events SSE endpoint), SessionLineageResourceTest (4 tests: happy path, no caseId, 404, non-UUID caseId robustness), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch()), CaseEventBroadcasterTest (5 tests: events-only, hybrid heartbeat, registry-hooks, SSE fan-out, EventSource close), RegistryHooksStrategyIntegrationTest (4 tests: strategy type, updateStatus push, remove push, register does not push — profile: registry-hooks), HybridDefaultConfigTest (1 test: strategy type is hybrid — profile: hybrid; no @TestSecurity)
 - `server/strategy/` — EventsOnlyStrategyTest (5 unit tests), HybridStrategyTest (4 unit tests)
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
 - `server/expiry/` — ExpiryPolicyRegistryTest, UserInteractionExpiryPolicyTest, TerminalOutputExpiryPolicyTest, StatusAwareExpiryPolicyTest, SessionIdleSchedulerTest
