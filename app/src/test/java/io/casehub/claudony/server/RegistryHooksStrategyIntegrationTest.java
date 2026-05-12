@@ -5,7 +5,6 @@ import io.casehub.claudony.server.model.SessionStatus;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
 @TestProfile(RegistryHooksStrategyIntegrationTest.RegistryHooksProfile.class)
-@TestSecurity(user = "test", roles = "user")
 class RegistryHooksStrategyIntegrationTest {
 
     public static class RegistryHooksProfile implements QuarkusTestProfile {
