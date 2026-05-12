@@ -59,7 +59,7 @@ bootstrap time, before any framework initialisation.
 
 ### New class: `EncryptionKeyConfigSource`
 
-**Package:** `dev.claudony.config`  
+**Package:** `io.casehub.claudony.config`  
 **Implements:** `org.eclipse.microprofile.config.spi.ConfigSource`  
 **Annotation:** `@RegisterForReflection` (native image safety)  
 **Registration:** `META-INF/services/org.eclipse.microprofile.config.spi.ConfigSource`

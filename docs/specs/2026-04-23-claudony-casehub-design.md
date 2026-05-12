@@ -16,7 +16,7 @@
 
 ```
 claudony/
-├── pom.xml                    (parent, groupId=dev.claudony, packaging=pom)
+├── pom.xml                    (parent, groupId=io.casehub.claudony, packaging=pom)
 ├── claudony-core/             (extracted core: TmuxService, SessionRegistry, Session,
 │   ├── pom.xml                ClaudonyConfig, expiry, fleet — no CaseHub)
 │   └── src/
@@ -69,7 +69,7 @@ claudony.casehub.workers.default-working-dir=${claudony.default-working-dir}
 
 ### `ClaudonyWorkerProvisioner`
 
-**Package:** `dev.claudony.casehub`
+**Package:** `io.casehub.claudony.casehub`
 **Dependencies:** `TmuxService`, `SessionRegistry`, `ClaudonyConfig`, `ClaudonyWorkerContextProvider` (internal), `CaseLedgerEntryRepository` (via context provider)
 
 `provision(Set<String> capabilities, ProvisionContext context)`:
@@ -94,7 +94,7 @@ claudony.casehub.workers.default-working-dir=${claudony.default-working-dir}
 
 ### `ClaudonyCaseChannelProvider`
 
-**Package:** `dev.claudony.casehub`
+**Package:** `io.casehub.claudony.casehub`
 **Dependencies:** `QhorusMcpTools` (injected from `claudony-app`)
 
 `openChannel(UUID caseId, String purpose)`:
@@ -118,7 +118,7 @@ claudony.casehub.workers.default-working-dir=${claudony.default-working-dir}
 
 ### `ClaudonyWorkerContextProvider`
 
-**Package:** `dev.claudony.casehub`
+**Package:** `io.casehub.claudony.casehub`
 **Dependencies:** `CaseLedgerEntryRepository`, `ClaudonyCaseChannelProvider`
 
 `buildContext(String workerId, WorkRequest task)`:
@@ -133,7 +133,7 @@ claudony.casehub.workers.default-working-dir=${claudony.default-working-dir}
 
 ### `ClaudonyWorkerStatusListener`
 
-**Package:** `dev.claudony.casehub`
+**Package:** `io.casehub.claudony.casehub`
 **Dependencies:** `SessionRegistry`
 
 CaseEngine discovers this via CDI `Instance<WorkerStatusListener>` and calls it at lifecycle events.

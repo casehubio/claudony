@@ -523,7 +523,7 @@
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn compile -f /Users/mdproctor/claude/claudony/.worktrees/claudony-casehub/pom.xml -pl claudony-core -q)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn help:effective-pom -f /Users/mdproctor/claude/claudony/.worktrees/claudony-casehub/pom.xml -pl claudony-app)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn dependency:resolve -f /Users/mdproctor/claude/claudony/.worktrees/claudony-casehub/pom.xml -pl claudony-app -Dincludes=org.assertj:assertj-core -q)",
-      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn dependency:tree -f /Users/mdproctor/claude/claudony/.worktrees/claudony-casehub/pom.xml -pl claudony-app -Dincludes=dev.claudony:claudony-core)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn dependency:tree -f /Users/mdproctor/claude/claudony/.worktrees/claudony-casehub/pom.xml -pl claudony-app -Dincludes=io.casehub.claudony:claudony-core)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn install -pl claudony-core -DskipTests -q)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn install -f /Users/mdproctor/claude/quarkus-ledger/pom.xml -DskipTests -q)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) mvn dependency:tree -pl claudony-app)",

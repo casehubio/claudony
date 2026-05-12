@@ -22,7 +22,7 @@ A single Quarkus binary operates in two modes:
 Three Maven modules: `claudony-core` (shared services), `claudony-casehub` (optional CaseHub integration), `claudony-app` (Quarkus application).
 
 ```
-claudony-casehub — dev.claudony.casehub
+claudony-casehub — io.casehub.claudony.casehub
 ├── CaseHubConfig                   — @ConfigMapping for claudony.casehub.*
 ├── WorkerCommandResolver           — capability→command lookup with default fallback
 ├── CaseLineageQuery                — interface for prior-worker lineage queries
@@ -49,7 +49,7 @@ claudony-casehub — dev.claudony.casehub
                                      SILENT returns empty. Channel names from CaseChannelLayout; prior
                                      workers from CaseLineageQuery. Stored in WorkerContext.properties["systemPrompt"]
 
-dev.claudony — claudony-core + claudony-app
+io.casehub.claudony — claudony-core + claudony-app
 ├── config/
 │   └── ClaudonyConfig          — all @ConfigProperty bindings
 ├── server/
