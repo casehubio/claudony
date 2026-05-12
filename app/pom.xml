@@ -15,7 +15,7 @@
   <description>Quarkus application: REST API, WebSocket terminal, dashboard, auth, fleet, agent MCP</description>
 
   <dependencies>
-    <!-- Core services from claudony-core -->
+    <!-- Core services from casehub-claudony-core -->
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-claudony-core</artifactId>
