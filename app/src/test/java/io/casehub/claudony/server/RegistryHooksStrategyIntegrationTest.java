@@ -51,6 +51,19 @@ class RegistryHooksStrategyIntegrationTest {
     }
 
     @Test
+    void register_doesNotTriggerSSEPush() throws Exception {
+        var received = new CopyOnWriteArrayList<String>();
+
+        broadcaster.subscribe("rh-case-3", () -> "data: snap\n\n")
+                .subscribe().with(received::add);
+
+        registry.register(caseSession("rh-s3", "rh-case-3"));
+
+        Thread.sleep(100);
+        assertThat(received).containsExactly("data: snap\n\n"); // only the initial snapshot — register() does not notify
+    }
+
+    @Test
     void updateStatus_triggersSSEPush() throws Exception {
         registry.register(caseSession("rh-s1", "rh-case-1"));
 

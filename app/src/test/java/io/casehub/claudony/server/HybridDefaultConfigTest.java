@@ -3,7 +3,6 @@ package io.casehub.claudony.server;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
 @TestProfile(HybridDefaultConfigTest.HybridProfile.class)
-@TestSecurity(user = "test", roles = "user")
 class HybridDefaultConfigTest {
 
     public static class HybridProfile implements QuarkusTestProfile {
