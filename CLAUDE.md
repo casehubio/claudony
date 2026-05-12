@@ -373,7 +373,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**474 tests passing** (as of 2026-05-05, all modules): 4 in `claudony-core` + 134 in `claudony-casehub` + 336 in `claudony-app`. Zero failures, zero errors.
+**478 tests passing** (as of 2026-05-12, all modules): 4 in `claudony-core` + 134 in `claudony-casehub` + 340 in `claudony-app`. Zero failures, zero errors.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -404,7 +404,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 
 `claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint
-- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test; case-events SSE endpoint), SessionLineageResourceTest (4 tests: happy path, no caseId, 404, non-UUID caseId robustness), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch()), CaseEventBroadcasterTest (5 tests: events-only, hybrid heartbeat, registry-hooks, SSE fan-out, EventSource close)
+- `server/` — TmuxService (real tmux; includes `displayMessage` tests), SessionRegistry (+ findByCaseId, 3 tests), SessionResource (+ ?caseId= filter, 2 tests; caseId/roleName in response, 1 test; case-events SSE endpoint), SessionLineageResourceTest (4 tests: happy path, no caseId, 404, non-UUID caseId robustness), TerminalWebSocket, ServerStartup, SessionInputOutput, MeshResourceInterjectionTest, `model/SessionTest` (session model + touch()), CaseEventBroadcasterTest (5 tests: events-only, hybrid heartbeat, registry-hooks, SSE fan-out, EventSource close), RegistryHooksStrategyIntegrationTest (3 tests: strategy type, updateStatus push, remove push — profile: registry-hooks), HybridDefaultConfigTest (1 test: strategy type is hybrid — profile: hybrid)
 - `server/strategy/` — EventsOnlyStrategyTest (5 unit tests), HybridStrategyTest (4 unit tests)
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
 - `server/expiry/` — ExpiryPolicyRegistryTest, UserInteractionExpiryPolicyTest, TerminalOutputExpiryPolicyTest, StatusAwareExpiryPolicyTest, SessionIdleSchedulerTest
