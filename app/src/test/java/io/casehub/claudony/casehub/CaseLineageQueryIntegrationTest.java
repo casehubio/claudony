@@ -7,7 +7,6 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * no manual cleanup needed.
  */
 @QuarkusTest
-@TestSecurity(user = "test", roles = "user")
 class CaseLineageQueryIntegrationTest {
 
     @Inject

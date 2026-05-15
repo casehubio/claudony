@@ -10,7 +10,6 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.security.TestSecurity;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -38,7 +37,6 @@ import org.junit.jupiter.api.Test;
  * Refs casehubio/casehub-ledger#72
  */
 @QuarkusTest
-@TestSecurity(user = "test", roles = "user")
 class ClaudonyLedgerEventCaptureTest {
 
     @Inject

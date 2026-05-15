@@ -56,6 +56,29 @@
       <artifactId>casehub-qhorus-testing</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-testing</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <!-- Exclude old 'engine' artifact — it transitively pulls in quarkus-ledger (old artifact
+             name) which conflicts with casehub-ledger (new artifact name): both register a Quarkus
+             extension with feature name "ledger", causing a build-time error.
+             CaseHubRuntimeImpl is provided by casehub-engine (new name) below instead. -->
+        <exclusion>
+          <groupId>io.casehub</groupId>
+          <artifactId>engine</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <!-- Provides CaseHubRuntimeImpl (CaseHubRuntime CDI bean) for CaseEngineRoundTripTest.
+           casehub-engine brings in casehub-ledger which is already on the classpath — Maven
+           deduplicates it so there is no "duplicate ledger feature" conflict. -->
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.awaitility</groupId>
