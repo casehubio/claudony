@@ -1,6 +1,7 @@
 package io.casehub.claudony;
 
 import io.casehub.work.api.WorkloadProvider;
+import io.quarkus.arc.DefaultBean;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
@@ -12,6 +13,7 @@ import jakarta.enterprise.context.ApplicationScoped;
  * Always returns 0 active work items — correct for the no-static-workers test path where
  * CaseContextChangedEventHandler bypasses workloadProvider entirely (line 230: workers.isEmpty()).
  */
+@DefaultBean
 @ApplicationScoped
 class NoOpWorkloadProvider implements WorkloadProvider {
 

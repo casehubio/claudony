@@ -118,7 +118,8 @@ class CaseEngineRoundTripTest {
         // Stub workerContextProvider to avoid JPA call on Vert.x IO thread.
         // ClaudonyWorkerContextProvider.buildContext() calls JpaCaseLineageQuery which is blocking;
         // when invoked from CaseContextChangedEventHandler (IO thread), it throws
-        // BlockingOperationNotAllowedException. The mock returns a minimal WorkerContext.
+        // BlockingOperationNotAllowedException. This is also a production bug — tracked in #115.
+        // The mock returns a minimal WorkerContext.
         when(workerContextProvider.buildContext(any(), any(), any()))
                 .thenReturn(new WorkerContext("researcher", null, List.of(), List.of(),
                         PropagationContext.createRoot(), Map.of()));
@@ -188,6 +189,7 @@ class CaseEngineRoundTripTest {
             tx.rollback();
         }
         assertThat(summary.workerName()).as("workerName").isEqualTo("researcher");
+        assertThat(summary.workerId()).as("workerId").isEqualTo("researcher");
         assertThat(summary.startedAt()).as("startedAt").isNotNull();
         assertThat(summary.completedAt()).as("completedAt").isNotNull();
         assertThat(summary.ledgerEntryId()).as("ledgerEntryId").isNotNull();
