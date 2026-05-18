@@ -2,10 +2,11 @@ package io.casehub.claudony.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.claudony.config.ClaudonyConfig;
-import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
 import io.casehub.qhorus.runtime.mcp.QhorusMcpToolsBase;
+import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import io.quarkiverse.mcp.server.ToolCallException;
@@ -30,9 +31,10 @@ import java.util.Set;
 public class MeshResource {
 
     private static final Logger LOG = Logger.getLogger(MeshResource.class);
+    private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
     @Inject ClaudonyConfig config;
-    @Inject QhorusMcpTools qhorusMcpTools;
+    @Inject ReactiveQhorusMcpTools qhorusMcpTools;
     @Inject ObjectMapper mapper;
     @Inject SecurityIdentity securityIdentity;
 
@@ -51,26 +53,29 @@ public class MeshResource {
 
     @GET
     @Path("/channels")
+    @Blocking
     public List<QhorusMcpToolsBase.ChannelDetail> channels() {
-        return qhorusMcpTools.listChannels();
+        return qhorusMcpTools.listChannels().await().atMost(TIMEOUT);
     }
 
     @GET
     @Path("/instances")
+    @Blocking
     public List<QhorusMcpToolsBase.InstanceInfo> instances() {
-        return qhorusMcpTools.listInstances(null);
+        return qhorusMcpTools.listInstances(null).await().atMost(TIMEOUT);
     }
 
     @GET
     @Path("/channels/{name}/timeline")
+    @Blocking
     public List<Map<String, Object>> timeline(
             @PathParam("name") String name,
             @QueryParam("after") Long after,
             @QueryParam("limit") @DefaultValue("50") int limit) {
         try {
-            return qhorusMcpTools.getChannelTimeline(name, after, limit);
+            return qhorusMcpTools.getChannelTimeline(name, after, limit).await().atMost(TIMEOUT);
         } catch (IllegalArgumentException | ToolCallException e) {
-            // QhorusMcpTools @WrapBusinessError wraps IllegalArgumentException (unknown channel)
+            // ReactiveQhorusMcpTools @WrapBusinessError wraps IllegalArgumentException (unknown channel)
             // and IllegalStateException (paused/ACL-blocked) into ToolCallException before
             // they exit the CDI proxy — catch both so unknown channels return [] not 500.
             return List.of();
@@ -79,9 +84,10 @@ public class MeshResource {
 
     @GET
     @Path("/feed")
+    @Blocking
     public List<Map<String, Object>> feed(
             @QueryParam("limit") @DefaultValue("100") int limit) {
-        List<QhorusMcpToolsBase.ChannelDetail> channels = qhorusMcpTools.listChannels();
+        List<QhorusMcpToolsBase.ChannelDetail> channels = qhorusMcpTools.listChannels().await().atMost(TIMEOUT);
         if (channels.isEmpty()) return List.of();
 
         int perChannel = Math.max(5, limit / channels.size());
@@ -90,7 +96,7 @@ public class MeshResource {
         for (QhorusMcpToolsBase.ChannelDetail ch : channels) {
             try {
                 List<Map<String, Object>> msgs = qhorusMcpTools.getChannelTimeline(
-                        ch.name(), null, perChannel);
+                        ch.name(), null, perChannel).await().atMost(TIMEOUT);
                 for (Map<String, Object> m : msgs) {
                     Map<String, Object> tagged = new HashMap<>(m);
                     tagged.put("channel", ch.name());
@@ -117,16 +123,16 @@ public class MeshResource {
     public Multi<String> events() {
         // Pushes a full mesh snapshot every refresh-interval milliseconds.
         // Default strategy is poll; SSE is for deployments that prefer push.
-        // Snapshot building is dispatched to a worker thread — JPA operations
-        // (ledger writes, channel queries) are blocking and cannot run on the Vert.x I/O thread.
+        // Snapshot building is dispatched to a worker thread — reactive service calls
+        // are safe here but we use runSubscriptionOn to avoid blocking the I/O thread.
         long intervalMs = config.meshRefreshInterval();
         return Multi.createFrom().ticks().every(Duration.ofMillis(intervalMs))
                 .onItem().transformToUniAndConcatenate(tick ->
                     Uni.createFrom().item(() -> {
                         try {
                             var snapshot = Map.of(
-                                    "channels", qhorusMcpTools.listChannels(),
-                                    "instances", qhorusMcpTools.listInstances(null),
+                                    "channels", qhorusMcpTools.listChannels().await().atMost(TIMEOUT),
+                                    "instances", qhorusMcpTools.listInstances(null).await().atMost(TIMEOUT),
                                     "feed", feed(100));
                             return "data: " + mapper.writeValueAsString(snapshot) + "\n\n";
                         } catch (Exception e) {
@@ -140,6 +146,7 @@ public class MeshResource {
     @POST
     @Path("/channels/{name}/messages")
     @Consumes(MediaType.APPLICATION_JSON)
+    @Blocking
     public Response postMessage(
             @PathParam("name") String name,
             PostMessageRequest req) {
@@ -153,7 +160,8 @@ public class MeshResource {
         String sender = "human:" + securityIdentity.getPrincipal().getName();
         try {
             QhorusMcpToolsBase.MessageResult result =
-                    qhorusMcpTools.sendMessage(name, sender, type, req.content(), null, null, null, null, null);
+                    qhorusMcpTools.sendMessage(name, sender, type, req.content(), null, null, null, null, null)
+                            .await().atMost(TIMEOUT);
             return Response.ok(result).build();
         } catch (IllegalArgumentException e) {
             // Not wrapped — returned directly (shouldn't happen due to @WrapBusinessError, but guard)

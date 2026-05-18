@@ -5,7 +5,7 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
-import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
+import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CaseContextPanelE2ETest extends PlaywrightBase {
 
     @Inject SessionRegistry registry;
-    @Inject QhorusMcpTools tools;
+    @Inject ReactiveQhorusMcpTools tools;
     @Inject InMemoryChannelStore channelStore;
     @Inject InMemoryMessageStore messageStore;
 
@@ -135,7 +135,8 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
     @Test
     void caseSession_autoSelectsCaseChannel() {
         var caseChannelName = "case-" + CASE_ID + "/work";
-        tools.createChannel(caseChannelName, "Case work channel", "APPEND", null, null, null, null, null, null);
+        tools.createChannel(caseChannelName, "Case work channel", "APPEND", null, null, null, null, null, null)
+                .await().atMost(java.time.Duration.ofSeconds(5));
 
         page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=researcher");
         openChannelPanel();

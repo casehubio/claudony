@@ -1,13 +1,10 @@
 package io.casehub.claudony;
 
-import io.casehub.api.context.PropagationContext;
 import io.casehub.api.model.Capability;
 import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.CaseStatus;
 import io.casehub.api.model.Worker;
-import io.casehub.api.model.WorkerContext;
 import io.casehub.api.model.WorkerSummary;
-import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
 import io.casehub.claudony.casehub.JpaCaseLineageQuery;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.engine.internal.context.CaseContextImpl;
@@ -24,7 +21,6 @@ import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.inject.Inject;
-import jakarta.transaction.UserTransaction;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
@@ -34,24 +30,23 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * CaseEngine round-trip integration test.
  *
  * Exercises: CaseContextChangedEvent → CaseContextChangedEventHandler evaluates
- * ContextChangeTrigger → ClaudonyWorkerProvisioner.provision() (TmuxService mocked) →
+ * ContextChangeTrigger → ClaudonyReactiveWorkerContextProvider.buildContext() (real impl) →
+ * ClaudonyReactiveWorkerProvisioner.provision() (TmuxService mocked) →
  * WorkflowExecutionCompleted published → ClaudonyLedgerEventCapture writes ledger →
  * JpaCaseLineageQuery.findCompletedWorkers() returns populated WorkerSummary.
  *
  * Drives the engine via CONTEXT_CHANGED event bus directly, bypassing CaseStartedEventHandler
- * (which requires the Quartz scheduler). This exercises the critical provision path:
- * CaseContextChangedEventHandler.tryProvision() → ClaudonyWorkerProvisioner.
+ * (which requires the Quartz scheduler). The real ClaudonyReactiveWorkerContextProvider runs —
+ * no mock bypass — proving the reactive/worker-thread fix is correct end-to-end.
  *
  * CDI-only — no HTTP endpoints exercised, no @TestSecurity (PP-20260513-7c227e).
  *
@@ -64,10 +59,15 @@ class CaseEngineRoundTripTest {
     public static class CasehubEnabledProfile implements QuarkusTestProfile {
         @Override
         public Map<String, String> getConfigOverrides() {
+            // Map.of supports up to 10 pairs; expand to Map.ofEntries if needed.
             return Map.of(
                     "claudony.casehub.enabled", "true",
                     "claudony.casehub.workers.commands.researcher", "claude",
                     "claudony.casehub.workers.commands.default", "claude",
+                    // Suppress ServerStartup.checkTmux() — @InjectMock replaces TmuxService
+                    // after CDI init, but StartupEvent fires during init (before mock is active).
+                    // Agent mode skips ServerStartup.onStart() entirely without affecting engine.
+                    "claudony.mode", "agent",
                     // Index casehub-engine so all engine CDI beans (CaseHubRuntimeImpl,
                     // CaseContextChangedEventHandler, etc.) are visible to Quarkus.
                     // casehub-engine has no jandex.idx of its own — explicit indexing required.
@@ -107,22 +107,12 @@ class CaseEngineRoundTripTest {
     @Inject CaseInstanceRepository caseInstanceRepository;
     @Inject CaseDefinitionRegistry caseDefinitionRegistry;
     @Inject EventBus eventBus;
-    @Inject UserTransaction tx;
 
     @InjectMock TmuxService tmuxService;
-    @InjectMock ClaudonyWorkerContextProvider workerContextProvider;
 
     @Test
     void contextChanged_engineProvisions_andLineageReturnsCompletedSummary() throws Exception {
         doNothing().when(tmuxService).createSession(anyString(), anyString(), anyString());
-        // Stub workerContextProvider to avoid JPA call on Vert.x IO thread.
-        // ClaudonyWorkerContextProvider.buildContext() calls JpaCaseLineageQuery which is blocking;
-        // when invoked from CaseContextChangedEventHandler (IO thread), it throws
-        // BlockingOperationNotAllowedException. This is also a production bug — tracked in #115.
-        // The mock returns a minimal WorkerContext.
-        when(workerContextProvider.buildContext(any(), any(), any()))
-                .thenReturn(new WorkerContext("researcher", null, List.of(), List.of(),
-                        PropagationContext.createRoot(), Map.of()));
 
         // Build a minimal CaseInstance with the researcher case definition.
         // We drive the engine via CONTEXT_CHANGED event bus directly, bypassing
@@ -145,7 +135,7 @@ class CaseEngineRoundTripTest {
                 EventBusAddresses.CONTEXT_CHANGED,
                 new CaseContextChangedEvent(instance, instance.getCaseContext().asJsonNode()));
 
-        // Wait for ClaudonyWorkerProvisioner.provision() → tmuxService.createSession()
+        // Wait for ClaudonyReactiveWorkerProvisioner.provision() → tmuxService.createSession()
         Awaitility.await()
                 .atMost(Duration.ofSeconds(20))
                 .pollInterval(Duration.ofMillis(200))
@@ -154,7 +144,7 @@ class CaseEngineRoundTripTest {
                                 .createSession(anyString(), anyString(), anyString()));
 
         // Drive completion: publish WorkflowExecutionCompleted to the engine event bus.
-        // Worker name must match what ClaudonyWorkerProvisioner.provision() returns
+        // Worker name must match what ClaudonyReactiveWorkerProvisioner.provision() returns
         // (the capability name = "researcher").
         Capability cap = new Capability("researcher", "{}", "{}");
         Worker provisioned = new Worker("researcher", List.of(cap), ctx -> Map.of());
@@ -165,29 +155,21 @@ class CaseEngineRoundTripTest {
                         instance, provisioned, UUID.randomUUID().toString(), Map.of()));
 
         // Wait for ClaudonyLedgerEventCapture (@ObservesAsync) to write the ledger entry.
-        // findCompletedWorkers() uses JPA (blocking) — wrap each poll in a UserTransaction so
-        // Hibernate's TransactionScopedSession is satisfied even without @TestTransaction.
+        // findCompletedWorkers() returns Uni<List<WorkerSummary>> — await each poll.
         Awaitility.await()
                 .atMost(Duration.ofSeconds(20))
                 .pollInterval(Duration.ofMillis(200))
                 .untilAsserted(() -> {
-                    tx.begin();
-                    try {
-                        assertThat(lineageQuery.findCompletedWorkers(caseId))
-                                .as("lineage must contain the completed worker")
-                                .hasSize(1);
-                    } finally {
-                        tx.rollback();
-                    }
+                    List<WorkerSummary> workers = lineageQuery.findCompletedWorkers(caseId)
+                            .await().atMost(Duration.ofSeconds(5));
+                    assertThat(workers)
+                            .as("lineage must contain the completed worker")
+                            .hasSize(1);
                 });
 
-        tx.begin();
-        WorkerSummary summary;
-        try {
-            summary = lineageQuery.findCompletedWorkers(caseId).get(0);
-        } finally {
-            tx.rollback();
-        }
+        WorkerSummary summary = lineageQuery.findCompletedWorkers(caseId)
+                .await().atMost(Duration.ofSeconds(5))
+                .get(0);
         assertThat(summary.workerName()).as("workerName").isEqualTo("researcher");
         assertThat(summary.workerId()).as("workerId").isEqualTo("researcher");
         assertThat(summary.startedAt()).as("startedAt").isNotNull();

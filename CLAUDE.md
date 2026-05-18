@@ -385,7 +385,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**479 tests passing** (as of 2026-05-15, all modules): 4 in `claudony-core` + 134 in `claudony-casehub` + 341 in `claudony-app`. Zero failures, zero errors.
+**Full suite count pending re-run from user terminal** (as of 2026-05-18, after reactive SPI migration #115): 4 in `claudony-core` + 130 in `claudony-casehub` confirmed passing. `CaseEngineRoundTripTest` passes with real `ClaudonyReactiveWorkerContextProvider` (no `@InjectMock`). App module tests require tmux on PATH — run from user terminal to get full count. Previous baseline: 479 (4 + 134 + 341, 2026-05-15).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties

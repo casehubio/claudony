@@ -1,6 +1,6 @@
 package io.casehub.claudony;
 
-import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
+import io.casehub.claudony.casehub.ClaudonyReactiveWorkerContextProvider;
 import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkerContext;
 import io.quarkus.test.junit.QuarkusTest;
@@ -9,6 +9,7 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
@@ -30,13 +31,14 @@ class SystemPromptSilentProfileTest {
     }
 
     @Inject
-    ClaudonyWorkerContextProvider provider;
+    ClaudonyReactiveWorkerContextProvider provider;
 
     @Test
     void silentConfig_systemPromptAbsent() {
         UUID caseId = UUID.randomUUID();
         WorkerContext ctx = provider.buildContext("integration-worker", caseId,
-                WorkRequest.of("researcher", Map.of()));
+                WorkRequest.of("researcher", Map.of()))
+                .await().atMost(Duration.ofSeconds(5));
 
         assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
     }

@@ -3,7 +3,7 @@ package io.casehub.claudony.e2e;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.RequestOptions;
 import com.microsoft.playwright.options.WaitForSelectorState;
-import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
+import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -11,6 +11,8 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChannelPanelE2ETest extends PlaywrightBase {
 
     @Inject
-    QhorusMcpTools tools;
+    ReactiveQhorusMcpTools tools;
     @Inject
     InMemoryChannelStore channelStore;
     @Inject
@@ -39,7 +41,8 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     @BeforeEach
     void createChannel() {
         channelName = "ch-panel-e2e-" + System.nanoTime();
-        tools.createChannel(channelName, "E2E test channel", "APPEND", null, null, null, null, null, null);
+        tools.createChannel(channelName, "E2E test channel", "APPEND", null, null, null, null, null, null)
+                .await().atMost(Duration.ofSeconds(5));
     }
 
     @AfterEach
@@ -303,7 +306,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         // EVENT messages carry telemetry as JSON content; content field itself is null by design
         tools.sendMessage(channelName, "system", "event",
                 "{\"tool_name\":\"read_file\",\"duration_ms\":250,\"token_count\":150}",
-                null, null, null, null, null);
+                null, null, null, null, null).await().atMost(Duration.ofSeconds(5));
 
         navigateToSessionPageWithChannel();
         openPanel();
@@ -328,7 +331,8 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     @Test
     void eventMessage_withMissingTelemetryFields_rendersDash() {
         // EVENT with no tool_name/duration_ms/token_count falls back to '—'
-        tools.sendMessage(channelName, "system", "event", "{}", null, null, null, null, null);
+        tools.sendMessage(channelName, "system", "event", "{}", null, null, null, null, null)
+                .await().atMost(Duration.ofSeconds(5));
 
         navigateToSessionPageWithChannel();
         openPanel();
@@ -360,7 +364,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         // Create a channel restricted to COMMAND and QUERY only
         String restrictedChannel = "restricted-" + System.nanoTime();
         tools.createChannel(restrictedChannel, "Governance channel", "APPEND",
-                null, null, null, null, null, "COMMAND,QUERY");
+                null, null, null, null, null, "COMMAND,QUERY").await().atMost(Duration.ofSeconds(5));
 
         page.navigate(BASE_URL + "/app/session.html?id=fake-session-id&name=test-session");
         openPanel();

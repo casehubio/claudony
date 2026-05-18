@@ -8,7 +8,9 @@ import io.casehub.api.model.Capability;
 import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.model.Worker;
 import io.casehub.api.spi.ProvisioningException;
-import io.casehub.api.spi.WorkerProvisioner;
+import io.casehub.api.spi.ReactiveWorkerProvisioner;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.io.IOException;
@@ -20,7 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @ApplicationScoped
-public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
+public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisioner {
 
     static final String SESSION_PREFIX = "claudony-worker-";
 
@@ -28,50 +30,71 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
     private final TmuxService tmux;
     private final SessionRegistry registry;
     private final WorkerCommandResolver resolver;
-    private final ClaudonyWorkerContextProvider contextProvider;
     private final WorkerSessionMapping sessionMapping;
     private final String defaultWorkingDir;
 
     @Inject
-    public ClaudonyWorkerProvisioner(
+    public ClaudonyReactiveWorkerProvisioner(
             CaseHubConfig config,
             TmuxService tmux,
             SessionRegistry registry,
             WorkerCommandResolver resolver,
-            ClaudonyWorkerContextProvider contextProvider,
             WorkerSessionMapping sessionMapping) {
-        this(config.enabled(), tmux, registry, resolver, contextProvider, sessionMapping,
+        this(config.enabled(), tmux, registry, resolver, sessionMapping,
                 config.workers().defaultWorkingDir());
     }
 
-    ClaudonyWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
-                               WorkerCommandResolver resolver,
-                               ClaudonyWorkerContextProvider contextProvider,
-                               WorkerSessionMapping sessionMapping,
-                               String defaultWorkingDir) {
+    ClaudonyReactiveWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
+                                       WorkerCommandResolver resolver,
+                                       WorkerSessionMapping sessionMapping,
+                                       String defaultWorkingDir) {
         this.enabled = enabled;
         this.tmux = tmux;
         this.registry = registry;
         this.resolver = resolver;
-        this.contextProvider = contextProvider;
         this.sessionMapping = sessionMapping;
         this.defaultWorkingDir = defaultWorkingDir;
     }
 
     @Override
-    public Worker provision(Set<String> capabilities, ProvisionContext context) {
+    public Uni<Worker> provision(Set<String> capabilities, ProvisionContext context) {
+        return Uni.createFrom()
+                  .item(() -> doProvision(capabilities, context))
+                  .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
+
+    @Override
+    public Uni<Void> terminate(String workerId) {
+        return Uni.createFrom()
+                  .<Void>item(() -> {
+                      try {
+                          tmux.killSession(SESSION_PREFIX + workerId);
+                      } catch (IOException | InterruptedException e) {
+                          // Session may already be gone — no-op
+                      }
+                      registry.remove(workerId);
+                      return null;
+                  })
+                  .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
+
+    @Override
+    public Uni<Set<String>> getCapabilities() {
+        return Uni.createFrom().item(resolver.getAvailableCapabilities());
+    }
+
+    private Worker doProvision(Set<String> capabilities, ProvisionContext context) {
         if (!enabled) {
             throw new ProvisioningException(
                     "CaseHub integration is disabled — set claudony.casehub.enabled=true");
         }
-        // roleName = taskType from the case definition — used as Worker.name so
-        // WorkResultSubmitter can find the worker by name in the case definition.
-        // sessionId = UUID — unique tmux session identity, tracked separately.
         String sessionId = UUID.randomUUID().toString();
-        String roleName = context.taskType() != null ? context.taskType() : capabilities.stream().findFirst().orElse("worker");
+        String roleName = context.taskType() != null
+                ? context.taskType()
+                : capabilities.stream().findFirst().orElse("worker");
         String command = resolver.resolve(capabilities);
-
         String sessionName = SESSION_PREFIX + sessionId;
+
         try {
             tmux.createSession(sessionName, defaultWorkingDir, command);
         } catch (IOException | InterruptedException e) {
@@ -89,20 +112,5 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                 .map(cap -> new Capability(cap, null, null))
                 .toList();
         return new Worker(roleName, capList, ctx -> Map.of());
-    }
-
-    @Override
-    public void terminate(String workerId) {
-        try {
-            tmux.killSession(SESSION_PREFIX + workerId);
-        } catch (IOException | InterruptedException e) {
-            // Session may already be gone — no-op
-        }
-        registry.remove(workerId);
-    }
-
-    @Override
-    public Set<String> getCapabilities() {
-        return resolver.getAvailableCapabilities();
     }
 }

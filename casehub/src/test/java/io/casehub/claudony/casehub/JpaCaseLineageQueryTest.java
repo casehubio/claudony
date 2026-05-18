@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +33,7 @@ class JpaCaseLineageQueryTest {
     void setUp() {
         query = new JpaCaseLineageQuery();
         query.em = em;
+        query.self = query;
     }
 
     @Test
@@ -41,7 +43,8 @@ class JpaCaseLineageQueryTest {
         when(entryQuery.setParameter(anyString(), any())).thenReturn(entryQuery);
         when(entryQuery.getResultList()).thenReturn(List.of());
 
-        List<WorkerSummary> result = query.findCompletedWorkers(UUID.randomUUID());
+        List<WorkerSummary> result = query.findCompletedWorkers(UUID.randomUUID())
+                .await().atMost(Duration.ofSeconds(5));
 
         assertThat(result).isEmpty();
     }
@@ -71,7 +74,8 @@ class JpaCaseLineageQueryTest {
         when(instantQuery.setMaxResults(1)).thenReturn(instantQuery);
         when(instantQuery.getResultStream()).thenReturn(Stream.of(startedAt));
 
-        List<WorkerSummary> result = query.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = query.findCompletedWorkers(caseId)
+                .await().atMost(Duration.ofSeconds(5));
 
         assertThat(result).hasSize(1);
         WorkerSummary summary = result.get(0);
@@ -106,7 +110,8 @@ class JpaCaseLineageQueryTest {
         when(instantQuery.setMaxResults(1)).thenReturn(instantQuery);
         when(instantQuery.getResultStream()).thenReturn(Stream.empty());
 
-        List<WorkerSummary> result = query.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = query.findCompletedWorkers(caseId)
+                .await().atMost(Duration.ofSeconds(5));
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).startedAt()).isEqualTo(completedAt);

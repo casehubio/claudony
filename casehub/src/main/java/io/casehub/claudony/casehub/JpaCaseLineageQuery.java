@@ -3,6 +3,8 @@ package io.casehub.claudony.casehub;
 import io.casehub.api.model.WorkerSummary;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
@@ -17,9 +19,10 @@ import java.util.UUID;
 /**
  * JPA-backed CaseLineageQuery — queries case_ledger_entry for completed worker records.
  *
- * <p>Returns results only when casehub-ledger is in the classpath and CaseHub fires
- * WORKER_EXECUTION_STARTED / WORKER_EXECUTION_COMPLETED CaseLifecycleEvents into the ledger.
- * Until then (pre end-to-end integration), returns empty — same behaviour as EmptyCaseLineageQuery.
+ * <p>Offloads blocking JPA query to a virtual-thread worker pool via
+ * {@code runSubscriptionOn(Infrastructure.getDefaultWorkerPool())}. Self-injection
+ * ensures the {@code @Transactional(REQUIRED)} interceptor fires from within the
+ * lambda — creates a transaction if none exists.
  */
 @ApplicationScoped
 @Alternative
@@ -30,9 +33,18 @@ public class JpaCaseLineageQuery implements CaseLineageQuery {
     @LedgerPersistenceUnit
     EntityManager em;
 
+    @Inject
+    JpaCaseLineageQuery self;
+
     @Override
-    @Transactional(TxType.SUPPORTS)
-    public List<WorkerSummary> findCompletedWorkers(UUID caseId) {
+    public Uni<List<WorkerSummary>> findCompletedWorkers(UUID caseId) {
+        return Uni.createFrom()
+                  .item(() -> self.blocking(caseId))
+                  .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
+
+    @Transactional(TxType.REQUIRED)
+    public List<WorkerSummary> blocking(UUID caseId) {
         List<CaseLedgerEntry> completed = em.createQuery(
                         "SELECT e FROM CaseLedgerEntry e " +
                         "WHERE e.caseId = :caseId AND e.eventType = 'WorkerExecutionCompleted' " +

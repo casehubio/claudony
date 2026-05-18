@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -47,7 +48,8 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, workerId, "WorkerExecutionCompleted", 2, completedAt);
         em.flush();
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
+                .await().atMost(Duration.ofSeconds(5));
 
         assertThat(result).hasSize(1);
         WorkerSummary s = result.get(0);
@@ -62,7 +64,8 @@ class CaseLineageQueryIntegrationTest {
     @Test
     @TestTransaction
     void returnsEmptyForUnknownCase() {
-        assertThat(lineageQuery.findCompletedWorkers(UUID.randomUUID())).isEmpty();
+        assertThat(lineageQuery.findCompletedWorkers(UUID.randomUUID())
+                .await().atMost(Duration.ofSeconds(5))).isEmpty();
     }
 
     @Test
@@ -78,7 +81,8 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-running", "WorkerExecutionStarted", 3, now.minus(2, ChronoUnit.MINUTES));
         em.flush();
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
+                .await().atMost(Duration.ofSeconds(5));
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).workerId()).isEqualTo("worker-done");
@@ -96,7 +100,8 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-second", "WorkerExecutionCompleted",  4, base);
         em.flush();
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
+                .await().atMost(Duration.ofSeconds(5));
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).workerId()).isEqualTo("worker-first");
@@ -113,7 +118,8 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-x", "WorkerExecutionCompleted", 1, completedAt);
         em.flush();
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
+                .await().atMost(Duration.ofSeconds(5));
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).startedAt()).isEqualTo(completedAt);
