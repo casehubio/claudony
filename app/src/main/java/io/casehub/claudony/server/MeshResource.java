@@ -6,6 +6,7 @@ import io.casehub.qhorus.runtime.mcp.QhorusMcpToolsBase;
 import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import io.quarkiverse.mcp.server.ToolCallException;
@@ -52,18 +53,21 @@ public class MeshResource {
 
     @GET
     @Path("/channels")
+    @Blocking
     public List<QhorusMcpToolsBase.ChannelDetail> channels() {
         return qhorusMcpTools.listChannels().await().atMost(TIMEOUT);
     }
 
     @GET
     @Path("/instances")
+    @Blocking
     public List<QhorusMcpToolsBase.InstanceInfo> instances() {
         return qhorusMcpTools.listInstances(null).await().atMost(TIMEOUT);
     }
 
     @GET
     @Path("/channels/{name}/timeline")
+    @Blocking
     public List<Map<String, Object>> timeline(
             @PathParam("name") String name,
             @QueryParam("after") Long after,
@@ -80,6 +84,7 @@ public class MeshResource {
 
     @GET
     @Path("/feed")
+    @Blocking
     public List<Map<String, Object>> feed(
             @QueryParam("limit") @DefaultValue("100") int limit) {
         List<QhorusMcpToolsBase.ChannelDetail> channels = qhorusMcpTools.listChannels().await().atMost(TIMEOUT);
@@ -141,6 +146,7 @@ public class MeshResource {
     @POST
     @Path("/channels/{name}/messages")
     @Consumes(MediaType.APPLICATION_JSON)
+    @Blocking
     public Response postMessage(
             @PathParam("name") String name,
             PostMessageRequest req) {
