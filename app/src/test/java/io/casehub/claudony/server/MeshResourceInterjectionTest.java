@@ -1,6 +1,6 @@
 package io.casehub.claudony.server;
 
-import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
+import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -10,6 +10,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
 import static org.hamcrest.Matchers.*;
@@ -18,7 +20,7 @@ import static org.hamcrest.Matchers.*;
 @TestSecurity(user = "test", roles = "user")
 class MeshResourceInterjectionTest {
 
-    @Inject QhorusMcpTools tools;
+    @Inject ReactiveQhorusMcpTools tools;
     @Inject InMemoryChannelStore channelStore;
     @Inject InMemoryMessageStore messageStore;
 
@@ -27,7 +29,8 @@ class MeshResourceInterjectionTest {
     @BeforeEach
     void createChannel() {
         channelName = "test-interjection-" + System.nanoTime();
-        tools.createChannel(channelName, "test channel for interjection", "APPEND", null, null, null, null, null, null);
+        tools.createChannel(channelName, "test channel for interjection", "APPEND", null, null, null, null, null, null)
+                .await().atMost(Duration.ofSeconds(5));
     }
 
     @AfterEach

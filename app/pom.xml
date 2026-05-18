@@ -98,6 +98,11 @@
       <artifactId>quarkus-reactive-h2-client</artifactId>
       <version>0.6.0</version>
     </dependency>
+    <!-- Hibernate Reactive Panache — required for reactive Qhorus JPA repos (optional in qhorus jar) -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-reactive-panache</artifactId>
+    </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-health</artifactId>

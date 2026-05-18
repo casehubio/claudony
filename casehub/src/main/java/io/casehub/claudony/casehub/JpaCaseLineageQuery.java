@@ -21,7 +21,8 @@ import java.util.UUID;
  *
  * <p>Offloads blocking JPA query to a virtual-thread worker pool via
  * {@code runSubscriptionOn(Infrastructure.getDefaultWorkerPool())}. Self-injection
- * ensures {@code @Transactional} interceptor fires from within the lambda.
+ * ensures the {@code @Transactional(REQUIRED)} interceptor fires from within the
+ * lambda — creates a transaction if none exists.
  */
 @ApplicationScoped
 @Alternative
@@ -42,7 +43,7 @@ public class JpaCaseLineageQuery implements CaseLineageQuery {
                   .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
-    @Transactional(TxType.SUPPORTS)
+    @Transactional(TxType.REQUIRED)
     public List<WorkerSummary> blocking(UUID caseId) {
         List<CaseLedgerEntry> completed = em.createQuery(
                         "SELECT e FROM CaseLedgerEntry e " +
