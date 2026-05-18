@@ -9,7 +9,8 @@ import io.casehub.api.model.Worker;
 import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkResult;
 import io.casehub.api.model.WorkerContext;
-import io.casehub.api.spi.CaseChannelProvider;
+import io.casehub.api.spi.ReactiveCaseChannelProvider;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.event.Event;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,10 +23,11 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.*;
 
 /**
- * Verifies the full SPI lifecycle sequence across ClaudonyWorkerProvisioner and
+ * Verifies the full SPI lifecycle sequence across ClaudonyReactiveWorkerProvisioner and
  * ClaudonyWorkerStatusListener using a real SessionRegistry so state transitions
  * are observable end-to-end rather than just method-call verified.
  *
@@ -40,10 +42,10 @@ class WorkerLifecycleSequenceTest {
     private final SessionRegistry      registry       = new SessionRegistry();
     private final WorkerSessionMapping sessionMapping = new WorkerSessionMapping();
 
-    private TmuxService                  tmux;
-    private ClaudonyWorkerProvisioner    provisioner;
-    private ClaudonyWorkerStatusListener listener;
-    private Event<Object>                events;
+    private TmuxService                          tmux;
+    private ClaudonyReactiveWorkerProvisioner    provisioner;
+    private ClaudonyWorkerStatusListener         listener;
+    private Event<Object>                        events;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
@@ -52,17 +54,17 @@ class WorkerLifecycleSequenceTest {
         events = mock(Event.class);
 
         var resolver = new WorkerCommandResolver(Map.of("default", "claude"));
-        var contextProvider = mock(ClaudonyWorkerContextProvider.class);
 
-        provisioner = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, resolver, contextProvider, sessionMapping, "/workspace");
+        provisioner = new ClaudonyReactiveWorkerProvisioner(
+                true, tmux, registry, resolver, sessionMapping, "/workspace");
         listener = new ClaudonyWorkerStatusListener(registry, tmux, events, sessionMapping);
     }
 
     @Test
     void happyPath_provisionThenActiveIdleThenStall() throws Exception {
         final UUID caseId = UUID.randomUUID();
-        final Worker worker = provisioner.provision(Set.of("default"), provisionContext(caseId));
+        final Worker worker = provisioner.provision(Set.of("default"), provisionContext(caseId))
+                .await().indefinitely();
         // Worker name is now the role/taskType ("code-reviewer"), not a UUID.
         // The tmux session UUID is tracked internally via WorkerSessionMapping.
         final String roleName = worker.getName();
@@ -72,7 +74,7 @@ class WorkerLifecycleSequenceTest {
         assertThat(registry.find(sessionId)).isPresent();
         assertThat(registry.find(sessionId).get().status()).isEqualTo(SessionStatus.IDLE);
         verify(tmux).createSession(
-                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX), anyString(), anyString());
+                contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX), anyString(), anyString());
 
         // CaseEngine signals work started → ACTIVE (passes caseId in sessionMeta)
         listener.onWorkerStarted(roleName, Map.of("caseId", caseId.toString()));
@@ -93,7 +95,8 @@ class WorkerLifecycleSequenceTest {
     @Test
     void faultPath_faultedWorkerIsKilledAndRemovedFromRegistry() throws Exception {
         final UUID caseId = UUID.randomUUID();
-        final Worker worker = provisioner.provision(Set.of("default"), provisionContext(caseId));
+        final Worker worker = provisioner.provision(Set.of("default"), provisionContext(caseId))
+                .await().indefinitely();
         final String roleName = worker.getName();
         final String sessionId = sessionMapping.findByRole(roleName).orElseThrow();
 
@@ -111,15 +114,17 @@ class WorkerLifecycleSequenceTest {
     void twoWorkers_differentRoles_independentLifecycles() throws Exception {
         // Use two DIFFERENT roles — same-role concurrent workers are a known MVP limitation
         final UUID caseId = UUID.randomUUID();
-        final Worker w1 = provisioner.provision(Set.of("default"), provisionContext(caseId));
+        final Worker w1 = provisioner.provision(Set.of("default"), provisionContext(caseId))
+                .await().indefinitely();
         // Create a second worker with a different taskType
         final ProvisionContext ctx2 = new ProvisionContext(caseId, "reviewer",
                 new io.casehub.api.model.WorkerContext("review", caseId, null, List.of(),
                         io.casehub.api.context.PropagationContext.createRoot(), Map.of()),
                 io.casehub.api.context.PropagationContext.createRoot(), null, null);
-        final Worker w2 = provisioner.provision(Set.of("default"), ctx2);
+        final Worker w2 = provisioner.provision(Set.of("default"), ctx2)
+                .await().indefinitely();
 
-        final String role1 = w1.getName();   // "code-reviewer"
+        final String role1 = w1.getName();   // "default"
         final String role2 = w2.getName();   // "reviewer"
         final String sid1 = sessionMapping.findByRole(role1).orElseThrow();
         final String sid2 = sessionMapping.findByRole(role2).orElseThrow();
@@ -144,11 +149,16 @@ class WorkerLifecycleSequenceTest {
 
     @Test
     void workerContext_alwaysContainsMeshParticipationKey() {
-        var contextProvider = new ClaudonyWorkerContextProvider(
-                mock(CaseLineageQuery.class), mock(CaseChannelProvider.class));
+        CaseLineageQuery lineageQuery = mock(CaseLineageQuery.class);
+        ReactiveCaseChannelProvider channelProvider = mock(ReactiveCaseChannelProvider.class);
+        when(lineageQuery.findCompletedWorkers(any())).thenReturn(Uni.createFrom().item(List.of()));
+        when(channelProvider.listChannels(any())).thenReturn(Uni.createFrom().item(List.of()));
+
+        var contextProvider = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider);
 
         WorkerContext ctx = contextProvider.buildContext("worker-1", null,
-                WorkRequest.of("researcher", Map.of()));
+                WorkRequest.of("researcher", Map.of()))
+                .await().indefinitely();
 
         assertThat(ctx.properties()).containsKey("meshParticipation");
     }
