@@ -5,6 +5,7 @@ import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkerContext;
 import io.casehub.api.model.WorkerSummary;
 import io.casehub.api.spi.CaseChannelProvider;
+import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.time.Instant;
@@ -30,7 +31,7 @@ class ClaudonyWorkerContextProviderTest {
     @Test
     void buildContext_noPriorWorkers_returnsEmptyPriorWorkers() {
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = provider.buildContext("worker-1", caseId,
@@ -45,7 +46,7 @@ class ClaudonyWorkerContextProviderTest {
         UUID caseId = UUID.randomUUID();
         UUID entryId = UUID.randomUUID();
         var summary = new WorkerSummary("alice", "AliceRole", null, Instant.now().minusSeconds(60), null, entryId);
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of(summary));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of(summary)));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = provider.buildContext("worker-2", caseId,
@@ -61,7 +62,7 @@ class ClaudonyWorkerContextProviderTest {
     void buildContext_withChannel_includesChannelInContext() {
         UUID caseId = UUID.randomUUID();
         var channel = new CaseChannel("ch-id", "case-coord", "coordination", "qhorus", Map.of());
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of(channel));
 
         WorkerContext ctx = provider.buildContext("worker-1", caseId,
@@ -106,7 +107,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new ActiveParticipationStrategy());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
@@ -120,7 +121,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new ReactiveParticipationStrategy());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
@@ -134,7 +135,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new SilentParticipationStrategy());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
@@ -207,7 +208,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new ActiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
@@ -221,7 +222,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new SilentParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
@@ -235,7 +236,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new ReactiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
@@ -274,7 +275,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new ActiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
@@ -289,7 +290,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new ActiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
@@ -304,7 +305,7 @@ class ClaudonyWorkerContextProviderTest {
         var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
                 new ReactiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
         when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,

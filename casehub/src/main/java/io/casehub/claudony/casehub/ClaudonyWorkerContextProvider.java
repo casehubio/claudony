@@ -73,7 +73,8 @@ public class ClaudonyWorkerContextProvider implements WorkerContextProvider {
                     List.of(), PropagationContext.createRoot(), props);
         }
 
-        List<WorkerSummary> priorWorkers = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> priorWorkers = lineageQuery.findCompletedWorkers(caseId)
+                .await().atMost(java.time.Duration.ofSeconds(10));
 
         CaseChannel channel = channelProvider.listChannels(caseId).stream()
                 .findFirst()
