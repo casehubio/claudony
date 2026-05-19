@@ -137,7 +137,7 @@ Claudony uses blocking I/O throughout — ProcessBuilder for tmux, Socket for he
 
 | Context | Thread model | Blocking I/O? |
 |---|---|---|
-| REST endpoints (`@Path`) | Quarkus default executor (not event loop) | ✅ Safe — no `@Blocking` needed |
+| REST endpoints (`@Path`) | Quarkus default executor (not event loop) | ✅ Safe — no `@Blocking` needed (exception: endpoints that call `.await()` on a reactive `Uni` must be `@Blocking` to run on a worker thread, e.g. `getLineage()`) |
 | WebSocket `onOpen()` setup | WebSocket handler (not Vert.x event loop) | ✅ Safe — short-lived ProcessBuilder calls |
 | FIFO streaming | Explicit `Thread.ofVirtual().start(...)` | ✅ Safe — virtual thread owns the read loop |
 | Service health checks | `Executors.newVirtualThreadPerTaskExecutor()` | ✅ Safe — parallel virtual threads |
