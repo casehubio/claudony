@@ -25,6 +25,7 @@ import io.smallrye.mutiny.Uni;
 @Authenticated
 public class MeshResource {
 
+    // FAILURE intentionally excluded: human operators signal decisions, not automated failure states.
     private static final Set<MessageType> VALID_HUMAN_TYPES = Set.of(
             MessageType.QUERY, MessageType.COMMAND, MessageType.RESPONSE,
             MessageType.STATUS, MessageType.DECLINE, MessageType.HANDOFF,
