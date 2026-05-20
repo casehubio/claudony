@@ -1,49 +1,42 @@
 package io.casehub.claudony.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.casehub.claudony.config.ClaudonyConfig;
-import io.casehub.qhorus.runtime.mcp.QhorusMcpToolsBase;
-import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
-import io.quarkus.security.Authenticated;
-import io.quarkus.security.identity.SecurityIdentity;
-import io.smallrye.common.annotation.Blocking;
-import io.smallrye.mutiny.Multi;
-import io.smallrye.mutiny.Uni;
-import io.quarkiverse.mcp.server.ToolCallException;
-import io.smallrye.mutiny.infrastructure.Infrastructure;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.MediaType;
-import org.jboss.logging.Logger;
-
-import jakarta.ws.rs.core.Response;
-
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.casehub.claudony.config.ClaudonyConfig;
+import io.casehub.qhorus.api.message.MessageType;
+import io.casehub.qhorus.runtime.dashboard.QhorusDashboardService;
+import io.quarkus.security.Authenticated;
+import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.Uni;
 
 @Path("/api/mesh")
 @Produces(MediaType.APPLICATION_JSON)
 @Authenticated
 public class MeshResource {
 
-    private static final Logger LOG = Logger.getLogger(MeshResource.class);
-    private static final Duration TIMEOUT = Duration.ofSeconds(10);
-
-    @Inject ClaudonyConfig config;
-    @Inject ReactiveQhorusMcpTools qhorusMcpTools;
-    @Inject ObjectMapper mapper;
-    @Inject SecurityIdentity securityIdentity;
+    private static final Set<MessageType> VALID_HUMAN_TYPES = Set.of(
+            MessageType.QUERY, MessageType.COMMAND, MessageType.RESPONSE,
+            MessageType.STATUS, MessageType.DECLINE, MessageType.HANDOFF,
+            MessageType.DONE, MessageType.EVENT);
 
     record MeshConfig(String strategy, int interval) {}
-
-    private static final Set<String> VALID_HUMAN_TYPES =
-            Set.of("query", "command", "response", "status", "decline", "handoff", "done", "event");
-
     record PostMessageRequest(String content, String type) {}
+
+    @Inject ClaudonyConfig config;
+    @Inject QhorusDashboardService dashboard;
+    @Inject ObjectMapper mapper;
+    @Inject SecurityIdentity securityIdentity;
 
     @GET
     @Path("/config")
@@ -53,129 +46,86 @@ public class MeshResource {
 
     @GET
     @Path("/channels")
-    @Blocking
-    public List<QhorusMcpToolsBase.ChannelDetail> channels() {
-        return qhorusMcpTools.listChannels().await().atMost(TIMEOUT);
+    public Uni<List<QhorusDashboardService.ChannelView>> channels() {
+        return dashboard.listChannels();
     }
 
     @GET
     @Path("/instances")
-    @Blocking
-    public List<QhorusMcpToolsBase.InstanceInfo> instances() {
-        return qhorusMcpTools.listInstances(null).await().atMost(TIMEOUT);
+    public Uni<List<QhorusDashboardService.InstanceView>> instances() {
+        return dashboard.listInstances();
     }
 
     @GET
     @Path("/channels/{name}/timeline")
-    @Blocking
-    public List<Map<String, Object>> timeline(
+    public Uni<List<Map<String, Object>>> timeline(
             @PathParam("name") String name,
             @QueryParam("after") Long after,
             @QueryParam("limit") @DefaultValue("50") int limit) {
-        try {
-            return qhorusMcpTools.getChannelTimeline(name, after, limit).await().atMost(TIMEOUT);
-        } catch (IllegalArgumentException | ToolCallException e) {
-            // ReactiveQhorusMcpTools @WrapBusinessError wraps IllegalArgumentException (unknown channel)
-            // and IllegalStateException (paused/ACL-blocked) into ToolCallException before
-            // they exit the CDI proxy — catch both so unknown channels return [] not 500.
-            return List.of();
-        }
+        return dashboard.getTimeline(name, after, limit);
     }
 
     @GET
     @Path("/feed")
-    @Blocking
-    public List<Map<String, Object>> feed(
+    public Uni<List<Map<String, Object>>> feed(
             @QueryParam("limit") @DefaultValue("100") int limit) {
-        List<QhorusMcpToolsBase.ChannelDetail> channels = qhorusMcpTools.listChannels().await().atMost(TIMEOUT);
-        if (channels.isEmpty()) return List.of();
-
-        int perChannel = Math.max(5, limit / channels.size());
-        List<Map<String, Object>> combined = new ArrayList<>();
-
-        for (QhorusMcpToolsBase.ChannelDetail ch : channels) {
-            try {
-                List<Map<String, Object>> msgs = qhorusMcpTools.getChannelTimeline(
-                        ch.name(), null, perChannel).await().atMost(TIMEOUT);
-                for (Map<String, Object> m : msgs) {
-                    Map<String, Object> tagged = new HashMap<>(m);
-                    tagged.put("channel", ch.name());
-                    combined.add(tagged);
-                }
-            } catch (Exception e) {
-                LOG.debugf("Skipping channel %s in feed: %s", ch.name(), e.getMessage());
-            }
-        }
-
-        // Sort newest-last; ISO-8601 strings sort lexicographically
-        combined.sort((a, b) -> {
-            String ta = String.valueOf(a.getOrDefault("created_at", ""));
-            String tb = String.valueOf(b.getOrDefault("created_at", ""));
-            return ta.compareTo(tb);
-        });
-
-        return combined.size() > limit ? combined.subList(0, limit) : combined;
+        return dashboard.getFeed(limit);
     }
 
     @GET
     @Path("/events")
     @Produces("text/event-stream")
     public Multi<String> events() {
-        // Pushes a full mesh snapshot every refresh-interval milliseconds.
-        // Default strategy is poll; SSE is for deployments that prefer push.
-        // Snapshot building is dispatched to a worker thread — reactive service calls
-        // are safe here but we use runSubscriptionOn to avoid blocking the I/O thread.
         long intervalMs = config.meshRefreshInterval();
         return Multi.createFrom().ticks().every(Duration.ofMillis(intervalMs))
-                .onItem().transformToUniAndConcatenate(tick ->
-                    Uni.createFrom().item(() -> {
-                        try {
-                            var snapshot = Map.of(
-                                    "channels", qhorusMcpTools.listChannels().await().atMost(TIMEOUT),
-                                    "instances", qhorusMcpTools.listInstances(null).await().atMost(TIMEOUT),
-                                    "feed", feed(100));
-                            return "data: " + mapper.writeValueAsString(snapshot) + "\n\n";
-                        } catch (Exception e) {
-                            LOG.debugf("SSE snapshot error: %s", e.getMessage());
-                            return "data: {}\n\n";
-                        }
-                    }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
-                );
+                .onItem().transformToUniAndConcatenate(tick -> {
+                    Uni<List<QhorusDashboardService.ChannelView>> channels =
+                            dashboard.listChannels().onFailure().recoverWithItem(List.of());
+                    Uni<List<QhorusDashboardService.InstanceView>> instances =
+                            dashboard.listInstances().onFailure().recoverWithItem(List.of());
+                    Uni<List<Map<String, Object>>> feed =
+                            dashboard.getFeed(100).onFailure().recoverWithItem(List.of());
+                    return Uni.combine().all().unis(channels, instances, feed)
+                            .combinedWith((ch, inst, f) -> {
+                                try {
+                                    return "data: " + mapper.writeValueAsString(Map.of(
+                                            "channels", ch,
+                                            "instances", inst,
+                                            "feed", f)) + "\n\n";
+                                } catch (Exception e) {
+                                    return "data: {}\n\n";
+                                }
+                            })
+                            .onFailure().recoverWithItem("data: {}\n\n");
+                });
     }
 
     @POST
     @Path("/channels/{name}/messages")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Blocking
-    public Response postMessage(
+    public Uni<Response> postMessage(
             @PathParam("name") String name,
             PostMessageRequest req) {
         if (req == null || req.content() == null || req.content().isBlank()) {
-            return Response.status(400).entity("content must not be blank").build();
+            return Uni.createFrom().item(Response.status(400).entity("content must not be blank").build());
         }
-        String type = req.type() == null ? "status" : req.type().toLowerCase();
+        MessageType type;
+        try {
+            type = MessageType.valueOf((req.type() == null ? "status" : req.type()).toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(
+                    Response.status(400).entity("invalid type: " + req.type()).build());
+        }
         if (!VALID_HUMAN_TYPES.contains(type)) {
-            return Response.status(400).entity("invalid type: " + type).build();
+            return Uni.createFrom().item(
+                    Response.status(400).entity("invalid type: " + req.type()).build());
         }
         String sender = "human:" + securityIdentity.getPrincipal().getName();
-        try {
-            QhorusMcpToolsBase.MessageResult result =
-                    qhorusMcpTools.sendMessage(name, sender, type, req.content(), null, null, null, null, null)
-                            .await().atMost(TIMEOUT);
-            return Response.ok(result).build();
-        } catch (IllegalArgumentException e) {
-            // Not wrapped — returned directly (shouldn't happen due to @WrapBusinessError, but guard)
-            return Response.status(404).entity(e.getMessage()).build();
-        } catch (ToolCallException e) {
-            // @WrapBusinessError wraps using ToolCallException(Throwable cause) — check cause type
-            Throwable cause = e.getCause();
-            if (cause instanceof IllegalArgumentException) {
-                return Response.status(404).entity(cause.getMessage()).build();
-            }
-            String msg = cause != null ? cause.getMessage() : e.getMessage();
-            return Response.status(409).entity(msg).build();
-        } catch (IllegalStateException e) {
-            return Response.status(409).entity(e.getMessage()).build();
-        }
+        return dashboard.sendHumanMessage(name, sender, type, req.content())
+                .map(result -> Response.ok(result).build())
+                .onFailure(IllegalArgumentException.class)
+                    .recoverWithItem(e -> Response.status(404).entity(e.getMessage()).build())
+                .onFailure(IllegalStateException.class)
+                    .recoverWithItem(e -> Response.status(409).entity(e.getMessage()).build());
     }
 }
