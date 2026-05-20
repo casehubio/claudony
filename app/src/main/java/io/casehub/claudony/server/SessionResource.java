@@ -16,6 +16,7 @@ import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionResponse;
 import io.casehub.claudony.server.model.SessionStatus;
 import io.quarkus.security.Authenticated;
+import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -136,6 +137,7 @@ public class SessionResource {
 
     @GET
     @Path("/{id}/lineage")
+    @Blocking
     public Response getLineage(@PathParam("id") String id) {
         return registry.find(id)
                 .map(session -> {
@@ -150,7 +152,8 @@ public class SessionResource {
                                 id, session.caseId().get());
                         return Response.ok(List.of()).build();
                     }
-                    return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)).build();
+                    return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)
+                            .await().indefinitely()).build();
                 })
                 .orElse(Response.status(404).build());
     }
