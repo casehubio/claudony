@@ -387,7 +387,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Full suite count pending re-run from user terminal** (as of 2026-05-18, after reactive SPI migration #115): 4 in `claudony-core` + 130 in `claudony-casehub` confirmed passing. `CaseEngineRoundTripTest` passes with real `ClaudonyReactiveWorkerContextProvider` (no `@InjectMock`). App module tests require tmux on PATH — run from user terminal to get full count. Previous baseline: 479 (4 + 134 + 341, 2026-05-15).
+**Baseline (as of 2026-05-20, after #119 MeshResource reactive refactor):** 4 in `claudony-core` + 130 in `claudony-casehub` + 341 in `claudony-app` = **475 passing, 0 failures** (run from user terminal — requires tmux on PATH). Previous baseline: 479 (4 + 134 + 341, 2026-05-15).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -395,7 +395,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 ```
 Quarkus resolves `${quarkus.http.port}` to the actual assigned random port. Without this, the client silently connects to the default port (7777) and all such tests fail with `Connection refused`.
 
-**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 60 tools (8 Claudony + 52 Qhorus) — update this assertion and the count here when Qhorus ships new tools; the count changes with each Qhorus release. `quarkus.mcp.server.tools.page-size=0` in `application.properties` disables the default 50-tool pagination cap; the long-term fix (separate endpoints) is tracked in #105.
+**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 58 tools (8 Claudony + 50 Qhorus) — update this assertion and the count here when Qhorus ships new tools; the count changes with each Qhorus release. `quarkus.mcp.server.tools.page-size=0` in `application.properties` disables the default 50-tool pagination cap; the long-term fix (separate endpoints) is tracked in #105.
 
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash
