@@ -3,7 +3,9 @@ package io.casehub.claudony.server;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -15,8 +17,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.platform.api.preferences.PreferenceProvider;
 import io.casehub.platform.api.preferences.SettingsScope;
+import io.casehub.qhorus.api.gateway.ChannelRef;
 import io.casehub.qhorus.api.message.MessageType;
+import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
 import io.casehub.qhorus.runtime.dashboard.QhorusDashboardService;
+import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.mutiny.Multi;
@@ -36,11 +41,15 @@ public class MeshResource {
     record MeshConfig(String strategy, int interval, int cursorStalenessMinutes) {}
     record PostMessageRequest(String content, String type) {}
 
-    @Inject ClaudonyConfig config;
+    @Inject ClaudonyConfig         config;
     @Inject QhorusDashboardService dashboard;
-    @Inject ObjectMapper mapper;
-    @Inject SecurityIdentity securityIdentity;
-    @Inject PreferenceProvider preferenceProvider;
+    @Inject ObjectMapper           mapper;
+    @Inject SecurityIdentity       securityIdentity;
+    @Inject PreferenceProvider     preferenceProvider;
+    @Inject ChannelEventBus        channelEventBus;
+    @Inject ClaudonyChannelBackend channelBackend;
+    @Inject ChannelGateway         gateway;
+    @Inject ReactiveChannelService channelService;
 
     @GET
     @Path("/config")
@@ -106,6 +115,69 @@ public class MeshResource {
                             })
                             .onFailure().recoverWithItem("data: {}\n\n");
                 });
+    }
+
+    @GET
+    @Path("/channels/{name}/events")
+    @Produces("text/event-stream")
+    @io.smallrye.common.annotation.Blocking
+    public Multi<String> channelEvents(
+            @PathParam("name") String channelName,
+            @QueryParam("after") @DefaultValue("0") long after) {
+        // Resolve channel synchronously before returning the Multi — RESTEasy Reactive
+        // sends 200 + text/event-stream headers before the first emission, so any
+        // NotFoundException thrown inside transformToMulti arrives too late to affect
+        // the status code. @Blocking + await() here gives us a real 404.
+        var opt = channelService.findByName(channelName).await().indefinitely();
+        if (opt.isEmpty()) {
+            throw new NotFoundException("Channel not found: " + channelName);
+        }
+        var channel = opt.get();
+        var channelId = channel.id;
+
+        // Idempotent backend registration
+        ChannelRef ref = new ChannelRef(channelId, channelName);
+        gateway.deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
+        channelBackend.open(ref, Map.of());
+        gateway.registerBackend(channelId, channelBackend, "human_observer");
+
+        AtomicLong lastSentId = new AtomicLong(after);
+
+        // Initial catch-up: fetch messages since cursor
+        Multi<String> catchUp = Multi.createFrom().uni(
+                dashboard.getTimeline(channelName, lastSentId.get(), 50)
+                        .invoke(entries -> updateLastSentId(lastSentId, entries))
+                        .map(entries -> entries.isEmpty() ? null : serializeEntries(entries))
+        ).filter(Objects::nonNull);
+
+        // Live: on each tick, fetch new messages since lastSentId
+        Multi<String> live = channelEventBus.subscribe(channelName)
+                .onItem().transformToUniAndConcatenate(tick ->
+                        dashboard.getTimeline(channelName, lastSentId.get(), 50)
+                                .invoke(entries -> updateLastSentId(lastSentId, entries))
+                                .map(entries -> entries.isEmpty() ? null
+                                        : serializeEntries(entries))
+                ).filter(Objects::nonNull);
+
+        return Multi.createBy().concatenating().streams(catchUp, live);
+    }
+
+    private static void updateLastSentId(AtomicLong lastSentId,
+                                         List<Map<String, Object>> entries) {
+        entries.stream()
+                .map(e -> e.get("id"))
+                .filter(id -> id instanceof Number)
+                .mapToLong(id -> ((Number) id).longValue())
+                .max()
+                .ifPresent(lastSentId::set);
+    }
+
+    private String serializeEntries(List<Map<String, Object>> entries) {
+        try {
+            return "data: " + mapper.writeValueAsString(entries) + "\n\n";
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return null;
+        }
     }
 
     @POST

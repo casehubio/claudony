@@ -97,7 +97,10 @@ class CaseEngineRoundTripTest {
                     + "io.casehub.engine.internal.worker.CasehubWorkloadProvider,"
                     + "io.casehub.engine.internal.orchestration.WorkOrchestrator,"
                     + "io.casehub.engine.internal.engine.handler.SignalReceivedEventHandler,"
-                    + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService"
+                    + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService,"
+                    // casehub-work-core (transitive via casehub-testing) includes RoundRobinStrategy
+                    // which injects RoutingCursorStore — not provided in Claudony test context.
+                    + "io.casehub.work.core.strategy.RoundRobinStrategy"
             );
         }
     }
