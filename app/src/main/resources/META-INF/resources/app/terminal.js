@@ -161,6 +161,7 @@
 
     var chSelectedName    = null;
     var chPollTimer       = null;
+    var chEventSource     = null;
     var chStalePromptEl   = null;
     var POLL_MS           = 3000;
     var CURSOR_STORE_KEY  = 'claudony.channel.cursors';
@@ -420,7 +421,11 @@
         var wasAtBottom = chFeed.scrollHeight - chFeed.scrollTop <= chFeed.clientHeight + 4;
         var cursorAdvanced = false;
         entries.forEach(function (entry) {
-            chFeed.appendChild(renderMessage(entry));
+            // Skip messages already rendered (can happen when SSE catch-up and fullLoad() both deliver the same set)
+            if (entry.id && document.getElementById('ch-msg-' + entry.id)) return;
+            var el = renderMessage(entry);
+            if (entry.id) el.id = 'ch-msg-' + entry.id;
+            chFeed.appendChild(el);
             if (entry.id && chSelectedName) {
                 var c = chCursors[chSelectedName];
                 if (!c || entry.id > c.id) {
@@ -448,14 +453,41 @@
         chPollTimer = setTimeout(pollChannel, POLL_MS);
     }
 
+    function openChannelEventSource(name) {
+        if (chEventSource) {
+            chEventSource.close();
+            chEventSource = null;
+        }
+        var cursor = chCursors[name];
+        var afterId = cursor ? cursor.id : 0;
+        var url = '/api/mesh/channels/' + encodeURIComponent(name) + '/events?after=' + afterId;
+
+        chEventSource = new EventSource(url);
+        chEventSource.onmessage = function (e) {
+            try {
+                var entries = JSON.parse(e.data);
+                // Remove "No messages yet" placeholder if present
+                var empty = chFeed.querySelector('.ch-empty');
+                if (empty) empty.remove();
+                if (Array.isArray(entries) && entries.length) appendMessages(entries);
+            } catch (err) {}
+        };
+        chEventSource.onerror = function () {
+            if (chEventSource) {
+                chEventSource.close();
+                chEventSource = null;
+            }
+            if (chSelectedName) chPollTimer = setTimeout(pollChannel, POLL_MS);
+        };
+    }
+
     function catchUp(name, fromId) {
         var url = '/api/mesh/channels/' + encodeURIComponent(name) +
                   '/timeline?limit=50&after=' + fromId;
         fetch(url).then(function (r) { return r.json(); }).then(function (entries) {
             if (entries && entries.length) appendMessages(entries);
-        }).catch(function () {}).finally(function () {
-            chPollTimer = setTimeout(pollChannel, POLL_MS);
-        });
+        }).catch(function () {});
+        // EventSource already open from selectChannel(); no need to open again
     }
 
     function fullLoad(name) {
@@ -469,9 +501,8 @@
                 empty.textContent = 'No messages yet.';
                 chFeed.appendChild(empty);
             }
-        }).catch(function () {}).finally(function () {
-            chPollTimer = setTimeout(pollChannel, POLL_MS);
-        });
+        }).catch(function () {});
+        // EventSource already open from selectChannel(); no need to open again
     }
 
     function hideStalePrompt() {
@@ -502,18 +533,21 @@
         chStalePromptEl.style.display = '';
         document.getElementById('ch-stale-catchup-btn').onclick = function () {
             hideStalePrompt();
+            openChannelEventSource(name);
             catchUp(name, cursorId);
         };
         document.getElementById('ch-stale-reload-btn').onclick = function () {
             hideStalePrompt();
             delete chCursors[name];
             persistCursors();
+            openChannelEventSource(name);
             fullLoad(name);
         };
     }
 
     function selectChannel(name) {
         clearTimeout(chPollTimer);
+        if (chEventSource) { chEventSource.close(); chEventSource = null; }
         hideStalePrompt();
         // Re-read sessionStorage so external mutations (e.g. test code) are visible
         try { var _s = sessionStorage.getItem(CURSOR_STORE_KEY); if (_s) chCursors = JSON.parse(_s); } catch (e) {}
@@ -531,19 +565,22 @@
         var cursor = chCursors[name];
         if (cursor) {
             if (Date.now() - cursor.ts >= chStalenessMs) {
-                // Stale: clear feed and let user decide
+                // Stale: clear feed and let user decide (EventSource opened when user chooses)
                 chFeed.innerHTML = '';
                 showStalePrompt(name, cursor.id);
             } else if (sameChannel && chFeed.children.length > 0) {
                 // Same channel, panel just reopened: feed still rendered, just append new
+                openChannelEventSource(name);
                 catchUp(name, cursor.id);
             } else {
                 // Different channel or empty feed: fresh history load
                 chFeed.innerHTML = '';
+                openChannelEventSource(name);
                 fullLoad(name);
             }
         } else {
             chFeed.innerHTML = '';
+            openChannelEventSource(name);
             fullLoad(name);
         }
     }
@@ -587,6 +624,7 @@
     function closePanel() {
         chPanel.classList.add('collapsed');
         clearTimeout(chPollTimer);
+        if (chEventSource) { chEventSource.close(); chEventSource = null; }
         clearTimeout(lineagePollTimer);
         clearInterval(elapsedTicker);
     }

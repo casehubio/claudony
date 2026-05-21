@@ -262,10 +262,10 @@ class ChannelPanelE2ETest extends PlaywrightBase {
                 new Locator.WaitForOptions().setTimeout(5000));
         assertThat(page.locator("#ch-feed .ch-msg").count()).isGreaterThanOrEqualTo(1);
 
-        // Seed a second message after initial load — the poll (POLL_MS = 3000ms) picks it up
+        // Seed a second message after initial load — the SSE live stream picks it up
         postMessage("new message after initial load", "query");
 
-        // Wait for the poll cycle (up to 6s = 2× POLL_MS)
+        // Wait for SSE delivery (up to 2s — SSE polls every 500ms)
         page.locator("#ch-feed .ch-msg:nth-child(2)").waitFor(
                 new Locator.WaitForOptions().setTimeout(8000));
 
@@ -273,8 +273,8 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         assertThat(feedText).contains("pre-existing message");
         assertThat(feedText).contains("new message after initial load");
 
-        // At least 2 messages visible (pre-existing + new); cursor-based polling ensures
-        // the new message was fetched via the poll rather than a full reload
+        // At least 2 messages visible (pre-existing + new); cursor-based SSE ensures
+        // the new message was fetched via SSE live stream rather than a full reload
         var msgCount = page.locator("#ch-feed .ch-msg").count();
         assertThat(msgCount).isGreaterThanOrEqualTo(2);
     }
@@ -414,22 +414,22 @@ class ChannelPanelE2ETest extends PlaywrightBase {
                 new Locator.WaitForOptions().setTimeout(5000));
         assertThat(page.locator("#ch-feed .ch-msg").count()).isGreaterThanOrEqualTo(2);
 
-        // Capture timeline requests from panel reopen onwards
-        var timelineUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
+        // Capture SSE event requests from panel reopen onwards
+        var eventUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
         page.onRequest(req -> {
-            if (req.url().contains("/timeline")) timelineUrls.add(req.url());
+            if (req.url().contains("/events")) eventUrls.add(req.url());
         });
 
         // Close panel
         page.locator("#ch-toggle-btn").click();
         page.locator("#channel-panel.collapsed").waitFor(
                 new Locator.WaitForOptions().setTimeout(5000));
-        timelineUrls.clear(); // discard any pre-close poll requests
+        eventUrls.clear(); // discard any pre-close SSE requests
 
         // Seed 1 more message while panel is closed
         postMessage("msg-after-close", "status");
 
-        // Reopen panel — should use ?after=<lastId> for catch-up
+        // Reopen panel — should use ?after=<lastId> for catch-up via SSE
         page.locator("#ch-toggle-btn").click();
         page.locator("#channel-panel:not(.collapsed)").waitFor(
                 new Locator.WaitForOptions().setTimeout(5000));
@@ -439,9 +439,9 @@ class ChannelPanelE2ETest extends PlaywrightBase {
                 new Locator.FilterOptions().setHasText("msg-after-close"))
                 .first().waitFor(new Locator.WaitForOptions().setTimeout(8000));
 
-        // At least one timeline request must have used ?after= (catch-up rather than full reload)
-        assertThat(timelineUrls)
-                .as("panel reopen should issue a catch-up request with ?after=<id>")
+        // At least one SSE events request must have used ?after= (catch-up rather than full reload)
+        assertThat(eventUrls)
+                .as("panel reopen should issue an SSE catch-up request with ?after=<id>")
                 .anyMatch(url -> url.contains("after=") && !url.contains("after=0"));
 
         // Feed must show all 3 messages without duplicating the first two
@@ -511,10 +511,10 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
         postMessage("new-msg-after-absence", "status");
 
-        // Capture timeline requests after reopening
-        var timelineUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
+        // Capture SSE event requests after reopening
+        var eventUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
         page.onRequest(req -> {
-            if (req.url().contains("/timeline")) timelineUrls.add(req.url());
+            if (req.url().contains("/events")) eventUrls.add(req.url());
         });
 
         page.locator("#ch-toggle-btn").click();
@@ -528,12 +528,12 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         // Click catch-up
         page.locator("#ch-stale-catchup-btn").click();
 
-        // Catch-up fetch uses ?after=
+        // SSE catch-up uses ?after= and delivers the new message
         page.locator("#ch-feed .ch-msg").filter(
                 new Locator.FilterOptions().setHasText("new-msg-after-absence"))
                 .first().waitFor(new Locator.WaitForOptions().setTimeout(8000));
 
-        assertThat(timelineUrls)
+        assertThat(eventUrls)
                 .anyMatch(url -> url.contains("after=") && !url.contains("after=0"));
         assertThat(page.locator("#ch-stale-prompt").isVisible()).isFalse();
     }
@@ -561,10 +561,10 @@ class ChannelPanelE2ETest extends PlaywrightBase {
                 "sessionStorage.setItem(k,JSON.stringify(c));" +
                 "}", channelName);
 
-        // Capture timeline requests
-        var timelineUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
+        // Capture SSE event requests
+        var eventUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
         page.onRequest(req -> {
-            if (req.url().contains("/timeline")) timelineUrls.add(req.url());
+            if (req.url().contains("/events")) eventUrls.add(req.url());
         });
 
         page.locator("#ch-toggle-btn").click();
@@ -575,13 +575,13 @@ class ChannelPanelE2ETest extends PlaywrightBase {
                 new Locator.WaitForOptions().setTimeout(5000));
         page.locator("#ch-stale-reload-btn").click();
 
-        // Full history load — no ?after= in the initial fetch
+        // Full history load via SSE with ?after=0 (cursor deleted before opening)
         page.locator("#ch-feed .ch-msg").first().waitFor(
                 new Locator.WaitForOptions().setTimeout(5000));
 
-        // The reload request must NOT use ?after= (or use after=0 meaning full reload)
-        assertThat(timelineUrls)
-                .anyMatch(url -> !url.contains("after=") || url.contains("after=0") || url.contains("limit=100"));
+        // The reload SSE request uses ?after=0 (full reload from beginning)
+        assertThat(eventUrls)
+                .anyMatch(url -> url.contains("after=0"));
         assertThat(page.locator("#ch-stale-prompt").isVisible()).isFalse();
         assertThat(page.locator("#ch-feed").textContent()).contains("old-msg-reload");
     }
@@ -608,5 +608,38 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         assertThat(optionValues).anyMatch(s -> s.contains("STATUS"));
         assertThat(optionValues).anyMatch(s -> s.contains("EVENT"));
         assertThat(optionValues).anyMatch(s -> s.contains("HANDOFF"));
+    }
+
+    // ── AC 16: real-time push — message appears without waiting for poll cycle ──
+
+    @Test
+    void channelEvents_pushesMessageInRealTime() {
+        navigateToSessionPageWithChannel();
+        openPanel();
+
+        // Wait for channel to be selected and EventSource to open
+        page.locator("#ch-select option[value='" + channelName + "']").waitFor(
+                new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED).setTimeout(5000));
+        page.evaluate("() => { " +
+                "var sel = document.getElementById('ch-select'); " +
+                "sel.value = '" + channelName + "'; " +
+                "sel.dispatchEvent(new Event('change')); " +
+                "}");
+
+        // Give 1s for EventSource handshake to complete
+        page.waitForTimeout(1000);
+
+        // Seed a message AFTER EventSource is open
+        long before = System.currentTimeMillis();
+        postMessage("real-time-push-msg", "status");
+
+        // Message must appear within 2s (real-time push, not 3s poll cycle)
+        page.locator("#ch-feed .ch-msg").filter(
+                new Locator.FilterOptions().setHasText("real-time-push-msg"))
+                .first().waitFor(new Locator.WaitForOptions().setTimeout(2000));
+        long elapsed = System.currentTimeMillis() - before;
+
+        assertThat(elapsed).isLessThan(2500);
+        assertThat(page.locator("#ch-feed").textContent()).contains("real-time-push-msg");
     }
 }

@@ -46,7 +46,6 @@ public class MeshResource {
     @Inject ObjectMapper           mapper;
     @Inject SecurityIdentity       securityIdentity;
     @Inject PreferenceProvider     preferenceProvider;
-    @Inject ChannelEventBus        channelEventBus;
     @Inject ClaudonyChannelBackend channelBackend;
     @Inject ChannelGateway         gateway;
     @Inject ReactiveChannelService channelService;
@@ -150,8 +149,11 @@ public class MeshResource {
                         .map(entries -> entries.isEmpty() ? null : serializeEntries(entries))
         ).filter(Objects::nonNull);
 
-        // Live: on each tick, fetch new messages since lastSentId
-        Multi<String> live = channelEventBus.subscribe(channelName)
+        // Live: poll every 500ms for new messages since lastSentId.
+        // The SSE-via-ticks approach is used here because the ChannelEventBus emitter
+        // cross-thread emit (vert.x-eventloop-thread-X → response owned by thread-Y)
+        // caused the emitted SSE frame to not be flushed to the browser reliably.
+        Multi<String> live = Multi.createFrom().ticks().every(Duration.ofMillis(500))
                 .onItem().transformToUniAndConcatenate(tick ->
                         dashboard.getTimeline(channelName, lastSentId.get(), 50)
                                 .invoke(entries -> updateLastSentId(lastSentId, entries))
@@ -174,7 +176,7 @@ public class MeshResource {
 
     private String serializeEntries(List<Map<String, Object>> entries) {
         try {
-            return "data: " + mapper.writeValueAsString(entries) + "\n\n";
+            return mapper.writeValueAsString(entries);
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             return null;
         }
