@@ -159,7 +159,10 @@ public class MeshResource {
                                 .invoke(entries -> updateLastSentId(lastSentId, entries))
                                 .map(entries -> entries.isEmpty() ? null
                                         : serializeEntries(entries))
-                ).filter(Objects::nonNull);
+                )
+                .onTermination().invoke(() ->
+                        gateway.deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID))
+                .filter(Objects::nonNull);
 
         return Multi.createBy().concatenating().streams(catchUp, live);
     }

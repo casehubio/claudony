@@ -12,9 +12,11 @@ import java.util.Map;
 /**
  * Qhorus HumanObserverChannelBackend for the Claudony dashboard panel.
  *
- * <p>Singleton — one instance registered per channel. {@code post()} ticks
- * the {@link ChannelEventBus} so active SSE subscribers fetch and render
- * new messages via {@code QhorusDashboardService.getTimeline()}.
+ * <p>Singleton — registered once per channel by {@code MeshResource.channelEvents()} and
+ * by {@code ServerStartup.bootstrapChannelBackends()} on restart. {@code post()} ticks
+ * {@link ChannelEventBus} (reserved for future event-driven delivery); the current SSE
+ * endpoint uses a 500 ms server-side tick via {@code Multi.createFrom().ticks()} instead.
+ * See claudony#131 to track moving to true push delivery.
  */
 @ApplicationScoped
 public class ClaudonyChannelBackend implements HumanObserverChannelBackend {
