@@ -38,6 +38,16 @@
       <!-- CaseHub ecosystem — all components versioned together -->
       <dependency>
         <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-api</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-config</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
         <artifactId>casehub-engine-api</artifactId>
         <version>${casehub.version}</version>
       </dependency>

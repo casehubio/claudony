@@ -3,6 +3,8 @@ package io.casehub.claudony.e2e;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.RequestOptions;
 import com.microsoft.playwright.options.WaitForSelectorState;
+import io.casehub.qhorus.api.channel.ChannelSemantic;
+import io.casehub.qhorus.runtime.channel.Channel;
 import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
@@ -41,8 +43,11 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     @BeforeEach
     void createChannel() {
         channelName = "ch-panel-e2e-" + System.nanoTime();
-        tools.createChannel(channelName, "E2E test channel", "APPEND", null, null, null, null, null, null)
-                .await().atMost(Duration.ofSeconds(5));
+        Channel ch = new Channel();
+        ch.name = channelName;
+        ch.description = "E2E test channel";
+        ch.semantic = ChannelSemantic.APPEND;
+        channelStore.put(ch);
     }
 
     @AfterEach
@@ -363,8 +368,12 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     void interjectionDock_typeDropdown_filteredToChannelAllowedTypes() {
         // Create a channel restricted to COMMAND and QUERY only
         String restrictedChannel = "restricted-" + System.nanoTime();
-        tools.createChannel(restrictedChannel, "Governance channel", "APPEND",
-                null, null, null, null, null, "COMMAND,QUERY").await().atMost(Duration.ofSeconds(5));
+        Channel restricted = new Channel();
+        restricted.name = restrictedChannel;
+        restricted.description = "Governance channel";
+        restricted.semantic = ChannelSemantic.APPEND;
+        restricted.allowedTypes = "COMMAND,QUERY";
+        channelStore.put(restricted);
 
         page.navigate(BASE_URL + "/app/session.html?id=fake-session-id&name=test-session");
         openPanel();
@@ -387,6 +396,194 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         assertThat(optionValues).anyMatch(s -> s.contains("QUERY"));
         assertThat(optionValues).noneMatch(s -> s.contains("STATUS"));
         assertThat(optionValues).noneMatch(s -> s.contains("EVENT"));
+    }
+
+    // ── AC 12: catch-up on panel reopen uses ?after= cursor ──────────────────
+
+    @Test
+    void catchUp_onPanelReopen_usesAfterCursor() {
+        // Seed 2 messages before initial open
+        postMessage("msg-before-close-1", "status");
+        postMessage("msg-before-close-2", "status");
+
+        navigateToSessionPageWithChannel();
+        openPanel();
+
+        // Wait for initial messages to render
+        page.locator("#ch-feed .ch-msg").first().waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+        assertThat(page.locator("#ch-feed .ch-msg").count()).isGreaterThanOrEqualTo(2);
+
+        // Capture timeline requests from panel reopen onwards
+        var timelineUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
+        page.onRequest(req -> {
+            if (req.url().contains("/timeline")) timelineUrls.add(req.url());
+        });
+
+        // Close panel
+        page.locator("#ch-toggle-btn").click();
+        page.locator("#channel-panel.collapsed").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+        timelineUrls.clear(); // discard any pre-close poll requests
+
+        // Seed 1 more message while panel is closed
+        postMessage("msg-after-close", "status");
+
+        // Reopen panel — should use ?after=<lastId> for catch-up
+        page.locator("#ch-toggle-btn").click();
+        page.locator("#channel-panel:not(.collapsed)").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // Wait for the new message to appear
+        page.locator("#ch-feed .ch-msg").filter(
+                new Locator.FilterOptions().setHasText("msg-after-close"))
+                .first().waitFor(new Locator.WaitForOptions().setTimeout(8000));
+
+        // At least one timeline request must have used ?after= (catch-up rather than full reload)
+        assertThat(timelineUrls)
+                .as("panel reopen should issue a catch-up request with ?after=<id>")
+                .anyMatch(url -> url.contains("after=") && !url.contains("after=0"));
+
+        // Feed must show all 3 messages without duplicating the first two
+        assertThat(page.locator("#ch-feed").textContent()).contains("msg-before-close-1");
+        assertThat(page.locator("#ch-feed").textContent()).contains("msg-after-close");
+    }
+
+    // ── AC 13: stale cursor shows reconnect prompt ────────────────────────────
+
+    @Test
+    void staleCursor_showsReconnectPrompt() {
+        postMessage("initial-msg", "status");
+
+        navigateToSessionPageWithChannel();
+        openPanel();
+
+        // Wait for message to appear and cursor to be written to sessionStorage
+        page.locator("#ch-feed .ch-msg").first().waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // Close panel
+        page.locator("#ch-toggle-btn").click();
+        page.locator("#channel-panel.collapsed").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // Backdating the cursor timestamp to 2 hours ago makes it stale
+        page.evaluate("(name) => {" +
+                "var k='claudony.channel.cursors';" +
+                "var c=JSON.parse(sessionStorage.getItem(k)||'{}');" +
+                "if(c[name]){c[name].ts=Date.now()-2*60*60*1000;}" +
+                "sessionStorage.setItem(k,JSON.stringify(c));" +
+                "}", channelName);
+
+        // Reopen panel
+        page.locator("#ch-toggle-btn").click();
+        page.locator("#channel-panel:not(.collapsed)").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // Stale cursor prompt must appear
+        page.locator("#ch-stale-prompt").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+        assertThat(page.locator("#ch-stale-prompt").isVisible()).isTrue();
+    }
+
+    // ── AC 14: stale cursor — choose catch-up loads from cursor ──────────────
+
+    @Test
+    void staleCursor_chooseCatchUp_fetchesFromCursor() {
+        postMessage("old-msg", "status");
+
+        navigateToSessionPageWithChannel();
+        openPanel();
+        page.locator("#ch-feed .ch-msg").first().waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        page.locator("#ch-toggle-btn").click();
+        page.locator("#channel-panel.collapsed").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // Make cursor stale
+        page.evaluate("(name) => {" +
+                "var k='claudony.channel.cursors';" +
+                "var c=JSON.parse(sessionStorage.getItem(k)||'{}');" +
+                "if(c[name]){c[name].ts=Date.now()-2*60*60*1000;}" +
+                "sessionStorage.setItem(k,JSON.stringify(c));" +
+                "}", channelName);
+
+        postMessage("new-msg-after-absence", "status");
+
+        // Capture timeline requests after reopening
+        var timelineUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
+        page.onRequest(req -> {
+            if (req.url().contains("/timeline")) timelineUrls.add(req.url());
+        });
+
+        page.locator("#ch-toggle-btn").click();
+        page.locator("#channel-panel:not(.collapsed)").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // Prompt must appear
+        page.locator("#ch-stale-prompt").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // Click catch-up
+        page.locator("#ch-stale-catchup-btn").click();
+
+        // Catch-up fetch uses ?after=
+        page.locator("#ch-feed .ch-msg").filter(
+                new Locator.FilterOptions().setHasText("new-msg-after-absence"))
+                .first().waitFor(new Locator.WaitForOptions().setTimeout(8000));
+
+        assertThat(timelineUrls)
+                .anyMatch(url -> url.contains("after=") && !url.contains("after=0"));
+        assertThat(page.locator("#ch-stale-prompt").isVisible()).isFalse();
+    }
+
+    // ── AC 15: stale cursor — choose reload fetches full history ─────────────
+
+    @Test
+    void staleCursor_chooseReload_fetchesFullHistory() {
+        postMessage("old-msg-reload", "status");
+
+        navigateToSessionPageWithChannel();
+        openPanel();
+        page.locator("#ch-feed .ch-msg").first().waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        page.locator("#ch-toggle-btn").click();
+        page.locator("#channel-panel.collapsed").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // Make cursor stale
+        page.evaluate("(name) => {" +
+                "var k='claudony.channel.cursors';" +
+                "var c=JSON.parse(sessionStorage.getItem(k)||'{}');" +
+                "if(c[name]){c[name].ts=Date.now()-2*60*60*1000;}" +
+                "sessionStorage.setItem(k,JSON.stringify(c));" +
+                "}", channelName);
+
+        // Capture timeline requests
+        var timelineUrls = new java.util.concurrent.CopyOnWriteArrayList<String>();
+        page.onRequest(req -> {
+            if (req.url().contains("/timeline")) timelineUrls.add(req.url());
+        });
+
+        page.locator("#ch-toggle-btn").click();
+        page.locator("#channel-panel:not(.collapsed)").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        page.locator("#ch-stale-prompt").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+        page.locator("#ch-stale-reload-btn").click();
+
+        // Full history load — no ?after= in the initial fetch
+        page.locator("#ch-feed .ch-msg").first().waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+
+        // The reload request must NOT use ?after= (or use after=0 meaning full reload)
+        assertThat(timelineUrls)
+                .anyMatch(url -> !url.contains("after=") || url.contains("after=0") || url.contains("limit=100"));
+        assertThat(page.locator("#ch-stale-prompt").isVisible()).isFalse();
+        assertThat(page.locator("#ch-feed").textContent()).contains("old-msg-reload");
     }
 
     @Test

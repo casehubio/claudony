@@ -15,6 +15,15 @@
   <description>Quarkus application: REST API, WebSocket terminal, dashboard, auth, fleet, agent MCP</description>
 
   <dependencies>
+    <!-- Platform preferences API + config-file provider -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-config</artifactId>
+    </dependency>
     <!-- Core services from casehub-claudony-core -->
     <dependency>
       <groupId>io.casehub</groupId>

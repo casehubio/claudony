@@ -13,6 +13,8 @@ import jakarta.ws.rs.core.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.casehub.claudony.config.ClaudonyConfig;
+import io.casehub.platform.api.preferences.PreferenceProvider;
+import io.casehub.platform.api.preferences.SettingsScope;
 import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.dashboard.QhorusDashboardService;
 import io.quarkus.security.Authenticated;
@@ -31,18 +33,23 @@ public class MeshResource {
             MessageType.STATUS, MessageType.DECLINE, MessageType.HANDOFF,
             MessageType.DONE, MessageType.EVENT);
 
-    record MeshConfig(String strategy, int interval) {}
+    record MeshConfig(String strategy, int interval, int cursorStalenessMinutes) {}
     record PostMessageRequest(String content, String type) {}
 
     @Inject ClaudonyConfig config;
     @Inject QhorusDashboardService dashboard;
     @Inject ObjectMapper mapper;
     @Inject SecurityIdentity securityIdentity;
+    @Inject PreferenceProvider preferenceProvider;
 
     @GET
     @Path("/config")
     public MeshConfig config() {
-        return new MeshConfig(config.meshRefreshStrategy(), config.meshRefreshInterval());
+        int staleness = preferenceProvider
+                .resolve(SettingsScope.of("casehubio", "claudony"))
+                .getOrDefault(ChannelCursorStaleness.KEY)
+                .minutes();
+        return new MeshConfig(config.meshRefreshStrategy(), config.meshRefreshInterval(), staleness);
     }
 
     @GET

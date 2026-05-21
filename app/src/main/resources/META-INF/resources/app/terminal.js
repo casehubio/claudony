@@ -159,10 +159,26 @@
     var chToggleBtn  = document.getElementById('ch-toggle-btn');
     var chCloseBtn   = document.getElementById('ch-close-btn');
 
-    var chSelectedName = null;
-    var chLastId       = 0;
-    var chPollTimer    = null;
-    var POLL_MS        = 3000;
+    var chSelectedName    = null;
+    var chPollTimer       = null;
+    var chStalePromptEl   = null;
+    var POLL_MS           = 3000;
+    var CURSOR_STORE_KEY  = 'claudony.channel.cursors';
+    var chStalenessMs     = 30 * 60 * 1000; // default; overwritten after config fetch
+    var chCursors         = {};             // { channelName: {id, ts} }
+
+    // Load persisted cursors from sessionStorage
+    try {
+        var _stored = sessionStorage.getItem(CURSOR_STORE_KEY);
+        if (_stored) chCursors = JSON.parse(_stored);
+    } catch (e) {}
+
+    // Fetch mesh config to get server-configured staleness threshold
+    fetch('/api/mesh/config').then(function (r) { return r.json(); }).then(function (cfg) {
+        if (cfg && typeof cfg.cursorStalenessMinutes === 'number') {
+            chStalenessMs = cfg.cursorStalenessMinutes * 60 * 1000;
+        }
+    }).catch(function () {});
 
     // Case context state (populated from session fetch)
     var sessionCaseId    = null;
@@ -396,19 +412,33 @@
         return el;
     }
 
+    function persistCursors() {
+        try { sessionStorage.setItem(CURSOR_STORE_KEY, JSON.stringify(chCursors)); } catch (e) {}
+    }
+
     function appendMessages(entries) {
         var wasAtBottom = chFeed.scrollHeight - chFeed.scrollTop <= chFeed.clientHeight + 4;
+        var cursorAdvanced = false;
         entries.forEach(function (entry) {
             chFeed.appendChild(renderMessage(entry));
-            if (entry.id && entry.id > chLastId) chLastId = entry.id;
+            if (entry.id && chSelectedName) {
+                var c = chCursors[chSelectedName];
+                if (!c || entry.id > c.id) {
+                    chCursors[chSelectedName] = {id: entry.id, ts: Date.now()};
+                    cursorAdvanced = true;
+                }
+            }
         });
+        if (cursorAdvanced) persistCursors();
         if (wasAtBottom) chFeed.scrollTop = chFeed.scrollHeight;
     }
 
     function pollChannel() {
         if (!chSelectedName) return;
+        var cursor = chCursors[chSelectedName];
+        var lastId = cursor ? cursor.id : 0;
         var url = '/api/mesh/channels/' + encodeURIComponent(chSelectedName) +
-                  '/timeline?limit=50' + (chLastId ? '&after=' + chLastId : '');
+                  '/timeline?limit=50' + (lastId ? '&after=' + lastId : '');
         fetch(url).then(function (r) {
             if (!r.ok) return;
             return r.json();
@@ -418,18 +448,17 @@
         chPollTimer = setTimeout(pollChannel, POLL_MS);
     }
 
-    function selectChannel(name) {
-        clearTimeout(chPollTimer);
-        chSelectedName = name || null;
-        chLastId = 0;
-        chFeed.innerHTML = '';
-        chError.textContent = '';
-        chSendBtn.disabled = !name;
-        updateTypeSelectForChannel(name || null);
+    function catchUp(name, fromId) {
+        var url = '/api/mesh/channels/' + encodeURIComponent(name) +
+                  '/timeline?limit=50&after=' + fromId;
+        fetch(url).then(function (r) { return r.json(); }).then(function (entries) {
+            if (entries && entries.length) appendMessages(entries);
+        }).catch(function () {}).finally(function () {
+            chPollTimer = setTimeout(pollChannel, POLL_MS);
+        });
+    }
 
-        if (!name) return;
-
-        // Load initial history then start polling
+    function fullLoad(name) {
         var url = '/api/mesh/channels/' + encodeURIComponent(name) + '/timeline?limit=100';
         fetch(url).then(function (r) { return r.json(); }).then(function (entries) {
             if (entries && entries.length) {
@@ -443,6 +472,80 @@
         }).catch(function () {}).finally(function () {
             chPollTimer = setTimeout(pollChannel, POLL_MS);
         });
+    }
+
+    function hideStalePrompt() {
+        if (chStalePromptEl) chStalePromptEl.style.display = 'none';
+    }
+
+    function showStalePrompt(name, cursorId) {
+        if (!chStalePromptEl) {
+            chStalePromptEl = document.createElement('div');
+            chStalePromptEl.id = 'ch-stale-prompt';
+            chStalePromptEl.className = 'ch-stale-prompt';
+            var msg = document.createElement('span');
+            msg.className = 'ch-stale-msg';
+            msg.textContent = 'You were away for a while.';
+            var catchupBtn = document.createElement('button');
+            catchupBtn.id = 'ch-stale-catchup-btn';
+            catchupBtn.className = 'ch-stale-btn';
+            catchupBtn.textContent = 'Catch up from where you left off';
+            var reloadBtn = document.createElement('button');
+            reloadBtn.id = 'ch-stale-reload-btn';
+            reloadBtn.className = 'ch-stale-btn ch-stale-btn-secondary';
+            reloadBtn.textContent = 'Reload full history';
+            chStalePromptEl.appendChild(msg);
+            chStalePromptEl.appendChild(catchupBtn);
+            chStalePromptEl.appendChild(reloadBtn);
+            chFeed.parentNode.insertBefore(chStalePromptEl, chFeed);
+        }
+        chStalePromptEl.style.display = '';
+        document.getElementById('ch-stale-catchup-btn').onclick = function () {
+            hideStalePrompt();
+            catchUp(name, cursorId);
+        };
+        document.getElementById('ch-stale-reload-btn').onclick = function () {
+            hideStalePrompt();
+            delete chCursors[name];
+            persistCursors();
+            fullLoad(name);
+        };
+    }
+
+    function selectChannel(name) {
+        clearTimeout(chPollTimer);
+        hideStalePrompt();
+        // Re-read sessionStorage so external mutations (e.g. test code) are visible
+        try { var _s = sessionStorage.getItem(CURSOR_STORE_KEY); if (_s) chCursors = JSON.parse(_s); } catch (e) {}
+        var sameChannel = (name === chSelectedName);
+        chSelectedName = name || null;
+        chError.textContent = '';
+        chSendBtn.disabled = !name;
+        updateTypeSelectForChannel(name || null);
+
+        if (!name) {
+            chFeed.innerHTML = '';
+            return;
+        }
+
+        var cursor = chCursors[name];
+        if (cursor) {
+            if (Date.now() - cursor.ts >= chStalenessMs) {
+                // Stale: clear feed and let user decide
+                chFeed.innerHTML = '';
+                showStalePrompt(name, cursor.id);
+            } else if (sameChannel && chFeed.children.length > 0) {
+                // Same channel, panel just reopened: feed still rendered, just append new
+                catchUp(name, cursor.id);
+            } else {
+                // Different channel or empty feed: fresh history load
+                chFeed.innerHTML = '';
+                fullLoad(name);
+            }
+        } else {
+            chFeed.innerHTML = '';
+            fullLoad(name);
+        }
     }
 
     function loadChannels() {

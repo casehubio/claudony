@@ -21,6 +21,14 @@ class MeshResourceTest {
     }
 
     @Test
+    void meshConfig_returnsCursorStalenessMinutes() {
+        given().when().get("/api/mesh/config")
+            .then()
+            .statusCode(200)
+            .body("cursorStalenessMinutes", equalTo(30));
+    }
+
+    @Test
     void meshChannels_returnsEmptyList() {
         given().when().get("/api/mesh/channels")
             .then()
