@@ -4,6 +4,9 @@ import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.claudony.server.auth.ApiKeyService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
+import io.casehub.qhorus.api.gateway.ChannelRef;
+import io.casehub.qhorus.runtime.dashboard.QhorusDashboardService;
+import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -13,20 +16,24 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class ServerStartup {
 
     private static final Logger LOG = Logger.getLogger(ServerStartup.class);
 
-    @Inject ClaudonyConfig  config;
-    @Inject
-            TmuxService     tmux;
-    @Inject
-            SessionRegistry registry;
-    @Inject ApiKeyService   apiKeyService;
+    @Inject ClaudonyConfig         config;
+    @Inject TmuxService            tmux;
+    @Inject SessionRegistry        registry;
+    @Inject ApiKeyService          apiKeyService;
+    @Inject ChannelGateway         gateway;
+    @Inject ClaudonyChannelBackend channelBackend;
+    @Inject QhorusDashboardService dashboard;
 
     void onStart(@Observes StartupEvent event) {
         if (!config.isServerMode()) return;
@@ -34,6 +41,7 @@ public class ServerStartup {
         ensureDirectories();
         apiKeyService.initServer();
         bootstrapRegistry();
+        bootstrapChannelBackends();
         LOG.infof("Claudony Server ready — http://%s:%d", config.bind(), config.port());
     }
 
@@ -79,6 +87,29 @@ public class ServerStartup {
             LOG.infof("Bootstrapped %d existing session(s) from tmux", count);
         } catch (IOException | InterruptedException e) {
             LOG.warn("Could not bootstrap from tmux list-sessions: " + e.getMessage());
+        }
+    }
+
+    void bootstrapChannelBackends() {
+        Set<String> casePrefixes = registry.all().stream()
+                .flatMap(s -> s.caseId().stream())
+                .map(caseId -> "case-" + caseId + "/")
+                .collect(Collectors.toSet());
+
+        if (casePrefixes.isEmpty()) return;
+
+        try {
+            dashboard.listChannels().await().indefinitely().stream()
+                    .filter(ch -> casePrefixes.stream().anyMatch(p -> ch.name().startsWith(p)))
+                    .forEach(ch -> {
+                        ChannelRef ref = new ChannelRef(ch.channelId(), ch.name());
+                        gateway.deregisterBackend(ch.channelId(), ClaudonyChannelBackend.BACKEND_ID);
+                        channelBackend.open(ref, Map.of());
+                        gateway.registerBackend(ch.channelId(), channelBackend, "human_observer");
+                    });
+            LOG.infof("Re-registered ClaudonyChannelBackend for %d case prefix(es)", casePrefixes.size());
+        } catch (Exception e) {
+            LOG.warn("Could not re-register channel backends on startup: " + e.getMessage());
         }
     }
 }
