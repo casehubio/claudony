@@ -72,4 +72,17 @@ class ChannelEventBusTest {
         assertThat(r1).hasSize(1);
         assertThat(r2).hasSize(1);
     }
+
+    @Test
+    void subscribe_cancelBoth_mapEntryFullyRemoved() {
+        var sub1 = bus.subscribe("ch").subscribe().with(t -> {});
+        var sub2 = bus.subscribe("ch").subscribe().with(t -> {});
+        assertThat(bus.subscriberCount("ch")).isEqualTo(2);
+
+        sub1.cancel();
+        assertThat(bus.subscriberCount("ch")).isEqualTo(1);
+
+        sub2.cancel();
+        assertThat(bus.subscriberCount("ch")).isZero();
+    }
 }

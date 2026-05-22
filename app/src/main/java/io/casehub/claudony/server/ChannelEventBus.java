@@ -41,10 +41,9 @@ public class ChannelEventBus {
     }
 
     private void removeSubscriber(String channelName, MultiEmitter<Integer> emitter) {
-        List<MultiEmitter<Integer>> list = subscribers.get(channelName);
-        if (list != null) {
+        subscribers.computeIfPresent(channelName, (key, list) -> {
             list.remove(emitter);
-            if (list.isEmpty()) subscribers.remove(channelName, list);
-        }
+            return list.isEmpty() ? null : list;
+        });
     }
 }
