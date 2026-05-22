@@ -2,7 +2,7 @@ package io.casehub.claudony.casehub;
 
 import io.casehub.engine.internal.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
-import io.casehub.ledger.api.model.ActorTypeResolver;
+import io.casehub.platform.api.identity.ActorTypeResolver;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import jakarta.enterprise.context.ApplicationScoped;

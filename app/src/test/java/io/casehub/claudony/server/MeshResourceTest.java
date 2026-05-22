@@ -103,6 +103,36 @@ class MeshResourceTest {
     }
 
     @Test
+    void meshEvents_sseFrameIsValidJson() throws Exception {
+        int port = io.restassured.RestAssured.port;
+        java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
+            new java.net.URL("http://localhost:" + port + "/api/mesh/events").openConnection();
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000); // SSE tick interval is 3000ms in test config; wait up to 5s
+        try {
+            int status = conn.getResponseCode();
+            org.assertj.core.api.Assertions.assertThat(status).isEqualTo(200);
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(conn.getInputStream()));
+            String line;
+            // Skip blank lines; block until first "data:" line arrives (~3000ms)
+            while ((line = reader.readLine()) != null && !line.startsWith("data:")) {}
+            org.assertj.core.api.Assertions.assertThat(line).isNotNull().startsWith("data:");
+            // RESTEasy SSE may emit "data: " (with space) or "data:" (without); strip the prefix
+            String json = line.startsWith("data: ") ? line.substring("data: ".length())
+                                                     : line.substring("data:".length());
+            com.fasterxml.jackson.databind.ObjectMapper om =
+                new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = om.readTree(json);
+            org.assertj.core.api.Assertions.assertThat(node.has("channels")).isTrue();
+            org.assertj.core.api.Assertions.assertThat(node.has("instances")).isTrue();
+            org.assertj.core.api.Assertions.assertThat(node.has("feed")).isTrue();
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    @Test
     void channelEvents_unknownChannel_returns404() throws Exception {
         int port = io.restassured.RestAssured.port;
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection)

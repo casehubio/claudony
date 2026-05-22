@@ -2,7 +2,7 @@ package io.casehub.claudony.casehub;
 
 import io.casehub.api.model.WorkerSummary;
 import io.casehub.ledger.model.CaseLedgerEntry;
-import io.casehub.ledger.api.model.ActorType;
+import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import io.quarkus.test.TestTransaction;
