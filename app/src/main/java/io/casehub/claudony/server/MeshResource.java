@@ -107,15 +107,15 @@ public class MeshResource {
                     return Uni.combine().all().unis(channels, instances, feed)
                             .combinedWith((ch, inst, f) -> {
                                 try {
-                                    return "data: " + mapper.writeValueAsString(Map.of(
+                                    return mapper.writeValueAsString(Map.of(
                                             "channels", ch,
                                             "instances", inst,
-                                            "feed", f)) + "\n\n";
+                                            "feed", f));
                                 } catch (Exception e) {
-                                    return "data: {}\n\n";
+                                    return "{}";
                                 }
                             })
-                            .onFailure().recoverWithItem("data: {}\n\n");
+                            .onFailure().recoverWithItem("{}");
                 });
     }
 
