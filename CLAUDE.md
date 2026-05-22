@@ -1,5 +1,6 @@
 # claudony Workspace
 
+**Name:** claudony
 **Project repo:** /Users/mdproctor/claude/casehub/claudony
 **Workspace type:** public
 

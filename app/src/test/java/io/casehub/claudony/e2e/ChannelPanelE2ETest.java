@@ -315,7 +315,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         // EVENT messages carry telemetry as JSON content; content field itself is null by design
         tools.sendMessage(channelName, "system", "event",
                 "{\"tool_name\":\"read_file\",\"duration_ms\":250,\"token_count\":150}",
-                null, null, null, null, null).await().atMost(Duration.ofSeconds(5));
+                null, null, null, null, null, null, null).await().atMost(Duration.ofSeconds(5));
 
         navigateToSessionPageWithChannel();
         openPanel();
@@ -340,7 +340,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     @Test
     void eventMessage_withMissingTelemetryFields_rendersDash() {
         // EVENT with no tool_name/duration_ms/token_count falls back to '—'
-        tools.sendMessage(channelName, "system", "event", "{}", null, null, null, null, null)
+        tools.sendMessage(channelName, "system", "event", "{}", null, null, null, null, null, null, null)
                 .await().atMost(Duration.ofSeconds(5));
 
         navigateToSessionPageWithChannel();

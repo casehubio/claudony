@@ -88,6 +88,14 @@
       <artifactId>casehub-engine</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <!-- casehub-engine now self-indexes via its embedded application.properties, activating
+           JQExpressionEngine and CaseContextChangedEventHandler which inject
+           io.casehub.platform.expression.JQEvaluator. Provide it on the test classpath. -->
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-expression</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.awaitility</groupId>

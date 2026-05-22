@@ -46,6 +46,13 @@
         <artifactId>casehub-platform-config</artifactId>
         <version>${casehub.version}</version>
       </dependency>
+      <!-- casehub-engine self-indexes via its embedded application.properties, activating beans
+           that inject io.casehub.platform.expression.JQEvaluator — see #138 -->
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-expression</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-engine-api</artifactId>

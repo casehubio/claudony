@@ -438,3 +438,39 @@ defaults and require explicit configuration.
 **Scope:** Test-only (`smallrye.config.mapping.validate-unknown=false` is in
 `src/test/resources/application.properties`). Production startup is not affected
 because it doesn't hit strict augmentation-time validation.
+
+---
+
+## 21. casehub-engine Jar Self-Indexes Its Own Beans Via Embedded application.properties
+
+**Symptom:** After updating the `casehub-engine` SNAPSHOT jar, CDI deployment in
+`@QuarkusTest` fails with:
+
+```
+Found 2 deployment problems:
+[1] Unsatisfied dependency for type io.casehub.platform.expression.JQEvaluator
+[2] Unsatisfied dependency for type io.casehub.platform.expression.JQEvaluator
+    - injection target: io.casehub.engine.internal.engine.JQExpressionEngine#jqEvaluator
+    - injection target: io.casehub.engine.internal.engine.handler.CaseContextChangedEventHandler#jqEvaluator
+```
+
+**Root cause:** The `casehub-engine` jar bundles an `application.properties` that contains:
+```properties
+quarkus.index-dependency.engine.group-id=io.casehub
+quarkus.index-dependency.engine.artifact-id=casehub-engine
+```
+This causes Quarkus to automatically Jandex-index the engine jar in ALL test contexts
+that have it on the classpath — including the default `@QuarkusTest` profile where the
+engine was previously not indexed. Once indexed, `JQExpressionEngine` and
+`CaseContextChangedEventHandler` become active CDI beans. Both inject
+`io.casehub.platform.expression.JQEvaluator` (moved from `casehub-engine-common` to
+`casehub-platform-expression` in casehub-platform #88). If `casehub-platform-expression`
+is not on the test classpath, CDI deployment fails.
+
+**Fix (Refs #138):** Add `casehub-platform-expression` as a `test`-scoped dependency in
+`app/pom.xml`. The beans themselves remain excluded in the default test profile via
+`%test.quarkus.arc.exclude-types`, but the missing injection type causes deployment
+failure even before CDI activation applies the excludes.
+
+**Note:** If the engine jar later adds new beans with new injections from other missing
+modules, the same pattern applies — add the missing module as a test dependency.
