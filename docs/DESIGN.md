@@ -60,6 +60,10 @@ io.casehub.claudony — claudony-core + claudony-app
 │   ├── WorkerCaseLifecycleEvent — CDI event bridging casehub→app (avoids circular dep)
 │   ├── SessionResource         — REST /api/sessions (CRUD + resize + ?caseId= filter;
 │   │                             GET /api/sessions/{id}/case-events SSE stream)
+│   ├── ChannelEventBus         — in-process SSE tick fan-out keyed by channel name;
+│   │                             subscribe(name) → Multi<Integer>; emit(name) ticks active subscribers
+│   ├── ClaudonyChannelBackend  — HumanObserverChannelBackend SPI; BACKEND_ID = "claudony-observer";
+│   │                             post() → ChannelEventBus.emit(name); singleton across all channels
 │   ├── CaseWorkerUpdateStrategy — SPI: events-only | hybrid | registry-hooks
 │   ├── CaseEventBroadcaster    — @ApplicationScoped SSE fan-out; observes WorkerCaseLifecycleEvent
 │   ├── strategy/
@@ -145,6 +149,32 @@ Claudony uses blocking I/O throughout — ProcessBuilder for tmux, Socket for he
 
 **Rule:** Code on the Vert.x event loop must use non-blocking API or `@Blocking`. REST resources and WebSocket handlers are not on the event loop — blocking I/O there is safe by default.
 
+### Channel Panel Cursor-Based Catch-up (#100)
+
+The panel maintains a per-channel cursor map (`chCursors`) backed by `sessionStorage`.
+On `selectChannel()`: fresh cursor (<30 min) catches up silently via `GET /timeline?after=<cursor>`;
+stale cursor (≥30 min) shows a prompt ("Catch up" or "Reload full history"); no cursor does a
+full history load. Staleness threshold comes from `GET /api/mesh/config` via the platform
+preferences API (`claudony.channelCursorStalenessMinutes`, default 30, `ChannelCursorStaleness`
+preference key). The cursor persists across panel close/reopen and page reloads.
+
+### Channel SSE Delivery (#98) and Restart Recovery (#101)
+
+`ClaudonyChannelBackend` (`HumanObserverChannelBackend` SPI, singleton) is registered with
+`ChannelGateway` so `fanOut()` calls `post()` on every channel message. Registration is lazy —
+at `EventSource` subscribe time in `MeshResource.channelEvents()`, not at `openChannel()` —
+to avoid a circular module dependency (`claudony-app` cannot inject `claudony-casehub` beans;
+ADR-0006). `ServerStartup.bootstrapChannelBackends()` re-registers for all case channels on
+restart (idempotent: deregister → `open()` → register; ADR-0006).
+
+The SSE endpoint uses a 500ms server-side tick (`Multi.createFrom().ticks()`) rather than
+`ChannelEventBus.subscribe()` due to a cross-thread dispatch issue between the Vert.x event loop
+and `@Blocking` SSE response threads in Mutiny (ADR-0007; true push delivery tracked in #131).
+Each tick calls `QhorusDashboardService.getTimeline(name, lastSentId, 50)` and emits new entries
+as bare JSON — RESTEasy Reactive wraps each emitted `String` with `data: ...\n\n` automatically;
+including the prefix manually produces double-framing. The panel replaces `pollChannel()` with
+`EventSource`, falling back to the 3s poll on SSE error.
+
 ### MCP Transport: HTTP JSON-RPC
 
 The Agent exposes `POST /mcp` as a synchronous JSON-RPC endpoint. Claude Code connects to it as an MCP server via `--mcp-config`. HTTP transport is GraalVM-native compatible — no stdio subprocess needed. The `mcpServers` wrapper key in the config file is required (matches the `settings.json` schema); omitting it produces a silent schema validation error — no session is created.
@@ -223,6 +253,23 @@ Browser → WS /ws/{id} → TerminalWebSocket.onOpen()
 Browser keystroke → onMessage() → TmuxService.sendKeys(name, text)
 ```
 
+### Channel message delivery (SSE)
+
+```
+Agent → QhorusMcpTools.sendMessage() → messageService.send() (persist)
+  → ChannelGateway.fanOut(channelId, message)
+  → ClaudonyChannelBackend.post(ref, message) [virtual thread]
+  → ChannelEventBus.emit(channelName) [tick signal]
+  → MeshResource.channelEvents() 500ms tick
+  → QhorusDashboardService.getTimeline(name, lastSentId, 50)
+  → bare JSON → RESTEasy wraps as "data: [...]\n\n" SSE frame
+  → Browser EventSource.onmessage → appendMessages(entries)
+  → chCursors[name] updated in sessionStorage
+```
+
+Fallback: `EventSource.onerror` → close → `pollChannel()` (3s timer).
+Restart: `bootstrapChannelBackends()` re-registers `ClaudonyChannelBackend` for all active case channels.
+
 ### MCP tool call (Agent)
 
 ```
@@ -246,6 +293,7 @@ Claude → POST /mcp → McpServer.dispatch()
 | Auth | quarkus-security-webauthn + custom ApiKeyAuthMechanism |
 | Build | Maven (not Maven wrapper) |
 | TLS (deployment) | Caddy reverse proxy |
+| Platform preferences | `casehub-platform-api` + `casehub-platform-config`; typed `PreferenceKey<T>` pattern via `PreferenceProvider`; defaults configurable via `casehub.platform.preferences.defaults.*` in `application.properties` |
 
 ---
 
@@ -464,6 +512,8 @@ claudony.casehub.mesh-participation=active     # active | reactive | silent
 - [ADR-0001: Terminal streaming via pipe-pane and FIFO](adr/ADR-0001-terminal-streaming-pipe-pane-fifo.md)
 - [ADR-0002: MCP transport via HTTP JSON-RPC](adr/ADR-0002-mcp-transport-http-json-rpc.md)
 - [ADR-0003: Authentication via WebAuthn passkeys and API key](adr/ADR-0003-authentication-webauthn-api-key.md)
+- [ADR-0006: Channel backend registration timing](adr/0006-channel-backend-registration-timing.md)
+- [ADR-0007: SSE channel delivery mechanism](adr/0007-sse-channel-delivery-mechanism.md)
 - [Auth design spec](superpowers/specs/2026-04-05-auth-design.md)
 - [Landing page spec](superpowers/specs/2026-04-11-landing-page-design.md)
 - [Known bugs and oddities](BUGS-AND-ODDITIES.md)
