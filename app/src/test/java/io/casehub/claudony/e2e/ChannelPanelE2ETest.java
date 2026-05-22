@@ -4,7 +4,9 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.RequestOptions;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import io.casehub.qhorus.api.channel.ChannelSemantic;
+import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.channel.Channel;
+import io.casehub.qhorus.runtime.message.Message;
 import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
@@ -39,6 +41,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     InMemoryMessageStore messageStore;
 
     private String channelName;
+    private java.util.UUID channelId;
 
     @BeforeEach
     void createChannel() {
@@ -48,6 +51,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         ch.description = "E2E test channel";
         ch.semantic = ChannelSemantic.APPEND;
         channelStore.put(ch);
+        channelId = ch.id;
     }
 
     @AfterEach
@@ -641,5 +645,38 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
         assertThat(elapsed).isLessThan(2500);
         assertThat(page.locator("#ch-feed").textContent()).contains("real-time-push-msg");
+    }
+
+    // ── AC 17: EventSource error triggers poll fallback ───────────────────────
+
+    @Test
+    void channelPanel_eventSourceError_fallsBackToPoll() {
+        // Abort SSE connections before navigation — route is active when EventSource opens.
+        // Matches /api/mesh/channels/{name}/events?after=... for any channel name.
+        page.route("**/api/mesh/channels/*/events*", route -> route.abort());
+
+        // Navigate with channel pre-selected (URL param); openPanel() auto-selects it.
+        navigateToSessionPageWithChannel();
+        openPanel();
+
+        // Wait for fullLoad() to complete (uses /timeline, not /events — not affected by route).
+        // Empty channel shows "No messages yet." placeholder (.ch-empty).
+        page.locator(".ch-empty").waitFor(
+                new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(5000));
+
+        // Insert a message AFTER fullLoad completes.
+        // The next pollChannel() tick (POLL_MS=3000ms after EventSource onerror) will deliver it.
+        Message msg = new Message();
+        msg.channelId = channelId;
+        msg.sender = "agent:poll-fallback-test";
+        msg.messageType = MessageType.STATUS;
+        msg.content = "poll-delivers-this";
+        messageStore.put(msg);
+
+        // Wait up to 6s for poll cycle to deliver the message (POLL_MS=3000ms + 2s margin).
+        page.locator("#ch-feed .ch-msg").first().waitFor(
+                new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(6000));
+
+        assertThat(page.locator("#ch-feed").textContent()).contains("poll-delivers-this");
     }
 }
