@@ -18,7 +18,7 @@ Run `add-dir /Users/mdproctor/claude/casehub/claudony` before any other work.
 | design-snapshot | `snapshots/` |
 | java-update-design / update-primary-doc | `design/JOURNAL.md` (created by `epic`) |
 | adr | `adr/` |
-| write-blog | `blog/` |
+| write-blog | `~/claude/mdproctor.github.io/` (via publish-blog — not staged in workspace) |
 
 ## Structure
 
@@ -28,7 +28,6 @@ Run `add-dir /Users/mdproctor/claude/casehub/claudony` before any other work.
 - `plans/` — implementation plans (superpowers output)
 - `snapshots/` — design snapshots with INDEX.md (auto-pruned, max 10)
 - `adr/` — architecture decision records with INDEX.md
-- `blog/` — project diary entries with INDEX.md
 - `design/` — epic journal (created by `epic` at branch start)
 
 ## Git Discipline
@@ -54,7 +53,7 @@ Before any git operation, run `git rev-parse --show-toplevel` to confirm which r
 |------------|-------------|-------|
 | adr        | project     | lands in `docs/adr/` — promoted at epic close |
 | specs      | project     | lands in `docs/specs/` — promoted at epic close |
-| blog       | workspace   | staged here; published to mdproctor.github.io via publish-blog |
+| blog       | mdproctor.github.io | written directly by write-blog + publish-blog; not staged in workspace |
 | plans      | workspace   | stay in workspace permanently |
 | design     | workspace   | epic journal stays in workspace |
 | snapshots  | workspace   | stay in workspace permanently |
