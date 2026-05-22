@@ -40,6 +40,12 @@ Before any git operation, run `git rev-parse --show-toplevel` to confirm which r
 - Source code commits → project repo
 - Methodology artifacts → workspace
 
+## Git Workflow — Fork Model
+
+origin   → personal fork   (`git remote get-url origin`)
+upstream → casehubio       (`git remote get-url upstream`)
+
+Before starting any branch: `git fetch upstream && git rebase upstream/main` to sync local main with casehubio. At work-end: rebase the branch onto local main, push to `origin main`. PRs to `upstream` are created separately, on demand — never automatically at work-end.
 
 ## Rules
 
@@ -53,7 +59,7 @@ Before any git operation, run `git rev-parse --show-toplevel` to confirm which r
 |------------|-------------|-------|
 | adr        | project     | lands in `docs/adr/` — promoted at epic close |
 | specs      | project     | lands in `docs/specs/` — promoted at epic close |
-| blog       | mdproctor.github.io | written directly by write-blog + publish-blog; not staged in workspace |
+| blog       | personal fork       | staged here; published via publish-blog (destination in ~/.claude/blog-routing.yaml) |
 | plans      | workspace   | stay in workspace permanently |
 | design     | workspace   | epic journal stays in workspace |
 | snapshots  | workspace   | stay in workspace permanently |
