@@ -26,11 +26,14 @@ import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
+import org.jboss.logging.Logger;
 
 @Path("/api/mesh")
 @Produces(MediaType.APPLICATION_JSON)
 @Authenticated
 public class MeshResource {
+
+    private static final Logger LOG = Logger.getLogger(MeshResource.class);
 
     // FAILURE intentionally excluded: human operators signal decisions, not automated failure states.
     private static final Set<MessageType> VALID_HUMAN_TYPES = Set.of(
@@ -157,14 +160,19 @@ public class MeshResource {
                 .onItem().transformToUniAndConcatenate(tick ->
                         dashboard.getTimeline(channelName, lastSentId.get(), 50)
                                 .invoke(entries -> updateLastSentId(lastSentId, entries))
-                                .map(entries -> entries.isEmpty() ? null
-                                        : serializeEntries(entries))
+                                .map(entries -> entries.isEmpty() ? null : serializeEntries(entries))
+                                .onFailure().invoke(e -> LOG.warnf(
+                                        "channelEvents tick failed for '%s': %s",
+                                        channelName, e.getMessage()))
+                                .onFailure().recoverWithItem((String) null)
                 )
-                .onTermination().invoke(() ->
-                        gateway.deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID))
                 .filter(Objects::nonNull);
 
-        return Multi.createBy().concatenating().streams(catchUp, live);
+        // onTermination on the concatenated Multi covers both early disconnect during
+        // catchUp (where live was never subscribed) and normal SSE stream termination.
+        return Multi.createBy().concatenating().streams(catchUp, live)
+                .onTermination().invoke(() ->
+                        gateway.deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID));
     }
 
     private static void updateLastSentId(AtomicLong lastSentId,

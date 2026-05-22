@@ -99,6 +99,7 @@ public class ServerStartup {
         if (casePrefixes.isEmpty()) return;
 
         try {
+            var registered = new java.util.concurrent.atomic.AtomicInteger(0);
             dashboard.listChannels().await().indefinitely().stream()
                     .filter(ch -> casePrefixes.stream().anyMatch(p -> ch.name().startsWith(p)))
                     .forEach(ch -> {
@@ -106,8 +107,10 @@ public class ServerStartup {
                         gateway.deregisterBackend(ch.channelId(), ClaudonyChannelBackend.BACKEND_ID);
                         channelBackend.open(ref, Map.of());
                         gateway.registerBackend(ch.channelId(), channelBackend, "human_observer");
+                        registered.incrementAndGet();
                     });
-            LOG.infof("Re-registered ClaudonyChannelBackend for %d case prefix(es)", casePrefixes.size());
+            LOG.infof("Re-registered ClaudonyChannelBackend for %d channel(s) across %d case(s)",
+                    registered.get(), casePrefixes.size());
         } catch (Exception e) {
             LOG.warn("Could not re-register channel backends on startup: " + e.getMessage());
         }
