@@ -11,6 +11,8 @@ import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
@@ -20,6 +22,7 @@ class MeshResourceTest {
 
     @Inject InMemoryChannelStore channelStore;
     @Inject InMemoryMessageStore messageStore;
+    @Inject ObjectMapper objectMapper;
 
     @AfterEach
     void cleanup() {
@@ -129,7 +132,7 @@ class MeshResourceTest {
         given().when().get("/api/mesh/feed")
             .then()
             .statusCode(200)
-            .body("$", hasSize(2));
+            .body("channel", containsInAnyOrder(ch1.name, ch2.name));
     }
 
     @Test
@@ -194,18 +197,18 @@ class MeshResourceTest {
             java.io.BufferedReader reader = new java.io.BufferedReader(
                 new java.io.InputStreamReader(conn.getInputStream()));
             String line;
-            // Skip blank lines; block until first "data:" line arrives (~3000ms)
+            // Skip blank lines; first tick fires at t=0 per Multi.createFrom().ticks().every()
             while ((line = reader.readLine()) != null && !line.startsWith("data:")) {}
             org.assertj.core.api.Assertions.assertThat(line).isNotNull().startsWith("data:");
             // RESTEasy SSE may emit "data: " (with space) or "data:" (without); strip the prefix
             String json = line.startsWith("data: ") ? line.substring("data: ".length())
                                                      : line.substring("data:".length());
-            com.fasterxml.jackson.databind.ObjectMapper om =
-                new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = om.readTree(json);
+            JsonNode node = objectMapper.readTree(json);
             org.assertj.core.api.Assertions.assertThat(node.has("channels")).isTrue();
             org.assertj.core.api.Assertions.assertThat(node.has("instances")).isTrue();
             org.assertj.core.api.Assertions.assertThat(node.has("feed")).isTrue();
+        } catch (java.net.SocketTimeoutException e) {
+            throw e;
         } finally {
             conn.disconnect();
         }
