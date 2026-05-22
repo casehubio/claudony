@@ -162,7 +162,9 @@
     var chSelectedName    = null;
     var chPollTimer       = null;
     var chEventSource     = null;
-    var chStalePromptEl   = null;
+    var chStalePromptEl        = null;
+    var chStalePromptCatchupBtn = null;
+    var chStalePromptReloadBtn  = null;
     var POLL_MS           = 3000;
     var CURSOR_STORE_KEY  = 'claudony.channel.cursors';
     var chStalenessMs     = 30 * 60 * 1000; // default; overwritten after config fetch
@@ -429,7 +431,7 @@
             if (entry.id && chSelectedName) {
                 var c = chCursors[chSelectedName];
                 if (!c || entry.id > c.id) {
-                    chCursors[chSelectedName] = {id: entry.id, ts: Date.now()};
+                    chCursors[chSelectedName] = {id: entry.id, ts: Date.now() /* time of last catch-up, not last message */};
                     cursorAdvanced = true;
                 }
             }
@@ -484,15 +486,23 @@
     function catchUp(name, fromId) {
         var url = '/api/mesh/channels/' + encodeURIComponent(name) +
                   '/timeline?limit=50&after=' + fromId;
-        fetch(url).then(function (r) { return r.json(); }).then(function (entries) {
+        fetch(url).then(function (r) {
+            if (!r.ok) return;
+            return r.json();
+        }).then(function (entries) {
             if (entries && entries.length) appendMessages(entries);
-        }).catch(function () {});
+        }).catch(function () {
+            chError.textContent = 'Catch-up failed — some messages may be missing.';
+        });
         // EventSource already open from selectChannel(); no need to open again
     }
 
     function fullLoad(name) {
         var url = '/api/mesh/channels/' + encodeURIComponent(name) + '/timeline?limit=100';
-        fetch(url).then(function (r) { return r.json(); }).then(function (entries) {
+        fetch(url).then(function (r) {
+            if (!r.ok) return;
+            return r.json();
+        }).then(function (entries) {
             if (entries && entries.length) {
                 appendMessages(entries);
             } else {
@@ -501,7 +511,9 @@
                 empty.textContent = 'No messages yet.';
                 chFeed.appendChild(empty);
             }
-        }).catch(function () {});
+        }).catch(function () {
+            chError.textContent = 'Failed to load messages.';
+        });
         // EventSource already open from selectChannel(); no need to open again
     }
 
@@ -525,18 +537,20 @@
             reloadBtn.id = 'ch-stale-reload-btn';
             reloadBtn.className = 'ch-stale-btn ch-stale-btn-secondary';
             reloadBtn.textContent = 'Reload full history';
+            chStalePromptCatchupBtn = catchupBtn;
+            chStalePromptReloadBtn  = reloadBtn;
             chStalePromptEl.appendChild(msg);
             chStalePromptEl.appendChild(catchupBtn);
             chStalePromptEl.appendChild(reloadBtn);
             chFeed.parentNode.insertBefore(chStalePromptEl, chFeed);
         }
         chStalePromptEl.style.display = '';
-        document.getElementById('ch-stale-catchup-btn').onclick = function () {
+        chStalePromptCatchupBtn.onclick = function () {
             hideStalePrompt();
             openChannelEventSource(name);
             catchUp(name, cursorId);
         };
-        document.getElementById('ch-stale-reload-btn').onclick = function () {
+        chStalePromptReloadBtn.onclick = function () {
             hideStalePrompt();
             delete chCursors[name];
             persistCursors();
@@ -622,6 +636,7 @@
     }
 
     function closePanel() {
+        hideStalePrompt();
         chPanel.classList.add('collapsed');
         clearTimeout(chPollTimer);
         if (chEventSource) { chEventSource.close(); chEventSource = null; }
