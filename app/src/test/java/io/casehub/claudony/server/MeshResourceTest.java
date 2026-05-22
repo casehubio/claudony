@@ -1,7 +1,9 @@
 package io.casehub.claudony.server;
 
 import io.casehub.qhorus.api.channel.ChannelSemantic;
+import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.channel.Channel;
+import io.casehub.qhorus.runtime.message.Message;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -75,6 +77,83 @@ class MeshResourceTest {
             .then()
             .statusCode(200)
             .body("$", hasSize(0));
+    }
+
+    @Test
+    void meshFeed_withMessages_returnsEntriesTaggedWithChannelName() {
+        Channel ch = new Channel();
+        ch.name = "feed-tagged-" + System.nanoTime();
+        ch.semantic = ChannelSemantic.APPEND;
+        channelStore.put(ch);
+
+        Message msg = new Message();
+        msg.channelId = ch.id;
+        msg.sender = "agent:test";
+        msg.messageType = MessageType.STATUS;
+        msg.content = "hello from channel";
+        messageStore.put(msg);
+
+        given().when().get("/api/mesh/feed")
+            .then()
+            .statusCode(200)
+            .body("$", hasSize(greaterThan(0)))
+            .body("[0].channel", equalTo(ch.name));
+    }
+
+    @Test
+    void meshFeed_multiChannel_returnsMergedEntries() {
+        Channel ch1 = new Channel();
+        ch1.name = "feed-multi-a-" + System.nanoTime();
+        ch1.semantic = ChannelSemantic.APPEND;
+        channelStore.put(ch1);
+
+        Channel ch2 = new Channel();
+        ch2.name = "feed-multi-b-" + System.nanoTime();
+        ch2.semantic = ChannelSemantic.APPEND;
+        channelStore.put(ch2);
+
+        Message m1 = new Message();
+        m1.channelId = ch1.id;
+        m1.sender = "a";
+        m1.messageType = MessageType.STATUS;
+        m1.content = "from ch1";
+        messageStore.put(m1);
+
+        Message m2 = new Message();
+        m2.channelId = ch2.id;
+        m2.sender = "b";
+        m2.messageType = MessageType.STATUS;
+        m2.content = "from ch2";
+        messageStore.put(m2);
+
+        given().when().get("/api/mesh/feed")
+            .then()
+            .statusCode(200)
+            .body("$", hasSize(2));
+    }
+
+    @Test
+    void meshFeed_limitTruncates() {
+        Channel ch = new Channel();
+        ch.name = "feed-limit-" + System.nanoTime();
+        ch.semantic = ChannelSemantic.APPEND;
+        channelStore.put(ch);
+
+        for (int i = 0; i < 10; i++) {
+            Message msg = new Message();
+            msg.channelId = ch.id;
+            msg.sender = "agent:test";
+            msg.messageType = MessageType.STATUS;
+            msg.content = "msg-" + i;
+            messageStore.put(msg);
+        }
+
+        // getFeed() uses Math.max(5, limit/channels.size()) per channel, then truncates to limit.
+        // With 1 channel and limit=3: perChannel=max(5,3)=5, fetches 5, truncated to 3.
+        given().when().get("/api/mesh/feed?limit=3")
+            .then()
+            .statusCode(200)
+            .body("$", hasSize(equalTo(3)));
     }
 
     @Test
