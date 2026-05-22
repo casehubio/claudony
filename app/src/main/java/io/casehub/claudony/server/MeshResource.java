@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jakarta.inject.Inject;
@@ -52,6 +54,8 @@ public class MeshResource {
     @Inject ClaudonyChannelBackend channelBackend;
     @Inject ChannelGateway         gateway;
     @Inject ReactiveChannelService channelService;
+
+    private final ConcurrentHashMap<UUID, Object> channelRegistrationLocks = new ConcurrentHashMap<>();
 
     @GET
     @Path("/config")
@@ -137,11 +141,14 @@ public class MeshResource {
         var channel = opt.get();
         var channelId = channel.id;
 
-        // Idempotent backend registration
+        // Per-channel lock prevents concurrent SSE opens from duplicating human_observer
+        // registration. Remove when ChannelGateway guards human_observer duplicates (#131).
         ChannelRef ref = new ChannelRef(channelId, channelName);
-        gateway.deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
-        channelBackend.open(ref, Map.of());
-        gateway.registerBackend(channelId, channelBackend, "human_observer");
+        synchronized (channelRegistrationLocks.computeIfAbsent(channelId, k -> new Object())) {
+            gateway.deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
+            channelBackend.open(ref, Map.of());
+            gateway.registerBackend(channelId, channelBackend, "human_observer");
+        }
 
         AtomicLong lastSentId = new AtomicLong(after);
 
@@ -189,6 +196,7 @@ public class MeshResource {
         try {
             return mapper.writeValueAsString(entries);
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            LOG.errorf("Failed to serialize channel timeline entries: %s", e.getMessage());
             return null;
         }
     }
