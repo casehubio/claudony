@@ -151,8 +151,7 @@ class MeshResourceTest {
             messageStore.put(msg);
         }
 
-        // getFeed() uses Math.max(5, limit/channels.size()) per channel, then truncates to limit.
-        // With 1 channel and limit=3: perChannel=max(5,3)=5, fetches 5, truncated to 3.
+        // Global DESC scan: returns the 3 most recent messages (newest first), limited at store level.
         given().when().get("/api/mesh/feed?limit=3")
             .then()
             .statusCode(200)
@@ -255,6 +254,71 @@ class MeshResourceTest {
         } finally {
             conn.disconnect();
         }
+    }
+
+    @Test
+    void meshFeed_returnsNewestMessages_oldestFallOff() {
+        Channel ch = new Channel();
+        ch.name = "feed-newest-" + System.nanoTime();
+        ch.semantic = ChannelSemantic.APPEND;
+        channelStore.put(ch);
+
+        for (int i = 0; i < 10; i++) {
+            Message msg = new Message();
+            msg.channelId = ch.id;
+            msg.sender = "agent:test";
+            msg.messageType = MessageType.STATUS;
+            msg.content = "msg-" + i;
+            messageStore.put(msg);
+        }
+
+        // With limit=3, only the 3 newest messages should appear (msg-7, msg-8, msg-9)
+        var body = given().when().get("/api/mesh/feed?limit=3")
+            .then()
+            .statusCode(200)
+            .body("$", hasSize(3))
+            .extract().body().asString();
+
+        // Newest first: msg-9 should be first
+        org.assertj.core.api.Assertions.assertThat(body).contains("msg-9");
+        org.assertj.core.api.Assertions.assertThat(body).doesNotContain("msg-0");
+    }
+
+    @Test
+    void meshFeed_noChannelStarvation_allChannelsRepresented() {
+        Channel busy = new Channel();
+        busy.name = "feed-busy-" + System.nanoTime();
+        busy.semantic = ChannelSemantic.APPEND;
+        channelStore.put(busy);
+
+        Channel quiet = new Channel();
+        quiet.name = "feed-quiet-" + System.nanoTime();
+        quiet.semantic = ChannelSemantic.APPEND;
+        channelStore.put(quiet);
+
+        // Insert 1 message in quiet channel first (lower ID)
+        Message quietMsg = new Message();
+        quietMsg.channelId = quiet.id;
+        quietMsg.sender = "agent:q";
+        quietMsg.messageType = MessageType.STATUS;
+        quietMsg.content = "quiet-msg";
+        messageStore.put(quietMsg);
+
+        // Insert 5 messages in busy channel (higher IDs)
+        for (int i = 0; i < 5; i++) {
+            Message msg = new Message();
+            msg.channelId = busy.id;
+            msg.sender = "agent:b";
+            msg.messageType = MessageType.STATUS;
+            msg.content = "busy-" + i;
+            messageStore.put(msg);
+        }
+
+        // With limit=100, both channels should appear
+        given().when().get("/api/mesh/feed?limit=100")
+            .then()
+            .statusCode(200)
+            .body("channel", hasItems(busy.name, quiet.name));
     }
 }
 
