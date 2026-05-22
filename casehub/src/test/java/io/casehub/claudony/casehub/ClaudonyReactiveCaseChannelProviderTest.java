@@ -202,6 +202,72 @@ class ClaudonyReactiveCaseChannelProviderTest {
                 isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
+    @Test
+    void postToChannel_commandWithCorrelationId_passesCorrelationIdToSend() {
+        UUID channelId = UUID.randomUUID();
+        CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
+                Map.of("qhorus-name", "case-x/work"));
+        String content = "{\"type\":\"COMMAND\",\"capability\":\"research\","
+                + "\"correlationId\":\"42\",\"input\":{}}";
+        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(Uni.createFrom().nullItem());
+
+        provider.postToChannel(ch, "engine", content, MessageType.COMMAND).await().indefinitely();
+
+        verify(messageService).send(
+                eq(channelId), eq("engine"), eq(MessageType.COMMAND), eq(content),
+                eq("42"), isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    void postToChannel_queryWithCorrelationId_passesCorrelationIdToSend() {
+        UUID channelId = UUID.randomUUID();
+        CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
+                Map.of("qhorus-name", "case-x/work"));
+        String content = "{\"type\":\"QUERY\",\"correlationId\":\"q-99\",\"input\":{}}";
+        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(Uni.createFrom().nullItem());
+
+        provider.postToChannel(ch, "engine", content, MessageType.QUERY).await().indefinitely();
+
+        verify(messageService).send(
+                eq(channelId), eq("engine"), eq(MessageType.QUERY), eq(content),
+                eq("q-99"), isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    void postToChannel_commandMalformedJson_sendsWithNullCorrelationId() {
+        UUID channelId = UUID.randomUUID();
+        CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
+                Map.of("qhorus-name", "case-x/work"));
+        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(Uni.createFrom().nullItem());
+
+        // Must not throw; must still deliver the message
+        provider.postToChannel(ch, "engine", "not-valid-json", MessageType.COMMAND)
+                .await().indefinitely();
+
+        verify(messageService).send(
+                eq(channelId), eq("engine"), eq(MessageType.COMMAND), eq("not-valid-json"),
+                isNull(), isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    void postToChannel_nonCommandType_doesNotParseCorrelationId() {
+        UUID channelId = UUID.randomUUID();
+        CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
+                Map.of("qhorus-name", "case-x/work"));
+        String content = "{\"correlationId\":\"should-be-ignored\"}";
+        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(Uni.createFrom().nullItem());
+
+        provider.postToChannel(ch, "engine", content, MessageType.STATUS).await().indefinitely();
+
+        verify(messageService).send(
+                eq(channelId), eq("engine"), eq(MessageType.STATUS), eq(content),
+                isNull(), isNull(), isNull(), isNull(), isNull());
+    }
+
     // ── closeChannel ──────────────────────────────────────────────────────────
 
     @Test

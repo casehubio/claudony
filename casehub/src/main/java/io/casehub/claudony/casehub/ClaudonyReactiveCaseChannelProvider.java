@@ -1,5 +1,7 @@
 package io.casehub.claudony.casehub;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.api.model.CaseChannel;
 import io.casehub.api.spi.ReactiveCaseChannelProvider;
 import io.casehub.qhorus.api.message.MessageType;
@@ -22,6 +24,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     private static final Logger log = Logger.getLogger(ClaudonyReactiveCaseChannelProvider.class);
     private static final String CHANNEL_PREFIX = "case-";
     private static final String QHORUS_NAME_KEY = "qhorus-name";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final ReactiveChannelService channelService;
     private final ReactiveMessageService messageService;
@@ -75,8 +78,23 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     @Override
     public Uni<Void> postToChannel(CaseChannel channel, String from, String content, MessageType type) {
         UUID channelId = UUID.fromString(channel.id());
-        return messageService.send(channelId, from, type, content, null, null, null, null, null)
+        String correlationId = (type == MessageType.COMMAND || type == MessageType.QUERY)
+                ? extractCorrelationId(content) : null;
+        return messageService.send(channelId, from, type, content, correlationId, null, null, null, null)
                 .replaceWithVoid();
+    }
+
+    // Content-coupling workaround: postToChannel() SPI doesn't carry correlationId as a
+    // first-class parameter. Track claudony#135 for the SPI fix that removes this method.
+    private static String extractCorrelationId(String content) {
+        try {
+            JsonNode node = MAPPER.readTree(content);
+            JsonNode cid = node.get("correlationId");
+            return (cid != null && !cid.isNull()) ? cid.asText() : null;
+        } catch (Exception e) {
+            log.warnf("Could not parse correlationId from COMMAND/QUERY content — Commitment will not be tracked");
+            return null;
+        }
     }
 
     @Override
