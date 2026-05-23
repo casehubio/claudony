@@ -1,6 +1,9 @@
 package io.casehub.claudony.casehub;
 
 import io.casehub.api.model.CaseChannel;
+import io.casehub.platform.api.identity.ActorType;
+import io.casehub.qhorus.api.message.DispatchResult;
+import io.casehub.qhorus.api.message.MessageDispatch;
 import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.channel.Channel;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
@@ -170,102 +173,97 @@ class ClaudonyReactiveCaseChannelProviderTest {
 
     // ── postToChannel ─────────────────────────────────────────────────────────
 
+    private DispatchResult dr(UUID channelId, String sender, MessageType type) {
+        return new DispatchResult(1L, channelId, sender, type, null, null, List.of(), null, null, null, null, 0);
+    }
+
     @Test
     void postToChannel_sendsViaMessageService() {
         UUID channelId = UUID.randomUUID();
         CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
                 Map.of("qhorus-name", "case-x/work"));
+        when(messageService.dispatch(any(MessageDispatch.class)))
+                .thenReturn(Uni.createFrom().item(dr(channelId, "alice", MessageType.STATUS)));
 
-        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(Uni.createFrom().nullItem());
+        provider.postToChannel(ch, "alice", "hello", MessageType.STATUS, null, null).await().indefinitely();
 
-        provider.postToChannel(ch, "alice", "hello", MessageType.STATUS).await().indefinitely();
-
-        verify(messageService).send(
-                eq(channelId), eq("alice"), eq(MessageType.STATUS), eq("hello"),
-                isNull(), isNull(), isNull(), isNull(), isNull());
+        verify(messageService).dispatch(argThat(d ->
+                channelId.equals(d.channelId()) &&
+                "alice".equals(d.sender()) &&
+                d.type() == MessageType.STATUS &&
+                "hello".equals(d.content()) &&
+                d.correlationId() == null &&
+                d.deadline() == null &&
+                d.actorType() == ActorType.AGENT));
     }
 
     @Test
-    void postToChannel_nullType_sendsWithNullType() {
+    void postToChannel_nullType_throwsIllegalArgumentException() {
         UUID channelId = UUID.randomUUID();
         CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
                 Map.of("qhorus-name", "case-x/work"));
 
-        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(Uni.createFrom().nullItem());
-
-        provider.postToChannel(ch, "alice", "hello", null).await().indefinitely();
-
-        verify(messageService).send(
-                eq(channelId), eq("alice"), isNull(), eq("hello"),
-                isNull(), isNull(), isNull(), isNull(), isNull());
+        // null type is now rejected by MessageDispatch.builder().build() — null was a silent pass-through
+        // with the old send() flat-param API; the builder enforces the 9-type taxonomy invariant.
+        assertThatThrownBy(() ->
+                provider.postToChannel(ch, "alice", "hello", null, null, null).await().indefinitely())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("type is required");
     }
 
     @Test
-    void postToChannel_commandWithCorrelationId_passesCorrelationIdToSend() {
+    void postToChannel_commandWithCorrelationId_passesCorrelationIdToDispatch() {
         UUID channelId = UUID.randomUUID();
         CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
                 Map.of("qhorus-name", "case-x/work"));
         String content = "{\"type\":\"COMMAND\",\"capability\":\"research\","
                 + "\"correlationId\":\"42\",\"input\":{}}";
-        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(Uni.createFrom().nullItem());
+        when(messageService.dispatch(any(MessageDispatch.class)))
+                .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.COMMAND)));
 
-        provider.postToChannel(ch, "engine", content, MessageType.COMMAND).await().indefinitely();
+        provider.postToChannel(ch, "engine", content, MessageType.COMMAND, "42", null)
+                .await().indefinitely();
 
-        verify(messageService).send(
-                eq(channelId), eq("engine"), eq(MessageType.COMMAND), eq(content),
-                eq("42"), isNull(), isNull(), isNull(), isNull());
+        verify(messageService).dispatch(argThat(d ->
+                channelId.equals(d.channelId()) &&
+                "engine".equals(d.sender()) &&
+                d.type() == MessageType.COMMAND &&
+                "42".equals(d.correlationId()) &&
+                d.deadline() == null));
     }
 
     @Test
-    void postToChannel_queryWithCorrelationId_passesCorrelationIdToSend() {
+    void postToChannel_queryWithCorrelationId_passesCorrelationIdToDispatch() {
         UUID channelId = UUID.randomUUID();
         CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
                 Map.of("qhorus-name", "case-x/work"));
         String content = "{\"type\":\"QUERY\",\"correlationId\":\"q-99\",\"input\":{}}";
-        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(Uni.createFrom().nullItem());
+        when(messageService.dispatch(any(MessageDispatch.class)))
+                .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.QUERY)));
 
-        provider.postToChannel(ch, "engine", content, MessageType.QUERY).await().indefinitely();
-
-        verify(messageService).send(
-                eq(channelId), eq("engine"), eq(MessageType.QUERY), eq(content),
-                eq("q-99"), isNull(), isNull(), isNull(), isNull());
-    }
-
-    @Test
-    void postToChannel_commandMalformedJson_sendsWithNullCorrelationId() {
-        UUID channelId = UUID.randomUUID();
-        CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
-                Map.of("qhorus-name", "case-x/work"));
-        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(Uni.createFrom().nullItem());
-
-        // Must not throw; must still deliver the message
-        provider.postToChannel(ch, "engine", "not-valid-json", MessageType.COMMAND)
+        provider.postToChannel(ch, "engine", content, MessageType.QUERY, "q-99", null)
                 .await().indefinitely();
 
-        verify(messageService).send(
-                eq(channelId), eq("engine"), eq(MessageType.COMMAND), eq("not-valid-json"),
-                isNull(), isNull(), isNull(), isNull(), isNull());
+        verify(messageService).dispatch(argThat(d ->
+                channelId.equals(d.channelId()) &&
+                "q-99".equals(d.correlationId())));
     }
 
     @Test
-    void postToChannel_nonCommandType_doesNotParseCorrelationId() {
+    void postToChannel_withDeadline_passesDeadlineToDispatch() {
         UUID channelId = UUID.randomUUID();
         CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
                 Map.of("qhorus-name", "case-x/work"));
-        String content = "{\"correlationId\":\"should-be-ignored\"}";
-        when(messageService.send(any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(Uni.createFrom().nullItem());
+        String deadline = "2026-05-23T12:00:00Z";
+        when(messageService.dispatch(any(MessageDispatch.class)))
+                .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.COMMAND)));
 
-        provider.postToChannel(ch, "engine", content, MessageType.STATUS).await().indefinitely();
+        provider.postToChannel(ch, "engine", "{}", MessageType.COMMAND, "42", deadline)
+                .await().indefinitely();
 
-        verify(messageService).send(
-                eq(channelId), eq("engine"), eq(MessageType.STATUS), eq(content),
-                isNull(), isNull(), isNull(), isNull(), isNull());
+        verify(messageService).dispatch(argThat(d ->
+                "42".equals(d.correlationId()) &&
+                java.time.Instant.parse(deadline).equals(d.deadline())));
     }
 
     // ── closeChannel ──────────────────────────────────────────────────────────
