@@ -14,7 +14,7 @@ import jakarta.enterprise.context.ApplicationScoped;
  * which calls ClaudonyWorkerProvisioner when it advertises the "researcher" capability.
  */
 @ApplicationScoped
-public class TestResearcherCase extends CaseHub {
+public class TestResearcherCase extends CaseHub { // public: CDI proxy generation requires it (extends concrete class)
 
     @Override
     public CaseDefinition getDefinition() {

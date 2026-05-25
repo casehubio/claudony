@@ -74,10 +74,9 @@ class CaseEngineRoundTripTest {
                     // The NoOp/Empty worker beans are @DefaultBean → yield to Claudony's SPIs.
                     "quarkus.index-dependency.casehub-engine.group-id", "io.casehub",
                     "quarkus.index-dependency.casehub-engine.artifact-id", "casehub-engine",
-                    // Re-include TestResearcherCase (excluded in %test profile because CaseHub
-                    // injects CaseHubRuntime which is only available when casehub-engine is indexed).
-                    // Scheduler-dependent beans are excluded: they require casehub-engine-scheduler-quartz
-                    // which brings in Quartz JDBC store (JTA) and conflicts with the test context.
+                    // Mirrors %test.quarkus.arc.exclude-types from application.properties but
+                    // re-includes TestResearcherCase and NoOpWorkloadProvider (needed for the
+                    // engine round-trip). Order: ledger → persistence-memory → testing → engine → work-core.
                     "quarkus.arc.exclude-types",
                     "io.casehub.ledger.repository.CaseLedgerEntryRepository,"
                     + "io.casehub.ledger.service.CaseLedgerEventCapture,"
@@ -85,21 +84,16 @@ class CaseEngineRoundTripTest {
                     + "io.casehub.persistence.memory.InMemoryCaseMetaModelRepository,"
                     + "io.casehub.persistence.memory.InMemoryEventLogRepository,"
                     + "io.casehub.testing.WorkResultSubmitter,"
-                    // Engine beans that require JobScheduler or WorkerExecutionManager
-                    // (only provided by casehub-engine-scheduler-quartz which we cannot add
-                    // due to Quartz JTA conflicts in the test context):
                     + "io.casehub.engine.internal.engine.handler.CaseStartedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.CaseStatusChangedHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventHandler,"
+                    + "io.casehub.engine.internal.engine.handler.SignalReceivedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
+                    + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService,"
+                    + "io.casehub.engine.internal.orchestration.WorkOrchestrator,"
                     + "io.casehub.engine.internal.scheduler.SchedulerService,"
                     + "io.casehub.engine.internal.worker.CasehubWorkloadProvider,"
-                    + "io.casehub.engine.internal.orchestration.WorkOrchestrator,"
-                    + "io.casehub.engine.internal.engine.handler.SignalReceivedEventHandler,"
-                    + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService,"
-                    // casehub-work-core (transitive via casehub-testing) includes RoundRobinStrategy
-                    // which injects RoutingCursorStore — not provided in Claudony test context.
                     + "io.casehub.work.core.strategy.RoundRobinStrategy"
             );
         }
@@ -140,7 +134,7 @@ class CaseEngineRoundTripTest {
 
         // Wait for ClaudonyReactiveWorkerProvisioner.provision() → tmuxService.createSession()
         Awaitility.await()
-                .atMost(Duration.ofSeconds(20))
+                .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(200))
                 .untilAsserted(() ->
                         verify(tmuxService, atLeastOnce())
@@ -160,7 +154,7 @@ class CaseEngineRoundTripTest {
         // Wait for ClaudonyLedgerEventCapture (@ObservesAsync) to write the ledger entry.
         // findCompletedWorkers() returns Uni<List<WorkerSummary>> — await each poll.
         Awaitility.await()
-                .atMost(Duration.ofSeconds(20))
+                .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(200))
                 .untilAsserted(() -> {
                     List<WorkerSummary> workers = lineageQuery.findCompletedWorkers(caseId)
