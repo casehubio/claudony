@@ -396,7 +396,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-05-23, after #135 postToChannel SPI correlationId+deadline):** 4 in `claudony-core` + 133 in `claudony-casehub` + 371 in `claudony-app` = **508 passing, 0 failures** (run from user terminal — requires tmux on PATH). Previous baseline: 509 (4 + 134 + 371, 2026-05-22 after #124/#138).
+**Baseline (as of 2026-05-25, after #120 openChannel race fix):** 4 in `claudony-core` + 135 in `claudony-casehub` + 371 in `claudony-app` = **510 passing, 0 failures** (run from user terminal — requires tmux on PATH). Previous baseline: 508 (4 + 133 + 371, 2026-05-23 after #135).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -415,7 +415,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 `claudony-casehub` tests:
 - `WorkerCommandResolverTest` — capability-to-command resolution, default fallback
 - `ClaudonyReactiveWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness, caseId/roleName stamped; Uni<Worker> unwrapped
-- `ClaudonyReactiveCaseChannelProviderTest` — Qhorus channel creation (ReactiveChannelService), list filtering, postToChannel (including correlationId extraction for COMMAND/QUERY via #122), cache-hit no-op
+- `ClaudonyReactiveCaseChannelProviderTest` — Qhorus channel creation (ReactiveChannelService), list filtering, postToChannel (including correlationId extraction for COMMAND/QUERY via #122), cache-hit no-op, concurrent init race (CountDownLatch barrier, #120), failed init eviction retry (#120)
 - `ClaudonyReactiveWorkerContextProviderTest` — lineage, channel, clean-start, missing caseId; Uni<WorkerContext> unwrapped
 - `EmptyCaseLineageQueryTest` — Uni<List<WorkerSummary>> returns empty
 - `ClaudonyWorkerStatusListenerTest` — ACTIVE/IDLE/FAULTED lifecycle, stall event
