@@ -778,6 +778,8 @@
     }
 
     function switchToWorker(newSessionId, newName) {
+        try { sessionStorage.setItem(CURSOR_STORE_KEY, JSON.stringify(chCursors)); } catch (e) {}
+        chCursors = {};
         sessionId = newSessionId;
         sessionName = newName;
         document.getElementById('session-name').textContent = newName;
