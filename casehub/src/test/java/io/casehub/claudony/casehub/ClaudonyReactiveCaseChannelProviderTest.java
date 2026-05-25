@@ -158,6 +158,29 @@ class ClaudonyReactiveCaseChannelProviderTest {
     }
 
     @Test
+    void openChannel_failedInit_retriesOnNextCall() {
+        UUID caseId = UUID.randomUUID();
+
+        // First call: channelService.create fails
+        when(channelService.create(
+                contains(caseId.toString()), any(), any(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), any()))
+                .thenReturn(Uni.createFrom().failure(new RuntimeException("transient error")));
+
+        assertThatThrownBy(() -> provider.openChannel(caseId, "work").await().indefinitely())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("transient error");
+
+        // Second call: channelService.create succeeds — should retry, not replay cached failure
+        stubCreate(caseId);
+
+        CaseChannel result = provider.openChannel(caseId, "work").await().indefinitely();
+
+        assertThat(result).isNotNull();
+        assertThat(result.purpose()).isEqualTo("work");
+    }
+
+    @Test
     void openChannel_channelNameContainsCaseIdAndPurpose() {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);

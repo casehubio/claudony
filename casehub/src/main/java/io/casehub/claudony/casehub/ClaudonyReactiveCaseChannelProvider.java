@@ -52,7 +52,9 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     @Override
     public Uni<CaseChannel> openChannel(UUID caseId, String purpose) {
         return layoutCache.computeIfAbsent(caseId,
-                        id -> initializeLayout(id).memoize().indefinitely())
+                        id -> initializeLayout(id)
+                                .onFailure().invoke(err -> layoutCache.remove(id))
+                                .memoize().indefinitely())
                 .map(channels -> {
                     CaseChannel ch = channels.get(purpose);
                     if (ch == null) {
