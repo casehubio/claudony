@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -106,6 +107,52 @@ class ClaudonyReactiveCaseChannelProviderTest {
         provider.openChannel(caseId2, "work").await().indefinitely();
 
         verify(channelService, times(6)).create(
+                anyString(), any(), any(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), any());
+    }
+
+    @Test
+    void openChannel_concurrentCallsSameCaseId_initializesOnlyOnce() throws Exception {
+        UUID caseId = UUID.randomUUID();
+        stubCreate(caseId);
+
+        int threads = 3;
+        CountDownLatch ready = new CountDownLatch(threads);
+        CountDownLatch go = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(threads);
+        CaseChannel[] results = new CaseChannel[threads];
+        Throwable[] errors = new Throwable[threads];
+        String[] purposes = {"work", "observe", "work"};
+
+        for (int i = 0; i < threads; i++) {
+            int idx = i;
+            new Thread(() -> {
+                try {
+                    ready.countDown();
+                    go.await();
+                    provider.openChannel(caseId, purposes[idx])
+                            .subscribe().with(
+                                    ch -> { results[idx] = ch; done.countDown(); },
+                                    err -> { errors[idx] = err; done.countDown(); });
+                } catch (Exception e) {
+                    errors[idx] = e;
+                    done.countDown();
+                }
+            }).start();
+        }
+
+        ready.await();
+        go.countDown();
+        done.await();
+
+        for (int i = 0; i < threads; i++) {
+            assertThat(errors[i]).as("thread " + i).isNull();
+            assertThat(results[i]).as("thread " + i).isNotNull();
+            assertThat(results[i].purpose()).isEqualTo(purposes[i]);
+        }
+
+        // NormativeChannelLayout has 3 channels — should create exactly 3, not 6 or 9
+        verify(channelService, times(3)).create(
                 anyString(), any(), any(),
                 isNull(), isNull(), isNull(), isNull(), isNull(), any());
     }

@@ -26,7 +26,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     private final ReactiveChannelService channelService;
     private final ReactiveMessageService messageService;
     private final CaseChannelLayout layout;
-    private final ConcurrentHashMap<UUID, Map<String, CaseChannel>> caseChannels = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Uni<Map<String, CaseChannel>>> layoutCache = new ConcurrentHashMap<>();
 
     @Inject
     public ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
@@ -51,17 +51,8 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
 
     @Override
     public Uni<CaseChannel> openChannel(UUID caseId, String purpose) {
-        Map<String, CaseChannel> cached = caseChannels.get(caseId);
-        if (cached != null) {
-            CaseChannel ch = cached.get(purpose);
-            if (ch != null) {
-                return Uni.createFrom().item(ch);
-            }
-            // purpose not in layout — create ad-hoc
-            return createQhorusChannel(caseId, purpose, null, null)
-                    .invoke(ch2 -> cached.put(purpose, ch2));
-        }
-        return initializeLayout(caseId)
+        return layoutCache.computeIfAbsent(caseId,
+                        id -> initializeLayout(id).memoize().indefinitely())
                 .map(channels -> {
                     CaseChannel ch = channels.get(purpose);
                     if (ch == null) {
@@ -113,7 +104,6 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     private Uni<Map<String, CaseChannel>> initializeLayout(UUID caseId) {
         List<CaseChannelLayout.ChannelSpec> specs = layout.channelsFor(caseId, null);
 
-        // Create all channels in sequence, accumulate into a map, then cache
         Uni<Map<String, CaseChannel>> seed = Uni.createFrom().item(new ConcurrentHashMap<>());
         for (CaseChannelLayout.ChannelSpec spec : specs) {
             String allowedTypes = toAllowedTypesString(spec.allowedTypes());
@@ -124,7 +114,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
                                 return acc;
                             }));
         }
-        return seed.invoke(channels -> caseChannels.put(caseId, channels));
+        return seed;
     }
 
     private Uni<CaseChannel> createQhorusChannel(UUID caseId, String purpose, String semantic, String allowedTypes) {
