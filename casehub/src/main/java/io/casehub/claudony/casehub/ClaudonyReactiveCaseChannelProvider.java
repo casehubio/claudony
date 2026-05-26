@@ -21,7 +21,6 @@ import org.jboss.logging.Logger;
 public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelProvider {
 
     private static final Logger log = Logger.getLogger(ClaudonyReactiveCaseChannelProvider.class);
-    private static final String CHANNEL_PREFIX = "case-";
     private static final String QHORUS_NAME_KEY = "qhorus-name";
     private final ReactiveChannelService channelService;
     private final ReactiveMessageService messageService;
@@ -88,7 +87,8 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
 
     @Override
     public Uni<List<CaseChannel>> listChannels(UUID caseId) {
-        String prefix = CHANNEL_PREFIX + caseId;
+        // No trailing slash — startsWith scan for all channels belonging to this case.
+        String prefix = CaseChannel.CASE_CHANNEL_PREFIX + caseId;
         return channelService.listAll()
                 .map(channels -> channels.stream()
                         .filter(ch -> ch.name != null && ch.name.startsWith(prefix))
@@ -120,7 +120,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     }
 
     private Uni<CaseChannel> createQhorusChannel(UUID caseId, String purpose, String semantic, String allowedTypes) {
-        String channelName = CHANNEL_PREFIX + caseId + "/" + purpose;
+        String channelName = CaseChannel.channelName(caseId, purpose);
         io.casehub.qhorus.api.channel.ChannelSemantic channelSemantic =
                 semantic != null ? io.casehub.qhorus.api.channel.ChannelSemantic.valueOf(semantic) : null;
         return channelService.create(channelName, purpose, channelSemantic,
@@ -139,7 +139,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     }
 
     private String extractPurpose(String channelName, UUID caseId) {
-        String prefix = CHANNEL_PREFIX + caseId + "/";
+        String prefix = CaseChannel.CASE_CHANNEL_PREFIX + caseId + "/";
         return channelName.startsWith(prefix) ? channelName.substring(prefix.length()) : channelName;
     }
 }
