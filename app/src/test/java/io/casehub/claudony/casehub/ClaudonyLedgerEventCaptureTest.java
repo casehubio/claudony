@@ -52,7 +52,7 @@ class ClaudonyLedgerEventCaptureTest {
         UUID caseId = UUID.randomUUID();
 
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseId, "StartCase", "CaseStarted", "RUNNING", null, "System"))
+                        caseId, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
 
         List<CaseLedgerEntry> entries = findByCaseId(caseId);
@@ -78,13 +78,13 @@ class ClaudonyLedgerEventCaptureTest {
         UUID caseId = UUID.randomUUID();
 
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseId, "StartCase", "CaseStarted", "RUNNING", null, "System"))
+                        caseId, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseId, "SuspendCase", "CaseSuspended", "SUSPENDED", null, "System"))
+                        caseId, "SuspendCase", "CaseSuspended", "SUSPENDED", null, "System", null))
                 .toCompletableFuture().join();
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseId, "ResumeCase", "CaseResumed", "RUNNING", null, "System"))
+                        caseId, "ResumeCase", "CaseResumed", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
 
         List<CaseLedgerEntry> entries = findByCaseId(caseId);
@@ -101,13 +101,13 @@ class ClaudonyLedgerEventCaptureTest {
         UUID caseB = UUID.randomUUID();
 
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseA, "StartCase", "CaseStarted", "RUNNING", null, "System"))
+                        caseA, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseB, "StartCase", "CaseStarted", "RUNNING", null, "System"))
+                        caseB, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseA, "CompleteCase", "CaseCompleted", "COMPLETED", null, "System"))
+                        caseA, "CompleteCase", "CaseCompleted", "COMPLETED", null, "System", null))
                 .toCompletableFuture().join();
 
         assertThat(findByCaseId(caseA)).hasSize(2);
@@ -120,7 +120,7 @@ class ClaudonyLedgerEventCaptureTest {
     void nullCaseId_observerCompletesWithoutException() {
         assertThatCode(() ->
                 lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                                null, "StartCase", "CaseStarted", "RUNNING", null, "System"))
+                                null, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                         .toCompletableFuture().join()
         ).doesNotThrowAnyException();
     }
@@ -129,7 +129,7 @@ class ClaudonyLedgerEventCaptureTest {
     void nullEventType_observerCompletesWithoutException() {
         assertThatCode(() ->
                 lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                                UUID.randomUUID(), "StartCase", null, "RUNNING", null, "System"))
+                                UUID.randomUUID(), "StartCase", null, "RUNNING", null, "System", null))
                         .toCompletableFuture().join()
         ).doesNotThrowAnyException();
     }
@@ -141,7 +141,7 @@ class ClaudonyLedgerEventCaptureTest {
         String workerId = "researcher-worker-" + UUID.randomUUID();
 
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseId, "ExecuteWorker", "WorkerExecutionStarted", null, workerId, "WORKER"))
+                        caseId, "ExecuteWorker", "WorkerExecutionStarted", null, workerId, "WORKER", null))
                 .toCompletableFuture().join();
 
         List<CaseLedgerEntry> entries = findByCaseId(caseId);

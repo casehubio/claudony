@@ -65,15 +65,12 @@ class CaseEngineRoundTripTest {
                     // CaseContextChangedEventHandler, etc.) are visible to Quarkus.
                     "quarkus.index-dependency.casehub-engine.group-id", "io.casehub",
                     "quarkus.index-dependency.casehub-engine.artifact-id", "casehub-engine",
-                    // Quartz RAM store — no JTA JDBC, no Quartz tables.
-                    // Required for CaseStartedEventHandler.registerScheduledTriggers() to run
-                    // on the blocking thread without a JDBC datasource (PP-20260516-quartz-ram).
-                    "quarkus.quartz.store-type", "ram",
                     // Mirrors %test.quarkus.arc.exclude-types from application.properties but
                     // re-includes TestResearcherCase and NoOpWorkloadProvider (needed for the
                     // engine round-trip). CaseStartedEventHandler and SchedulerService are
                     // now included — blocking=true (engine#367) makes the handler safe on a
-                    // blocking thread; RAM store makes SchedulerService work without JTA JDBC.
+                    // blocking thread; NoOpJobScheduler (@DefaultBean) satisfies JobScheduler
+                    // injection since TestResearcherCase has no schedule bindings (no-op safe).
                     "quarkus.arc.exclude-types",
                     "io.casehub.ledger.repository.CaseLedgerEntryRepository,"
                     + "io.casehub.ledger.service.CaseLedgerEventCapture,"
