@@ -19,7 +19,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.platform.api.preferences.PreferenceProvider;
 import io.casehub.platform.api.preferences.SettingsScope;
+import io.casehub.qhorus.api.channel.ChannelDetail;
 import io.casehub.qhorus.api.gateway.ChannelRef;
+import io.casehub.qhorus.api.instance.InstanceInfo;
 import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
 import io.casehub.qhorus.runtime.dashboard.QhorusDashboardService;
@@ -69,13 +71,13 @@ public class MeshResource {
 
     @GET
     @Path("/channels")
-    public Uni<List<QhorusDashboardService.ChannelView>> channels() {
+    public Uni<List<ChannelDetail>> channels() {
         return dashboard.listChannels();
     }
 
     @GET
     @Path("/instances")
-    public Uni<List<QhorusDashboardService.InstanceView>> instances() {
+    public Uni<List<InstanceInfo>> instances() {
         return dashboard.listInstances();
     }
 
@@ -102,9 +104,9 @@ public class MeshResource {
         long intervalMs = config.meshRefreshInterval();
         return Multi.createFrom().ticks().every(Duration.ofMillis(intervalMs))
                 .onItem().transformToUniAndConcatenate(tick -> {
-                    Uni<List<QhorusDashboardService.ChannelView>> channels =
+                    Uni<List<ChannelDetail>> channels =
                             dashboard.listChannels().onFailure().recoverWithItem(List.of());
-                    Uni<List<QhorusDashboardService.InstanceView>> instances =
+                    Uni<List<InstanceInfo>> instances =
                             dashboard.listInstances().onFailure().recoverWithItem(List.of());
                     Uni<List<Map<String, Object>>> feed =
                             dashboard.getFeed(100).onFailure().recoverWithItem(List.of());

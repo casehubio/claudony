@@ -59,6 +59,12 @@
       <groupId>io.casehub</groupId>
       <artifactId>casehub-qhorus</artifactId>
     </dependency>
+    <!-- Explicit qhorus-api dep — transitive SNAPSHOT resolution on GitHub Packages
+         is unreliable (GE-20260430-0042ff); required for ChannelDetail, InstanceInfo -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-qhorus-api</artifactId>
+    </dependency>
     <!-- Qhorus testing support — InMemory*Store alternatives for unit tests -->
     <dependency>
       <groupId>io.casehub</groupId>
