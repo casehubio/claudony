@@ -87,11 +87,9 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
 
     @Override
     public Uni<List<CaseChannel>> listChannels(UUID caseId) {
-        // No trailing slash — startsWith scan for all channels belonging to this case.
         String prefix = CaseChannel.CASE_CHANNEL_PREFIX + caseId;
-        return channelService.listAll()
+        return channelService.findByNamePrefix(prefix)
                 .map(channels -> channels.stream()
-                        .filter(ch -> ch.name != null && ch.name.startsWith(prefix))
                         .map(ch -> new CaseChannel(
                                 ch.id.toString(),
                                 ch.name,
