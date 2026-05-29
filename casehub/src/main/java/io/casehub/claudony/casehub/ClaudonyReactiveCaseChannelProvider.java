@@ -26,10 +26,14 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     private final ReactiveMessageService messageService;
     private final CaseChannelLayout layout;
     private final ConcurrentHashMap<UUID, Uni<Map<String, CaseChannel>>> layoutCache = new ConcurrentHashMap<>();
+    private final io.casehub.qhorus.runtime.gateway.ChannelGateway gateway;
+    private final jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent;
 
     @Inject
     public ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
-            ReactiveMessageService messageService, CaseHubConfig config) {
+            ReactiveMessageService messageService, CaseHubConfig config,
+            io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
+            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent) {
         this.channelService = channelService;
         this.messageService = messageService;
         try {
@@ -38,14 +42,20 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
             log.errorf("Unknown channel-layout '%s' — valid values: normative, simple", config.channelLayout());
             throw e;
         }
+        this.gateway = gateway;
+        this.channelCreatedEvent = channelCreatedEvent;
     }
 
     /** Package-private constructor for tests. */
     ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
-            ReactiveMessageService messageService, CaseChannelLayout layout) {
+            ReactiveMessageService messageService, CaseChannelLayout layout,
+            io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
+            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent) {
         this.channelService = channelService;
         this.messageService = messageService;
         this.layout = layout;
+        this.gateway = gateway;
+        this.channelCreatedEvent = channelCreatedEvent;
     }
 
     @Override
@@ -123,12 +133,18 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
                 semantic != null ? io.casehub.qhorus.api.channel.ChannelSemantic.valueOf(semantic) : null;
         return channelService.create(channelName, purpose, channelSemantic,
                         null, null, null, null, null, allowedTypes)
-                .map(detail -> new CaseChannel(
-                        detail.id.toString(),
-                        detail.name,
-                        purpose,
-                        "qhorus",
-                        Map.of(QHORUS_NAME_KEY, detail.name)));
+                .map(detail -> {
+                    gateway.initChannel(detail.id,
+                            new io.casehub.qhorus.api.gateway.ChannelRef(detail.id, detail.name));
+                    channelCreatedEvent.fire(
+                            new io.casehub.claudony.server.CaseChannelCreatedEvent(detail.id, detail.name));
+                    return new CaseChannel(
+                            detail.id.toString(),
+                            detail.name,
+                            purpose,
+                            "qhorus",
+                            Map.of(QHORUS_NAME_KEY, detail.name));
+                });
     }
 
     private static String toAllowedTypesString(Set<MessageType> types) {
