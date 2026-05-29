@@ -9,11 +9,13 @@ import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CaseInstanceRepository;
+import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 import io.vertx.mutiny.core.eventbus.EventBus;
+import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
@@ -74,6 +76,7 @@ class CaseEngineRoundTripTest {
                     "quarkus.arc.exclude-types",
                     "io.casehub.ledger.repository.CaseLedgerEntryRepository,"
                     + "io.casehub.ledger.service.CaseLedgerEventCapture,"
+                    + "io.casehub.ledger.service.WorkerDecisionEventCapture,"
                     + "io.casehub.persistence.memory.InMemoryCaseInstanceRepository,"
                     + "io.casehub.persistence.memory.InMemoryCaseMetaModelRepository,"
                     + "io.casehub.persistence.memory.InMemoryEventLogRepository,"
@@ -94,6 +97,7 @@ class CaseEngineRoundTripTest {
     @Inject JpaCaseLineageQuery lineageQuery;
     @Inject CaseInstanceRepository caseInstanceRepository;
     @Inject EventBus eventBus;
+    @Inject Event<CaseLifecycleEvent> lifecycleEvents;
 
     @InjectMock TmuxService tmuxService;
 
@@ -120,6 +124,14 @@ class CaseEngineRoundTripTest {
                 .await().atMost(Duration.ofSeconds(5));
         Capability cap = new Capability("researcher", "{}", "{}");
         Worker provisioned = new Worker("researcher", List.of(cap), ctx -> Map.of());
+
+        // Simulate the WorkerExecutionStarted lifecycle event that Quartz would normally fire
+        // (WorkerScheduleEventHandler is excluded from CasehubEnabledProfile so Quartz doesn't run).
+        // Since engine#390, WorkerExecutionCompleted has actorId="system"; lineage resolves the
+        // worker name from the nearest preceding WorkerExecutionStarted entry.
+        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+                caseId, "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
+                "researcher", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
 
         eventBus.publish(
                 EventBusAddresses.WORKER_EXECUTION_FINISHED,

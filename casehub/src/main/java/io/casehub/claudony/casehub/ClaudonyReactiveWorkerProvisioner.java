@@ -4,9 +4,8 @@ import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
-import io.casehub.api.model.Capability;
 import io.casehub.api.model.ProvisionContext;
-import io.casehub.api.model.Worker;
+import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
 import io.casehub.api.spi.ReactiveWorkerProvisioner;
 import io.smallrye.mutiny.Uni;
@@ -15,8 +14,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -57,7 +54,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
     }
 
     @Override
-    public Uni<Worker> provision(Set<String> capabilities, ProvisionContext context) {
+    public Uni<ProvisionResult> provision(Set<String> capabilities, ProvisionContext context) {
         return Uni.createFrom()
                   .item(() -> doProvision(capabilities, context))
                   .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
@@ -83,7 +80,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         return Uni.createFrom().item(resolver.getAvailableCapabilities());
     }
 
-    private Worker doProvision(Set<String> capabilities, ProvisionContext context) {
+    private ProvisionResult doProvision(Set<String> capabilities, ProvisionContext context) {
         if (!enabled) {
             throw new ProvisioningException(
                     "CaseHub integration is disabled — set claudony.casehub.enabled=true");
@@ -108,9 +105,6 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         registry.register(session);
         sessionMapping.register(roleName, context.caseId(), sessionId);
 
-        List<Capability> capList = capabilities.stream()
-                .map(cap -> new Capability(cap, null, null))
-                .toList();
-        return new Worker(roleName, capList, ctx -> Map.of());
+        return ProvisionResult.empty();
     }
 }

@@ -25,6 +25,7 @@ class JpaCaseLineageQueryTest {
 
     @Mock EntityManager em;
     @Mock TypedQuery<CaseLedgerEntry> entryQuery;
+    @Mock TypedQuery<String> nameQuery;
     @Mock TypedQuery<Instant> instantQuery;
 
     JpaCaseLineageQuery query;
@@ -59,8 +60,8 @@ class JpaCaseLineageQueryTest {
         CaseLedgerEntry completed = new CaseLedgerEntry();
         completed.id = entryId;
         completed.caseId = caseId;
-        completed.actorId = "worker-abc";
-        completed.eventType = "WORKER_EXECUTION_COMPLETED";
+        completed.actorId = "system";   // engine#390: actorId is now "system" for COMPLETED
+        completed.eventType = "WorkerExecutionCompleted";
         completed.occurredAt = completedAt;
 
         when(em.createQuery(contains("WorkerExecutionCompleted"), eq(CaseLedgerEntry.class)))
@@ -68,6 +69,14 @@ class JpaCaseLineageQueryTest {
         when(entryQuery.setParameter(anyString(), any())).thenReturn(entryQuery);
         when(entryQuery.getResultList()).thenReturn(List.of(completed));
 
+        // First WorkerExecutionStarted query: resolveWorkerName returns the worker role
+        when(em.createQuery(contains("WorkerExecutionStarted"), eq(String.class)))
+                .thenReturn(nameQuery);
+        when(nameQuery.setParameter(anyString(), any())).thenReturn(nameQuery);
+        when(nameQuery.setMaxResults(1)).thenReturn(nameQuery);
+        when(nameQuery.getResultStream()).thenReturn(Stream.of("worker-abc"));
+
+        // Second WorkerExecutionStarted query: findStartedAt returns the started timestamp
         when(em.createQuery(contains("WorkerExecutionStarted"), eq(Instant.class)))
                 .thenReturn(instantQuery);
         when(instantQuery.setParameter(anyString(), any())).thenReturn(instantQuery);
@@ -95,8 +104,8 @@ class JpaCaseLineageQueryTest {
         CaseLedgerEntry completed = new CaseLedgerEntry();
         completed.id = UUID.randomUUID();
         completed.caseId = caseId;
-        completed.actorId = "worker-abc";
-        completed.eventType = "WORKER_EXECUTION_COMPLETED";
+        completed.actorId = "system";
+        completed.eventType = "WorkerExecutionCompleted";
         completed.occurredAt = completedAt;
 
         when(em.createQuery(contains("WorkerExecutionCompleted"), eq(CaseLedgerEntry.class)))
@@ -104,16 +113,19 @@ class JpaCaseLineageQueryTest {
         when(entryQuery.setParameter(anyString(), any())).thenReturn(entryQuery);
         when(entryQuery.getResultList()).thenReturn(List.of(completed));
 
-        when(em.createQuery(contains("WorkerExecutionStarted"), eq(Instant.class)))
-                .thenReturn(instantQuery);
-        when(instantQuery.setParameter(anyString(), any())).thenReturn(instantQuery);
-        when(instantQuery.setMaxResults(1)).thenReturn(instantQuery);
-        when(instantQuery.getResultStream()).thenReturn(Stream.empty());
+        // resolveWorkerName — no started entry, falls back to "system"
+        when(em.createQuery(contains("WorkerExecutionStarted"), eq(String.class)))
+                .thenReturn(nameQuery);
+        when(nameQuery.setParameter(anyString(), any())).thenReturn(nameQuery);
+        when(nameQuery.setMaxResults(1)).thenReturn(nameQuery);
+        when(nameQuery.getResultStream()).thenReturn(Stream.empty());
+        // When workerName == "system", findStartedAt is not called — startedAt = completedAt directly.
 
         List<WorkerSummary> result = query.findCompletedWorkers(caseId)
                 .await().atMost(Duration.ofSeconds(5));
 
         assertThat(result).hasSize(1);
+        assertThat(result.get(0).workerName()).isEqualTo("system");
         assertThat(result.get(0).startedAt()).isEqualTo(completedAt);
     }
 }

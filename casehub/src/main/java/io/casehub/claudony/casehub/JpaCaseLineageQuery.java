@@ -54,29 +54,60 @@ public class JpaCaseLineageQuery implements CaseLineageQuery {
                 .getResultList();
 
         return completed.stream()
-                .map(e -> new WorkerSummary(
-                        e.actorId,
-                        e.actorId,
-                        findStartedAt(caseId, e.actorId, e.occurredAt),
-                        e.occurredAt,
-                        null,
-                        e.id))
+                .map(e -> {
+                    // Since engine#390 the WorkerExecutionCompleted actorId is "system".
+                    // Resolve the actual worker name from the WorkerExecutionStarted entry
+                    // that immediately precedes this completed entry by sequence number.
+                    String workerName = resolveWorkerName(caseId, e.sequenceNumber);
+                    Instant startedAt = workerName.equals("system")
+                            ? e.occurredAt
+                            : findStartedAt(caseId, workerName, e.sequenceNumber);
+                    return new WorkerSummary(
+                            workerName,
+                            workerName,
+                            startedAt,
+                            e.occurredAt,
+                            null,
+                            e.id);
+                })
                 .toList();
     }
 
-    private Instant findStartedAt(UUID caseId, String actorId, Instant before) {
+    /**
+     * Returns the actorId of the WorkerExecutionStarted entry with the highest sequence
+     * number below the given completedSequence for this case. Using sequence number
+     * rather than timestamp avoids ambiguity when multiple workers run concurrently.
+     * Falls back to "system" if no started entry is found.
+     */
+    private String resolveWorkerName(UUID caseId, int completedSequence) {
         return em.createQuery(
-                        "SELECT e.occurredAt FROM CaseLedgerEntry e " +
-                        "WHERE e.caseId = :caseId AND e.actorId = :actorId " +
-                        "AND e.eventType = 'WorkerExecutionStarted' AND e.occurredAt <= :before " +
-                        "ORDER BY e.occurredAt DESC",
-                        Instant.class)
+                        "SELECT e.actorId FROM CaseLedgerEntry e " +
+                        "WHERE e.caseId = :caseId AND e.eventType = 'WorkerExecutionStarted' " +
+                        "AND e.sequenceNumber < :seq " +
+                        "ORDER BY e.sequenceNumber DESC",
+                        String.class)
                 .setParameter("caseId", caseId)
-                .setParameter("actorId", actorId)
-                .setParameter("before", before)
+                .setParameter("seq", completedSequence)
                 .setMaxResults(1)
                 .getResultStream()
                 .findFirst()
-                .orElse(before);
+                .orElse("system");
+    }
+
+    private Instant findStartedAt(UUID caseId, String workerName, int completedSequence) {
+        return em.createQuery(
+                        "SELECT e.occurredAt FROM CaseLedgerEntry e " +
+                        "WHERE e.caseId = :caseId AND e.actorId = :workerName " +
+                        "AND e.eventType = 'WorkerExecutionStarted' " +
+                        "AND e.sequenceNumber < :seq " +
+                        "ORDER BY e.sequenceNumber DESC",
+                        Instant.class)
+                .setParameter("caseId", caseId)
+                .setParameter("workerName", workerName)
+                .setParameter("seq", completedSequence)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst()
+                .orElse(null);
     }
 }

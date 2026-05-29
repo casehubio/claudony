@@ -5,7 +5,6 @@ import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.api.context.PropagationContext;
 import io.casehub.api.model.ProvisionContext;
-import io.casehub.api.model.Worker;
 import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkResult;
 import io.casehub.api.model.WorkerContext;
@@ -63,11 +62,10 @@ class WorkerLifecycleSequenceTest {
     @Test
     void happyPath_provisionThenActiveIdleThenStall() throws Exception {
         final UUID caseId = UUID.randomUUID();
-        final Worker worker = provisioner.provision(Set.of("default"), provisionContext(caseId))
-                .await().indefinitely();
-        // Worker name is now the role/taskType ("code-reviewer"), not a UUID.
-        // The tmux session UUID is tracked internally via WorkerSessionMapping.
-        final String roleName = worker.getName();
+        final ProvisionContext ctx = provisionContext(caseId);
+        provisioner.provision(Set.of("default"), ctx).await().indefinitely();
+        // Role name comes from the taskType in the context.
+        final String roleName = ctx.taskType();
         final String sessionId = sessionMapping.findByRole(roleName).orElseThrow();
 
         // After provision: session registered by UUID, starts IDLE
@@ -95,9 +93,9 @@ class WorkerLifecycleSequenceTest {
     @Test
     void faultPath_faultedWorkerIsKilledAndRemovedFromRegistry() throws Exception {
         final UUID caseId = UUID.randomUUID();
-        final Worker worker = provisioner.provision(Set.of("default"), provisionContext(caseId))
-                .await().indefinitely();
-        final String roleName = worker.getName();
+        final ProvisionContext ctx = provisionContext(caseId);
+        provisioner.provision(Set.of("default"), ctx).await().indefinitely();
+        final String roleName = ctx.taskType();
         final String sessionId = sessionMapping.findByRole(roleName).orElseThrow();
 
         listener.onWorkerStarted(roleName, Map.of("caseId", caseId.toString()));
@@ -114,18 +112,17 @@ class WorkerLifecycleSequenceTest {
     void twoWorkers_differentRoles_independentLifecycles() throws Exception {
         // Use two DIFFERENT roles — same-role concurrent workers are a known MVP limitation
         final UUID caseId = UUID.randomUUID();
-        final Worker w1 = provisioner.provision(Set.of("default"), provisionContext(caseId))
-                .await().indefinitely();
+        final ProvisionContext ctx1 = provisionContext(caseId);
+        provisioner.provision(Set.of("default"), ctx1).await().indefinitely();
         // Create a second worker with a different taskType
         final ProvisionContext ctx2 = new ProvisionContext(caseId, "reviewer",
                 new io.casehub.api.model.WorkerContext("review", caseId, null, List.of(),
                         io.casehub.api.context.PropagationContext.createRoot(), Map.of()),
                 io.casehub.api.context.PropagationContext.createRoot(), null, null);
-        final Worker w2 = provisioner.provision(Set.of("default"), ctx2)
-                .await().indefinitely();
+        provisioner.provision(Set.of("default"), ctx2).await().indefinitely();
 
-        final String role1 = w1.getName();   // "default"
-        final String role2 = w2.getName();   // "reviewer"
+        final String role1 = ctx1.taskType();   // "default"
+        final String role2 = ctx2.taskType();   // "reviewer"
         final String sid1 = sessionMapping.findByRole(role1).orElseThrow();
         final String sid2 = sessionMapping.findByRole(role2).orElseThrow();
 
