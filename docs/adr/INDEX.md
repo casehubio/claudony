@@ -9,3 +9,4 @@
 | [0005](0005-casehub-integration-is-optional.md) | CaseHub Integration Lives in an Optional Module | Accepted | 2026-04-22 |
 | [0006](0006-channel-backend-registration-timing.md) | Channel Backend Registration Timing | Accepted | 2026-05-22 |
 | [0007](0007-sse-channel-delivery-mechanism.md) | SSE Channel Delivery Mechanism | Accepted | 2026-05-22 |
+| [0008](0008-fleet-channel-backend-registration-via-channel-initialised-event.md) | Fleet-aware channel backend registration via ChannelInitialisedEvent | Accepted | 2026-05-29 |
