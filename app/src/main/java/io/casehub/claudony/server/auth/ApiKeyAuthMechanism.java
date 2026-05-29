@@ -61,7 +61,7 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
             return Uni.createFrom().item(
                 QuarkusSecurityIdentity.builder()
                     .setPrincipal(new QuarkusPrincipal("peer"))
-                    .addRole("user")
+                    .addRole("fleet")
                     .build());
         }
 
