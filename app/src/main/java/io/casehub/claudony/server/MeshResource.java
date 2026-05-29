@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jakarta.inject.Inject;
@@ -20,12 +18,10 @@ import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.platform.api.preferences.PreferenceProvider;
 import io.casehub.platform.api.preferences.SettingsScope;
 import io.casehub.qhorus.api.channel.ChannelDetail;
-import io.casehub.qhorus.api.gateway.ChannelRef;
 import io.casehub.qhorus.api.instance.InstanceInfo;
 import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
 import io.casehub.qhorus.runtime.dashboard.QhorusDashboardService;
-import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.mutiny.Multi;
@@ -53,11 +49,7 @@ public class MeshResource {
     @Inject ObjectMapper           mapper;
     @Inject SecurityIdentity       securityIdentity;
     @Inject PreferenceProvider     preferenceProvider;
-    @Inject ClaudonyChannelBackend channelBackend;
-    @Inject ChannelGateway         gateway;
     @Inject ReactiveChannelService channelService;
-
-    private final ConcurrentHashMap<UUID, Object> channelRegistrationLocks = new ConcurrentHashMap<>();
 
     @GET
     @Path("/config")
@@ -140,18 +132,6 @@ public class MeshResource {
         if (opt.isEmpty()) {
             throw new NotFoundException("Channel not found: " + channelName);
         }
-        var channel = opt.get();
-        var channelId = channel.id;
-
-        // Per-channel lock prevents concurrent SSE opens from duplicating human_observer
-        // registration. Remove when ChannelGateway guards human_observer duplicates (#131).
-        ChannelRef ref = new ChannelRef(channelId, channelName);
-        synchronized (channelRegistrationLocks.computeIfAbsent(channelId, k -> new Object())) {
-            gateway.deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
-            channelBackend.open(ref, Map.of());
-            gateway.registerBackend(channelId, channelBackend, "human_observer");
-        }
-
         AtomicLong lastSentId = new AtomicLong(after);
 
         // Initial catch-up: fetch messages since cursor
@@ -177,11 +157,7 @@ public class MeshResource {
                 )
                 .filter(Objects::nonNull);
 
-        // onTermination on the concatenated Multi covers both early disconnect during
-        // catchUp (where live was never subscribed) and normal SSE stream termination.
-        return Multi.createBy().concatenating().streams(catchUp, live)
-                .onTermination().invoke(() ->
-                        gateway.deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID));
+        return Multi.createBy().concatenating().streams(catchUp, live);
     }
 
     private static void updateLastSentId(AtomicLong lastSentId,
