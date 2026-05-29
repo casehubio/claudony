@@ -1,8 +1,8 @@
 package io.casehub.claudony;
 
-import io.casehub.engine.internal.scheduler.JobIdentifier;
-import io.casehub.engine.internal.scheduler.ScheduledJobRequest;
-import io.casehub.engine.spi.scheduler.JobScheduler;
+import io.casehub.engine.common.internal.scheduler.JobIdentifier;
+import io.casehub.engine.common.internal.scheduler.ScheduledJobRequest;
+import io.casehub.engine.common.spi.scheduler.JobScheduler;
 import io.quarkus.arc.DefaultBean;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
