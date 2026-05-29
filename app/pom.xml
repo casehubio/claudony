@@ -109,6 +109,22 @@
       <version>4.3.0</version>
       <scope>test</scope>
     </dependency>
+    <!-- Testcontainers PostgreSQL — used by ClaudonyReactiveCaseChannelProviderPostgresIT
+         via QuarkusTestResource to start a real PostgreSQL container before augmentation,
+         so the JDBC URL is available at the highest config priority. Version managed by
+         Quarkus BOM. -->
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- RunOnVertxContext + UniAsserter — required for IT tests that call reactive CDI
+         beans directly (Hibernate Reactive Panache requires a Vert.x event loop context). -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-test-vertx</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <!-- JDBC driver for Qhorus + ledger tables (Flyway uses this) -->
     <dependency>
@@ -120,6 +136,18 @@
       <groupId>io.quarkiverse.quarkus-reactive-h2-client</groupId>
       <artifactId>quarkus-reactive-h2-client</artifactId>
       <version>0.6.0</version>
+    </dependency>
+    <!-- PostgreSQL reactive client — enables reactive Vert.x pool for PostgreSQL datasources -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-reactive-pg-client</artifactId>
+    </dependency>
+    <!-- PostgreSQL JDBC driver — required by Flyway in the reactive-pg test profile.
+         quarkus-jdbc-postgresql is <optional>true</optional> in casehub-qhorus and
+         does not propagate transitively. -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-postgresql</artifactId>
     </dependency>
     <!-- Hibernate Reactive Panache — required for reactive Qhorus JPA repos (optional in qhorus jar) -->
     <dependency>
