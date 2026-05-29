@@ -82,78 +82,104 @@ native image — reflection configs and startup overhead for the PostgreSQL driv
 included regardless of deployment. Acceptable trade-off for an application target; a
 Maven profile could gate them for size-sensitive native builds if that becomes a concern.
 
-### 3. Test infrastructure — `%reactive-pg` profile
+### 3. Test infrastructure — `QuarkusTestResource` + `%reactive-pg` profile
 
-**Convention:** follows the named-datasource Dev Services pattern established in
-`casehub-eidos` and `casehub-qhorus` (protocol PP-20260528-ac6d93). Profile name
-`reactive-pg` (more specific than eidos's `reactive` — deliberate deviation).
+**Why not Quarkus Dev Services:** The design originally specified Quarkus Dev Services.
+Dev Services was abandoned after discovering that `QuarkusTestProfile.getConfigProfile()`
+**replaces** the `%test` profile entirely — it does not add to it. When `getConfigProfile()`
+returns `"reactive-pg"`, only the production `application.properties` (no prefix) and
+`%reactive-pg.*` properties are active. The production config has
+`quarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:~/.claudony/qhorus`. Dev Services does
+not override configured URLs — seeing the H2 URL, it skips URL injection. Attempts to
+clear it with an empty-string `%reactive-pg.quarkus.datasource.qhorus.jdbc.url=` caused
+Quarkus to deactivate the Agroal datasource bean at build time (before Dev Services could
+inject a replacement). No Quarkus config mechanism overrides an explicitly configured URL.
 
-**File:** `app/src/test/resources/application.properties` — add:
+**Actual approach: `QuarkusTestResourceLifecycleManager`**
 
-```properties
-# PostgreSQL reactive profile — activated by ReactivePostgresTestProfile.
-# Quarkus Dev Services starts postgres:17-alpine automatically.
-# Explicit empty-string overrides are required to clear the %test.* H2 URLs:
-# Quarkus @QuarkusTest activates both the %test profile and the named profile
-# simultaneously; without these overrides Dev Services sees the H2 URLs from
-# %test.* and never starts the PostgreSQL container.
-%reactive-pg.quarkus.datasource.qhorus.db-kind=postgresql
-%reactive-pg.quarkus.datasource.qhorus.jdbc.url=
-%reactive-pg.quarkus.datasource.qhorus.reactive.url=
-%reactive-pg.quarkus.datasource.qhorus.devservices.enabled=true
-%reactive-pg.quarkus.datasource.qhorus.devservices.image-name=postgres:17-alpine
-%reactive-pg.quarkus.datasource.qhorus.reactive=true
-%reactive-pg.quarkus.datasource.qhorus.jdbc=true
-%reactive-pg.quarkus.flyway.qhorus.migrate-at-start=true
-%reactive-pg.quarkus.flyway.qhorus.locations=classpath:db/qhorus/migration,classpath:db/ledger/migration
-%reactive-pg.quarkus.hibernate-orm.qhorus.database.generation=none
-```
-
-**File:** `app/src/test/java/io/casehub/claudony/casehub/ReactivePostgresTestProfile.java`
+`PostgresTestResource implements QuarkusTestResourceLifecycleManager` starts a
+`postgres:17-alpine` container and returns JDBC+reactive+credentials from `start()`.
+`QuarkusTestResourceLifecycleManager.start()` properties are applied at the **highest**
+config priority — above system properties, above profile config, above production config.
+They are available before Quarkus augmentation, so `AgroalDataSource` sees a real
+PostgreSQL URL and activates. Flyway runs against the container.
 
 ```java
-public class ReactivePostgresTestProfile implements QuarkusTestProfile {
+public class PostgresTestResource implements QuarkusTestResourceLifecycleManager {
+    private PostgreSQLContainer<?> postgres;
+
     @Override
-    public String getConfigProfile() { return "reactive-pg"; }
+    public Map<String, String> start() {
+        postgres = new PostgreSQLContainer<>("postgres:17-alpine")
+                .withDatabaseName("qhorus").withUsername("qhorus").withPassword("qhorus");
+        postgres.start();
+        return Map.of(
+                "quarkus.datasource.qhorus.jdbc.url", postgres.getJdbcUrl(),
+                "quarkus.datasource.qhorus.reactive.url",
+                        "vertx-reactive:postgresql://" + postgres.getHost() + ":"
+                        + postgres.getMappedPort(5432) + "/" + postgres.getDatabaseName(),
+                "quarkus.datasource.qhorus.username", postgres.getUsername(),
+                "quarkus.datasource.qhorus.password", postgres.getPassword(),
+                "quarkus.flyway.qhorus.migrate-at-start", "true",
+                "quarkus.flyway.qhorus.locations",
+                        "classpath:db/qhorus/migration,classpath:db/ledger/migration",
+                "quarkus.hibernate-orm.qhorus.database.generation", "none");
+    }
 }
 ```
 
-**Placement:** `app/src/test/java/` — consistent with the established Quarkus multi-module
-convention that `@QuarkusTest` tests belong in the application module (the one with the
-`quarkus-maven-plugin`). This is why `ClaudonyLedgerEventCaptureTest` (which tests
-`casehub` module code) also lives in `app/`.
+Deps added: `org.testcontainers:testcontainers-postgresql` (version managed by Quarkus BOM)
+and `io.quarkus:quarkus-test-vertx` (for `@RunOnVertxContext + UniAsserter`).
+
+`application.properties` `%reactive-pg.*` block — minimal, just signals PostgreSQL mode:
+
+```properties
+%reactive-pg.quarkus.datasource.qhorus.db-kind=postgresql
+%reactive-pg.quarkus.datasource.qhorus.reactive=true
+%reactive-pg.quarkus.hibernate-orm.qhorus.database.generation=none
+```
+
+`ReactivePostgresTestProfile.getConfigProfile()` returns `"reactive-pg"` to activate
+this profile. `@QuarkusTestResource(value = PostgresTestResource.class, restrictToAnnotatedClass = true)`
+scopes the container to this IT class only.
+
+**Placement:** `app/src/test/java/` — standard Quarkus multi-module convention;
+`@QuarkusTest` belongs in the application module (the one with `quarkus-maven-plugin`).
 
 ### 4. Integration test — `ClaudonyReactiveCaseChannelProviderPostgresIT`
 
 **File:** `app/src/test/java/io/casehub/claudony/casehub/ClaudonyReactiveCaseChannelProviderPostgresIT.java`
 
-`@QuarkusTest @TestProfile(ReactivePostgresTestProfile.class)`. Injects
-`ClaudonyReactiveCaseChannelProvider` directly. Requires Docker on the test machine.
+`@QuarkusTest @TestProfile(ReactivePostgresTestProfile.class) @QuarkusTestResource(PostgresTestResource.class)`.
+Injects `ClaudonyReactiveCaseChannelProvider` directly (CDI-only, no HTTP → no `@TestSecurity`).
+Requires Docker on the test machine.
 
-**Fixture:** `@BeforeEach` creates a dedicated `ClaudonyReactiveCaseChannelProvider`
-channel via `openChannel()` using a fresh `UUID.randomUUID()` caseId per test. This
-ensures test isolation — channels from one test are never visible to another because
-each test operates on a distinct caseId.
-
-**Server mode / tmux:** Tests run in server mode; `ServerStartup.checkTmux()` executes.
-tmux on PATH is a universal requirement for all Claudony tests (CLAUDE.md). No special
-handling needed — `bootstrapChannelBackends()` against zero sessions is a no-op.
+**Why `@RunOnVertxContext + UniAsserter`:** `ReactiveChannelService.create()` calls
+`Panache.withTransaction()`, which requires an active Vert.x duplicated context. The JUnit
+thread does not have one — calling `.await().indefinitely()` from the JUnit thread causes
+`IllegalStateException: No current Vertx context found`. `@RunOnVertxContext` runs each
+test method on the Vert.x event loop; `UniAsserter` is the Quarkus API for writing
+assertions over `Uni<T>` pipelines in that context. `@BeforeEach` is not used — each test
+opens its own channel via the `UniAsserter` chain, ensuring a fresh `UUID.randomUUID()`
+caseId per test and full isolation.
 
 | Test | What it verifies |
 |------|-----------------|
 | `openChannel_createsQhorusChannel` | `openChannel()` creates a Qhorus channel via the reactive PostgreSQL path |
-| `listChannels_returnsChannelsViaPrefix` | `listChannels()` returns the case's channels via `findByNamePrefix()` |
-| `postToChannel_dispatchesMessage` | `postToChannel()` dispatches a message via reactive `MessageService` |
-| `listChannels_excludesChannelsFromOtherCases` | Creates channels for two caseIds; verifies `listChannels(caseId1)` returns only caseId1's channels — directly validates the server-side filter behaviour |
+| `listChannels_returnsChannelsViaPrefix` | `listChannels()` returns all 3 normative channels (work/observe/oversight) for the case via `findByNamePrefix()`; asserts purposes |
+| `listChannels_excludesChannelsFromOtherCases` | Creates channels for two caseIds; verifies `listChannels(caseId1)` excludes caseId2 channels — directly validates server-side filter |
+| `postToChannel_dispatchesMessage` | `postToChannel()` dispatches a STATUS message via reactive `MessageService` without error |
 
 **Invocation:**
 ```bash
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test \
-  -Dtest=ClaudonyReactiveCaseChannelProviderPostgresIT
+  -pl app \
+  -Dtest=ClaudonyReactiveCaseChannelProviderPostgresIT \
+  -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-`@TestProfile` activates the `reactive-pg` profile at augmentation time — no additional
-`-Dquarkus.test.profile` flag needed.
+Does not run in the default `mvn test` (no `restrictToAnnotatedClass=true` escape; the
+`%reactive-pg` profile is only activated via `@TestProfile`).
 
 ### 5. Unit test update — `ClaudonyReactiveCaseChannelProviderTest`
 

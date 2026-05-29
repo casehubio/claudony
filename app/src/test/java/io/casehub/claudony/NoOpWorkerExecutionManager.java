@@ -12,9 +12,13 @@ import java.util.Map;
 
 /**
  * No-op WorkerExecutionManager — satisfies CaseContextChangedEventHandler's injection in
- * CasehubEnabledProfile. QuartzWorkerExecutionManager (the real impl) requires casehub-engine-
- * scheduler-quartz on the classpath; tests use this @DefaultBean instead.
- * TestResearcherCase has no scheduled workers, so none of the execution methods are ever called.
+ * CasehubEnabledProfile. QuartzWorkerExecutionManager (the real impl) requires
+ * casehub-engine-scheduler-quartz on the classpath; tests use this @DefaultBean instead.
+ *
+ * <p>Safe in CasehubEnabledProfile because TestResearcherCase has no scheduled workers;
+ * none of the execution methods are invoked. In profiles where real workers execute,
+ * @Alternative @Priority(1) implementations (e.g. QuartzWorkerExecutionManager) would
+ * override this @DefaultBean automatically.
  */
 @DefaultBean
 @ApplicationScoped
