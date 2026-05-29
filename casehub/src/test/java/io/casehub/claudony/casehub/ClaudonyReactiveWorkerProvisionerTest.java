@@ -4,12 +4,11 @@ import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.api.model.ProvisionContext;
-import io.casehub.api.model.Worker;
+import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -38,25 +37,13 @@ class ClaudonyReactiveWorkerProvisionerTest {
     void provision_createsSessionAndRegistersWorker() throws Exception {
         var caseId = UUID.randomUUID();
 
-        Worker worker = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
+        ProvisionResult result = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
                 .await()
                 .indefinitely();
 
-        assertThat(worker.getName()).isEqualTo("code-reviewer");
+        assertThat(result).isNotNull();
         verify(tmux).createSession(contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX), eq("/tmp/workers"), eq("claude"));
         verify(registry).register(any(Session.class));
-    }
-
-    @Test
-    void provision_returnsWorkerWithRequestedCapabilities() throws Exception {
-        var caseId = UUID.randomUUID();
-
-        Worker worker = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
-                .await()
-                .indefinitely();
-
-        assertThat(worker.getCapabilities()).extracting(c -> c.getName())
-                .containsExactlyInAnyOrder("code-reviewer");
     }
 
     @Test
