@@ -3,7 +3,7 @@ package io.casehub.claudony.casehub;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import io.casehub.engine.internal.event.CaseLifecycleEvent;
+import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;

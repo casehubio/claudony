@@ -5,10 +5,10 @@ import io.casehub.api.model.Worker;
 import io.casehub.api.model.WorkerSummary;
 import io.casehub.claudony.casehub.JpaCaseLineageQuery;
 import io.casehub.claudony.server.TmuxService;
-import io.casehub.engine.internal.event.EventBusAddresses;
-import io.casehub.engine.internal.event.WorkflowExecutionCompleted;
-import io.casehub.engine.internal.model.CaseInstance;
-import io.casehub.engine.spi.CaseInstanceRepository;
+import io.casehub.engine.common.internal.event.EventBusAddresses;
+import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
+import io.casehub.engine.common.internal.model.CaseInstance;
+import io.casehub.engine.common.spi.CaseInstanceRepository;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -66,11 +66,11 @@ class CaseEngineRoundTripTest {
                     "quarkus.index-dependency.casehub-engine.group-id", "io.casehub",
                     "quarkus.index-dependency.casehub-engine.artifact-id", "casehub-engine",
                     // Mirrors %test.quarkus.arc.exclude-types from application.properties but
-                    // re-includes TestResearcherCase and NoOpWorkloadProvider (needed for the
-                    // engine round-trip). CaseStartedEventHandler and SchedulerService are
-                    // now included — blocking=true (engine#367) makes the handler safe on a
-                    // blocking thread; NoOpJobScheduler (@DefaultBean) satisfies JobScheduler
-                    // injection since TestResearcherCase has no schedule bindings (no-op safe).
+                    // re-includes TestResearcherCase (needed for the engine round-trip).
+                    // CaseStartedEventHandler and SchedulerService are now included —
+                    // blocking=true (engine#367) makes the handler safe on a blocking thread;
+                    // NoOpJobScheduler (@DefaultBean) satisfies JobScheduler injection since
+                    // TestResearcherCase has no schedule bindings (no-op safe).
                     "quarkus.arc.exclude-types",
                     "io.casehub.ledger.repository.CaseLedgerEntryRepository,"
                     + "io.casehub.ledger.service.CaseLedgerEventCapture,"
@@ -85,7 +85,6 @@ class CaseEngineRoundTripTest {
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
                     + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService,"
                     + "io.casehub.engine.internal.orchestration.WorkOrchestrator,"
-                    + "io.casehub.engine.internal.worker.CasehubWorkloadProvider,"
                     + "io.casehub.work.core.strategy.RoundRobinStrategy"
             );
         }
