@@ -1,9 +1,11 @@
 package io.casehub.claudony.server;
 
 import io.casehub.platform.api.identity.ActorType;
+import io.casehub.qhorus.api.gateway.ChannelInitialisedEvent;
 import io.casehub.qhorus.api.gateway.ChannelRef;
 import io.casehub.qhorus.api.gateway.OutboundMessage;
 import io.casehub.qhorus.api.message.MessageType;
+import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,16 +15,19 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.Mockito.*;
 
 class ClaudonyChannelBackendTest {
 
     private ChannelEventBus bus;
+    private ChannelGateway gateway;
     private ClaudonyChannelBackend backend;
 
     @BeforeEach
     void setUp() {
         bus = new ChannelEventBus();
-        backend = new ClaudonyChannelBackend(bus);
+        gateway = mock(ChannelGateway.class);
+        backend = new ClaudonyChannelBackend(bus, gateway);
     }
 
     @Test
@@ -74,5 +79,24 @@ class ClaudonyChannelBackendTest {
                 "msg", null, null, ActorType.AGENT));
 
         assertThat(otherReceived).isEmpty();
+    }
+
+    @Test
+    void onChannelInitialised_caseChannel_registersBackend() {
+        UUID channelId = UUID.randomUUID();
+
+        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "case-abc/work"));
+
+        verify(gateway).deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
+        verify(gateway).registerBackend(channelId, backend, "human_observer");
+    }
+
+    @Test
+    void onChannelInitialised_nonCaseChannel_noRegistration() {
+        UUID channelId = UUID.randomUUID();
+
+        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "other-channel/data"));
+
+        verifyNoInteractions(gateway);
     }
 }
