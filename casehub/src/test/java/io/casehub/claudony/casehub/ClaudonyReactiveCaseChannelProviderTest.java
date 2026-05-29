@@ -26,12 +26,19 @@ class ClaudonyReactiveCaseChannelProviderTest {
     private ReactiveChannelService  channelService;
     private ReactiveMessageService  messageService;
     private ClaudonyReactiveCaseChannelProvider provider;
+    private io.casehub.qhorus.runtime.gateway.ChannelGateway gateway;
+    @SuppressWarnings("unchecked")
+    private jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent;
 
     @BeforeEach
     void setUp() {
         channelService = mock(ReactiveChannelService.class);
         messageService = mock(ReactiveMessageService.class);
-        provider = new ClaudonyReactiveCaseChannelProvider(channelService, messageService, new NormativeChannelLayout());
+        gateway = mock(io.casehub.qhorus.runtime.gateway.ChannelGateway.class);
+        channelCreatedEvent = mock(jakarta.enterprise.event.Event.class);
+        provider = new ClaudonyReactiveCaseChannelProvider(
+                channelService, messageService, new NormativeChannelLayout(),
+                gateway, channelCreatedEvent);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -215,6 +222,42 @@ class ClaudonyReactiveCaseChannelProviderTest {
                 contains("/work"), any(),
                 argThat(s -> s != null && s.name().equals("APPEND")),
                 isNull(), isNull(), isNull(), isNull(), isNull(), any());
+    }
+
+    @Test
+    void openChannel_callsInitChannelAfterCreate() {
+        UUID caseId = UUID.randomUUID();
+        stubCreate(caseId);
+
+        provider.openChannel(caseId, "work").await().indefinitely();
+
+        // NormativeChannelLayout creates 3 channels — initChannel called once per channel
+        verify(gateway, times(3)).initChannel(
+                any(UUID.class),
+                any(io.casehub.qhorus.api.gateway.ChannelRef.class));
+    }
+
+    @Test
+    void openChannel_initChannelCalledWithCorrectChannelName() {
+        UUID caseId = UUID.randomUUID();
+        stubCreate(caseId);
+
+        provider.openChannel(caseId, "work").await().indefinitely();
+
+        verify(gateway).initChannel(
+                any(UUID.class),
+                argThat(ref -> ref.name().equals("case-" + caseId + "/work")));
+    }
+
+    @Test
+    void openChannel_firesCaseChannelCreatedEvent() {
+        UUID caseId = UUID.randomUUID();
+        stubCreate(caseId);
+
+        provider.openChannel(caseId, "work").await().indefinitely();
+
+        verify(channelCreatedEvent, times(3)).fire(
+                any(io.casehub.claudony.server.CaseChannelCreatedEvent.class));
     }
 
     // ── listChannels ─────────────────────────────────────────────────────────
