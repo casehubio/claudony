@@ -47,4 +47,9 @@ public interface PeerClient {
     @Path("/internal/channels/sync")
     @Consumes(MediaType.APPLICATION_JSON)
     Response syncChannel(ChannelSyncRequest request);
+
+    @POST
+    @Path("/internal/channels/notify")
+    @Consumes(MediaType.APPLICATION_JSON)
+    Response notifyChannel(ChannelNotifyRequest request);
 }
