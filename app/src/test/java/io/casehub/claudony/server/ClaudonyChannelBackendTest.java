@@ -85,7 +85,7 @@ class ClaudonyChannelBackendTest {
     void onChannelInitialised_caseChannel_registersBackend() {
         UUID channelId = UUID.randomUUID();
 
-        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "case-abc/work"));
+        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "case-abc/work", false));
 
         verify(gateway).deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
         verify(gateway).registerBackend(channelId, backend, "human_observer");
@@ -95,7 +95,7 @@ class ClaudonyChannelBackendTest {
     void onChannelInitialised_nonCaseChannel_noRegistration() {
         UUID channelId = UUID.randomUUID();
 
-        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "other-channel/data"));
+        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "other-channel/data", false));
 
         verifyNoInteractions(gateway);
     }
