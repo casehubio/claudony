@@ -72,15 +72,30 @@ io.casehub.claudony — claudony-core + claudony-app
 │   │   └── RegistryHooksStrategy — fires on any SessionRegistry mutation
 │   ├── TerminalWebSocket       — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup           — startup health checks, tmux bootstrap
-│   └── auth/
-│       ├── ApiKeyAuthMechanism    — HttpAuthenticationMechanism for X-Api-Key header
-│       ├── ApiKeyService          — key generation, file persistence, banner logging
-│       ├── AuthRateLimiter        — sliding-window rate limiter on auth/WebAuthn paths
-│       ├── AuthResource           — /auth/invite, /auth/register, /auth/login, /auth/dev-login
-│       ├── CredentialStore        — WebAuthnUserProvider; reads/writes credentials.json
-│       ├── InviteService          — one-time invite token generation and validation
-│       ├── LenientNoneAttestation — Vert.x attestation override: accepts non-zero AAGUID
-│       └── WebAuthnPatcher        — startup bean that swaps the "none" handler via reflection
+│   ├── auth/
+│   │   ├── ApiKeyAuthMechanism    — HttpAuthenticationMechanism for X-Api-Key header
+│   │   ├── ApiKeyService          — key generation, file persistence, banner logging
+│   │   ├── AuthRateLimiter        — sliding-window rate limiter on auth/WebAuthn paths
+│   │   ├── AuthResource           — /auth/invite, /auth/register, /auth/login, /auth/dev-login
+│   │   ├── CredentialStore        — WebAuthnUserProvider; reads/writes credentials.json
+│   │   ├── InviteService          — one-time invite token generation and validation
+│   │   ├── LenientNoneAttestation — Vert.x attestation override: accepts non-zero AAGUID
+│   │   └── WebAuthnPatcher        — startup bean that swaps the "none" handler via reflection
+│   └── fleet/
+│       ├── PeerRegistry           — healthy peer list, circuit breaker, atomic peers.json persistence
+│       ├── PeerClient             — typed REST client for peer-to-peer fleet calls (sessions, sync, notify)
+│       ├── FleetKeyClientFilter   — injects X-Api-Key fleet key on outbound PeerClient calls
+│       ├── ChannelSyncResource    — POST /api/internal/channels/sync (gateway.initChannel on peer);
+│       │                           POST /api/internal/channels/notify (channelEventBus.emit on peer)
+│       ├── ChannelFleetBroadcaster — observes CaseChannelCreatedEvent; syncs new channels to peers
+│       │                            via POST /api/internal/channels/sync (#102)
+│       ├── FleetMessageRelayObserver — CLUSTER-scoped MessageObserver; relays a channel-name tick
+│       │                              to all healthy peers via POST /api/internal/channels/notify
+│       │                              on every Qhorus message dispatch (#118)
+│       ├── ChannelNotifyRequest   — record {channelName} — fleet tick relay payload
+│       ├── StaticConfigDiscovery  — loads claudony.peers at startup
+│       ├── ManualRegistrationDiscovery — REST-triggered peer management; persists to peers.json
+│       └── MdnsDiscovery          — mDNS advertise/discover (scaffold; full impl follow-on)
 ├── agent/
 │   ├── ServerClient            — typed REST client to Server (@RegisterRestClient)
 │   ├── ApiKeyClientFilter      — injects X-Api-Key on all ServerClient calls
@@ -255,6 +270,7 @@ Browser keystroke → onMessage() → TmuxService.sendKeys(name, text)
 
 ### Channel message delivery (SSE)
 
+Single-node path:
 ```
 Agent → QhorusMcpTools.sendMessage() → messageService.send() (persist)
   → ChannelGateway.fanOut(channelId, message)
@@ -265,6 +281,14 @@ Agent → QhorusMcpTools.sendMessage() → messageService.send() (persist)
   → bare JSON → RESTEasy wraps as "data: [...]\n\n" SSE frame
   → Browser EventSource.onmessage → appendMessages(entries)
   → chCursors[name] updated in sessionStorage
+```
+
+Fleet cross-node path (requires shared PostgreSQL Qhorus, #118):
+```
+Message posted on Node B → MessageObserverDispatcher → FleetMessageRelayObserver.onMessage()
+  → virtual thread per healthy peer → POST /api/internal/channels/notify {channelName} to Node A
+  → ChannelSyncResource.notify() → ChannelEventBus.emit(channelName) on Node A
+  → Node A SSE subscribers tick → browser fetches from shared PG via QhorusDashboardService
 ```
 
 Fallback: `EventSource.onerror` → close → `pollChannel()` (3s timer).
