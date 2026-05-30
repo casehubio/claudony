@@ -43,7 +43,14 @@ class StatusAwareExpiryPolicyTest {
     @Test
     void expiresAtShellPromptWhenLastActiveIsOld() throws Exception {
         tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "true");
-        Thread.sleep(500);
+        // Wait until 'true' exits and the shell takes over — avoids a race where
+        // pane_current_command is still 'true', making isExpired() return false incorrectly.
+        Await.until(() -> {
+            try {
+                var cmd = tmux.displayMessage(TEST_SESSION, "#{pane_current_command}").trim();
+                return !cmd.isBlank() && !"true".equals(cmd);
+            } catch (Exception e) { return false; }
+        }, Duration.ofSeconds(10), "shell to take over after 'true' exits");
         var oldLastActive = Instant.now().minus(Duration.ofDays(8));
         assertTrue(policy.isExpired(session(TEST_SESSION, oldLastActive), Duration.ofDays(7)));
     }
@@ -51,7 +58,12 @@ class StatusAwareExpiryPolicyTest {
     @Test
     void notExpiredAtShellPromptWhenLastActiveIsRecent() throws Exception {
         tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "true");
-        Thread.sleep(500);
+        Await.until(() -> {
+            try {
+                var cmd = tmux.displayMessage(TEST_SESSION, "#{pane_current_command}").trim();
+                return !cmd.isBlank() && !"true".equals(cmd);
+            } catch (Exception e) { return false; }
+        }, Duration.ofSeconds(10), "shell to take over after 'true' exits");
         var recentLastActive = Instant.now().minus(Duration.ofHours(1));
         assertFalse(policy.isExpired(session(TEST_SESSION, recentLastActive), Duration.ofDays(7)));
     }
