@@ -477,9 +477,14 @@ class MeshPanel {
     }
 
     update(data) {
+        // Skip re-render if visible content is identical to avoid reconnect flicker
+        var prev = JSON.stringify({channels: this.data.channels, instances: this.data.instances, feed: this.data.feed});
+        var next = JSON.stringify({channels: data.channels, instances: data.instances, feed: data.feed});
         this.data = data;
-        this._updateDockChannels();
-        this._renderActiveView();
+        if (prev !== next) {
+            this._updateDockChannels();
+            this._renderActiveView();
+        }
     }
 
     switchView(name) {
@@ -635,19 +640,38 @@ class PollingMeshStrategy {
 
 class SseMeshStrategy {
     constructor(url, panel) {
-        this.url = url;
+        this.baseUrl = url;
         this.panel = panel;
         this.source = null;
+        this._lastEventId = -1;
     }
 
     start() {
-        this.source = new EventSource(this.url);
-        this.source.addEventListener('mesh-update', e => {
-            try { this.panel.update(JSON.parse(e.data)); } catch (_) {}
-        });
+        this._connect();
     }
 
-    stop() { this.source?.close(); }
+    _connect() {
+        var url = this._lastEventId >= 0
+            ? this.baseUrl + '?after=' + this._lastEventId
+            : this.baseUrl;
+        this.source = new EventSource(url);
+        this.source.onmessage = (e) => {
+            try {
+                var data = JSON.parse(e.data);
+                if (typeof data._eventId === 'number') this._lastEventId = data._eventId;
+                this.panel.update(data);
+            } catch (_) {}
+        };
+        this.source.onerror = () => {
+            if (this.source) { this.source.close(); this.source = null; }
+            // Reconnect after a short delay with cursor so server can skip stale state
+            setTimeout(() => { if (this.source === null) this._connect(); }, 2000);
+        };
+    }
+
+    stop() {
+        if (this.source) { this.source.close(); this.source = null; }
+    }
 
     triggerPoll() { /* SSE is live — no action needed */ }
 }

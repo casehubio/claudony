@@ -92,8 +92,9 @@ public class MeshResource {
     @GET
     @Path("/events")
     @Produces("text/event-stream")
-    public Multi<String> events() {
+    public Multi<String> events(@QueryParam("after") @DefaultValue("-1") long after) {
         long intervalMs = config.meshRefreshInterval();
+        final long[] lastDeliveredId = {after};
         return Multi.createFrom().ticks().every(Duration.ofMillis(intervalMs))
                 .onItem().transformToUniAndConcatenate(tick -> {
                     Uni<List<ChannelDetail>> channels =
@@ -104,17 +105,34 @@ public class MeshResource {
                             dashboard.getFeed(100).onFailure().recoverWithItem(List.of());
                     return Uni.combine().all().unis(channels, instances, feed)
                             .combinedWith((ch, inst, f) -> {
+                                long eventId = maxFeedId(f);
+                                // Skip on first tick only when client already has this state
+                                if (tick == 0L && after >= 0 && eventId <= after) {
+                                    return null;
+                                }
+                                lastDeliveredId[0] = eventId;
                                 try {
                                     return mapper.writeValueAsString(Map.of(
                                             "channels", ch,
                                             "instances", inst,
-                                            "feed", f));
+                                            "feed", f,
+                                            "_eventId", eventId));
                                 } catch (Exception e) {
                                     return "{}";
                                 }
                             })
                             .onFailure().recoverWithItem("{}");
-                });
+                })
+                .filter(Objects::nonNull);
+    }
+
+    private static long maxFeedId(List<Map<String, Object>> feed) {
+        return feed.stream()
+                .map(e -> e.get("id"))
+                .filter(id -> id instanceof Number)
+                .mapToLong(id -> ((Number) id).longValue())
+                .max()
+                .orElse(0L);
     }
 
     @GET
