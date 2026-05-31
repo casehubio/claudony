@@ -214,6 +214,53 @@ class MeshResourceTest {
     }
 
     @Test
+    void meshEvents_sseFrameContainsEventId() throws Exception {
+        int port = io.restassured.RestAssured.port;
+        java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
+            new java.net.URL("http://localhost:" + port + "/api/mesh/events").openConnection();
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000);
+        try {
+            conn.getResponseCode();
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(conn.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null && !line.startsWith("data:")) {}
+            String json = line.startsWith("data: ") ? line.substring("data: ".length())
+                                                     : line.substring("data:".length());
+            JsonNode node = objectMapper.readTree(json);
+            org.assertj.core.api.Assertions.assertThat(node.has("_eventId")).isTrue();
+            org.assertj.core.api.Assertions.assertThat(node.get("_eventId").isNumber()).isTrue();
+        } catch (java.net.SocketTimeoutException e) {
+            throw e;
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    @Test
+    void meshEvents_withAfterZero_stillDeliversFrame() throws Exception {
+        int port = io.restassured.RestAssured.port;
+        java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
+            new java.net.URL("http://localhost:" + port + "/api/mesh/events?after=0").openConnection();
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000);
+        try {
+            int status = conn.getResponseCode();
+            org.assertj.core.api.Assertions.assertThat(status).isEqualTo(200);
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(conn.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null && !line.startsWith("data:")) {}
+            org.assertj.core.api.Assertions.assertThat(line).isNotNull().startsWith("data:");
+        } catch (java.net.SocketTimeoutException e) {
+            throw e;
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    @Test
     void channelEvents_unknownChannel_returns404() throws Exception {
         int port = io.restassured.RestAssured.port;
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection)

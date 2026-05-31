@@ -136,6 +136,7 @@ class CaseLineageQueryIntegrationTest {
         e.actorRole = "worker";
         e.eventType = eventType;
         e.entryType = LedgerEntryType.EVENT;
+        e.tenancyId = "default";
         e.sequenceNumber = seq;
         e.occurredAt = occurredAt;
         em.persist(e);
