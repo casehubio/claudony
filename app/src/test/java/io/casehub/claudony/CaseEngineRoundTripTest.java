@@ -130,7 +130,7 @@ class CaseEngineRoundTripTest {
         // Since engine#390, WorkerExecutionCompleted has actorId="system"; lineage resolves the
         // worker name from the nearest preceding WorkerExecutionStarted entry.
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                caseId, "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
+                caseId, null, "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
                 "researcher", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
 
         eventBus.publish(
