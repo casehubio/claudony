@@ -127,6 +127,40 @@ class ClaudonyReactiveWorkerProvisionerTest {
         assertThat(capabilities).doesNotContain("default");
     }
 
+    @Test
+    void provision_withNullTriggerFields_returnsEmptyProvisionResult() throws Exception {
+        var result = provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
+                .await()
+                .indefinitely();
+
+        assertThat(result.causedByEntryId()).isNull();
+    }
+
+    @Test
+    void drainCausalContext_afterSeed_returnsSeededValue() {
+        UUID caseId = UUID.randomUUID();
+        UUID entryId = UUID.randomUUID();
+
+        provisioner.seedCausalContextForTest(caseId, entryId);
+
+        assertThat(provisioner.drainCausalContext(caseId)).isEqualTo(entryId);
+    }
+
+    @Test
+    void drainCausalContext_withoutSeed_returnsNull() {
+        assertThat(provisioner.drainCausalContext(UUID.randomUUID())).isNull();
+    }
+
+    @Test
+    void drainCausalContext_isDraining_secondCallReturnsNull() {
+        UUID caseId = UUID.randomUUID();
+        provisioner.seedCausalContextForTest(caseId, UUID.randomUUID());
+
+        provisioner.drainCausalContext(caseId);
+
+        assertThat(provisioner.drainCausalContext(caseId)).isNull();
+    }
+
     private ProvisionContext provisionContext(UUID caseId) {
         return new ProvisionContext(caseId, "code-reviewer", null, null, null, null);
     }

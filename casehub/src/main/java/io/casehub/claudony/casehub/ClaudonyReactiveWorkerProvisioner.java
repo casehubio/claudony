@@ -17,11 +17,17 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
 public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisioner {
 
     static final String SESSION_PREFIX = "claudony-worker-";
+
+    // Bridges causedByEntryId from provision() to ClaudonyLedgerEventCapture.
+    // Keyed by caseId; drained when WorkerStarted fires. Safe for concurrent access;
+    // one provisioning per case at a time is the architectural invariant.
+    private final ConcurrentHashMap<UUID, UUID> causalContext = new ConcurrentHashMap<>();
 
     private final boolean enabled;
     private final TmuxService tmux;
@@ -80,6 +86,20 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         return Uni.createFrom().item(resolver.getAvailableCapabilities());
     }
 
+    /**
+     * Drains the causal context entry for the given caseId.
+     * Called by {@link io.casehub.claudony.casehub.ClaudonyLedgerEventCapture} when
+     * a WorkerStarted event is observed.
+     */
+    UUID drainCausalContext(UUID caseId) {
+        return causalContext.remove(caseId);
+    }
+
+    /** Seeded by tests to simulate a resolved causedByEntryId without engine#231. */
+    void seedCausalContextForTest(UUID caseId, UUID entryId) {
+        causalContext.put(caseId, entryId);
+    }
+
     private ProvisionResult doProvision(Set<String> capabilities, ProvisionContext context) {
         if (!enabled) {
             throw new ProvisioningException(
@@ -105,6 +125,10 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         registry.register(session);
         sessionMapping.register(roleName, context.caseId(), sessionId);
 
+        // TODO(engine#231): when triggerChannelId + triggerCorrelationId are non-null,
+        // look up MessageLedgerEntry by (channelId, correlationId) via Qhorus, store
+        // (caseId → entryId) in causalContext, and return ProvisionResult(entryId).
+        // ClaudonyLedgerEventCapture drains causalContext on WorkerStarted.
         return ProvisionResult.empty();
     }
 }

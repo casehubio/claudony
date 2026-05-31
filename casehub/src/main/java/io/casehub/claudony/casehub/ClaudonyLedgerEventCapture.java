@@ -45,6 +45,9 @@ public class ClaudonyLedgerEventCapture {
     @LedgerPersistenceUnit
     EntityManager em;
 
+    @Inject
+    ClaudonyReactiveWorkerProvisioner provisioner;
+
     @Transactional
     void onCaseLifecycleEvent(@ObservesAsync CaseLifecycleEvent event) {
         if (event.caseId() == null || event.eventType() == null) {
@@ -61,10 +64,16 @@ public class ClaudonyLedgerEventCapture {
         entry.commandType = event.commandType();
         entry.eventType = event.eventType();
         entry.caseStatus = event.caseStatus();
+        entry.tenancyId = event.tenancyId() != null ? event.tenancyId() : "default";
         entry.actorId = event.actorId() != null ? event.actorId() : "system";
         entry.actorType = ActorTypeResolver.resolve(entry.actorId);
         entry.actorRole = event.actorRole() != null ? event.actorRole() : "System";
         entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+
+        if ("WorkerStarted".equals(event.eventType())) {
+            UUID causedBy = provisioner.drainCausalContext(event.caseId());
+            if (causedBy != null) entry.causedByEntryId = causedBy;
+        }
 
         em.persist(entry);
         em.flush();
