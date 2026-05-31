@@ -120,7 +120,7 @@ class CaseEngineRoundTripTest {
                                 .createSession(anyString(), anyString(), anyString()));
 
         // Drive completion: publish WorkflowExecutionCompleted to the engine event bus.
-        CaseInstance instance = caseInstanceRepository.findByUuid(caseId)
+        CaseInstance instance = caseInstanceRepository.findByUuid(caseId, "default")
                 .await().atMost(Duration.ofSeconds(5));
         Capability cap = new Capability("researcher", "{}", "{}");
         Worker provisioned = new Worker("researcher", List.of(cap), ctx -> Map.of());
