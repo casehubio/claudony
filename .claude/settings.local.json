@@ -716,7 +716,11 @@
       "Skill(project-init)",
       "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) /usr/libexec/java_home -v 26)",
       "Bash(GIT_SEQUENCE_EDITOR=\"cp /tmp/squash-plan-102.txt\" git rebase *)",
-      "Bash(GIT_SEQUENCE_EDITOR=\"cp /tmp/squash-plan-102.txt\" git *)"
+      "Bash(GIT_SEQUENCE_EDITOR=\"cp /tmp/squash-plan-102.txt\" git *)",
+      "Skill(work)",
+      "Bash(xargs '-I{}' python3 -c ' *)",
+      "Skill(git-squash)",
+      "Skill(write-content)"
     ]
   }
 }

@@ -8,7 +8,7 @@ import io.casehub.claudony.server.TmuxService;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
 import io.casehub.engine.common.internal.model.CaseInstance;
-import io.casehub.engine.common.spi.CaseInstanceRepository;
+import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -95,7 +95,7 @@ class CaseEngineRoundTripTest {
 
     @Inject TestResearcherCase researcherCase;
     @Inject JpaCaseLineageQuery lineageQuery;
-    @Inject CaseInstanceRepository caseInstanceRepository;
+    @Inject CrossTenantCaseInstanceRepository caseInstanceRepository;
     @Inject EventBus eventBus;
     @Inject Event<CaseLifecycleEvent> lifecycleEvents;
 
@@ -120,7 +120,7 @@ class CaseEngineRoundTripTest {
                                 .createSession(anyString(), anyString(), anyString()));
 
         // Drive completion: publish WorkflowExecutionCompleted to the engine event bus.
-        CaseInstance instance = caseInstanceRepository.findByUuid(caseId, "default")
+        CaseInstance instance = caseInstanceRepository.findByUuid(caseId)
                 .await().atMost(Duration.ofSeconds(5));
         Capability cap = new Capability("researcher", "{}", "{}");
         Worker provisioned = new Worker("researcher", List.of(cap), ctx -> Map.of());
