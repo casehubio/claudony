@@ -33,9 +33,7 @@ Run `add-dir /Users/mdproctor/claude/casehub/claudony` before any other work.
 
 ## Git Discipline
 
-Two git repositories are active in every session:
-- **Workspace** (`/Users/mdproctor/claude/public/casehub/claudony`) — methodology artifacts: handover, blog, specs, plans, ADRs
-- **Project repo** (`/Users/mdproctor/claude/casehub/claudony`) — source code
+Two git repositories are active in every session: a **workspace** (methodology artifacts: handover, blog, specs, plans, ADRs) and the **project repo** (source code).
 
 Before any git operation, run `git rev-parse --show-toplevel` to confirm which repo is currently active. Do not assume — the session may have opened in either. cd to the correct repo before staging:
 - Source code commits → project repo
@@ -62,7 +60,7 @@ Before starting any branch: `git fetch upstream && git rebase upstream/main` to 
 | specs      | project     | lands in `docs/specs/` — promoted at epic close |
 | blog       | personal fork       | staged here; published via publish-blog (destination in ~/.claude/blog-routing.yaml) |
 | plans      | workspace   | stay in workspace permanently |
-| design     | workspace   | epic journal stays in workspace |
+| design     | project     | journal file lives in workspace design/; DESIGN.md merge target is project docs/DESIGN.md |
 | snapshots  | workspace   | stay in workspace permanently |
 | handover   | workspace   | |
 
