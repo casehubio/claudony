@@ -720,7 +720,11 @@
       "Skill(work)",
       "Bash(xargs '-I{}' python3 -c ' *)",
       "Skill(git-squash)",
-      "Skill(write-content)"
+      "Skill(write-content)",
+      "Bash(gh run *)",
+      "Bash(gh workflow *)",
+      "Bash(gh api *)",
+      "Skill(publish-blog)"
     ]
   }
 }

@@ -65,7 +65,7 @@ case-{caseId}/
 
 **`observe`** — Pure telemetry. Only `EVENT` messages. Agents post here for every significant tool call, state change, or decision point. No obligations are created. The dashboard streams this channel as a running activity log. This is also the substrate for future automated monitoring and watchdog alerts.
 
-**`oversight`** — The human governance channel. Agents post `QUERY` here when they need human input. Humans post `COMMAND` here to inject directives. The normative model makes this meaningful: a human `COMMAND` is a deontic act that can defeat a worker's current obligations (Layer 4 defeasibility). Human decisions posted here are recorded in the ledger as first-class events.
+**`oversight`** — The human governance channel. Agents post `COMMAND` here when requesting human approval for consequential actions, or `QUERY` when seeking human input. Humans respond with `RESPONSE`, `DECLINE`, `STATUS`, `DONE`, `FAILURE`, or `HANDOFF` as appropriate. The full commitment lifecycle is supported — `EVENT` is the only excluded type. Watchdog alerts about oversight commitments should register `notificationChannel = observe` (EVENTs on oversight are invisible to governance participants).
 
 ### Channel Semantics and the Normative Layers
 
@@ -590,7 +590,7 @@ Three named templates for common project setups. Choose at project initialisatio
 Channels:
   work      APPEND  all types        worker-to-worker coordination
   observe   APPEND  EVENT only       telemetry and dashboard streaming
-  oversight APPEND  QUERY, COMMAND   human governance
+  oversight APPEND  deniedTypes={EVENT}   human governance
 
 Participation: ACTIVE (all agents register and announce)
 ```
@@ -703,9 +703,9 @@ Both tools should import the layered examples in this document as their canonica
 - `share_data(key, description, content)`
 - `get_shared_data(key)`
 - `list_ledger_entries(channelName, type_filter?, sender?, since?, after_id?)`
-- `create_channel(name, description, semantic, barrier_contributors?, allowed_writers?, admin_instances?, rate_limit_per_channel?, rate_limit_per_instance?, allowed_types?)`
+- `create_channel(name, description, semantic, barrier_contributors?, allowed_writers?, admin_instances?, rate_limit_per_channel?, rate_limit_per_instance?, allowed_types?, denied_types?)`
 
-**`allowed_types`** — Pass `"EVENT"` when creating the observe channel; `"QUERY,COMMAND"` for the oversight channel. Enforced server-side by `MessageTypePolicy` SPI.
+**`allowed_types` / `denied_types`** — Pass `"EVENT"` as `allowed_types` when creating the observe channel (telemetry only, no obligations). Pass `"EVENT"` as `denied_types` when creating the oversight channel (all obligation-carrying types permitted; no telemetry). Work channel: both null (open). Enforced server-side by `StoredMessageTypePolicy`. Denial wins when a type appears in both fields; overlapping sets are rejected at channel creation time.
 - `list_channels()`
 
 **Claudony configuration:**
