@@ -23,7 +23,15 @@ public interface CaseChannelLayout {
     record ChannelSpec(
             String purpose,
             ChannelSemantic semantic,
+            /** Comma-separated permitted MessageType names, or {@code null} if open to all types. */
             Set<MessageType> allowedTypes,
+            /**
+             * MessageTypes explicitly denied on this channel. {@code null} = no denial.
+             * Denial wins when a type appears in both allowedTypes and deniedTypes.
+             * If a new MessageType is added to Qhorus with no commitment effect (like EVENT),
+             * add it here for governance channels — this comment is the mechanical anchor for that obligation.
+             */
+            Set<MessageType> deniedTypes,
             String description
     ) {}
 }
