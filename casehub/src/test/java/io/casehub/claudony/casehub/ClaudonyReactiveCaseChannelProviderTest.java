@@ -54,7 +54,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
     private void stubCreate(UUID caseId) {
         when(channelService.create(
                 contains(caseId.toString()), any(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), any()))
+                isNull(), isNull(), isNull(), isNull(), isNull(), any(), any()))
                 .thenAnswer(inv -> {
                     String name = inv.getArgument(0);
                     return Uni.createFrom().item(stubChannel(UUID.randomUUID(), name));
@@ -86,7 +86,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         // NormativeChannelLayout opens 3 channels on first touch
         verify(channelService, times(3)).create(
                 anyString(), any(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), any());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any(), any());
     }
 
     @Test
@@ -100,7 +100,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         // Still only 3 createChannel calls total (initialised on first touch)
         verify(channelService, times(3)).create(
                 anyString(), any(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), any());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any(), any());
     }
 
     @Test
@@ -115,7 +115,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
 
         verify(channelService, times(6)).create(
                 anyString(), any(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), any());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any(), any());
     }
 
     @Test
@@ -161,7 +161,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         // NormativeChannelLayout has 3 channels — should create exactly 3, not 6 or 9
         verify(channelService, times(3)).create(
                 anyString(), any(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), any());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any(), any());
     }
 
     @Test
@@ -171,7 +171,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         // First call: channelService.create fails
         when(channelService.create(
                 contains(caseId.toString()), any(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), any()))
+                isNull(), isNull(), isNull(), isNull(), isNull(), any(), any()))
                 .thenReturn(Uni.createFrom().failure(new RuntimeException("transient error")));
 
         assertThatThrownBy(() -> provider.openChannel(caseId, "work").await().indefinitely())
@@ -196,11 +196,11 @@ class ClaudonyReactiveCaseChannelProviderTest {
 
         verify(channelService).create(
                 eq("case-" + caseId + "/work"), any(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
-    void openChannel_oversightChannel_passesAllowedTypes() {
+    void openChannel_oversightChannel_passesNullAllowedTypesAndDeniedEvent() {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
@@ -208,7 +208,23 @@ class ClaudonyReactiveCaseChannelProviderTest {
 
         verify(channelService).create(
                 contains("/oversight"), any(), any(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), eq("COMMAND,QUERY"));
+                isNull(), isNull(), isNull(), isNull(), isNull(),
+                isNull(),        // allowedTypes: null (open)
+                eq("EVENT"));    // deniedTypes: "EVENT" (no telemetry)
+    }
+
+    @Test
+    void openChannel_observeChannel_passesAllowedEventNullDenied() {
+        UUID caseId = UUID.randomUUID();
+        stubCreate(caseId);
+
+        provider.openChannel(caseId, "observe").await().indefinitely();
+
+        verify(channelService).create(
+                contains("/observe"), any(), any(),
+                isNull(), isNull(), isNull(), isNull(), isNull(),
+                eq("EVENT"),  // allowedTypes: EVENT only
+                isNull());    // deniedTypes: null
     }
 
     @Test
@@ -221,7 +237,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         verify(channelService).create(
                 contains("/work"), any(),
                 argThat(s -> s != null && s.name().equals("APPEND")),
-                isNull(), isNull(), isNull(), isNull(), isNull(), any());
+                isNull(), isNull(), isNull(), isNull(), isNull(), any(), any());
     }
 
     @Test
