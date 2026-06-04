@@ -21,20 +21,20 @@ class MeshSystemPromptTemplateTest {
     private static final String CAPABILITY = "researcher";
 
     private static final List<ChannelSpec> NORMATIVE_SPECS = List.of(
-            new ChannelSpec("work", ChannelSemantic.APPEND, null,
+            new ChannelSpec("work", ChannelSemantic.APPEND, null, null,
                             "Primary coordination — all obligation-carrying message types"),
             new ChannelSpec("observe", ChannelSemantic.APPEND,
-                            Set.of(MessageType.EVENT), "Telemetry — EVENT only, no obligations created"),
+                            Set.of(MessageType.EVENT), null, "Telemetry — EVENT only, no obligations created"),
             new ChannelSpec("oversight", ChannelSemantic.APPEND,
-                            Set.of(MessageType.QUERY, MessageType.COMMAND),
-                            "Human governance — agent QUERY and human COMMAND")
+                            null, Set.of(MessageType.EVENT),
+                            "Human governance — all obligation-carrying types; no telemetry")
                                                                     );
 
     private static final List<ChannelSpec> SIMPLE_SPECS = List.of(
-            new ChannelSpec("work", ChannelSemantic.APPEND, null,
+            new ChannelSpec("work", ChannelSemantic.APPEND, null, null,
                             "Primary coordination — all obligation-carrying message types"),
             new ChannelSpec("observe", ChannelSemantic.APPEND,
-                            Set.of(MessageType.EVENT), "Telemetry — EVENT only, no obligations created")
+                            Set.of(MessageType.EVENT), null, "Telemetry — EVENT only, no obligations created")
                                                                  );
 
     private static WorkerSummary summary(String name, String output) {

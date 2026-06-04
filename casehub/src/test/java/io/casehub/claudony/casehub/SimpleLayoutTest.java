@@ -49,6 +49,22 @@ class SimpleLayoutTest {
     }
 
     @Test
+    void channelsFor_workChannel_deniedTypesIsNull() {
+        CaseChannelLayout.ChannelSpec work = layout.channelsFor(UUID.randomUUID(), null).stream()
+                .filter(s -> s.purpose().equals("work"))
+                .findFirst().orElseThrow();
+        assertThat(work.deniedTypes()).isNull();
+    }
+
+    @Test
+    void channelsFor_observeChannel_deniedTypesIsNull() {
+        CaseChannelLayout.ChannelSpec observe = layout.channelsFor(UUID.randomUUID(), null).stream()
+                .filter(s -> s.purpose().equals("observe"))
+                .findFirst().orElseThrow();
+        assertThat(observe.deniedTypes()).isNull();
+    }
+
+    @Test
     void channelsFor_hasNoOversightChannel() {
         List<CaseChannelLayout.ChannelSpec> specs = layout.channelsFor(UUID.randomUUID(), null);
         assertThat(specs).extracting(CaseChannelLayout.ChannelSpec::purpose)

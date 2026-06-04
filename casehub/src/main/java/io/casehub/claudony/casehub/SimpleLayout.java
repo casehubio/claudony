@@ -12,9 +12,9 @@ public class SimpleLayout implements CaseChannelLayout {
     @Override
     public List<ChannelSpec> channelsFor(UUID caseId, CaseDefinition definition) {
         return List.of(
-                new ChannelSpec("work", ChannelSemantic.APPEND, null,
+                new ChannelSpec("work", ChannelSemantic.APPEND, null, null,
                         "Primary coordination — all obligation-carrying message types"),
-                new ChannelSpec("observe", ChannelSemantic.APPEND, Set.of(MessageType.EVENT),
+                new ChannelSpec("observe", ChannelSemantic.APPEND, Set.of(MessageType.EVENT), null,
                         "Telemetry — EVENT only, no obligations created")
         );
     }
