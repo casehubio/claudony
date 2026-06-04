@@ -39,12 +39,11 @@ Before any git operation, run `git rev-parse --show-toplevel` to confirm which r
 - Source code commits → project repo
 - Methodology artifacts → workspace
 
-## Git Workflow — Fork Model
+## Git Workflow
 
-origin   → personal fork   (`git remote get-url origin`)
-upstream → casehubio       (`git remote get-url upstream`)
+origin   → casehubio/claudony (repo transferred 2026-06-04; fork distinction no longer applies)
 
-Before starting any branch: `git fetch upstream && git rebase upstream/main` to sync local main with casehubio. At work-end: rebase the branch onto local main, push to `origin main`. PRs to `upstream` are created separately, on demand — never automatically at work-end.
+Before starting any branch: `git fetch origin && git rebase origin/main` to sync local main. At work-end: rebase the branch onto local main, push to `origin main`. PRs are created on demand — never automatically at work-end.
 
 ## Rules
 
