@@ -724,7 +724,8 @@
       "Bash(gh run *)",
       "Bash(gh workflow *)",
       "Bash(gh api *)",
-      "Skill(publish-blog)"
+      "Skill(publish-blog)",
+      "Bash(GIT_SEQUENCE_EDITOR=\"cp /tmp/squash-plan.txt\" git rebase -i upstream/main)"
     ]
   }
 }
