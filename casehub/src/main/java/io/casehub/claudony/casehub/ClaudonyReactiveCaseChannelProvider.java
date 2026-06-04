@@ -117,8 +117,9 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
         Uni<Map<String, CaseChannel>> seed = Uni.createFrom().item(new ConcurrentHashMap<>());
         for (CaseChannelLayout.ChannelSpec spec : specs) {
             String allowedTypes = toAllowedTypesString(spec.allowedTypes());
+            String deniedTypes = toDeniedTypesString(spec.deniedTypes());
             seed = seed.flatMap(acc ->
-                    createQhorusChannel(caseId, spec.purpose(), spec.semantic().name(), allowedTypes)
+                    createQhorusChannel(caseId, spec.purpose(), spec.semantic().name(), allowedTypes, deniedTypes)
                             .map(ch -> {
                                 acc.put(spec.purpose(), ch);
                                 return acc;
@@ -127,12 +128,13 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
         return seed;
     }
 
-    private Uni<CaseChannel> createQhorusChannel(UUID caseId, String purpose, String semantic, String allowedTypes) {
+    private Uni<CaseChannel> createQhorusChannel(UUID caseId, String purpose, String semantic,
+            String allowedTypes, String deniedTypes) {
         String channelName = CaseChannel.channelName(caseId, purpose);
         io.casehub.qhorus.api.channel.ChannelSemantic channelSemantic =
                 semantic != null ? io.casehub.qhorus.api.channel.ChannelSemantic.valueOf(semantic) : null;
         return channelService.create(channelName, purpose, channelSemantic,
-                        null, null, null, null, null, allowedTypes)
+                        null, null, null, null, null, allowedTypes, deniedTypes)
                 .map(detail -> {
                     gateway.initChannel(detail.id,
                             new io.casehub.qhorus.api.gateway.ChannelRef(detail.id, detail.name));
@@ -148,6 +150,11 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     }
 
     private static String toAllowedTypesString(Set<MessageType> types) {
+        if (types == null || types.isEmpty()) return null;
+        return types.stream().map(MessageType::name).sorted().collect(Collectors.joining(","));
+    }
+
+    private static String toDeniedTypesString(Set<MessageType> types) {
         if (types == null || types.isEmpty()) return null;
         return types.stream().map(MessageType::name).sorted().collect(Collectors.joining(","));
     }
