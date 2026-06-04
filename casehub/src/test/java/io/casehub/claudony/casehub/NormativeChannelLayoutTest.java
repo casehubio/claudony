@@ -41,11 +41,36 @@ class NormativeChannelLayoutTest {
     }
 
     @Test
-    void channelsFor_oversightChannel_allowsQueryAndCommand() {
+    void channelsFor_oversightChannel_allowedTypesIsNull() {
         CaseChannelLayout.ChannelSpec oversight = layout.channelsFor(UUID.randomUUID(), null).stream()
                 .filter(s -> s.purpose().equals("oversight"))
                 .findFirst().orElseThrow();
-        assertThat(oversight.allowedTypes()).containsExactlyInAnyOrder(MessageType.QUERY, MessageType.COMMAND);
+        assertThat(oversight.allowedTypes()).isNull();
+    }
+
+    @Test
+    void channelsFor_oversightChannel_deniedTypesContainsEventOnly() {
+        CaseChannelLayout.ChannelSpec oversight = layout.channelsFor(UUID.randomUUID(), null).stream()
+                .filter(s -> s.purpose().equals("oversight"))
+                .findFirst().orElseThrow();
+        assertThat(oversight.deniedTypes()).containsExactly(MessageType.EVENT);
+    }
+
+    @Test
+    void channelsFor_workChannel_deniedTypesIsNull() {
+        CaseChannelLayout.ChannelSpec work = layout.channelsFor(UUID.randomUUID(), null).stream()
+                .filter(s -> s.purpose().equals("work"))
+                .findFirst().orElseThrow();
+        assertThat(work.deniedTypes()).isNull();
+    }
+
+    @Test
+    void channelsFor_observeChannel_deniedTypesIsNull() {
+        CaseChannelLayout.ChannelSpec observe = layout.channelsFor(UUID.randomUUID(), null).stream()
+                .filter(s -> s.purpose().equals("observe"))
+                .findFirst().orElseThrow();
+        // deniedTypes null on observe — EVENT is already the only allowed type; denial is redundant
+        assertThat(observe.deniedTypes()).isNull();
     }
 
     @Test

@@ -12,13 +12,16 @@ public class NormativeChannelLayout implements CaseChannelLayout {
     @Override
     public List<ChannelSpec> channelsFor(UUID caseId, CaseDefinition definition) {
         return List.of(
-                new ChannelSpec("work", ChannelSemantic.APPEND, null,
+                new ChannelSpec("work", ChannelSemantic.APPEND, null, null,
                         "Primary coordination — all obligation-carrying message types"),
-                new ChannelSpec("observe", ChannelSemantic.APPEND, Set.of(MessageType.EVENT),
+                new ChannelSpec("observe", ChannelSemantic.APPEND, Set.of(MessageType.EVENT), null,
                         "Telemetry — EVENT only, no obligations created"),
                 new ChannelSpec("oversight", ChannelSemantic.APPEND,
-                        Set.of(MessageType.QUERY, MessageType.COMMAND),
-                        "Human governance — agent QUERY and human COMMAND")
+                        null,                       // allowedTypes: open — all obligation-carrying types permitted
+                        // If a new MessageType is added to Qhorus with no commitment effect (like EVENT),
+                        // add it here. This comment is the mechanical anchor for that obligation.
+                        Set.of(MessageType.EVENT),  // deniedTypes: no telemetry on the governance channel
+                        "Human governance — all obligation-carrying types; no telemetry")
         );
     }
 }
