@@ -4,6 +4,8 @@ import io.casehub.claudony.config.ClaudonyConfig;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+import java.util.UUID;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
@@ -26,6 +28,31 @@ class ServerStartupTest {
                 .forEach(name ->
                     assertTrue(registryNames.contains(name),
                         "Expected registry to contain tmux session: " + name));
+    }
+
+    @Test
+    void bootstrapRegistry_populatesCaseIdAndRole_fromTmuxOptions() throws Exception {
+        var caseId = UUID.randomUUID();
+        var roleName = "test-role";
+        var sessionName = config.tmuxPrefix() + "bootstrap-casehub-" + System.currentTimeMillis();
+        tmux.createSession(sessionName, System.getProperty("user.home"), "bash");
+        tmux.setSessionOption(sessionName, "@casehub_case_id", caseId.toString());
+        tmux.setSessionOption(sessionName, "@casehub_role", roleName);
+
+        try {
+            serverStartup.bootstrapRegistry();
+
+            var session = registry.all().stream()
+                    .filter(s -> s.name().equals(sessionName))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Session not in registry after bootstrap"));
+            assertThat(session.caseId()).contains(caseId.toString());
+            assertThat(session.roleName()).contains(roleName);
+        } finally {
+            registry.all().stream().filter(s -> s.name().equals(sessionName))
+                    .map(s -> s.id()).findFirst().ifPresent(registry::remove);
+            if (tmux.sessionExists(sessionName)) tmux.killSession(sessionName);
+        }
     }
 
     @Test

@@ -4,6 +4,7 @@ import io.casehub.claudony.Await;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
@@ -72,6 +73,37 @@ class TmuxServiceTest {
         Thread.sleep(300);
         var command = tmux.displayMessage(TEST_SESSION, "#{pane_current_command}");
         assertFalse(command.isBlank());
+    }
+
+    @Test
+    void createWorkerSession_sessionClosesWhenCommandExits() throws Exception {
+        tmux.createWorkerSession(TEST_SESSION, System.getProperty("user.home"), "true");
+        // "true" exits immediately; with direct command execution the session must close
+        Await.until(() -> {
+            try { return !tmux.sessionExists(TEST_SESSION); }
+            catch (Exception e) { return false; }
+        }, "session to close after direct command exits");
+    }
+
+    @Test
+    void createWorkerSession_sessionExistsWhileCommandIsRunning() throws Exception {
+        tmux.createWorkerSession(TEST_SESSION, System.getProperty("user.home"), "sleep 30");
+        assertTrue(tmux.sessionExists(TEST_SESSION), "Session should be alive while command runs");
+    }
+
+    @Test
+    void setAndGetSessionOption_roundTrips() throws Exception {
+        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "echo hello");
+        tmux.setSessionOption(TEST_SESSION, "@casehub_case_id", "test-uuid-value");
+        var result = tmux.getSessionOption(TEST_SESSION, "@casehub_case_id");
+        assertThat(result).isPresent().hasValue("test-uuid-value");
+    }
+
+    @Test
+    void getSessionOption_returnsEmpty_whenKeyAbsent() throws Exception {
+        tmux.createSession(TEST_SESSION, System.getProperty("user.home"), "echo hello");
+        var result = tmux.getSessionOption(TEST_SESSION, "@nonexistent_key");
+        assertThat(result).isEmpty();
     }
 
     @Test

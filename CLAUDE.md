@@ -393,7 +393,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-06-04, after #142 oversight deniedTypes):** 4 in `claudony-core` + 147 in `claudony-casehub` + 387 in `claudony-app` = **538 total, all passing**. Previous baseline: 532 (4 + 141 + 387, 2026-05-31 after #140/#125). Note: engine SNAPSHOT stability window — `DefaultWorkOrchestrator` added to `exclude-types` in `%test` profile.
+**Baseline (as of 2026-06-05, after #146 tmux exit watcher):** 4 in `claudony-core` + 170 in `claudony-casehub` + 386 in `claudony-app` = **560 total, all passing**. Previous baseline: 538 (4 + 147 + 387, 2026-06-04 after #142). Note: engine SNAPSHOT stability window — `DefaultWorkOrchestrator` added to `exclude-types` in `%test` profile.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties

@@ -29,7 +29,14 @@ claudony-casehub — io.casehub.claudony.casehub
 ├── EmptyCaseLineageQuery           — @DefaultBean stub (active when ledger not configured)
 ├── JpaCaseLineageQuery             — @Alternative @Priority(1) — queries case_ledger_entry
 │                                     for WORKER_EXECUTION_COMPLETED events via qhorus PU
-├── ClaudonyWorkerProvisioner       — WorkerProvisioner SPI: creates tmux sessions
+├── ClaudonyReactiveWorkerProvisioner — ReactiveWorkerProvisioner SPI: creates tmux sessions via
+│                                       createWorkerSession() (direct command, session dies on exit);
+│                                       persists @casehub_case_id + @casehub_role to tmux session options
+│                                       for recovery; terminate() removes from registry before kill
+├── ClaudonyWorkerExecutionManager  — WorkerExecutionManager SPI: starts a virtual thread watcher
+│                                       per session after provision; polls tmux has-session; publishes
+│                                       WorkflowExecutionCompleted via EventBus.send() when session exits;
+│                                       atomic registry.remove() gate prevents double-publish
 ├── ClaudonyCaseChannelProvider     — CaseChannelProvider SPI: Qhorus-backed channels
 ├── ClaudonyWorkerContextProvider   — WorkerContextProvider SPI: lineage + channel context
 ├── ClaudonyWorkerStatusListener    — WorkerStatusListener SPI: lifecycle → SessionRegistry
@@ -55,7 +62,9 @@ io.casehub.claudony — claudony-core + claudony-app
 ├── server/
 │   ├── model/                  — Session (+ caseId, roleName for CaseHub workers),
 │   │                             SessionStatus, SessionResponse, request records
-│   ├── TmuxService             — ProcessBuilder wrappers for tmux commands
+│   ├── TmuxService             — ProcessBuilder wrappers for tmux commands; createWorkerSession()
+│   │                             runs command via sh -c so session closes when command exits;
+│   │                             setSessionOption/getSessionOption for CaseHub metadata persistence
 │   ├── SessionRegistry         — in-memory ConcurrentHashMap; findByCaseId() for case worker queries
 │   ├── WorkerCaseLifecycleEvent — CDI event bridging casehub→app (avoids circular dep)
 │   ├── SessionResource         — REST /api/sessions (CRUD + resize + ?caseId= filter;
@@ -71,7 +80,9 @@ io.casehub.claudony — claudony-core + claudony-app
 │   │   ├── HybridStrategy      — events + configurable heartbeat (default 30s)
 │   │   └── RegistryHooksStrategy — fires on any SessionRegistry mutation
 │   ├── TerminalWebSocket       — WebSocket /ws/{id}, pipe-pane + FIFO streaming
-│   ├── ServerStartup           — startup health checks, tmux bootstrap
+│   ├── ServerStartup           — startup health checks, tmux bootstrap; reads @casehub_case_id /
+│   │                             @casehub_role options from tmux sessions; bootstrapCasehubWatchers()
+│   │                             restarts watchers for in-flight CaseHub sessions after server restart
 │   ├── auth/
 │   │   ├── ApiKeyAuthMechanism    — HttpAuthenticationMechanism for X-Api-Key header
 │   │   ├── ApiKeyService          — key generation, file persistence, banner logging
@@ -120,7 +131,7 @@ io.casehub.claudony — claudony-core + claudony-app
 
 ### Source of Truth: tmux
 
-Sessions live in tmux independently of the Quarkus process. On server restart, `ServerStartup.bootstrapRegistry()` reads `tmux list-sessions` and re-registers any session with the `claudony-` prefix. Working directory shows as "unknown" for bootstrapped sessions — expected and acceptable.
+Sessions live in tmux independently of the Quarkus process. On server restart, `ServerStartup.bootstrapRegistry()` reads `tmux list-sessions` and re-registers any session with the `claudony-` prefix. CaseHub worker sessions additionally have `@casehub_case_id` and `@casehub_role` set as tmux session options during provision — bootstrapRegistry reads these so recovered sessions carry their CaseHub metadata. `bootstrapCasehubWatchers()` then restarts exit watchers for recovered workers (requires engine on classpath). Working directory shows as "unknown" for bootstrapped sessions — expected and acceptable.
 
 ### Terminal Streaming (no PTY)
 

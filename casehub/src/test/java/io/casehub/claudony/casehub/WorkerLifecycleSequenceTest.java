@@ -71,7 +71,7 @@ class WorkerLifecycleSequenceTest {
         // After provision: session registered by UUID, starts IDLE
         assertThat(registry.find(sessionId)).isPresent();
         assertThat(registry.find(sessionId).get().status()).isEqualTo(SessionStatus.IDLE);
-        verify(tmux).createSession(
+        verify(tmux).createWorkerSession(
                 contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX), anyString(), anyString());
 
         // CaseEngine signals work started → ACTIVE (passes caseId in sessionMeta)
@@ -86,7 +86,7 @@ class WorkerLifecycleSequenceTest {
         // CaseEngine detects stall → event fired, tmux NOT killed (stall ≠ fault)
         listener.onWorkerStalled(roleName);
         verify(events).fire(new ClaudonyWorkerStatusListener.WorkerStalledEvent(roleName));
-        verifyNoMoreInteractions(tmux); // no kill on stall
+        verify(tmux, never()).killSession(anyString()); // stall does not kill the session
         assertThat(registry.find(sessionId)).isPresent();
     }
 

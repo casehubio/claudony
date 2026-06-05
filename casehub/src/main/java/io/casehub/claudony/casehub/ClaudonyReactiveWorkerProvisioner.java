@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @ApplicationScoped
 public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisioner {
 
-    static final String SESSION_PREFIX = "claudony-worker-";
+    public static final String SESSION_PREFIX = "claudony-worker-";
 
     // Bridges causedByEntryId from provision() to ClaudonyLedgerEventCapture.
     // Keyed by caseId; drained when WorkerStarted fires. Safe for concurrent access;
@@ -70,12 +70,15 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
     public Uni<Void> terminate(String workerId) {
         return Uni.createFrom()
                   .<Void>item(() -> {
+                      // Remove from registry FIRST — this is the watcher's cancellation signal.
+                      // The watcher checks registry.find() at the top of each loop; removing here
+                      // before killing tmux ensures it exits cleanly without publishing a false completion.
+                      registry.remove(workerId);
                       try {
                           tmux.killSession(SESSION_PREFIX + workerId);
                       } catch (IOException | InterruptedException e) {
                           // Session may already be gone — no-op
                       }
-                      registry.remove(workerId);
                       return null;
                   })
                   .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
@@ -113,7 +116,12 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         String sessionName = SESSION_PREFIX + sessionId;
 
         try {
-            tmux.createSession(sessionName, defaultWorkingDir, command);
+            tmux.createWorkerSession(sessionName, defaultWorkingDir, command);
+            // Persist caseId and roleName in tmux session options for recovery after server restart
+            if (context.caseId() != null) {
+                tmux.setSessionOption(sessionName, "@casehub_case_id", context.caseId().toString());
+                tmux.setSessionOption(sessionName, "@casehub_role", roleName);
+            }
         } catch (IOException | InterruptedException e) {
             throw new ProvisioningException("Failed to create tmux session for worker " + sessionId, e);
         }
