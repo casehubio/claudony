@@ -1,18 +1,26 @@
 package io.casehub.claudony.server;
 
+import io.casehub.claudony.casehub.CaseHubConfig;
+import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.claudony.server.auth.ApiKeyService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
+import io.casehub.engine.common.internal.model.CaseInstance;
+import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
+import io.casehub.api.model.Worker;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,9 +30,12 @@ public class ServerStartup {
     private static final Logger LOG = Logger.getLogger(ServerStartup.class);
 
     @Inject ClaudonyConfig  config;
+    @Inject CaseHubConfig  casehubConfig;
     @Inject TmuxService     tmux;
     @Inject SessionRegistry registry;
     @Inject ApiKeyService   apiKeyService;
+    @Inject Instance<ClaudonyWorkerExecutionManager> workerExecManager;
+    @Inject Instance<CrossTenantCaseInstanceRepository> caseInstanceRepo;
 
     void onStart(@Observes StartupEvent event) {
         if (!config.isServerMode()) return;
@@ -32,6 +43,7 @@ public class ServerStartup {
         ensureDirectories();
         apiKeyService.initServer();
         bootstrapRegistry();
+        if (casehubConfig.enabled()) bootstrapCasehubWatchers();
         LOG.infof("Claudony Server ready — http://%s:%d", config.bind(), config.port());
     }
 
@@ -68,16 +80,67 @@ public class ServerStartup {
             for (var name : names) {
                 if (!name.startsWith(prefix)) continue;
                 var now = Instant.now();
+                Optional<String> caseId = Optional.empty();
+                Optional<String> roleName = Optional.empty();
+                try {
+                    // Read casehub metadata from tmux session options (set during provision)
+                    caseId = tmux.getSessionOption(name, "@casehub_case_id");
+                    roleName = tmux.getSessionOption(name, "@casehub_role");
+                } catch (IOException | InterruptedException e) {
+                    // A single session option read failure must not abort the loop.
+                    // Register without metadata — session is visible, but recovery watcher won't start.
+                    LOG.warnf("Could not read casehub options for session %s — registering without metadata: %s",
+                            name, e.getMessage());
+                }
                 registry.register(new Session(
                         UUID.randomUUID().toString(), name,
                         "unknown", config.claudeCommand(),
-                        SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty()));
+                        SessionStatus.IDLE, now, now, Optional.empty(), caseId, roleName));
                 count++;
             }
             LOG.infof("Bootstrapped %d existing session(s) from tmux", count);
         } catch (IOException | InterruptedException e) {
             LOG.warn("Could not bootstrap from tmux list-sessions: " + e.getMessage());
         }
+    }
+
+    void bootstrapCasehubWatchers() {
+        if (caseInstanceRepo.isUnsatisfied()) {
+            LOG.debug("CrossTenantCaseInstanceRepository not available — skipping casehub watcher recovery");
+            return;
+        }
+        if (workerExecManager.isUnsatisfied()) {
+            LOG.debug("ClaudonyWorkerExecutionManager not available — skipping casehub watcher recovery");
+            return;
+        }
+        var repo = caseInstanceRepo.get();
+        var execManager = workerExecManager.get();
+        int started = 0;
+        for (var session : registry.all()) {
+            if (session.caseId().isEmpty()) continue;
+            UUID caseId;
+            try {
+                caseId = UUID.fromString(session.caseId().get());
+            } catch (IllegalArgumentException e) {
+                LOG.warnf("Invalid caseId in registry for session %s — skipping", session.id());
+                continue;
+            }
+            try {
+                CaseInstance instance = repo.findByUuid(caseId).await().atMost(Duration.ofSeconds(5));
+                if (instance == null) {
+                    LOG.infof("No CaseInstance for caseId %s — skipping recovery watcher", caseId);
+                    continue;
+                }
+                var roleName = session.roleName().orElse("worker");
+                var worker = new Worker(roleName, List.of(), ctx -> java.util.Map.of());
+                execManager.watch(session.id(), session.name(), instance, worker);
+                started++;
+            } catch (Exception e) {
+                LOG.errorf(e, "Failed to recover watcher for caseId %s session %s — skipping",
+                        caseId, session.id());
+            }
+        }
+        LOG.infof("Started %d casehub watcher(s) for recovered sessions", started);
     }
 
 }

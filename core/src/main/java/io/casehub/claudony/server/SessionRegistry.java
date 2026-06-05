@@ -28,9 +28,9 @@ public class SessionRegistry {
         return Collections.unmodifiableCollection(sessions.values());
     }
 
-    public void remove(String id) {
+    public Session remove(String id) {
         notifyListeners(id);
-        sessions.remove(id);
+        return sessions.remove(id);
     }
 
     public void updateStatus(String id, SessionStatus status) {

@@ -9,6 +9,7 @@ import io.casehub.api.spi.ProvisioningException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -34,7 +35,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
     }
 
     @Test
-    void provision_createsSessionAndRegistersWorker() throws Exception {
+    void provision_createsWorkerSessionAndRegistersWorker() throws Exception {
         var caseId = UUID.randomUUID();
 
         ProvisionResult result = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
@@ -42,8 +43,28 @@ class ClaudonyReactiveWorkerProvisionerTest {
                 .indefinitely();
 
         assertThat(result).isNotNull();
-        verify(tmux).createSession(contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX), eq("/tmp/workers"), eq("claude"));
+        verify(tmux).createWorkerSession(
+                contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX), eq("/tmp/workers"), eq("claude"));
         verify(registry).register(any(Session.class));
+    }
+
+    @Test
+    void provision_setsCasehubTmuxOptions_afterSessionCreation() throws Exception {
+        var caseId = UUID.randomUUID();
+
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
+                .await()
+                .indefinitely();
+
+        // caseId and roleName must be persisted to tmux options for recovery after restart
+        verify(tmux).setSessionOption(
+                contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX),
+                eq("@casehub_case_id"),
+                eq(caseId.toString()));
+        verify(tmux).setSessionOption(
+                contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX),
+                eq("@casehub_role"),
+                eq("code-reviewer"));
     }
 
     @Test
@@ -73,7 +94,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
     @Test
     void provision_tmuxFails_failsWithProvisioningException() throws Exception {
         doThrow(new java.io.IOException("tmux not found")).when(tmux)
-                .createSession(anyString(), anyString(), anyString());
+                .createWorkerSession(anyString(), anyString(), anyString());
 
         assertThatThrownBy(() -> provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
                 .await()
@@ -98,13 +119,17 @@ class ClaudonyReactiveWorkerProvisionerTest {
     }
 
     @Test
-    void terminate_killsSessionAndRemovesFromRegistry() throws Exception {
+    void terminate_removesFromRegistryFirst_thenKillsSession() throws Exception {
+        // Order matters: registry.remove() is the watcher cancellation signal.
+        // It must happen BEFORE tmux.killSession() so the watcher sees the session
+        // absent in the registry and stops without publishing a false completion.
         provisioner.terminate("worker-abc")
                 .await()
                 .indefinitely();
 
-        verify(tmux).killSession(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + "worker-abc");
-        verify(registry).remove("worker-abc");
+        InOrder inOrder = inOrder(registry, tmux);
+        inOrder.verify(registry).remove("worker-abc");
+        inOrder.verify(tmux).killSession(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + "worker-abc");
     }
 
     @Test

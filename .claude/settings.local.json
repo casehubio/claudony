@@ -725,7 +725,9 @@
       "Bash(gh workflow *)",
       "Bash(gh api *)",
       "Skill(publish-blog)",
-      "Bash(GIT_SEQUENCE_EDITOR=\"cp /tmp/squash-plan.txt\" git rebase -i upstream/main)"
+      "Bash(GIT_SEQUENCE_EDITOR=\"cp /tmp/squash-plan.txt\" git rebase -i upstream/main)",
+      "Bash(tmux show-options *)",
+      "Bash(tmux has-session *)"
     ]
   }
 }

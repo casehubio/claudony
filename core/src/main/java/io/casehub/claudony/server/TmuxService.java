@@ -3,6 +3,7 @@ package io.casehub.claudony.server;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.io.*;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -31,6 +32,43 @@ public class TmuxService {
                 .redirectErrorStream(true).start();
         p2.getInputStream().transferTo(OutputStream.nullOutputStream());
         p2.waitFor();
+    }
+
+    /**
+     * Creates a tmux session that runs the command via {@code sh -c} so the session closes
+     * when the command exits. {@code remain-on-exit off} is set explicitly to override
+     * any user ~/.tmux.conf setting. Use for CaseHub workers where session lifetime == command lifetime.
+     */
+    public void createWorkerSession(String name, String workingDir, String command)
+            throws IOException, InterruptedException {
+        var p1 = new ProcessBuilder("tmux", "new-session", "-d", "-s", name, "-c", workingDir,
+                "--", "sh", "-c", command)
+                .redirectErrorStream(true).start();
+        p1.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p1.waitFor();
+        // Explicit enforcement — overrides any remain-on-exit on in ~/.tmux.conf
+        var p2 = new ProcessBuilder("tmux", "set-option", "-t", name, "remain-on-exit", "off")
+                .redirectErrorStream(true).start();
+        p2.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p2.waitFor();
+    }
+
+    public void setSessionOption(String name, String key, String value)
+            throws IOException, InterruptedException {
+        var p = new ProcessBuilder("tmux", "set-option", "-t", name, key, value)
+                .redirectErrorStream(true).start();
+        p.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p.waitFor();
+    }
+
+    public Optional<String> getSessionOption(String name, String key)
+            throws IOException, InterruptedException {
+        var p = new ProcessBuilder("tmux", "show-options", "-t", name, "-v", key)
+                .redirectErrorStream(false).start();
+        var value = new String(p.getInputStream().readAllBytes()).trim();
+        int exit = p.waitFor();
+        if (exit != 0 || value.isBlank()) return Optional.empty();
+        return Optional.of(value);
     }
 
     public void killSession(String name) throws IOException, InterruptedException {

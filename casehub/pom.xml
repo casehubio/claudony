@@ -28,6 +28,18 @@
             <artifactId>casehub-engine-api</artifactId>
         </dependency>
 
+        <!-- WorkerExecutionManager SPI + WorkflowExecutionCompleted + CaseInstance -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-engine-common</artifactId>
+        </dependency>
+
+        <!-- Vert.x EventBus for WorkflowExecutionCompleted publication -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-vertx</artifactId>
+        </dependency>
+
         <!-- CaseHub ledger for WorkerContextProvider lineage queries -->
         <dependency>
             <groupId>io.casehub</groupId>
@@ -63,6 +75,11 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

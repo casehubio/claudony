@@ -19,6 +19,14 @@ public interface CaseHubConfig {
     @WithDefault("active")
     String meshParticipation();
 
+    @WithName("worker-exit-poll-ms")
+    @WithDefault("5000")
+    long workerExitPollMs();
+
+    @WithName("worker-exit-max-poll-failures")
+    @WithDefault("3")
+    int workerExitMaxPollFailures();
+
     Workers workers();
 
     interface Workers {

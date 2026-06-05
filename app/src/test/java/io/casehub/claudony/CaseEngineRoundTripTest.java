@@ -3,18 +3,17 @@ package io.casehub.claudony;
 import io.casehub.api.model.Capability;
 import io.casehub.api.model.Worker;
 import io.casehub.api.model.WorkerSummary;
+import io.casehub.claudony.casehub.ClaudonyReactiveWorkerProvisioner;
+import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.claudony.casehub.JpaCaseLineageQuery;
+import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
-import io.casehub.engine.common.internal.event.EventBusAddresses;
-import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
-import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import org.awaitility.Awaitility;
@@ -29,8 +28,8 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * CaseEngine round-trip integration test.
@@ -95,50 +94,48 @@ class CaseEngineRoundTripTest {
 
     @Inject TestResearcherCase researcherCase;
     @Inject JpaCaseLineageQuery lineageQuery;
+    @Inject SessionRegistry sessionRegistry;
     @Inject CrossTenantCaseInstanceRepository caseInstanceRepository;
-    @Inject EventBus eventBus;
+    @Inject ClaudonyWorkerExecutionManager execManager;
     @Inject Event<CaseLifecycleEvent> lifecycleEvents;
 
     @InjectMock TmuxService tmuxService;
 
     @Test
-    void startCase_engineProvisions_andLineageReturnsCompletedSummary() throws Exception {
-        doNothing().when(tmuxService).createSession(anyString(), anyString(), anyString());
-
-        // Start via the true engine entry point. CaseStartedEventHandler (blocking=true)
-        // handles CASE_STARTED, registers Quartz triggers (RAM store), fires CONTEXT_CHANGED.
+    void startCase_engineProvisions_watcherDetectsExit_andLineageReturnsCompletedSummary()
+            throws Exception {
         UUID caseId = researcherCase.startCase(Map.of("topic", "test-topic"))
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
 
-        // Wait for ClaudonyReactiveWorkerProvisioner.provision() → tmuxService.createSession()
+        // Wait for provision() → createWorkerSession()
         Awaitility.await()
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(200))
                 .untilAsserted(() ->
                         verify(tmuxService, atLeastOnce())
-                                .createSession(anyString(), anyString(), anyString()));
+                                .createWorkerSession(anyString(), anyString(), anyString()));
 
-        // Drive completion: publish WorkflowExecutionCompleted to the engine event bus.
-        CaseInstance instance = caseInstanceRepository.findByUuid(caseId)
-                .await().atMost(Duration.ofSeconds(5));
-        Capability cap = new Capability("researcher", "{}", "{}");
-        Worker provisioned = new Worker("researcher", List.of(cap), ctx -> Map.of());
+        // WorkOrchestrator is excluded from CasehubEnabledProfile (it needs AgentRoutingStrategy etc.).
+        // Start the watcher manually by calling watch() directly — equivalent to WorkerExecutionManager.submit().
+        var session = sessionRegistry.findByCaseId(caseId.toString()).get(0);
+        var instance = caseInstanceRepository.findByUuid(caseId).await().atMost(Duration.ofSeconds(5));
+        var cap = new Capability("researcher", "{}", "{}");
+        var worker = new Worker("researcher", List.of(cap), ctx -> Map.of());
 
-        // Simulate the WorkerExecutionStarted lifecycle event that Quartz would normally fire
-        // (WorkerScheduleEventHandler is excluded from CasehubEnabledProfile so Quartz doesn't run).
-        // Since engine#390, WorkerExecutionCompleted has actorId="system"; lineage resolves the
-        // worker name from the nearest preceding WorkerExecutionStarted entry.
+        // Simulate WorkerExecutionStarted BEFORE starting the watcher.
+        // Lineage resolves the worker name from the preceding Started entry (engine#390:
+        // WorkerExecutionCompleted carries actorId="system", not the worker name).
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
                 caseId, null, "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
                 "researcher", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
 
-        eventBus.publish(
-                EventBusAddresses.WORKER_EXECUTION_FINISHED,
-                new WorkflowExecutionCompleted(
-                        instance, provisioned, UUID.randomUUID().toString(), Map.of()));
+        // Now start the watcher. sessionExists()→false triggers immediate completion publish.
+        when(tmuxService.sessionExists(anyString())).thenReturn(false);
+        execManager.watch(session.id(), session.name(), instance, worker);
 
-        // Wait for ClaudonyLedgerEventCapture (@ObservesAsync) to write the ledger entry.
+        // Wait for: watcher publishes completion → WorkflowExecutionCompletedHandler processes it
+        // → fireAsync(CaseLifecycleEvent WorkerExecutionCompleted) → ClaudonyLedgerEventCapture writes ledger
         Awaitility.await()
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(200))

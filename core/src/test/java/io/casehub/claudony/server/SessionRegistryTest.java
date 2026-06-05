@@ -60,6 +60,23 @@ class SessionRegistryTest {
     }
 
     @Test
+    void remove_returnsRemovedSession() {
+        var s = session("s5", "case-5");
+        registry.register(s);
+
+        var removed = registry.remove("s5");
+
+        assertThat(removed).isEqualTo(s);
+        assertThat(registry.find("s5")).isEmpty();
+    }
+
+    @Test
+    void remove_returnsNull_whenSessionAbsent() {
+        var removed = registry.remove("nonexistent");
+        assertThat(removed).isNull();
+    }
+
+    @Test
     void multipleListeners_allNotified() {
         List<String> l1 = new ArrayList<>(), l2 = new ArrayList<>();
         registry.addChangeListener(l1::add);
