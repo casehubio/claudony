@@ -2,12 +2,14 @@ package io.casehub.claudony.casehub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.Mockito.when;
 
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.event.Event;
@@ -48,6 +50,9 @@ class ClaudonyLedgerEventCaptureTest {
 
     @Inject
     ClaudonyReactiveWorkerProvisioner provisioner;
+
+    @InjectMock
+    ClaudonyWorkerExecutionManager execManager;
 
     @Test
     @TestTransaction
@@ -204,6 +209,49 @@ class ClaudonyLedgerEventCaptureTest {
         assertThat(entries).hasSize(2);
         assertThat(entries.get(0).causedByEntryId).isNotNull();
         assertThat(entries.get(1).causedByEntryId).isNull();
+    }
+
+    @Test
+    @TestTransaction
+    void workerExecutionCompleted_writesLedgerEntry_whenNoPendingSignal() {
+        UUID caseId = UUID.randomUUID();
+        when(execManager.drainExitSignal(caseId)).thenReturn(null);
+
+        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+                        caseId, null, "ExecuteWorker", "WorkerExecutionCompleted",
+                        "ACTIVE", "system", "SYSTEM", null))
+                .toCompletableFuture().join();
+
+        // In default profile CaseHubRuntime is unsatisfied — signal guard skips.
+        // Verify ledger entry is still written for WorkerExecutionCompleted.
+        var entries = findByCaseId(caseId);
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).eventType).isEqualTo("WorkerExecutionCompleted");
+    }
+
+    @Test
+    @TestTransaction
+    void workerStarted_andWorkerCompleted_bothWriteLedgerEntries() {
+        UUID caseId = UUID.randomUUID();
+        UUID causedBy = UUID.randomUUID();
+        provisioner.seedCausalContextForTest(caseId, causedBy);
+        when(execManager.drainExitSignal(caseId)).thenReturn(null);
+
+        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+                        caseId, null, "ProvisionWorker", "WorkerStarted", null, null, "System", null))
+                .toCompletableFuture().join();
+        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+                        caseId, null, "ExecuteWorker", "WorkerExecutionCompleted",
+                        "ACTIVE", "system", "SYSTEM", null))
+                .toCompletableFuture().join();
+
+        var entries = findByCaseId(caseId);
+        assertThat(entries).hasSize(2);
+        assertThat(entries.get(0).causedByEntryId).isEqualTo(causedBy);
+        assertThat(entries.get(1).eventType).isEqualTo("WorkerExecutionCompleted");
+        assertThat(entries.get(0).sequenceNumber).isEqualTo(1);
+        assertThat(entries.get(1).sequenceNumber).isEqualTo(2);
+        assertThat(entries.get(1).causedByEntryId).isNull(); // WorkerExecutionCompleted does not set causal link
     }
 
     private List<CaseLedgerEntry> findByCaseId(UUID caseId) {

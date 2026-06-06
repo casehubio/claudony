@@ -1,5 +1,6 @@
 package io.casehub.claudony.casehub;
 
+import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorTypeResolver;
@@ -7,6 +8,7 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -48,6 +50,12 @@ public class ClaudonyLedgerEventCapture {
     @Inject
     ClaudonyReactiveWorkerProvisioner provisioner;
 
+    @Inject
+    ClaudonyWorkerExecutionManager execManager;
+
+    @Inject
+    Instance<CaseHubRuntime> caseHubRuntime;
+
     @Transactional
     void onCaseLifecycleEvent(@ObservesAsync CaseLifecycleEvent event) {
         if (event.caseId() == null || event.eventType() == null) {
@@ -80,6 +88,16 @@ public class ClaudonyLedgerEventCapture {
 
         LOG.debugf("Ledger entry written: caseId=%s seq=%d event=%s actor=%s",
                 event.caseId(), seq, event.eventType(), entry.actorId);
+
+        // Signal engine that this worker's tmux session exited → triggers context re-evaluation.
+        // Must fire AFTER em.flush() so the engine sees the completed entry if it queries the ledger.
+        if ("WorkerExecutionCompleted".equals(event.eventType())) {
+            String roleName = execManager.drainExitSignal(event.caseId());
+            if (roleName != null && !caseHubRuntime.isUnsatisfied()) {
+                caseHubRuntime.get().signal(
+                        event.caseId(), "workers." + roleName + ".exited", true);
+            }
+        }
     }
 
     private int nextSequenceNumber(UUID caseId) {

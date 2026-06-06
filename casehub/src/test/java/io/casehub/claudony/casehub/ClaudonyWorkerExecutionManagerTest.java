@@ -332,4 +332,33 @@ class ClaudonyWorkerExecutionManagerTest {
     private Worker worker(String name) {
         return new Worker(name, List.of(new Capability(name, "{}", "{}")), ctx -> Map.of());
     }
+
+    // ── drainExitSignal ────────────────────────────────────────────────────────
+
+    @Test
+    void workerExit_storesPendingExitSignal() throws Exception {
+        var caseId = UUID.randomUUID();
+        var sessionId = "sig001";
+        var sessionName = SESSION_PREFIX + sessionId;
+        seedSession(sessionId, caseId, "researcher");
+        when(tmuxService.sessionExists(sessionName)).thenReturn(false);
+
+        manager.watch(sessionId, sessionName, caseInstance(caseId), worker("researcher"));
+
+        // Wait for event bus send — signal is stored before send, so it's there too
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(2))
+                .untilAsserted(() ->
+                        verify(eventBus).send(
+                                eq(EventBusAddresses.WORKER_EXECUTION_FINISHED),
+                                any(WorkflowExecutionCompleted.class)));
+
+        assertThat(manager.drainExitSignal(caseId)).isEqualTo("researcher");
+        assertThat(manager.drainExitSignal(caseId)).isNull(); // drained — second call returns null
+    }
+
+    @Test
+    void drainExitSignal_unknownCaseId_returnsNull() {
+        assertThat(manager.drainExitSignal(UUID.randomUUID())).isNull();
+    }
 }
