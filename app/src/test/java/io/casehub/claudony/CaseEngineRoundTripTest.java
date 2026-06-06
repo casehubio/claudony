@@ -90,7 +90,8 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
                     + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService,"
                     + "io.casehub.engine.internal.orchestration.WorkOrchestrator,"
-                    + "io.casehub.work.core.strategy.RoundRobinStrategy"
+                    + "io.casehub.work.core.strategy.RoundRobinStrategy,"
+                    + "io.casehub.claudony.casehub.ResearcherCase"
             );
         }
     }
