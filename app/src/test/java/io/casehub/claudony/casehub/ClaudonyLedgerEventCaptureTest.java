@@ -78,6 +78,7 @@ class ClaudonyLedgerEventCaptureTest {
         assertThat(entry.actorType).isEqualTo(ActorType.SYSTEM);
         assertThat(entry.actorRole).isEqualTo("System");
         assertThat(entry.occurredAt).isNotNull();
+        assertThat(entry.tenancyId).isEqualTo("default"); // null tenancyId stored as "default"
     }
 
     @Test
@@ -252,6 +253,20 @@ class ClaudonyLedgerEventCaptureTest {
         assertThat(entries.get(0).sequenceNumber).isEqualTo(1);
         assertThat(entries.get(1).sequenceNumber).isEqualTo(2);
         assertThat(entries.get(1).causedByEntryId).isNull(); // WorkerExecutionCompleted does not set causal link
+    }
+
+    @Test
+    @TestTransaction
+    void tenancyId_nonNull_storedAsIs() {
+        UUID caseId = UUID.randomUUID();
+
+        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+                        caseId, "tenant-1", "StartCase", "CaseStarted", "RUNNING", null, "System", null))
+                .toCompletableFuture().join();
+
+        List<CaseLedgerEntry> entries = findByCaseId(caseId);
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).tenancyId).isEqualTo("tenant-1");
     }
 
     private List<CaseLedgerEntry> findByCaseId(UUID caseId) {
