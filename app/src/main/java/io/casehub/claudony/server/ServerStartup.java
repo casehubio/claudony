@@ -6,9 +6,7 @@ import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.claudony.server.auth.ApiKeyService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
-import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
-import io.casehub.api.model.Worker;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -18,9 +16,7 @@ import org.jboss.logging.Logger;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -113,33 +109,9 @@ public class ServerStartup {
             LOG.debug("ClaudonyWorkerExecutionManager not available — skipping casehub watcher recovery");
             return;
         }
-        var repo = caseInstanceRepo.get();
-        var execManager = workerExecManager.get();
-        int started = 0;
-        for (var session : registry.all()) {
-            if (session.caseId().isEmpty()) continue;
-            UUID caseId;
-            try {
-                caseId = UUID.fromString(session.caseId().get());
-            } catch (IllegalArgumentException e) {
-                LOG.warnf("Invalid caseId in registry for session %s — skipping", session.id());
-                continue;
-            }
-            try {
-                CaseInstance instance = repo.findByUuid(caseId).await().atMost(Duration.ofSeconds(5));
-                if (instance == null) {
-                    LOG.infof("No CaseInstance for caseId %s — skipping recovery watcher", caseId);
-                    continue;
-                }
-                var roleName = session.roleName().orElse("worker");
-                var worker = new Worker(roleName, List.of(), ctx -> java.util.Map.of());
-                execManager.watch(session.id(), session.name(), instance, worker);
-                started++;
-            } catch (Exception e) {
-                LOG.errorf(e, "Failed to recover watcher for caseId %s session %s — skipping",
-                        caseId, session.id());
-            }
-        }
+        int started = new CasehubStartupService(
+                        registry, caseInstanceRepo.get(), workerExecManager.get())
+                .bootstrapWatchers();
         LOG.infof("Started %d casehub watcher(s) for recovered sessions", started);
     }
 

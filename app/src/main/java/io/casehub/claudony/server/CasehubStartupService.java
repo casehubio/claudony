@@ -1,0 +1,64 @@
+package io.casehub.claudony.server;
+
+import io.casehub.api.model.Worker;
+import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
+import io.casehub.engine.common.internal.model.CaseInstance;
+import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
+import org.jboss.logging.Logger;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Extracted from ServerStartup.bootstrapCasehubWatchers().
+ * Plain Java — no CDI annotations so unit tests can instantiate directly.
+ */
+class CasehubStartupService {
+
+    private static final Logger LOG = Logger.getLogger(CasehubStartupService.class);
+
+    private final SessionRegistry registry;
+    private final CrossTenantCaseInstanceRepository caseInstanceRepo;
+    private final ClaudonyWorkerExecutionManager execManager;
+
+    CasehubStartupService(
+            SessionRegistry registry,
+            CrossTenantCaseInstanceRepository caseInstanceRepo,
+            ClaudonyWorkerExecutionManager execManager) {
+        this.registry = registry;
+        this.caseInstanceRepo = caseInstanceRepo;
+        this.execManager = execManager;
+    }
+
+    int bootstrapWatchers() {
+        int started = 0;
+        for (var session : registry.all()) {
+            if (session.caseId().isEmpty()) continue;
+            UUID caseId;
+            try {
+                caseId = UUID.fromString(session.caseId().get());
+            } catch (IllegalArgumentException e) {
+                LOG.warnf("Invalid caseId in registry for session %s — skipping", session.id());
+                continue;
+            }
+            try {
+                CaseInstance instance = caseInstanceRepo.findByUuid(caseId)
+                        .await().atMost(Duration.ofSeconds(5));
+                if (instance == null) {
+                    LOG.infof("No CaseInstance for caseId %s — skipping recovery watcher", caseId);
+                    continue;
+                }
+                var roleName = session.roleName().orElse("worker");
+                var worker = new Worker(roleName, List.of(), ctx -> Map.of());
+                execManager.watch(session.id(), session.name(), instance, worker);
+                started++;
+            } catch (Exception e) {
+                LOG.errorf(e, "Failed to recover watcher for caseId %s session %s — skipping",
+                        caseId, session.id());
+            }
+        }
+        return started;
+    }
+}
