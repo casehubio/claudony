@@ -1,0 +1,25 @@
+dsl: "0.1"
+namespace: claudony
+name: researcher
+version: "1.0.0"
+title: "Researcher Case"
+spec:
+  capabilities:
+    - name: researcher
+      description: "Claude Code research worker started as a tmux session via Claudony"
+      inputSchema: "{}"
+      outputSchema: "{}"
+  bindings:
+    - name: start-researcher-on-topic
+      capability: researcher
+      on:
+        contextChange:
+          filter: ".topic != null"
+  goals:
+    - name: research-complete
+      condition: ".workers.researcher.exited == true"
+      kind: success
+  completion:
+    success:
+      allOf:
+        - research-complete
