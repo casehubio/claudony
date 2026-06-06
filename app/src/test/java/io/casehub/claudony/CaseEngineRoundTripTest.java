@@ -49,7 +49,7 @@ import static org.mockito.Mockito.when;
  */
 @QuarkusTest
 @TestProfile(CaseEngineRoundTripTest.CasehubEnabledProfile.class)
-class CaseEngineRoundTripTest {
+public class CaseEngineRoundTripTest {
 
     public static class CasehubEnabledProfile implements QuarkusTestProfile {
         @Override
@@ -81,6 +81,9 @@ class CaseEngineRoundTripTest {
                     + "io.casehub.persistence.memory.InMemoryEventLogRepository,"
                     + "io.casehub.testing.WorkResultSubmitter,"
                     + "io.casehub.engine.internal.engine.handler.CaseStatusChangedHandler,"
+                    + "io.casehub.engine.internal.engine.handler.ActionGateApprovedHandler,"
+                    + "io.casehub.engine.internal.engine.handler.ActionGateExpiredHandler,"
+                    + "io.casehub.engine.internal.engine.handler.ActionGateRejectedHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.SignalReceivedEventHandler,"

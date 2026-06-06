@@ -18,6 +18,7 @@ import org.jboss.logging.Logger;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -41,6 +42,8 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
     private final ConcurrentHashMap<String, Thread> watchers = new ConcurrentHashMap<>();
     /** sessionId → roleName, for getActiveWorkCount() lookups without iterating SessionRegistry. */
     private final ConcurrentHashMap<String, String> sessionToRole = new ConcurrentHashMap<>();
+    /** caseId → roleName for exit signals awaiting ledger capture drain. */
+    private final ConcurrentHashMap<UUID, String> pendingExitSignals = new ConcurrentHashMap<>();
 
     @Inject
     public ClaudonyWorkerExecutionManager(
@@ -123,6 +126,11 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
         return watchers.size();
     }
 
+    /** Drains and returns the pending exit role name for this case. Called by ClaudonyLedgerEventCapture on WorkerExecutionCompleted. Returns null if no signal is pending. */
+    public String drainExitSignal(UUID caseId) {
+        return pendingExitSignals.remove(caseId);
+    }
+
     private Runnable watcherRunnable(String sessionId, String sessionName,
                                      CaseInstance instance, Worker worker) {
         return () -> {
@@ -141,11 +149,11 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
                         if (!exists) {
                             // Atomic gate: whichever caller wins registry.remove() publishes
                             if (registry.remove(sessionId) != null) {
+                                pendingExitSignals.put(instance.getUuid(), worker.getName()); // store before send
                                 final String idempotencyKey =
                                         instance.getUuid() + ":" + worker.getName() + ":" + sessionId;
                                 eventBus.send(EventBusAddresses.WORKER_EXECUTION_FINISHED,
-                                        new WorkflowExecutionCompleted(
-                                                instance, worker, idempotencyKey, Map.of()));
+                                        WorkflowExecutionCompleted.approved(instance, worker, idempotencyKey, Map.of()));
                             }
                             break;
                         }
