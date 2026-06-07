@@ -729,7 +729,9 @@
       "Bash(tmux show-options *)",
       "Bash(tmux has-session *)",
       "Bash(xargs '-I{}' sh -c 'jar tf \"{}\" 2>/dev/null | grep \"\\\\.yaml\\\\|\\\\.yml\" | while read f; do echo \"{}:$f\"; done')",
-      "Bash(xargs '-I{}' bash -c 'jar tf \"{}\" 2>/dev/null | grep \"^io/casehub/model/CaseDefinition\" | head -1 | while read f; do echo \"{}:$f\"; done')"
+      "Bash(xargs '-I{}' bash -c 'jar tf \"{}\" 2>/dev/null | grep \"^io/casehub/model/CaseDefinition\" | head -1 | while read f; do echo \"{}:$f\"; done')",
+      "Bash(unzip *)",
+      "Skill(work-end)"
     ]
   }
 }
