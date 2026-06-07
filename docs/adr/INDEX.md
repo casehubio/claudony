@@ -11,3 +11,4 @@
 | [0007](0007-sse-channel-delivery-mechanism.md) | SSE Channel Delivery Mechanism | Accepted | 2026-05-22 |
 | [0008](0008-fleet-channel-backend-registration-via-channel-initialised-event.md) | Fleet-aware channel backend registration via ChannelInitialisedEvent | Accepted | 2026-05-29 |
 | [0009](0009-oversight-channel-denied-types-enforcement.md) | Oversight Channel Type Enforcement via deniedTypes | Accepted | 2026-06-04 |
+| [0010](0010-case-auto-completion-via-exit-watcher-signal.md) | Case Auto-Completion via Exit Watcher Signal | Accepted | 2026-06-07 |
