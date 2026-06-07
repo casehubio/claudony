@@ -10,11 +10,11 @@ spec:
       inputSchema: "{}"
       outputSchema: "{}"
   bindings:
-    - name: start-researcher-on-topic
+    - name: start-session-on-init
       capability: researcher
       on:
-        contextChange:
-          filter: ".topic != null"
+        contextChange: {}
+      when: ".workers.researcher.exited != true"
   goals:
     - name: research-complete
       condition: ".workers.researcher.exited == true"

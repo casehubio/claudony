@@ -108,7 +108,7 @@ public class CaseEngineRoundTripTest {
     @Test
     void startCase_engineProvisions_watcherDetectsExit_andLineageReturnsCompletedSummary()
             throws Exception {
-        UUID caseId = researcherCase.startCase(Map.of("topic", "test-topic"))
+        UUID caseId = researcherCase.startCase()
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
 

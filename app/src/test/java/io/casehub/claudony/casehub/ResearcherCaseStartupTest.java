@@ -26,9 +26,11 @@ class ResearcherCaseStartupTest {
                 .anyMatch(c -> "researcher".equals(c.getName()));
         assertThat(def.getBindings())
                 .anyMatch(b ->
-                        b.getOn() instanceof ContextChangeTrigger ctx
-                        && ctx.getFilter() instanceof JQExpressionEvaluator jq
-                        && ".topic != null".equals(jq.expression()));
+                        "start-session-on-init".equals(b.getName())
+                        && b.getOn() instanceof ContextChangeTrigger ctx
+                        && ctx.getFilter() == null
+                        && b.getWhen() instanceof JQExpressionEvaluator jq
+                        && ".workers.researcher.exited != true".equals(jq.expression()));
 
         // Verify goals
         assertThat(def.getGoals()).isNotEmpty();
