@@ -5,6 +5,7 @@ import io.casehub.api.model.Binding;
 import io.casehub.api.model.Capability;
 import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.ContextChangeTrigger;
+import io.casehub.api.model.evaluator.ExpressionEvaluator;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
@@ -25,9 +26,10 @@ public class TestResearcherCase extends CaseHub { // public: CDI proxy generatio
                 .build();
 
         Binding binding = Binding.builder()
-                .name("start-researcher-on-topic")
+                .name("start-session-on-init")
                 .capability(cap)
-                .on(new ContextChangeTrigger(".topic != null"))
+                .on(new ContextChangeTrigger((ExpressionEvaluator) null))
+                .when(".workers.researcher.exited != true")
                 .build();
 
         return CaseDefinition.builder()

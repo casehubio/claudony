@@ -109,8 +109,8 @@ class ResearcherCaseCompletionTest {
 
     @Test
     void researcherCase_completesWhenWorkerSessionExits() throws Exception {
-        // Start a case with topic in context — triggers provision via CaseStartedEventHandler
-        UUID caseId = researcherCase.startCase(Map.of("topic", "test-topic"))
+        // Start a case — triggers provision via CaseStartedEventHandler (CONTEXT_CHANGED fires on case init)
+        UUID caseId = researcherCase.startCase()
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
 
