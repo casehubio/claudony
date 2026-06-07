@@ -727,7 +727,9 @@
       "Skill(publish-blog)",
       "Bash(GIT_SEQUENCE_EDITOR=\"cp /tmp/squash-plan.txt\" git rebase -i upstream/main)",
       "Bash(tmux show-options *)",
-      "Bash(tmux has-session *)"
+      "Bash(tmux has-session *)",
+      "Bash(xargs '-I{}' sh -c 'jar tf \"{}\" 2>/dev/null | grep \"\\\\.yaml\\\\|\\\\.yml\" | while read f; do echo \"{}:$f\"; done')",
+      "Bash(xargs '-I{}' bash -c 'jar tf \"{}\" 2>/dev/null | grep \"^io/casehub/model/CaseDefinition\" | head -1 | while read f; do echo \"{}:$f\"; done')"
     ]
   }
 }

@@ -27,6 +27,12 @@ claudony-casehub — io.casehub.claudony.casehub
 ├── WorkerCommandResolver           — capability→command lookup with default fallback
 ├── CaseLineageQuery                — interface for prior-worker lineage queries
 ├── EmptyCaseLineageQuery           — @DefaultBean stub (active when ledger not configured)
+├── ClaudonyLedgerEventCapture      — replaces casehub-ledger's CaseLedgerEventCapture (excluded via
+│                                     quarkus.arc.exclude-types); writes CaseLedgerEntry rows directly
+│                                     via @LedgerPersistenceUnit EM; on WorkerExecutionCompleted:
+│                                     drains pendingExitSignals from ClaudonyWorkerExecutionManager and
+│                                     calls CaseHubRuntime.signal("workers.<role>.exited", true) to
+│                                     patch case context and trigger goal evaluation
 ├── JpaCaseLineageQuery             — @Alternative @Priority(1) — queries case_ledger_entry
 │                                     for WORKER_EXECUTION_COMPLETED events via qhorus PU
 ├── ClaudonyReactiveWorkerProvisioner — ReactiveWorkerProvisioner SPI: creates tmux sessions via
@@ -34,9 +40,12 @@ claudony-casehub — io.casehub.claudony.casehub
 │                                       persists @casehub_case_id + @casehub_role to tmux session options
 │                                       for recovery; terminate() removes from registry before kill
 ├── ClaudonyWorkerExecutionManager  — WorkerExecutionManager SPI: starts a virtual thread watcher
-│                                       per session after provision; polls tmux has-session; publishes
-│                                       WorkflowExecutionCompleted via EventBus.send() when session exits;
-│                                       atomic registry.remove() gate prevents double-publish
+│                                       per session after provision; polls tmux has-session; on exit:
+│                                       (1) puts caseId→roleName in pendingExitSignals before
+│                                       (2) publishes WorkflowExecutionCompleted via EventBus.send();
+│                                       atomic registry.remove() gate prevents double-publish.
+│                                       drainExitSignal(UUID) consumed by ClaudonyLedgerEventCapture
+│                                       on WorkerExecutionCompleted to fire the case context signal
 ├── ClaudonyCaseChannelProvider     — CaseChannelProvider SPI: Qhorus-backed channels
 ├── ClaudonyWorkerContextProvider   — WorkerContextProvider SPI: lineage + channel context
 ├── ClaudonyWorkerStatusListener    — WorkerStatusListener SPI: lifecycle → SessionRegistry
@@ -52,6 +61,10 @@ claudony-casehub — io.casehub.claudony.casehub
 ├── ActiveParticipationStrategy     — default: register + STATUS + periodic check_messages
 ├── ReactiveParticipationStrategy   — engage only when directly addressed; skip registration
 ├── SilentParticipationStrategy     — no mesh participation
+├── ResearcherCase                  — production CaseHub case definition (extends YamlCaseHub);
+│                                     loads casehub/researcher.yaml at startup; triggers on
+│                                     .topic != null; auto-completes when workers.researcher.exited == true
+│                                     (set by ClaudonyLedgerEventCapture signal drain on session exit)
 └── MeshSystemPromptTemplate        — package-private: generates ACTIVE full template, REACTIVE reduced,
                                      SILENT returns empty. Channel names from CaseChannelLayout; prior
                                      workers from CaseLineageQuery. Stored in WorkerContext.properties["systemPrompt"]
@@ -82,7 +95,11 @@ io.casehub.claudony — claudony-core + claudony-app
 │   ├── TerminalWebSocket       — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup           — startup health checks, tmux bootstrap; reads @casehub_case_id /
 │   │                             @casehub_role options from tmux sessions; bootstrapCasehubWatchers()
-│   │                             restarts watchers for in-flight CaseHub sessions after server restart
+│   │                             delegates to CasehubStartupService to restart watchers for in-flight
+│   │                             CaseHub sessions after server restart
+│   ├── CasehubStartupService   — plain Java (no CDI), extracted from ServerStartup; iterates registry,
+│   │                             validates UUIDs, resolves CaseInstance, restarts exit watchers with
+│   │                             roleName fallback to "worker"; returns count of started watchers
 │   ├── auth/
 │   │   ├── ApiKeyAuthMechanism    — HttpAuthenticationMechanism for X-Api-Key header
 │   │   ├── ApiKeyService          — key generation, file persistence, banner logging
@@ -446,7 +463,7 @@ All four CaseHub worker SPIs are implemented in the `claudony-casehub` module (e
 | `WorkerContextProvider` | `ClaudonyWorkerContextProvider` | Builds worker context: task, lineage, channel, `meshParticipation` stamped from `MeshParticipationStrategy`, and `systemPrompt` generated by `MeshSystemPromptTemplate`. Config: `claudony.casehub.mesh-participation=active\|reactive\|silent`, `claudony.casehub.channel-layout=normative\|simple` |
 | `WorkerStatusListener` | `ClaudonyWorkerStatusListener` | tmux session lifecycle → `SessionRegistry` status transitions + `WorkerStalledEvent` CDI event |
 
-**Lineage:** `JpaCaseLineageQuery` (`@Alternative @Priority(1)`) queries `case_ledger_entry` for `WORKER_EXECUTION_COMPLETED` events via the `qhorus` persistence unit. Returns empty until casehub-engine fires worker lifecycle `CaseLifecycleEvent`s — currently missing (tracked upstream).
+**Lineage:** `JpaCaseLineageQuery` (`@Alternative @Priority(1)`) queries `case_ledger_entry` for `WORKER_EXECUTION_COMPLETED` events via the `qhorus` persistence unit. `ClaudonyLedgerEventCapture` writes these rows — it replaces the excluded `casehub-ledger` bean and handles the full CaseLifecycleEvent → CaseLedgerEntry pipeline.
 
 **CDI wiring:** `casehub-ledger`'s own CDI beans (`CaseLedgerEntryRepository`, `CaseLedgerEventCapture`) are excluded via `quarkus.arc.exclude-types` to avoid `LedgerEntryRepository` ambiguity with casehub-ledger. Only `CaseLedgerEntry` (the JPA entity) is used directly.
 
