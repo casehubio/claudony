@@ -5,6 +5,7 @@ import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorTypeResolver;
 import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.runtime.model.LedgerEntry;
 import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -62,6 +63,13 @@ public class ClaudonyLedgerEventCapture {
             return;
         }
 
+        final String tenancyId = event.tenancyId();
+        if (tenancyId == null) {
+            LOG.errorf("CaseLifecycleEvent missing tenancyId for caseId=%s event=%s — event dropped to prevent cross-tenant data corruption",
+                event.caseId(), event.eventType());
+            return;
+        }
+
         int seq = nextSequenceNumber(event.caseId());
 
         CaseLedgerEntry entry = new CaseLedgerEntry();
@@ -72,7 +80,11 @@ public class ClaudonyLedgerEventCapture {
         entry.commandType = event.commandType();
         entry.eventType = event.eventType();
         entry.caseStatus = event.caseStatus();
-        entry.tenancyId = event.tenancyId() != null ? event.tenancyId() : "default";
+        // CaseLedgerEntry.tenancyId (nullable=false, case_ledger_entry table) shadows
+        // LedgerEntry.tenancyId (nullable=false, ledger_entry table). Both must be set
+        // explicitly; setting entry.tenancyId alone only reaches the child's shadow field.
+        entry.tenancyId = tenancyId;
+        ((LedgerEntry) entry).tenancyId = tenancyId;
         entry.actorId = event.actorId() != null ? event.actorId() : "system";
         entry.actorType = ActorTypeResolver.resolve(entry.actorId);
         entry.actorRole = event.actorRole() != null ? event.actorRole() : "System";
