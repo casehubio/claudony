@@ -90,8 +90,14 @@ class ResearcherCaseCompletionTest {
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
-                    + "io.casehub.engine.internal.orchestration.WorkOrchestrator,"
+                    + "io.casehub.engine.internal.orchestration.DefaultWorkOrchestrator,"
                     + "io.casehub.work.core.strategy.RoundRobinStrategy,"
+                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionManager,"
+                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionJob,"
+                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionJobListener,"
+                    + "io.casehub.engine.scheduler.quartz.ConditionalScheduledTriggerJob,"
+                    + "io.casehub.engine.scheduler.quartz.ScheduledTriggerJob,"
+                    + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
                     + "io.casehub.claudony.TestResearcherCase"
                     // NOT excluded: SignalReceivedEventHandler, CaseStatusChangedHandler,
                     //               DefaultWorkerExecutionRecoveryService (required by SignalReceivedEventHandler), ResearcherCase
@@ -136,7 +142,7 @@ class ResearcherCaseCompletionTest {
         // JpaCaseLineageQuery and drainExitSignal both resolve the worker name from the preceding
         // Started entry by sequence number.
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                caseId, null, "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
+                caseId, "default", "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
                 "researcher", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
 
         // Stub sessionExists() to return false immediately so the watcher detects exit on first poll.

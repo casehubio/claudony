@@ -89,8 +89,14 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.internal.engine.handler.SignalReceivedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
                     + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService,"
-                    + "io.casehub.engine.internal.orchestration.WorkOrchestrator,"
+                    + "io.casehub.engine.internal.orchestration.DefaultWorkOrchestrator,"
                     + "io.casehub.work.core.strategy.RoundRobinStrategy,"
+                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionManager,"
+                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionJob,"
+                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionJobListener,"
+                    + "io.casehub.engine.scheduler.quartz.ConditionalScheduledTriggerJob,"
+                    + "io.casehub.engine.scheduler.quartz.ScheduledTriggerJob,"
+                    + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
                     + "io.casehub.claudony.casehub.ResearcherCase"
             );
         }
@@ -131,7 +137,7 @@ public class CaseEngineRoundTripTest {
         // Lineage resolves the worker name from the preceding Started entry (engine#390:
         // WorkerExecutionCompleted carries actorId="system", not the worker name).
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                caseId, null, "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
+                caseId, "default", "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
                 "researcher", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
 
         // Now start the watcher. sessionExists()→false triggers immediate completion publish.

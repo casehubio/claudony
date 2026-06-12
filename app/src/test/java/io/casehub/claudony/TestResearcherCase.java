@@ -29,7 +29,7 @@ public class TestResearcherCase extends CaseHub { // public: CDI proxy generatio
                 .name("start-session-on-init")
                 .capability(cap)
                 .on(new ContextChangeTrigger((ExpressionEvaluator) null))
-                .when(".workers.researcher.exited != true")
+                .when(".workers.researcher.started != true and .workers.researcher.exited != true")
                 .build();
 
         return CaseDefinition.builder()

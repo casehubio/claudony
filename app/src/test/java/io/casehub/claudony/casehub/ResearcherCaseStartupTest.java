@@ -30,7 +30,7 @@ class ResearcherCaseStartupTest {
                         && b.getOn() instanceof ContextChangeTrigger ctx
                         && ctx.getFilter() == null
                         && b.getWhen() instanceof JQExpressionEvaluator jq
-                        && ".workers.researcher.exited != true".equals(jq.expression()));
+                        && ".workers.researcher.started != true and .workers.researcher.exited != true".equals(jq.expression()));
 
         // Verify goals
         assertThat(def.getGoals()).isNotEmpty();

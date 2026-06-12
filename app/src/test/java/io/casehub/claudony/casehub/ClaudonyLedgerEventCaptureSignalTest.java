@@ -3,6 +3,7 @@ package io.casehub.claudony.casehub;
 import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.claudony.CaseEngineRoundTripTest;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
+import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -34,13 +35,18 @@ class ClaudonyLedgerEventCaptureSignalTest {
     @InjectMock
     CaseHubRuntime runtimeMock;
 
+    // Mock ledger repo to isolate signal tests from DB schema requirements.
+    // These tests verify signal() is called — ledger persistence is a side effect.
+    @InjectMock
+    LedgerEntryRepository ledgerRepo;
+
     @Test
     void workerExecutionCompleted_withPendingSignal_firesContextSignal() throws Exception {
         UUID caseId = UUID.randomUUID();
         when(execManager.drainExitSignal(caseId)).thenReturn("researcher");
 
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseId, null, "ExecuteWorker", "WorkerExecutionCompleted",
+                        caseId, "default", "ExecuteWorker", "WorkerExecutionCompleted",
                         "ACTIVE", "system", "SYSTEM", null))
                 .toCompletableFuture().get(5, TimeUnit.SECONDS);
 
@@ -53,7 +59,7 @@ class ClaudonyLedgerEventCaptureSignalTest {
         when(execManager.drainExitSignal(caseId)).thenReturn(null);
 
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
-                        caseId, null, "ExecuteWorker", "WorkerExecutionCompleted",
+                        caseId, "default", "ExecuteWorker", "WorkerExecutionCompleted",
                         "ACTIVE", "system", "SYSTEM", null))
                 .toCompletableFuture().get(5, TimeUnit.SECONDS);
 

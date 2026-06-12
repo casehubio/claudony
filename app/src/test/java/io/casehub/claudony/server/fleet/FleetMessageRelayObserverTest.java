@@ -43,7 +43,7 @@ class FleetMessageRelayObserverTest {
     void onMessage_noPeers_returnsImmediately() {
         assertThatCode(() -> {
             observer.onMessage(new MessageReceivedEvent(
-                    "case-no-peers/work", UUID.randomUUID(),
+                    "case-no-peers/work", UUID.randomUUID(), "default",
                     MessageType.STATUS, "sender-1", null, "content"));
             Thread.sleep(100);
         }).doesNotThrowAnyException();
@@ -61,7 +61,7 @@ class FleetMessageRelayObserverTest {
         busSubscription = eventBus.subscribe(channelName).subscribe().with(ticks::add);
 
         observer.onMessage(new MessageReceivedEvent(
-                channelName, UUID.randomUUID(),
+                channelName, UUID.randomUUID(), "default",
                 MessageType.STATUS, "sender-1", null, "content"));
 
         Thread.sleep(500);
@@ -76,7 +76,7 @@ class FleetMessageRelayObserverTest {
 
         assertThatCode(() -> {
             observer.onMessage(new MessageReceivedEvent(
-                    "case-down-test/work", UUID.randomUUID(),
+                    "case-down-test/work", UUID.randomUUID(), "default",
                     MessageType.STATUS, "sender-1", null, "content"));
             Thread.sleep(300);
         }).doesNotThrowAnyException();
