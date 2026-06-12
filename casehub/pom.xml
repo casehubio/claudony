@@ -60,6 +60,13 @@
             <artifactId>casehub-ledger-api</artifactId>
         </dependency>
 
+        <!-- @WithSession — open a Hibernate Reactive session when buildContext() is called
+             from the engine event bus handler (which has Vert.x context but no session). -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-reactive-panache-common</artifactId>
+        </dependency>
+
         <!-- CDI -->
         <dependency>
             <groupId>io.quarkus</groupId>

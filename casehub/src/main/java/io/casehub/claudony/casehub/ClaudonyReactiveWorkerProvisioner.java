@@ -4,6 +4,7 @@ import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
+import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
@@ -11,7 +12,9 @@ import io.casehub.api.spi.ReactiveWorkerProvisioner;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Optional;
@@ -21,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
 public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisioner {
+
+    private static final Logger LOG = Logger.getLogger(ClaudonyReactiveWorkerProvisioner.class);
 
     public static final String SESSION_PREFIX = "claudony-worker-";
 
@@ -35,6 +40,11 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
     private final WorkerCommandResolver resolver;
     private final WorkerSessionMapping sessionMapping;
     private final String defaultWorkingDir;
+    // Optional: absent when engine is not on the classpath (non-CaseHub deployments).
+    // Used to signal workers.{role}.started=true before delivering ProvisionResult to
+    // the engine, ensuring the event bus queue position prevents re-provisioning on the
+    // engine's own provisioning context patch.
+    private final Instance<CaseHubRuntime> caseHubRuntime;
 
     @Inject
     public ClaudonyReactiveWorkerProvisioner(
@@ -42,28 +52,57 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
             TmuxService tmux,
             SessionRegistry registry,
             WorkerCommandResolver resolver,
-            WorkerSessionMapping sessionMapping) {
+            WorkerSessionMapping sessionMapping,
+            Instance<CaseHubRuntime> caseHubRuntime) {
         this(config.enabled(), tmux, registry, resolver, sessionMapping,
-                config.workers().defaultWorkingDir());
+                config.workers().defaultWorkingDir(), caseHubRuntime);
     }
 
     ClaudonyReactiveWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
                                        WorkerCommandResolver resolver,
                                        WorkerSessionMapping sessionMapping,
-                                       String defaultWorkingDir) {
+                                       String defaultWorkingDir,
+                                       Instance<CaseHubRuntime> caseHubRuntime) {
         this.enabled = enabled;
         this.tmux = tmux;
         this.registry = registry;
         this.resolver = resolver;
         this.sessionMapping = sessionMapping;
         this.defaultWorkingDir = defaultWorkingDir;
+        this.caseHubRuntime = caseHubRuntime;
     }
 
     @Override
     public Uni<ProvisionResult> provision(Set<String> capabilities, ProvisionContext context) {
         return Uni.createFrom()
                   .item(() -> doProvision(capabilities, context))
-                  .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+                  .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+                  .call(result -> signalStarted(capabilities, context));
+    }
+
+    /**
+     * Signals workers.{role}.started=true into the case context BEFORE delivering
+     * ProvisionResult to the engine. This queues the signal on the Vert.x event bus
+     * ahead of the engine's own provisioning context patch, so that when the engine's
+     * CONTEXT_CHANGED fires next, the when-guard (.workers.researcher.started != true)
+     * is already false — preventing duplicate provisioning.
+     */
+    private Uni<Void> signalStarted(Set<String> capabilities, ProvisionContext context) {
+        if (context.caseId() == null || caseHubRuntime == null || caseHubRuntime.isUnsatisfied()) {
+            return Uni.createFrom().voidItem();
+        }
+        String roleName = context.taskType() != null
+                ? context.taskType()
+                : capabilities.stream().findFirst().orElse("worker");
+        try {
+            caseHubRuntime.get().signal(context.caseId(), "workers." + roleName + ".started", true);
+        } catch (Exception e) {
+            // Non-fatal — session was created; guard is best-effort. Log so operators can detect
+            // repeated provisioning if the signal consistently fails.
+            LOG.warnf(e, "Failed to signal workers.%s.started for caseId=%s — when-guard may not prevent re-provisioning",
+                      roleName, context.caseId());
+        }
+        return Uni.createFrom().voidItem();
     }
 
     @Override

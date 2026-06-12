@@ -38,6 +38,21 @@
       <!-- CaseHub ecosystem — all components versioned together -->
       <dependency>
         <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-engine-persistence-memory</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-engine-scheduler-quartz</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-api</artifactId>
         <version>${casehub.version}</version>
       </dependency>

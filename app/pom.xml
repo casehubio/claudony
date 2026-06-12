@@ -15,7 +15,7 @@
   <description>Quarkus application: REST API, WebSocket terminal, dashboard, auth, fleet, agent MCP</description>
 
   <dependencies>
-    <!-- Platform preferences API + config-file provider -->
+    <!-- Platform: preferences API + config-file provider + @DefaultBean mocks (MockCurrentPrincipal etc.) -->
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-api</artifactId>
@@ -23,6 +23,25 @@
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-config</artifactId>
+    </dependency>
+    <dependency>
+      <!-- MockCurrentPrincipal @DefaultBean — required when casehub-engine is on classpath -->
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform</artifactId>
+    </dependency>
+    <dependency>
+      <!-- In-memory engine persistence for tutorial/single-node deployments.
+           Provides InMemoryCaseInstanceRepository, InMemoryEventLogRepository,
+           InMemoryCaseMetaModelRepository as @Alternative @Priority(1) beans.
+           Activated via quarkus.arc.selected-alternatives below. -->
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-engine-persistence-memory</artifactId>
+    </dependency>
+    <dependency>
+      <!-- Quartz-backed JobScheduler implementation (QuartzJobScheduler @ApplicationScoped).
+           Works with casehub-engine-persistence-memory's quarkus.quartz.store-type=ram. -->
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-engine-scheduler-quartz</artifactId>
     </dependency>
     <!-- Core services from casehub-claudony-core -->
     <dependency>
@@ -87,20 +106,16 @@
       </exclusions>
     </dependency>
     <dependency>
-      <!-- Provides CaseHubRuntimeImpl (CaseHubRuntime CDI bean) for CaseEngineRoundTripTest.
+      <!-- CaseHubRuntimeImpl — enables production case orchestration.
            casehub-engine brings in casehub-ledger which is already on the classpath — Maven
            deduplicates it so there is no "duplicate ledger feature" conflict. -->
       <groupId>io.casehub</groupId>
       <artifactId>casehub-engine</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
-      <!-- casehub-engine now self-indexes via its embedded application.properties, activating
-           JQExpressionEngine and CaseContextChangedEventHandler which inject
-           io.casehub.platform.expression.JQEvaluator. Provide it on the test classpath. -->
+      <!-- JQEvaluator for casehub-engine's JQExpressionEngine and CaseContextChangedEventHandler. -->
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-expression</artifactId>
-      <scope>test</scope>
     </dependency>
 
     <dependency>

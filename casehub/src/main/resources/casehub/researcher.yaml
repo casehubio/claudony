@@ -14,7 +14,7 @@ spec:
       capability: researcher
       on:
         contextChange: {}
-      when: ".workers.researcher.exited != true"
+      when: ".workers.researcher.started != true and .workers.researcher.exited != true"
   goals:
     - name: research-complete
       condition: ".workers.researcher.exited == true"

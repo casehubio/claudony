@@ -6,13 +6,11 @@ import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorTypeResolver;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
+import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
 
 import java.time.Instant;
@@ -30,14 +28,9 @@ import org.jboss.logging.Logger;
  * {@code CaseLedgerEntryRepository} which conflicts with the casehub-ledger
  * {@code LedgerEntryRepository} registered by the platform.
  *
- * <p>This implementation writes directly to the {@code case_ledger_entry} table via the
- * {@code @LedgerPersistenceUnit} EntityManager — the same unit used by
- * {@link JpaCaseLineageQuery} — bypassing the conflicting repository layer.
- *
- * <p>The hash chain and Merkle digest are omitted (digest column is nullable in
- * {@code LedgerEntry}). {@link JpaCaseLineageQuery} only reads {@code eventType},
- * {@code actorId}, and {@code occurredAt}, so lineage queries work correctly without
- * the hash chain.
+ * <p>Uses {@link LedgerEntryRepository#save} for persistence — the repository handles
+ * sequence allocation, enrichment, hashing, and signing. Direct {@code em.persist()} is
+ * rejected by the ledger's pre-persist validation.
  */
 @ApplicationScoped
 public class ClaudonyLedgerEventCapture {
@@ -45,8 +38,7 @@ public class ClaudonyLedgerEventCapture {
     private static final Logger LOG = Logger.getLogger(ClaudonyLedgerEventCapture.class);
 
     @Inject
-    @LedgerPersistenceUnit
-    EntityManager em;
+    LedgerEntryRepository ledgerRepo;
 
     @Inject
     ClaudonyReactiveWorkerProvisioner provisioner;
@@ -70,12 +62,9 @@ public class ClaudonyLedgerEventCapture {
             return;
         }
 
-        int seq = nextSequenceNumber(event.caseId());
-
         CaseLedgerEntry entry = new CaseLedgerEntry();
         entry.caseId = event.caseId();
         entry.subjectId = event.caseId();
-        entry.sequenceNumber = seq;
         entry.entryType = LedgerEntryType.EVENT;
         entry.commandType = event.commandType();
         entry.eventType = event.eventType();
@@ -83,6 +72,8 @@ public class ClaudonyLedgerEventCapture {
         // CaseLedgerEntry.tenancyId (nullable=false, case_ledger_entry table) shadows
         // LedgerEntry.tenancyId (nullable=false, ledger_entry table). Both must be set
         // explicitly; setting entry.tenancyId alone only reaches the child's shadow field.
+        // TODO: remove the cast once CaseLedgerEntry stops shadowing LedgerEntry.tenancyId
+        //       (field shadowing in JPA JOINED inheritance is a design smell — track upstream).
         entry.tenancyId = tenancyId;
         ((LedgerEntry) entry).tenancyId = tenancyId;
         entry.actorId = event.actorId() != null ? event.actorId() : "system";
@@ -95,11 +86,15 @@ public class ClaudonyLedgerEventCapture {
             if (causedBy != null) entry.causedByEntryId = causedBy;
         }
 
-        em.persist(entry);
-        em.flush();
+        // Repository handles sequence allocation, enrichment, hashing, signing.
+        // save() runs inside this @Transactional method's transaction. signal() fires
+        // before the transaction commits, but the engine processes signals asynchronously
+        // so the transaction will have committed by the time it acts. If the engine ever
+        // moves to synchronous ledger queries on signal receipt, revisit this ordering.
+        ledgerRepo.save(entry, tenancyId);
 
-        LOG.debugf("Ledger entry written: caseId=%s seq=%d event=%s actor=%s",
-                event.caseId(), seq, event.eventType(), entry.actorId);
+        LOG.debugf("Ledger entry written: caseId=%s event=%s actor=%s",
+                event.caseId(), event.eventType(), entry.actorId);
 
         // Signal engine that this worker's tmux session exited → triggers context re-evaluation.
         // Must fire AFTER em.flush() so the engine sees the completed entry if it queries the ledger.
@@ -110,17 +105,6 @@ public class ClaudonyLedgerEventCapture {
                         event.caseId(), "workers." + roleName + ".exited", true);
             }
         }
-    }
-
-    private int nextSequenceNumber(UUID caseId) {
-        var results = em.createQuery(
-                        "SELECT e FROM CaseLedgerEntry e WHERE e.subjectId = :caseId ORDER BY e.sequenceNumber DESC",
-                        CaseLedgerEntry.class)
-                .setParameter("caseId", caseId)
-                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                .setMaxResults(1)
-                .getResultList();
-        return results.isEmpty() ? 1 : results.get(0).sequenceNumber + 1;
     }
 
 }

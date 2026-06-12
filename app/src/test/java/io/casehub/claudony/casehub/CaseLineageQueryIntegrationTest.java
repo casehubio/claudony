@@ -4,11 +4,10 @@ import io.casehub.api.model.WorkerSummary;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit;
+import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -33,8 +32,7 @@ class CaseLineageQueryIntegrationTest {
     JpaCaseLineageQuery lineageQuery;
 
     @Inject
-    @LedgerPersistenceUnit
-    EntityManager em;
+    LedgerEntryRepository ledgerRepo;
 
     @Test
     @TestTransaction
@@ -46,7 +44,7 @@ class CaseLineageQueryIntegrationTest {
 
         persist(caseId, workerId, "WorkerExecutionStarted", 1, startedAt);
         persist(caseId, workerId, "WorkerExecutionCompleted", 2, completedAt);
-        em.flush();
+        // ledgerRepo.save() flushes internally via the save pipeline
 
         List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
                 .await().atMost(Duration.ofSeconds(5));
@@ -79,7 +77,7 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-done", "WorkerExecutionCompleted", 2, now);
         // Worker 2: only started — must NOT appear
         persist(caseId, "worker-running", "WorkerExecutionStarted", 3, now.minus(2, ChronoUnit.MINUTES));
-        em.flush();
+        // ledgerRepo.save() flushes internally via the save pipeline
 
         List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
                 .await().atMost(Duration.ofSeconds(5));
@@ -98,7 +96,7 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-first",  "WorkerExecutionCompleted",  2, base.minus(10, ChronoUnit.MINUTES));
         persist(caseId, "worker-second", "WorkerExecutionStarted",    3, base.minus(8, ChronoUnit.MINUTES));
         persist(caseId, "worker-second", "WorkerExecutionCompleted",  4, base);
-        em.flush();
+        // ledgerRepo.save() flushes internally via the save pipeline
 
         List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
                 .await().atMost(Duration.ofSeconds(5));
@@ -116,7 +114,7 @@ class CaseLineageQueryIntegrationTest {
 
         // Only a COMPLETED entry — no corresponding STARTED entry
         persist(caseId, "worker-x", "WorkerExecutionCompleted", 1, completedAt);
-        em.flush();
+        // ledgerRepo.save() flushes internally via the save pipeline
 
         List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
                 .await().atMost(Duration.ofSeconds(5));
@@ -128,7 +126,6 @@ class CaseLineageQueryIntegrationTest {
 
     private void persist(UUID caseId, String actorId, String eventType, int seq, Instant occurredAt) {
         CaseLedgerEntry e = new CaseLedgerEntry();
-        e.id = UUID.randomUUID();
         e.subjectId = caseId;
         e.caseId = caseId;
         e.actorId = actorId;
@@ -136,9 +133,8 @@ class CaseLineageQueryIntegrationTest {
         e.actorRole = "worker";
         e.eventType = eventType;
         e.entryType = LedgerEntryType.EVENT;
-        e.tenancyId = "default";
-        e.sequenceNumber = seq;
         e.occurredAt = occurredAt;
-        em.persist(e);
+        // sequenceNumber and tenancyId are managed by the repository save pipeline
+        ledgerRepo.save(e, "default");
     }
 }

@@ -55,7 +55,7 @@ class WorkerLifecycleSequenceTest {
         var resolver = new WorkerCommandResolver(Map.of("default", "claude"));
 
         provisioner = new ClaudonyReactiveWorkerProvisioner(
-                true, tmux, registry, resolver, sessionMapping, "/workspace");
+                true, tmux, registry, resolver, sessionMapping, "/workspace", null);
         listener = new ClaudonyWorkerStatusListener(registry, tmux, events, sessionMapping);
     }
 
