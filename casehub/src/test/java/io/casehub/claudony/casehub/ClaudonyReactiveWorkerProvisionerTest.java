@@ -123,7 +123,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
         // Order matters: registry.remove() is the watcher cancellation signal.
         // It must happen BEFORE tmux.killSession() so the watcher sees the session
         // absent in the registry and stops without publishing a false completion.
-        provisioner.terminate("worker-abc")
+        provisioner.terminate("worker-abc", null)
                 .await()
                 .indefinitely();
 
@@ -136,7 +136,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
     void terminate_tmuxFails_stillRemovesFromRegistry() throws Exception {
         doThrow(new java.io.IOException("session not found")).when(tmux).killSession(anyString());
 
-        assertThatNoException().isThrownBy(() -> provisioner.terminate("ghost-worker")
+        assertThatNoException().isThrownBy(() -> provisioner.terminate("ghost-worker", null)
                 .await()
                 .indefinitely());
         verify(registry).remove("ghost-worker");

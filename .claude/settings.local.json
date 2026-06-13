@@ -736,7 +736,8 @@
       "Bash(pkill -f \"quarkus:dev\\\\|quarkus-run.jar\")",
       "Bash(kill -9 53269)",
       "Bash(tmux ls *)",
-      "Skill(code-review)"
+      "Skill(code-review)",
+      "Bash(xargs -I{} jar -tf {})"
     ]
   }
 }

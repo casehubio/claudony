@@ -4,6 +4,7 @@ import io.casehub.api.model.CaseChannel;
 import io.casehub.api.spi.ReactiveCaseChannelProvider;
 import io.casehub.qhorus.api.message.MessageDispatch;
 import io.casehub.qhorus.api.message.MessageType;
+import io.casehub.qhorus.runtime.channel.ChannelCreateRequest;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
 import io.casehub.qhorus.runtime.message.ReactiveMessageService;
 import io.smallrye.mutiny.Uni;
@@ -116,10 +117,9 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
 
         Uni<Map<String, CaseChannel>> seed = Uni.createFrom().item(new ConcurrentHashMap<>());
         for (CaseChannelLayout.ChannelSpec spec : specs) {
-            String allowedTypes = toAllowedTypesString(spec.allowedTypes());
-            String deniedTypes = toDeniedTypesString(spec.deniedTypes());
             seed = seed.flatMap(acc ->
-                    createQhorusChannel(caseId, spec.purpose(), spec.semantic().name(), allowedTypes, deniedTypes)
+                    createQhorusChannel(caseId, spec.purpose(), spec.semantic().name(),
+                            spec.allowedTypes(), spec.deniedTypes())
                             .map(ch -> {
                                 acc.put(spec.purpose(), ch);
                                 return acc;
@@ -129,12 +129,16 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     }
 
     private Uni<CaseChannel> createQhorusChannel(UUID caseId, String purpose, String semantic,
-            String allowedTypes, String deniedTypes) {
+            Set<MessageType> allowedTypes, Set<MessageType> deniedTypes) {
         String channelName = CaseChannel.channelName(caseId, purpose);
         io.casehub.qhorus.api.channel.ChannelSemantic channelSemantic =
                 semantic != null ? io.casehub.qhorus.api.channel.ChannelSemantic.valueOf(semantic) : null;
-        return channelService.create(channelName, purpose, channelSemantic,
-                        null, null, null, null, null, allowedTypes, deniedTypes)
+        var request = new ChannelCreateRequest(channelName, purpose, channelSemantic,
+                null, null, null, null, null,
+                allowedTypes != null ? allowedTypes : Set.of(),
+                deniedTypes != null ? deniedTypes : Set.of(),
+                null, null, null, null);
+        return channelService.create(request)
                 .map(detail -> {
                     gateway.initChannel(detail.id,
                             new io.casehub.qhorus.api.gateway.ChannelRef(detail.id, detail.name));
@@ -147,16 +151,6 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
                             "qhorus",
                             Map.of(QHORUS_NAME_KEY, detail.name));
                 });
-    }
-
-    private static String toAllowedTypesString(Set<MessageType> types) {
-        if (types == null || types.isEmpty()) return null;
-        return types.stream().map(MessageType::name).sorted().collect(Collectors.joining(","));
-    }
-
-    private static String toDeniedTypesString(Set<MessageType> types) {
-        if (types == null || types.isEmpty()) return null;
-        return types.stream().map(MessageType::name).sorted().collect(Collectors.joining(","));
     }
 
     private String extractPurpose(String channelName, UUID caseId) {
