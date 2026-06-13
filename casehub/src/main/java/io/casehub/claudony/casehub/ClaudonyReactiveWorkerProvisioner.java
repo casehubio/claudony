@@ -106,7 +106,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
     }
 
     @Override
-    public Uni<Void> terminate(String workerId) {
+    public Uni<Void> terminate(String workerId, String tenancyId) {
         return Uni.createFrom()
                   .<Void>item(() -> {
                       // Remove from registry FIRST — this is the watcher's cancellation signal.
