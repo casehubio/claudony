@@ -748,7 +748,8 @@
       "Bash(kill 8340)",
       "Bash(kill -3 69099)",
       "Bash(kill 69099)",
-      "Bash(kill 9667)"
+      "Bash(kill 9667)",
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) java -version)"
     ]
   }
 }

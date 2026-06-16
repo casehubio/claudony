@@ -6,11 +6,13 @@ import io.casehub.claudony.server.model.Session;
 import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
+import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
@@ -184,6 +186,42 @@ class ClaudonyReactiveWorkerProvisionerTest {
         provisioner.drainCausalContext(caseId);
 
         assertThat(provisioner.drainCausalContext(caseId)).isNull();
+    }
+
+    @Test
+    void provision_withTriggerFields_storesCausalContextAndReturnsEntryId() throws Exception {
+        UUID entryId = UUID.randomUUID();
+        QhorusCausalLinkResolver mockResolver = mock(QhorusCausalLinkResolver.class);
+        when(mockResolver.resolve("ch-123", "corr-456"))
+            .thenReturn(Uni.createFrom().item(Optional.of(entryId)));
+        var prov = new ClaudonyReactiveWorkerProvisioner(
+            true, tmux, registry, resolver, sessionMapping, "/tmp/workers", null, null, mockResolver);
+        UUID caseId = UUID.randomUUID();
+        var ctx = new ProvisionContext(caseId, "code-reviewer", null, null, "ch-123", "corr-456");
+
+        ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx)
+            .await().indefinitely();
+
+        assertThat(result.causedByEntryId()).isEqualTo(entryId);
+        assertThat(prov.drainCausalContext(caseId)).isEqualTo(entryId);
+        assertThat(prov.drainCausalContext(caseId)).isNull(); // drained — second call returns null
+    }
+
+    @Test
+    void provision_withNullTriggerFields_guardShortCircuits() throws Exception {
+        QhorusCausalLinkResolver mockResolver = mock(QhorusCausalLinkResolver.class);
+        var prov = new ClaudonyReactiveWorkerProvisioner(
+            true, tmux, registry, resolver, sessionMapping, "/tmp/workers", null, null, mockResolver);
+        UUID caseId = UUID.randomUUID();
+        var ctx = new ProvisionContext(caseId, "code-reviewer", null, null, null, null);
+
+        ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx)
+            .await().indefinitely();
+
+        assertThat(result.causedByEntryId()).isNull();
+        assertThat(prov.drainCausalContext(caseId)).isNull();
+        // null trigger fields → guard short-circuits before resolver is called
+        verifyNoInteractions(mockResolver);
     }
 
     private ProvisionContext provisionContext(UUID caseId) {
