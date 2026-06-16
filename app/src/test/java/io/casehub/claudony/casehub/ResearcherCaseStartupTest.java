@@ -4,20 +4,26 @@ import io.casehub.api.model.ContextChangeTrigger;
 import io.casehub.api.model.GoalKind;
 import io.casehub.api.model.evaluator.JQExpressionEvaluator;
 import io.casehub.api.model.GoalBasedCompletion;
+import io.casehub.api.model.converter.CaseDefinitionYamlMapper;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies the production YAML case definition parses correctly.
- * Instantiates ResearcherCase directly — getDefinition() via YamlCaseHub loads the YAML
- * without touching the CaseHubRuntime injection point, so no Quarkus context is needed.
+ * Uses CaseDefinitionYamlMapper.load(InputStream) directly — avoids YamlCaseHub's CDI
+ * ObjectMapper injection, which is not available outside a Quarkus context.
  */
 class ResearcherCaseStartupTest {
 
     @Test
-    void yamlLoads_withExpectedMetadata() {
-        var def = new ResearcherCase().getDefinition();
+    void yamlLoads_withExpectedMetadata() throws IOException {
+        InputStream stream = ResearcherCaseStartupTest.class.getClassLoader()
+                .getResourceAsStream("casehub/researcher.yaml");
+        var def = CaseDefinitionYamlMapper.load(stream);
 
         assertThat(def).isNotNull();
         assertThat(def.getName()).isEqualTo("researcher");
