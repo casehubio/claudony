@@ -8,6 +8,7 @@ import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
 import io.casehub.engine.common.internal.history.EventLog;
 import io.casehub.engine.common.internal.model.CaseInstance;
+import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
 import io.casehub.engine.common.spi.scheduler.WorkerExecutionManager;
 import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.core.eventbus.EventBus;
@@ -45,18 +46,22 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
     /** caseId → roleName for exit signals awaiting ledger capture drain. */
     private final ConcurrentHashMap<UUID, String> pendingExitSignals = new ConcurrentHashMap<>();
 
+    private CrossTenantCaseInstanceRepository caseInstanceRepository;
+
     @Inject
     public ClaudonyWorkerExecutionManager(
             TmuxService tmuxService,
             SessionRegistry registry,
             WorkerSessionMapping sessionMapping,
             CaseHubConfig config,
-            EventBus eventBus) {
+            EventBus eventBus,
+            CrossTenantCaseInstanceRepository caseInstanceRepository) {
         this.tmuxService = tmuxService;
         this.registry = registry;
         this.sessionMapping = sessionMapping;
         this.config = config;
         this.eventBus = eventBus;
+        this.caseInstanceRepository = caseInstanceRepository;
     }
 
     @Override
@@ -93,6 +98,36 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
             return;
         }
         watcher.start();
+    }
+
+    /**
+     * Starts the exit watcher for a just-provisioned worker session.
+     * Called from ClaudonyReactiveWorkerProvisioner after provision() succeeds when
+     * the tryProvision() path in CaseContextChangedEventHandler bypasses WorkerScheduleEvent
+     * (because DefaultWorkOrchestrator is excluded), so submit() is never called via the
+     * normal WorkerScheduleEventHandler path.
+     */
+    public void startWatcherForSession(UUID caseId, String roleName) {
+        if (caseInstanceRepository == null) return; // unit test context without CDI
+        String sessionId = sessionMapping.findByCase(caseId.toString(), roleName).orElse(null);
+        if (sessionId == null) {
+            LOG.warnf("startWatcherForSession: no session for case %s role %s", caseId, roleName);
+            return;
+        }
+        CaseInstance instance = caseInstanceRepository.findByUuid(caseId)
+                .await().atMost(java.time.Duration.ofSeconds(5));
+        if (instance == null) {
+            LOG.warnf("startWatcherForSession: case %s not found", caseId);
+            return;
+        }
+        String sessionName = ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + sessionId;
+        var cap = new Capability(roleName, "{}", "{}");
+        var worker = Worker.builder()
+                .name(roleName)
+                .capabilities(java.util.List.of(cap))
+                .function(ctx -> io.casehub.api.model.WorkerResult.of(java.util.Map.of()))
+                .build();
+        watch(sessionId, sessionName, instance, worker);
     }
 
     @Override

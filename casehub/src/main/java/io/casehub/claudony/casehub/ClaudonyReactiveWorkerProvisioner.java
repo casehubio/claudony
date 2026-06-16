@@ -46,6 +46,9 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
     // engine's own provisioning context patch.
     private final Instance<CaseHubRuntime> caseHubRuntime;
 
+    private final ClaudonyWorkerExecutionManager execManager;
+    private final QhorusCausalLinkResolver causalLinkResolver;
+
     @Inject
     public ClaudonyReactiveWorkerProvisioner(
             CaseHubConfig config,
@@ -53,16 +56,20 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
             SessionRegistry registry,
             WorkerCommandResolver resolver,
             WorkerSessionMapping sessionMapping,
-            Instance<CaseHubRuntime> caseHubRuntime) {
+            Instance<CaseHubRuntime> caseHubRuntime,
+            ClaudonyWorkerExecutionManager execManager,
+            QhorusCausalLinkResolver causalLinkResolver) {
         this(config.enabled(), tmux, registry, resolver, sessionMapping,
-                config.workers().defaultWorkingDir(), caseHubRuntime);
+                config.workers().defaultWorkingDir(), caseHubRuntime, execManager, causalLinkResolver);
     }
 
     ClaudonyReactiveWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
                                        WorkerCommandResolver resolver,
                                        WorkerSessionMapping sessionMapping,
                                        String defaultWorkingDir,
-                                       Instance<CaseHubRuntime> caseHubRuntime) {
+                                       Instance<CaseHubRuntime> caseHubRuntime,
+                                       ClaudonyWorkerExecutionManager execManager,
+                                       QhorusCausalLinkResolver causalLinkResolver) {
         this.enabled = enabled;
         this.tmux = tmux;
         this.registry = registry;
@@ -70,6 +77,8 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         this.sessionMapping = sessionMapping;
         this.defaultWorkingDir = defaultWorkingDir;
         this.caseHubRuntime = caseHubRuntime;
+        this.execManager = execManager;
+        this.causalLinkResolver = causalLinkResolver;
     }
 
     @Override
@@ -77,7 +86,16 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         return Uni.createFrom()
                   .item(() -> doProvision(capabilities, context))
                   .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
-                  .call(result -> signalStarted(capabilities, context));
+                  .call(result -> signalStarted(capabilities, context))
+                  .invoke(result -> startWatcher(capabilities, context));
+    }
+
+    private void startWatcher(Set<String> capabilities, ProvisionContext context) {
+        if (context.caseId() == null || execManager == null) return;
+        String roleName = context.taskType() != null
+                ? context.taskType()
+                : capabilities.stream().findFirst().orElse("worker");
+        execManager.startWatcherForSession(context.caseId(), roleName);
     }
 
     /**

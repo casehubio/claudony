@@ -737,7 +737,18 @@
       "Bash(kill -9 53269)",
       "Bash(tmux ls *)",
       "Skill(code-review)",
-      "Bash(xargs -I{} jar -tf {})"
+      "Bash(xargs -I{} jar -tf {})",
+      "Bash(JAVA_HOME=__CMDSUB_OUTPUT__ java -Dquarkus.profile=dev -Dquarkus.http.port=7979 -Dclaudony.mode=server -Dclaudony.casehub.enabled=true '-Dclaudony.casehub.workers.commands.researcher=echo test-exit' -Dclaudony.casehub.workers.default-working-dir=/tmp -Dclaudony.casehub.mesh-participation=silent -jar /Users/mdproctor/claude/casehub/claudony/app/target/quarkus-app/quarkus-run.jar)",
+      "Bash(JAVA_HOME=__CMDSUB_OUTPUT__ java -Dquarkus.http.port=7979 -Dclaudony.mode=server -Dclaudony.casehub.enabled=true '-Dclaudony.casehub.workers.commands.researcher=echo test-exit' -Dclaudony.casehub.workers.default-working-dir=/tmp -Dclaudony.casehub.mesh-participation=silent -jar /Users/mdproctor/claude/casehub/claudony/app/target/quarkus-app/quarkus-run.jar)",
+      "Bash(kill 43567)",
+      "Bash(JAVA_HOME=__CMDSUB_OUTPUT__ java -Dquarkus.http.port=7979 -Dclaudony.mode=server -Dclaudony.casehub.enabled=true '-Dclaudony.casehub.workers.commands.researcher=echo test-exit' -Dclaudony.casehub.workers.default-working-dir=/tmp -Dclaudony.casehub.mesh-participation=silent '-Dquarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:/tmp/claudony-test;DB_CLOSE_ON_EXIT=FALSE' -Dquarkus.datasource.qhorus.reactive.url=h2:file:/tmp/claudony-test -jar /Users/mdproctor/claude/casehub/claudony/app/target/quarkus-app/quarkus-run.jar)",
+      "Bash(kill 89724)",
+      "Bash(JAVA_HOME=__CMDSUB_OUTPUT__ java -Dquarkus.http.port=7979 -Dclaudony.mode=server -Dclaudony.casehub.enabled=true '-Dclaudony.casehub.workers.commands.researcher=echo test-exit' -Dclaudony.casehub.workers.default-working-dir=/tmp -Dclaudony.casehub.mesh-participation=silent '-Dquarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:/tmp/claudony-test;DB_CLOSE_ON_EXIT=FALSE' -Dquarkus.datasource.qhorus.reactive.url=h2:file:/tmp/claudony-test -Dquarkus.hibernate-orm.qhorus.database.generation=update -jar /Users/mdproctor/claude/casehub/claudony/app/target/quarkus-app/quarkus-run.jar)",
+      "Bash(kill 84506)",
+      "Bash(kill 8340)",
+      "Bash(kill -3 69099)",
+      "Bash(kill 69099)",
+      "Bash(kill 9667)"
     ]
   }
 }

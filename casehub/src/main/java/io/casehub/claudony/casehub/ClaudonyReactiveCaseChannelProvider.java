@@ -6,6 +6,7 @@ import io.casehub.qhorus.api.message.MessageDispatch;
 import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.channel.ChannelCreateRequest;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.casehub.qhorus.runtime.message.ReactiveMessageService;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -97,6 +98,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     }
 
     @Override
+    @WithSession("qhorus")
     public Uni<List<CaseChannel>> listChannels(UUID caseId) {
         String prefix = CaseChannel.CASE_CHANNEL_PREFIX + caseId;
         return channelService.findByNamePrefix(prefix)
