@@ -48,7 +48,7 @@ class ClaudonyWorkerExecutionManagerTest {
         when(config.enabled()).thenReturn(true);
         when(config.workerExitPollMs()).thenReturn(50L);
         when(config.workerExitMaxPollFailures()).thenReturn(3);
-        manager = new ClaudonyWorkerExecutionManager(tmuxService, registry, sessionMapping, config, eventBus);
+        manager = new ClaudonyWorkerExecutionManager(tmuxService, registry, sessionMapping, config, eventBus, null);
     }
 
     // ── Normal path: session exits naturally ───────────────────────────────────
@@ -330,7 +330,11 @@ class ClaudonyWorkerExecutionManagerTest {
     }
 
     private Worker worker(String name) {
-        return new Worker(name, List.of(new Capability(name, "{}", "{}")), ctx -> Map.of());
+        return Worker.builder()
+                .name(name)
+                .capabilities(List.of(new Capability(name, "{}", "{}")))
+                .function(ctx -> io.casehub.api.model.WorkerResult.of(Map.of()))
+                .build();
     }
 
     // ── drainExitSignal ────────────────────────────────────────────────────────

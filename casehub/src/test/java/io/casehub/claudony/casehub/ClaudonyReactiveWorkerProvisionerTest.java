@@ -31,7 +31,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
         registry = mock(SessionRegistry.class);
         sessionMapping = new WorkerSessionMapping();
         resolver = new WorkerCommandResolver(Map.of("code-reviewer", "claude", "default", "claude"));
-        provisioner = new ClaudonyReactiveWorkerProvisioner(true, tmux, registry, resolver, sessionMapping, "/tmp/workers", null);
+        provisioner = new ClaudonyReactiveWorkerProvisioner(true, tmux, registry, resolver, sessionMapping, "/tmp/workers", null, null, null);
     }
 
     @Test
@@ -82,7 +82,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
     @Test
     void provision_disabled_failsWithProvisioningException() {
         var disabledProvisioner = new ClaudonyReactiveWorkerProvisioner(
-                false, tmux, registry, resolver, sessionMapping, "/tmp", null);
+                false, tmux, registry, resolver, sessionMapping, "/tmp", null, null, null);
 
         assertThatThrownBy(() -> disabledProvisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
                 .await()

@@ -294,7 +294,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
     // ── postToChannel ─────────────────────────────────────────────────────────
 
     private DispatchResult dr(UUID channelId, String sender, MessageType type) {
-        return new DispatchResult(1L, channelId, sender, type, null, null, List.of(), null, null, null, null, 0);
+        return new DispatchResult(1L, channelId, sender, type, null, null, List.of(), null, null, null, null, 0, List.of());
     }
 
     @Test
