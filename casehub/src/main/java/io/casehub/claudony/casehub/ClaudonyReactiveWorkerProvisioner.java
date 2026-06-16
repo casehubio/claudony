@@ -29,7 +29,9 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
 
     public static final String SESSION_PREFIX = "claudony-worker-";
 
-    // Bridges causedByEntryId from provision() to ClaudonyLedgerEventCapture.
+    // Permanent side-channel: CaseLifecycleEvent deliberately has no causedByEntryId field
+    // (shared events must not carry consumer-specific fields — see engine#389 design spec).
+    // This map bridges ProvisionResult.causedByEntryId → CaseLedgerEntry.causedByEntryId.
     // Keyed by caseId; drained when WorkerStarted fires. Safe for concurrent access;
     // one provisioning per case at a time is the architectural invariant.
     private final ConcurrentHashMap<UUID, UUID> causalContext = new ConcurrentHashMap<>();
@@ -83,11 +85,28 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
 
     @Override
     public Uni<ProvisionResult> provision(Set<String> capabilities, ProvisionContext context) {
-        return Uni.createFrom()
-                  .item(() -> doProvision(capabilities, context))
-                  .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
-                  .call(result -> signalStarted(capabilities, context))
-                  .invoke(result -> startWatcher(capabilities, context));
+        Uni<Void> setup = Uni.createFrom()
+            .<Void>item(() -> { setupSession(capabilities, context); return null; })
+            .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+
+        Uni<Optional<UUID>> causedBy =
+            (causalLinkResolver != null
+             && context.triggerChannelId() != null
+             && context.triggerCorrelationId() != null)
+            ? causalLinkResolver.resolve(context.triggerChannelId(), context.triggerCorrelationId())
+            : Uni.createFrom().item(Optional.empty());
+
+        return Uni.combine().all().unis(setup, causedBy).asTuple()
+            .invoke(tuple -> {
+                if (context.caseId() != null) {
+                    tuple.getItem2().ifPresent(id -> causalContext.put(context.caseId(), id));
+                }
+            })
+            .map(tuple -> new ProvisionResult(tuple.getItem2().orElse(null)))
+            .call(result -> signalStarted(capabilities, context))
+            // startWatcher() calls .await() — must run on worker pool, not event loop
+            .emitOn(Infrastructure.getDefaultWorkerPool())
+            .invoke(result -> startWatcher(capabilities, context));
     }
 
     private void startWatcher(Set<String> capabilities, ProvisionContext context) {
@@ -160,7 +179,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         causalContext.put(caseId, entryId);
     }
 
-    private ProvisionResult doProvision(Set<String> capabilities, ProvisionContext context) {
+    private void setupSession(Set<String> capabilities, ProvisionContext context) {
         if (!enabled) {
             throw new ProvisioningException(
                     "CaseHub integration is disabled — set claudony.casehub.enabled=true");
@@ -189,11 +208,5 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
                 Optional.of(roleName));
         registry.register(session);
         sessionMapping.register(roleName, context.caseId(), sessionId);
-
-        // TODO(engine#231): when triggerChannelId + triggerCorrelationId are non-null,
-        // look up MessageLedgerEntry by (channelId, correlationId) via Qhorus, store
-        // (caseId → entryId) in causalContext, and return ProvisionResult(entryId).
-        // ClaudonyLedgerEventCapture drains causalContext on WorkerStarted.
-        return ProvisionResult.empty();
     }
 }

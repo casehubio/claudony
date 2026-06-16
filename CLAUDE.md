@@ -401,7 +401,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-06-13, after #153 #154 CI alignment):** 6 in `claudony-core` + 162 in `claudony-casehub` + 408 in `claudony-app` = **576 total, 574 passing**. Known failing: `MeshResourceInterjectionTest.postMessage_eventType_isValid` (Qhorus SNAPSHOT: EVENT dispatch now requires gateway registration — pre-existing); `ResearcherCaseCompletionTest` (engine SNAPSHOT: GoalReachedEventHandler→CaseStatusChangedHandler chain not visible via CrossTenantCaseInstanceRepository — tracked in #154). Previous baseline: 573 (6 + 162 + 405, 2026-06-06 after #148 #143 #147). Note: engine SNAPSHOT stability window — `DefaultWorkOrchestrator` added to `exclude-types` in `%test` profile.
+**Baseline (as of 2026-06-16, after #94 causedByEntryId + SNAPSHOT realignment):** 6 in `claudony-core` + 172 in `claudony-casehub` + 408 in `claudony-app` = **586 total, 584 passing**. Known failing: `MeshResourceInterjectionTest.postMessage_eventType_isValid` (Qhorus SNAPSHOT: EVENT dispatch now requires gateway registration — pre-existing); `ResearcherCaseCompletionTest` (engine SNAPSHOT: GoalReachedEventHandler→CaseStatusChangedHandler chain not visible via CrossTenantCaseInstanceRepository — tracked in #154). Previous baseline: 576 (6 + 162 + 408, 2026-06-13 after #153 #154 CI alignment). Note: engine SNAPSHOT stability window — `DefaultWorkOrchestrator` added to `exclude-types` in `%test` profile.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -419,7 +419,8 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 
 `claudony-casehub` tests:
 - `WorkerCommandResolverTest` — capability-to-command resolution, default fallback
-- `ClaudonyReactiveWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness, caseId/roleName stamped; returns ProvisionResult (engine#390 changed return type from Worker)
+- `ClaudonyReactiveWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness, caseId/roleName stamped; returns ProvisionResult; 2 causal context tests: trigger fields → storesCausalContextAndReturnsEntryId, null trigger fields → guardShortCircuits (engine#390 changed return type from Worker; claudony#94 added causedByEntryId provision path)
+- `QhorusCausalLinkResolverTest` — 8 unit tests: null channelId, null correlationId, repo unsatisfied, invalid UUID, blank correlationId, empty channelId, entry found → returns UUID, entry not found → empty
 - `ClaudonyReactiveCaseChannelProviderTest` — Qhorus channel creation (ReactiveChannelService), list filtering, postToChannel (including correlationId extraction for COMMAND/QUERY via #122), cache-hit no-op, concurrent init race (CountDownLatch barrier, #120), failed init eviction retry (#120), fires CaseChannelCreatedEvent on open (#102), createQhorusChannel calls initChannel (#102)
 - `ClaudonyReactiveWorkerContextProviderTest` — lineage, channel, clean-start, missing caseId; Uni<WorkerContext> unwrapped
 - `EmptyCaseLineageQueryTest` — Uni<List<WorkerSummary>> returns empty
