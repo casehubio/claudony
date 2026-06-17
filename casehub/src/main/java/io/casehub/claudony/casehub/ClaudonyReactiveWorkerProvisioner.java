@@ -131,17 +131,8 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         String roleName = context.taskType() != null
                 ? context.taskType()
                 : capabilities.stream().findFirst().orElse("worker");
-        try {
-            // signal() now returns CompletionStage<Void> (engine SNAPSHOT); join() to block
-            // briefly — this is non-fatal best-effort, so we accept any completion.
-            caseHubRuntime.get().signal(context.caseId(), "workers." + roleName + ".started", true)
-                    .toCompletableFuture().join();
-        } catch (Throwable e) {
-            // Non-fatal — session was created; guard is best-effort. Log so operators can detect
-            // repeated provisioning if the signal consistently fails.
-            LOG.warnf(e, "Failed to signal workers.%s.started for caseId=%s — when-guard may not prevent re-provisioning",
-                      roleName, context.caseId());
-        }
+        CaseHubRuntimeCompat.signal(caseHubRuntime.get(),
+                context.caseId(), "workers." + roleName + ".started", true);
         return Uni.createFrom().voidItem();
     }
 

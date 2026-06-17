@@ -101,7 +101,7 @@ public class ClaudonyLedgerEventCapture {
         if ("WorkerExecutionCompleted".equals(event.eventType())) {
             String roleName = execManager.drainExitSignal(event.caseId());
             if (roleName != null && !caseHubRuntime.isUnsatisfied()) {
-                caseHubRuntime.get().signal(
+                CaseHubRuntimeCompat.signal(caseHubRuntime.get(),
                         event.caseId(), "workers." + roleName + ".exited", true);
             }
         }
