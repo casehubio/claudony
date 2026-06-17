@@ -82,6 +82,7 @@ class ResearcherCaseCompletionTest {
                     + "io.casehub.engine.scheduler.quartz.ConditionalScheduledTriggerJob,"
                     + "io.casehub.engine.scheduler.quartz.ScheduledTriggerJob,"
                     + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
+                    + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
                     + "io.casehub.claudony.TestResearcherCase,"
                     + "io.casehub.claudony.casehub.ResearcherCase"
             );

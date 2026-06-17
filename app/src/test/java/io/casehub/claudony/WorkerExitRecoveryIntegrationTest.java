@@ -88,7 +88,7 @@ class WorkerExitRecoveryIntegrationTest {
 
         // Call watch() directly — this is what bootstrapCasehubWatchers() does
         execManager.watch(seededSessionId, sessionName, instance,
-                new io.casehub.api.model.Worker(roleName, java.util.List.of(), ctx -> java.util.Map.of()));
+                io.casehub.api.model.Worker.builder().name(roleName).capabilities(java.util.List.of()).function(ctx -> io.casehub.api.model.WorkerResult.of(java.util.Map.of())).build());
 
         // Wait for the watcher virtual thread to detect exit and publish
         Awaitility.await()

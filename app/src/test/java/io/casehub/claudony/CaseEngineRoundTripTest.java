@@ -1,14 +1,10 @@
 package io.casehub.claudony;
 
-import io.casehub.api.model.Capability;
-import io.casehub.api.model.Worker;
 import io.casehub.api.model.WorkerSummary;
-import io.casehub.claudony.casehub.ClaudonyReactiveWorkerProvisioner;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.claudony.casehub.JpaCaseLineageQuery;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
-import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -58,6 +54,8 @@ public class CaseEngineRoundTripTest {
                     "claudony.casehub.enabled", "true",
                     "claudony.casehub.workers.commands.researcher", "claude",
                     "claudony.casehub.workers.commands.default", "claude",
+                    // Fast poll for tests — watcher detects exit in ≤200ms rather than ≤5000ms
+                    "claudony.casehub.worker-exit-poll-ms", "200",
                     // Suppress ServerStartup.checkTmux() — @InjectMock replaces TmuxService
                     // after CDI init, but StartupEvent fires during init (before mock is active).
                     // Agent mode skips ServerStartup.onStart() entirely without affecting engine.
@@ -97,6 +95,7 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.scheduler.quartz.ConditionalScheduledTriggerJob,"
                     + "io.casehub.engine.scheduler.quartz.ScheduledTriggerJob,"
                     + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
+                    + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
                     + "io.casehub.claudony.casehub.ResearcherCase"
             );
         }
@@ -105,7 +104,6 @@ public class CaseEngineRoundTripTest {
     @Inject TestResearcherCase researcherCase;
     @Inject JpaCaseLineageQuery lineageQuery;
     @Inject SessionRegistry sessionRegistry;
-    @Inject CrossTenantCaseInstanceRepository caseInstanceRepository;
     @Inject ClaudonyWorkerExecutionManager execManager;
     @Inject Event<CaseLifecycleEvent> lifecycleEvents;
 
@@ -114,11 +112,16 @@ public class CaseEngineRoundTripTest {
     @Test
     void startCase_engineProvisions_watcherDetectsExit_andLineageReturnsCompletedSummary()
             throws Exception {
+        // provision() now auto-starts the watcher via startWatcherForSession(). Stub sessionExists()
+        // to return true initially so the watcher polls rather than detecting immediate exit and
+        // removing the session from the registry before we can inspect it.
+        when(tmuxService.sessionExists(anyString())).thenReturn(true);
+
         UUID caseId = researcherCase.startCase()
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
 
-        // Wait for provision() → createWorkerSession()
+        // Wait for provision() → createWorkerSession() — and registry.register() which follows synchronously.
         Awaitility.await()
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(200))
@@ -126,23 +129,20 @@ public class CaseEngineRoundTripTest {
                         verify(tmuxService, atLeastOnce())
                                 .createWorkerSession(anyString(), anyString(), anyString()));
 
-        // WorkOrchestrator is excluded from CasehubEnabledProfile (it needs AgentRoutingStrategy etc.).
-        // Start the watcher manually by calling watch() directly — equivalent to WorkerExecutionManager.submit().
+        // Assert session is in registry (startWatcherForSession() auto-started the watcher above).
         var session = sessionRegistry.findByCaseId(caseId.toString()).get(0);
-        var instance = caseInstanceRepository.findByUuid(caseId).await().atMost(Duration.ofSeconds(5));
-        var cap = new Capability("researcher", "{}", "{}");
-        var worker = new Worker("researcher", List.of(cap), ctx -> Map.of());
+        assertThat(session).isNotNull();
 
-        // Simulate WorkerExecutionStarted BEFORE starting the watcher.
+        // Simulate WorkerExecutionStarted BEFORE triggering exit.
         // Lineage resolves the worker name from the preceding Started entry (engine#390:
         // WorkerExecutionCompleted carries actorId="system", not the worker name).
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
                 caseId, "default", "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
                 "researcher", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
 
-        // Now start the watcher. sessionExists()→false triggers immediate completion publish.
+        // Trigger watcher exit: sessionExists()→false causes the auto-started watcher to detect
+        // session gone and publish WorkflowExecutionCompleted.
         when(tmuxService.sessionExists(anyString())).thenReturn(false);
-        execManager.watch(session.id(), session.name(), instance, worker);
 
         // Wait for: watcher publishes completion → WorkflowExecutionCompletedHandler processes it
         // → fireAsync(CaseLifecycleEvent WorkerExecutionCompleted) → ClaudonyLedgerEventCapture writes ledger
