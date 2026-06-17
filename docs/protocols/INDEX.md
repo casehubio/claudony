@@ -13,3 +13,5 @@ See [claudony/INDEX.md](claudony/INDEX.md) for the full table.
 | [claudony/casehub-binding-when-guard.md](claudony/casehub-binding-when-guard.md) | Null-filter bindings require a when: guard to prevent re-provisioning on exit signal |
 | [claudony/casehub-contextchange-yaml-form.md](claudony/casehub-contextchange-yaml-form.md) | contextChange: {} not bare contextChange: in YAML — bare form throws at startup |
 | [claudony/engine-cdi-exclude-types-sync.md](claudony/engine-cdi-exclude-types-sync.md) | quarkus.arc.exclude-types must stay in sync with engine-enabled test profile overrides |
+| [claudony/casehub-runtime-signal-compat.md](claudony/casehub-runtime-signal-compat.md) | CaseHubRuntime.signal() must go through CaseHubRuntimeCompat.signal() — API return type changes across SNAPSHOTs |
+| [claudony/casehub-signal-handler-required.md](claudony/casehub-signal-handler-required.md) | SignalReceivedEventHandler must stay in CasehubEnabledProfile — excluding it silently drops all signal() calls |
