@@ -84,7 +84,6 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.internal.engine.handler.ActionGateRejectedHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventHandler,"
-                    + "io.casehub.engine.internal.engine.handler.SignalReceivedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
                     + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService,"
                     + "io.casehub.engine.internal.orchestration.DefaultWorkOrchestrator,"
