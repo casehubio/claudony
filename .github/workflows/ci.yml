@@ -1,20 +1,26 @@
 name: Build and Publish
 
 on:
-  repository_dispatch:
-    types: [upstream-published]
   push:
     branches: [main]
+  repository_dispatch:
+    types: [upstream-published]
   pull_request:
+    types: [opened, synchronize, reopened]
     branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
-      packages: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -30,5 +36,22 @@ jobs:
 
       - name: Build and test
         run: mvn --batch-mode verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Surefire reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-reports
+          path: |
+            **/target/surefire-reports/*
+            **/target/failsafe-reports/*
+          if-no-files-found: ignore
+          retention-days: 5
+
+      - name: Publish to GitHub Packages
+        if: github.event_name != 'pull_request'
+        run: mvn --batch-mode deploy -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
