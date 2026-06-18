@@ -188,7 +188,7 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
                                 final String idempotencyKey =
                                         instance.getUuid() + ":" + worker.getName() + ":" + sessionId;
                                 eventBus.send(EventBusAddresses.WORKER_EXECUTION_FINISHED,
-                                        WorkflowExecutionCompleted.approved(instance, worker, idempotencyKey, Map.of()));
+                                        WorkflowExecutionCompleted.approved(instance, worker, idempotencyKey, Map.of(), null));
                             }
                             break;
                         }
