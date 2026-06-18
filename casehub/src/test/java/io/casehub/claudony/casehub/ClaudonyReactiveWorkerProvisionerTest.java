@@ -197,7 +197,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
         var prov = new ClaudonyReactiveWorkerProvisioner(
             true, tmux, registry, resolver, sessionMapping, "/tmp/workers", null, null, mockResolver);
         UUID caseId = UUID.randomUUID();
-        var ctx = new ProvisionContext(caseId, "code-reviewer", null, null, "ch-123", "corr-456");
+        var ctx = new ProvisionContext(caseId, null, "code-reviewer", null, null, "ch-123", "corr-456");
 
         ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx)
             .await().indefinitely();
@@ -213,7 +213,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
         var prov = new ClaudonyReactiveWorkerProvisioner(
             true, tmux, registry, resolver, sessionMapping, "/tmp/workers", null, null, mockResolver);
         UUID caseId = UUID.randomUUID();
-        var ctx = new ProvisionContext(caseId, "code-reviewer", null, null, null, null);
+        var ctx = new ProvisionContext(caseId, null, "code-reviewer", null, null, null, null);
 
         ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx)
             .await().indefinitely();
@@ -225,6 +225,6 @@ class ClaudonyReactiveWorkerProvisionerTest {
     }
 
     private ProvisionContext provisionContext(UUID caseId) {
-        return new ProvisionContext(caseId, "code-reviewer", null, null, null, null);
+        return new ProvisionContext(caseId, null, "code-reviewer", null, null, null, null);
     }
 }
