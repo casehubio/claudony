@@ -8,7 +8,11 @@ import io.casehub.qhorus.runtime.channel.ChannelCreateRequest;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.casehub.qhorus.runtime.message.ReactiveMessageService;
+import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
+import io.smallrye.common.vertx.VertxContext;
 import io.smallrye.mutiny.Uni;
+import io.vertx.core.Context;
+import io.vertx.mutiny.core.Vertx;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.List;
@@ -30,12 +34,14 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     private final ConcurrentHashMap<UUID, Uni<Map<String, CaseChannel>>> layoutCache = new ConcurrentHashMap<>();
     private final io.casehub.qhorus.runtime.gateway.ChannelGateway gateway;
     private final jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent;
+    private final Vertx vertx;
 
     @Inject
     public ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
             ReactiveMessageService messageService, CaseHubConfig config,
             io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
-            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent) {
+            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent,
+            Vertx vertx) {
         this.channelService = channelService;
         this.messageService = messageService;
         try {
@@ -46,6 +52,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
         }
         this.gateway = gateway;
         this.channelCreatedEvent = channelCreatedEvent;
+        this.vertx = vertx;
     }
 
     /** Package-private constructor for tests. */
@@ -53,11 +60,20 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
             ReactiveMessageService messageService, CaseChannelLayout layout,
             io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
             jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent) {
+        this(channelService, messageService, layout, gateway, channelCreatedEvent, null);
+    }
+
+    ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
+            ReactiveMessageService messageService, CaseChannelLayout layout,
+            io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
+            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent,
+            Vertx vertx) {
         this.channelService = channelService;
         this.messageService = messageService;
         this.layout = layout;
         this.gateway = gateway;
         this.channelCreatedEvent = channelCreatedEvent;
+        this.vertx = vertx;
     }
 
     @Override
@@ -98,8 +114,29 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     }
 
     @Override
-    @WithSession("qhorus")
     public Uni<List<CaseChannel>> listChannels(UUID caseId) {
+        // listChannels() may be called from an engine executor thread (not the Vert.x event loop).
+        // @WithSession("qhorus") checks assertUseOnEventLoop() at invocation time and would fail.
+        // Using deferred + runSubscriptionOn(eventLoop) ensures @WithSession is intercepted
+        // on the event loop where it can establish a Hibernate Reactive session.
+        Uni<List<CaseChannel>> deferred = Uni.createFrom().deferred(() -> doListChannels(caseId));
+        if (vertx == null) {
+            // Unit tests without Vert.x — InMemoryReactiveChannelStore needs no session.
+            return deferred;
+        }
+        // Engine handlers call listChannels() from executor threads (not Vert.x event loop).
+        // @WithSession("qhorus") checks assertUseOnEventLoop() at invocation time in doListChannels().
+        // Use runSubscriptionOn with a safe Vert.x duplicated context so the check passes.
+        io.vertx.core.Vertx delegate = vertx.getDelegate();
+        return deferred.runSubscriptionOn(command -> {
+            Context safe = VertxContext.getOrCreateDuplicatedContext(delegate.getOrCreateContext());
+            VertxContextSafetyToggle.setContextSafe(safe, true);
+            safe.runOnContext(v -> command.run());
+        });
+    }
+
+    @WithSession("qhorus")
+    Uni<List<CaseChannel>> doListChannels(UUID caseId) {
         String prefix = CaseChannel.CASE_CHANNEL_PREFIX + caseId;
         return channelService.findByNamePrefix(prefix)
                 .map(channels -> channels.stream()
