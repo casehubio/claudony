@@ -203,22 +203,25 @@ public class MeshResource {
     public Uni<Response> postMessage(
             @PathParam("name") String name,
             PostMessageRequest req) {
-        if (req == null || req.content() == null || req.content().isBlank()) {
-            return Uni.createFrom().item(Response.status(400).entity("content must not be blank").build());
-        }
         MessageType type;
         try {
-            type = MessageType.valueOf((req.type() == null ? "status" : req.type()).toUpperCase());
+            type = MessageType.valueOf((req == null || req.type() == null ? "status" : req.type()).toUpperCase());
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(
-                    Response.status(400).entity("invalid type: " + req.type()).build());
+                    Response.status(400).entity("invalid type: " + (req == null ? null : req.type())).build());
         }
         if (!VALID_HUMAN_TYPES.contains(type)) {
             return Uni.createFrom().item(
                     Response.status(400).entity("invalid type: " + req.type()).build());
         }
+        // EVENT is a signal — content is optional. All other human types require content.
+        boolean contentRequired = type != MessageType.EVENT;
+        if (contentRequired && (req == null || req.content() == null || req.content().isBlank())) {
+            return Uni.createFrom().item(Response.status(400).entity("content must not be blank").build());
+        }
+        String content = (req != null && req.content() != null && !req.content().isBlank()) ? req.content() : null;
         String sender = "human:" + securityIdentity.getPrincipal().getName();
-        return dashboard.sendHumanMessage(name, sender, type, req.content())
+        return dashboard.sendHumanMessage(name, sender, type, content)
                 .map(result -> Response.ok(result).build())
                 .onFailure(IllegalArgumentException.class)
                     .recoverWithItem(e -> Response.status(404).entity(e.getMessage()).build())

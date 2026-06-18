@@ -126,10 +126,10 @@ class MeshResourceInterjectionTest {
 
     @Test
     void postMessage_eventType_isValid() {
-        // EVENT was added to VALID_HUMAN_TYPES — verify it is accepted (no deontic obligation)
+        // EVENT is a signal — content is optional. Verify it is accepted without content.
         given()
             .contentType(JSON)
-            .body("{\"content\":\"tool call: read_file AuthService.java\",\"type\":\"event\"}")
+            .body("{\"type\":\"event\"}")
         .when()
             .post("/api/mesh/channels/{name}/messages", channelName)
         .then()
