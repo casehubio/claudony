@@ -95,6 +95,7 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.scheduler.quartz.ScheduledTriggerJob,"
                     + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
                     + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
+                    + "io.casehub.engine.internal.bridge.QhorusMessageSignalBridge,"
                     + "io.casehub.claudony.casehub.ResearcherCase"
             );
         }
