@@ -38,6 +38,15 @@ public class JpaCaseLineageQuery implements CaseLineageQuery {
 
     @Override
     public Uni<List<WorkerSummary>> findCompletedWorkers(UUID caseId) {
+        if (!io.vertx.core.Context.isOnEventLoopThread()) {
+            // Not on the Vert.x event loop thread (executeBlocking worker, plain executor, or
+            // JUnit thread) — run JPA inline on the current thread. Crossing to the worker pool
+            // via runSubscriptionOn passes through SmallRye context propagation which invokes
+            // Hibernate Reactive's VertxContext.execute() on the worker pool thread, requiring
+            // the event loop thread and throwing HR000068.
+            return Uni.createFrom().item(() -> self.blocking(caseId));
+        }
+        // On Vert.x event loop — offload blocking JPA to the worker pool.
         return Uni.createFrom()
                   .item(() -> self.blocking(caseId))
                   .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());

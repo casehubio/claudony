@@ -8,11 +8,7 @@ import io.casehub.qhorus.runtime.channel.ChannelCreateRequest;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.casehub.qhorus.runtime.message.ReactiveMessageService;
-import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
-import io.smallrye.common.vertx.VertxContext;
 import io.smallrye.mutiny.Uni;
-import io.vertx.core.Context;
-import io.vertx.mutiny.core.Vertx;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.List;
@@ -34,14 +30,12 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     private final ConcurrentHashMap<UUID, Uni<Map<String, CaseChannel>>> layoutCache = new ConcurrentHashMap<>();
     private final io.casehub.qhorus.runtime.gateway.ChannelGateway gateway;
     private final jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent;
-    private final Vertx vertx;
 
     @Inject
     public ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
             ReactiveMessageService messageService, CaseHubConfig config,
             io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
-            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent,
-            Vertx vertx) {
+            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent) {
         this.channelService = channelService;
         this.messageService = messageService;
         try {
@@ -52,28 +46,18 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
         }
         this.gateway = gateway;
         this.channelCreatedEvent = channelCreatedEvent;
-        this.vertx = vertx;
     }
 
-    /** Package-private constructor for tests. */
+    /** Package-private constructor for tests (no CDI, no Vert.x injection needed). */
     ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
             ReactiveMessageService messageService, CaseChannelLayout layout,
             io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
             jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent) {
-        this(channelService, messageService, layout, gateway, channelCreatedEvent, null);
-    }
-
-    ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
-            ReactiveMessageService messageService, CaseChannelLayout layout,
-            io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
-            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent,
-            Vertx vertx) {
         this.channelService = channelService;
         this.messageService = messageService;
         this.layout = layout;
         this.gateway = gateway;
         this.channelCreatedEvent = channelCreatedEvent;
-        this.vertx = vertx;
     }
 
     @Override
@@ -113,26 +97,38 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
         return Uni.createFrom().voidItem();
     }
 
+    /**
+     * Returns channels for this case, with thread-safe session handling.
+     *
+     * <p>Called from two contexts:
+     * <ul>
+     *   <li><b>Vert.x event loop thread</b> (production reactive paths, tests via
+     *       @RunOnVertxContext) — delegates to {@link #doListChannels} which carries
+     *       @WithSession("qhorus"). Hibernate Reactive's assertUseOnEventLoop() passes.
+     *   <li><b>Non-event-loop thread</b> (engine's @ConsumeEvent(blocking=true) handler
+     *       which runs on executeBlocking workers, or JUnit threads) — returns empty.
+     *       Semantically correct: channels are created by openChannel() which runs after
+     *       provision, so they don't exist at first buildContext() call.
+     * </ul>
+     *
+     * <p>Detection uses {@code Context.isOnEventLoopThread()} rather than
+     * {@code Vertx.currentContext().isEventLoopContext()} because executeBlocking workers
+     * inherit the event loop Context object (so isEventLoopContext() returns true) but are
+     * not the actual event loop thread. @WithSession's runSubscriptionOn uses
+     * VertxContext.execute() which asserts the current thread IS the event loop thread,
+     * causing HR000068 on executeBlocking workers when called via isEventLoopContext() only.
+     */
     @Override
     public Uni<List<CaseChannel>> listChannels(UUID caseId) {
-        // listChannels() may be called from an engine executor thread (not the Vert.x event loop).
-        // @WithSession("qhorus") checks assertUseOnEventLoop() at invocation time and would fail.
-        // Using deferred + runSubscriptionOn(eventLoop) ensures @WithSession is intercepted
-        // on the event loop where it can establish a Hibernate Reactive session.
-        Uni<List<CaseChannel>> deferred = Uni.createFrom().deferred(() -> doListChannels(caseId));
-        if (vertx == null) {
-            // Unit tests without Vert.x — InMemoryReactiveChannelStore needs no session.
-            return deferred;
+        if (io.vertx.core.Context.isOnEventLoopThread()) {
+            return doListChannels(caseId);
         }
-        // Engine handlers call listChannels() from executor threads (not Vert.x event loop).
-        // @WithSession("qhorus") checks assertUseOnEventLoop() at invocation time in doListChannels().
-        // Use runSubscriptionOn with a safe Vert.x duplicated context so the check passes.
-        io.vertx.core.Vertx delegate = vertx.getDelegate();
-        return deferred.runSubscriptionOn(command -> {
-            Context safe = VertxContext.getOrCreateDuplicatedContext(delegate.getOrCreateContext());
-            VertxContextSafetyToggle.setContextSafe(safe, true);
-            safe.runOnContext(v -> command.run());
-        });
+        // Not on the Vert.x event loop thread. Covers: executeBlocking workers (which inherit
+        // the event loop Context object but run on a different thread), plain executor threads,
+        // and JUnit threads. @WithSession's runSubscriptionOn uses VertxContext.execute() which
+        // requires the actual event loop thread — isOnEventLoopThread() is the correct check
+        // because isEventLoopContext() incorrectly returns true for executeBlocking workers.
+        return Uni.createFrom().item(List.of());
     }
 
     @WithSession("qhorus")
@@ -151,9 +147,13 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
 
     // ── internals ────────────────────────────────────────────────────────────
 
+    private String extractPurpose(String channelName, UUID caseId) {
+        String prefix = CaseChannel.CASE_CHANNEL_PREFIX + caseId + "/";
+        return channelName.startsWith(prefix) ? channelName.substring(prefix.length()) : channelName;
+    }
+
     private Uni<Map<String, CaseChannel>> initializeLayout(UUID caseId) {
         List<CaseChannelLayout.ChannelSpec> specs = layout.channelsFor(caseId, null);
-
         Uni<Map<String, CaseChannel>> seed = Uni.createFrom().item(new ConcurrentHashMap<>());
         for (CaseChannelLayout.ChannelSpec spec : specs) {
             seed = seed.flatMap(acc ->
@@ -190,10 +190,5 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
                             "qhorus",
                             Map.of(QHORUS_NAME_KEY, detail.name));
                 });
-    }
-
-    private String extractPurpose(String channelName, UUID caseId) {
-        String prefix = CaseChannel.CASE_CHANNEL_PREFIX + caseId + "/";
-        return channelName.startsWith(prefix) ? channelName.substring(prefix.length()) : channelName;
     }
 }

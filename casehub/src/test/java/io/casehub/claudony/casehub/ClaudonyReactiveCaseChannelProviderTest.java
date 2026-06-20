@@ -267,13 +267,21 @@ class ClaudonyReactiveCaseChannelProviderTest {
     // ── listChannels ─────────────────────────────────────────────────────────
 
     @Test
-    void listChannels_mapsReturnedChannels() {
+    void listChannels_returnsEmptyFromNonEventLoopThread() {
+        // listChannels() returns empty when called from a non-Vert.x thread (executor/JUnit).
+        // The reactive path (doListChannels) is only taken from the Vert.x event loop.
+        List<CaseChannel> result = provider.listChannels(UUID.randomUUID()).await().indefinitely();
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void doListChannels_mapsReturnedChannels() {
         UUID caseId = UUID.randomUUID();
         Channel ch = stubChannel(UUID.randomUUID(), "case-" + caseId + "/coord");
         when(channelService.findByNamePrefix("case-" + caseId))
                 .thenReturn(Uni.createFrom().item(List.of(ch)));
 
-        List<CaseChannel> result = provider.listChannels(caseId).await().indefinitely();
+        List<CaseChannel> result = provider.doListChannels(caseId).await().indefinitely();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).name()).isEqualTo("case-" + caseId + "/coord");
@@ -282,11 +290,11 @@ class ClaudonyReactiveCaseChannelProviderTest {
     }
 
     @Test
-    void listChannels_noMatch_returnsEmpty() {
+    void doListChannels_noMatch_returnsEmpty() {
         when(channelService.findByNamePrefix(anyString()))
                 .thenReturn(Uni.createFrom().item(List.of()));
 
-        List<CaseChannel> result = provider.listChannels(UUID.randomUUID()).await().indefinitely();
+        List<CaseChannel> result = provider.doListChannels(UUID.randomUUID()).await().indefinitely();
 
         assertThat(result).isEmpty();
     }
