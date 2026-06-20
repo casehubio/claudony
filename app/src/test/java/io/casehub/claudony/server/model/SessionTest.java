@@ -68,10 +68,10 @@ class SessionTest {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
                 "claude", SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("case-abc"), Optional.of("researcher"));
+                Optional.of("case-abc"), Optional.of("agent"));
         var updated = session.withStatus(SessionStatus.ACTIVE);
         assertEquals(Optional.of("case-abc"), updated.caseId());
-        assertEquals(Optional.of("researcher"), updated.roleName());
+        assertEquals(Optional.of("agent"), updated.roleName());
     }
 
     @Test

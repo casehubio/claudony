@@ -37,11 +37,11 @@ class ClaudonyReactiveWorkerContextProviderTest {
         when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
 
         WorkerContext ctx = provider.buildContext("worker-1", caseId,
-                WorkRequest.of("researcher", Map.of()))
+                WorkRequest.of("agent", Map.of()))
                 .await().indefinitely();
 
         assertThat(ctx.priorWorkers()).isEmpty();
-        assertThat(ctx.taskDescription()).isEqualTo("researcher");
+        assertThat(ctx.taskDescription()).isEqualTo("agent");
     }
 
     @Test
@@ -189,7 +189,7 @@ class ClaudonyReactiveWorkerContextProviderTest {
         when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("researcher", Map.of()))
+                WorkRequest.of("agent", Map.of()))
                 .await().indefinitely();
 
         assertThat(ctx.properties()).containsKey("systemPrompt");
@@ -204,7 +204,7 @@ class ClaudonyReactiveWorkerContextProviderTest {
         when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("researcher", Map.of()))
+                WorkRequest.of("agent", Map.of()))
                 .await().indefinitely();
 
         assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
@@ -221,7 +221,7 @@ class ClaudonyReactiveWorkerContextProviderTest {
         when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("researcher", Map.of()))
+                WorkRequest.of("agent", Map.of()))
                 .await().indefinitely();
 
         String prompt = (String) ctx.properties().get("systemPrompt");

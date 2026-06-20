@@ -17,34 +17,34 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Uses CaseDefinitionYamlMapper.load(InputStream) directly — avoids YamlCaseHub's CDI
  * ObjectMapper injection, which is not available outside a Quarkus context.
  */
-class ResearcherCaseStartupTest {
+class AgentCaseStartupTest {
 
     @Test
     void yamlLoads_withExpectedMetadata() throws IOException {
-        InputStream stream = ResearcherCaseStartupTest.class.getClassLoader()
-                .getResourceAsStream("casehub/researcher.yaml");
+        InputStream stream = AgentCaseStartupTest.class.getClassLoader()
+                .getResourceAsStream("casehub/agent.yaml");
         var def = CaseDefinitionYamlMapper.load(stream);
 
         assertThat(def).isNotNull();
-        assertThat(def.getName()).isEqualTo("researcher");
+        assertThat(def.getName()).isEqualTo("agent");
         assertThat(def.getNamespace()).isEqualTo("claudony");
         assertThat(def.getCapabilities())
-                .anyMatch(c -> "researcher".equals(c.getName()));
+                .anyMatch(c -> "agent".equals(c.getName()));
         assertThat(def.getBindings())
                 .anyMatch(b ->
                         "start-session-on-init".equals(b.getName())
                         && b.getOn() instanceof ContextChangeTrigger ctx
                         && ctx.getFilter() == null
                         && b.getWhen() instanceof JQExpressionEvaluator jq
-                        && ".workers.researcher.started != true and .workers.researcher.exited != true".equals(jq.expression()));
+                        && ".workers.agent.started != true and .workers.agent.exited != true".equals(jq.expression()));
 
         // Verify goals
         assertThat(def.getGoals()).isNotEmpty();
         assertThat(def.getGoals())
                 .anyMatch(g ->
-                        "research-complete".equals(g.getName())
+                        "agent-complete".equals(g.getName())
                         && g.getCondition() instanceof JQExpressionEvaluator jq
-                        && ".workers.researcher.exited == true".equals(jq.expression())
+                        && ".workers.agent.exited == true".equals(jq.expression())
                         && GoalKind.SUCCESS == g.getKind());
 
         // Verify completion

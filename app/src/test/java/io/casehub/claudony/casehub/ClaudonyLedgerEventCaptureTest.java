@@ -159,7 +159,7 @@ class ClaudonyLedgerEventCaptureTest {
     @TestTransaction
     void workerEvent_writesLedgerEntry_withWorkerIdAsActorId() {
         UUID caseId = UUID.randomUUID();
-        String workerId = "researcher-worker-" + UUID.randomUUID();
+        String workerId = "agent-worker-" + UUID.randomUUID();
 
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
                         caseId, "tenant-1", "ExecuteWorker", "WorkerExecutionStarted", null, workerId, "WORKER", null))

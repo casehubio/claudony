@@ -6,7 +6,7 @@ scope: repo
 applies_to: "CaseHub YAML case definition files in claudony-casehub (casehub/*.yaml)"
 severity: important
 refs:
-  - casehub/src/main/resources/casehub/researcher.yaml
+  - casehub/src/main/resources/casehub/agent.yaml
 violation_hint: "bare contextChange: (no value) parses as YAML null → CaseDefinitionYamlMapper.convertTrigger() throws UnsupportedOperationException at startup"
 garden_ref: "GE-20260608-a1daf1"
 created: 2026-06-08

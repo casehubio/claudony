@@ -20,33 +20,27 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * E2E proof: when the exit signal fires, the researcher case reaches COMPLETED.
+ * E2E proof: when the exit signal fires, the agent case reaches COMPLETED.
  *
  * Tests the core completion chain:
- *   CaseHubRuntime.signal("workers.researcher.exited", true) →
+ *   CaseHubRuntime.signal("workers.agent.exited", true) →
  *   SignalReceivedEventHandler patches context → CONTEXT_CHANGED →
- *   CaseContextChangedEventHandler evaluates goal: .workers.researcher.exited == true →
+ *   CaseContextChangedEventHandler evaluates goal: .workers.agent.exited == true →
  *   GoalReachedEventHandler marks goal reached → CaseStatusChangedHandler sets COMPLETED.
  *
  * Uses TestCompletionCase (no bindings) to eliminate the provision retry timer that would
  * otherwise race with the exit signal via the engine's Vert.x lock in SignalReceivedEventHandler.
  * The watcher→drainExitSignal→signal chain is covered by ClaudonyLedgerEventCaptureTest.
  *
- * Known SNAPSHOT instability: GoalReachedEventHandler→CaseStatusChangedHandler chain does not
- * reliably update the case to COMPLETED in the current engine SNAPSHOT. The signal fires and
- * CONTEXT_CHANGED evaluates goals, but CaseStatusChangedHandler write is not visible via
- * CrossTenantCaseInstanceRepository.findByUuid(). Fix tracked in engine; test will pass when
- * the completion chain is stable. See #154.
- *
  * CDI-only — no HTTP endpoints, no @TestSecurity (PP-20260513-7c227e).
  */
 @QuarkusTest
-@TestProfile(ResearcherCaseCompletionTest.CompletionTestProfile.class)
-class ResearcherCaseCompletionTest {
+@TestProfile(AgentCaseCompletionTest.CompletionTestProfile.class)
+class AgentCaseCompletionTest {
 
     /**
      * Enables the engine's goal evaluation and completion handlers.
-     * TestCompletionCase is active; ResearcherCase and TestResearcherCase are excluded
+     * TestCompletionCase is active; AgentCase and TestAgentCase are excluded
      * to prevent duplicate CaseHub bean registration and binding-driven provision retries.
      */
     public static class CompletionTestProfile implements QuarkusTestProfile {
@@ -83,8 +77,8 @@ class ResearcherCaseCompletionTest {
                     + "io.casehub.engine.scheduler.quartz.ScheduledTriggerJob,"
                     + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
                     + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
-                    + "io.casehub.claudony.TestResearcherCase,"
-                    + "io.casehub.claudony.casehub.ResearcherCase"
+                    + "io.casehub.claudony.TestAgentCase,"
+                    + "io.casehub.claudony.casehub.AgentCase"
             );
         }
     }
@@ -94,14 +88,14 @@ class ResearcherCaseCompletionTest {
     @Inject CaseHubRuntime caseHubRuntime;
 
     @Test
-    void researcherCase_completesWhenWorkerSessionExits() throws Exception {
+    void agentCase_completesWhenWorkerSessionExits() throws Exception {
         UUID caseId = completionCase.startCase()
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
 
         // Signal exit — triggers goal evaluation → COMPLETED.
         // No sleep needed: TestCompletionCase has no bindings so no competing CONTEXT_CHANGED.
-        caseHubRuntime.signal(caseId, "workers.researcher.exited", true);
+        caseHubRuntime.signal(caseId, "workers.agent.exited", true);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(10))
@@ -110,7 +104,7 @@ class ResearcherCaseCompletionTest {
                     CaseInstance updated = caseInstanceRepository.findByUuid(caseId)
                             .await().atMost(Duration.ofSeconds(5));
                     assertThat(updated.getState())
-                            .as("case state after researcher exit")
+                            .as("case state after agent exit")
                             .isEqualTo(CaseStatus.COMPLETED);
                 });
     }

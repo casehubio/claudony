@@ -10,7 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 /**
  * No-op JobScheduler — satisfies SchedulerService's JobScheduler injection in CasehubEnabledProfile.
  * SchedulerService is excluded from the default test profile so this bean is only active there.
- * TestResearcherCase has no schedule bindings: registerScheduledTriggers() returns immediately,
+ * TestAgentCase has no schedule bindings: registerScheduledTriggers() returns immediately,
  * none of the scheduler methods are ever called.
  */
 @DefaultBean

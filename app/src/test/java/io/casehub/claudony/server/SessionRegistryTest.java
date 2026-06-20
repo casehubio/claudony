@@ -87,7 +87,7 @@ class SessionRegistryTest {
         var now = Instant.now();
         var s1 = new Session("s1", "w1", "/tmp", "claude", SessionStatus.IDLE,
                 now.minusSeconds(10), now.minusSeconds(10), Optional.empty(),
-                Optional.of("case-x"), Optional.of("researcher"));
+                Optional.of("case-x"), Optional.of("agent"));
         var s2 = new Session("s2", "w2", "/tmp", "claude", SessionStatus.ACTIVE,
                 now, now, Optional.empty(),
                 Optional.of("case-x"), Optional.of("coder"));

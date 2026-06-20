@@ -58,10 +58,10 @@ class ClaudonyWorkerExecutionManagerTest {
         var caseId = UUID.randomUUID();
         var sessionId = "abc123";
         var sessionName = SESSION_PREFIX + sessionId;
-        seedSession(sessionId, caseId, "researcher");
+        seedSession(sessionId, caseId, "agent");
 
         var instance = caseInstance(caseId);
-        var worker = worker("researcher");
+        var worker = worker("agent");
 
         // Session alive then gone
         when(tmuxService.sessionExists(sessionName)).thenReturn(true, false);
@@ -82,11 +82,11 @@ class ClaudonyWorkerExecutionManagerTest {
         var caseId = UUID.randomUUID();
         var sessionId = "abc123";
         var sessionName = SESSION_PREFIX + sessionId;
-        seedSession(sessionId, caseId, "researcher");
+        seedSession(sessionId, caseId, "agent");
         when(tmuxService.sessionExists(sessionName)).thenReturn(false);
 
         var instance = caseInstance(caseId);
-        var worker = worker("researcher");
+        var worker = worker("agent");
 
         AtomicReference<WorkflowExecutionCompleted> captured = new AtomicReference<>();
         doAnswer(inv -> { captured.set(inv.getArgument(1)); return null; })
@@ -99,7 +99,7 @@ class ClaudonyWorkerExecutionManagerTest {
                 .until(() -> captured.get() != null);
 
         String key = captured.get().idempotency();
-        assertThat(key).isEqualTo(caseId + ":researcher:" + sessionId);
+        assertThat(key).isEqualTo(caseId + ":agent:" + sessionId);
     }
 
     // ── Termination path: registry removed first ──────────────────────────────
@@ -163,7 +163,7 @@ class ClaudonyWorkerExecutionManagerTest {
     void submit_doesNothing_whenCasehubDisabled() {
         when(config.enabled()).thenReturn(false);
 
-        manager.submit(null, caseInstance(UUID.randomUUID()), worker("researcher"), null, Map.of())
+        manager.submit(null, caseInstance(UUID.randomUUID()), worker("agent"), null, Map.of())
                 .await().indefinitely();
 
         verifyNoInteractions(tmuxService, eventBus);
@@ -174,7 +174,7 @@ class ClaudonyWorkerExecutionManagerTest {
     @Test
     void submit_doesNothing_whenNoSessionFoundForCase() {
         // No session registered for this caseId
-        manager.submit(null, caseInstance(UUID.randomUUID()), worker("researcher"), null, Map.of())
+        manager.submit(null, caseInstance(UUID.randomUUID()), worker("agent"), null, Map.of())
                 .await().indefinitely();
 
         verifyNoInteractions(tmuxService, eventBus);
@@ -235,8 +235,8 @@ class ClaudonyWorkerExecutionManagerTest {
         var caseId2 = UUID.randomUUID();
         var sessionId1 = "role1-s1";
         var sessionId2 = "role1-s2";
-        seedSession(sessionId1, caseId1, "researcher");
-        seedSession(sessionId2, caseId2, "researcher");
+        seedSession(sessionId1, caseId1, "agent");
+        seedSession(sessionId2, caseId2, "agent");
 
         var countdown = new java.util.concurrent.CountDownLatch(1);
         when(tmuxService.sessionExists(anyString())).thenAnswer(inv -> {
@@ -244,12 +244,12 @@ class ClaudonyWorkerExecutionManagerTest {
             return false;
         });
 
-        manager.submit(null, caseInstance(caseId1), worker("researcher"), null, Map.of())
+        manager.submit(null, caseInstance(caseId1), worker("agent"), null, Map.of())
                 .await().indefinitely();
-        manager.submit(null, caseInstance(caseId2), worker("researcher"), null, Map.of())
+        manager.submit(null, caseInstance(caseId2), worker("agent"), null, Map.of())
                 .await().indefinitely();
 
-        assertThat(manager.getActiveWorkCount("researcher")).isEqualTo(2);
+        assertThat(manager.getActiveWorkCount("agent")).isEqualTo(2);
         assertThat(manager.getActiveWorkCount("other-role")).isEqualTo(0);
         countdown.countDown();
     }
@@ -344,10 +344,10 @@ class ClaudonyWorkerExecutionManagerTest {
         var caseId = UUID.randomUUID();
         var sessionId = "sig001";
         var sessionName = SESSION_PREFIX + sessionId;
-        seedSession(sessionId, caseId, "researcher");
+        seedSession(sessionId, caseId, "agent");
         when(tmuxService.sessionExists(sessionName)).thenReturn(false);
 
-        manager.watch(sessionId, sessionName, caseInstance(caseId), worker("researcher"));
+        manager.watch(sessionId, sessionName, caseInstance(caseId), worker("agent"));
 
         // Wait for event bus send — signal is stored before send, so it's there too
         Awaitility.await()
@@ -357,7 +357,7 @@ class ClaudonyWorkerExecutionManagerTest {
                                 eq(EventBusAddresses.WORKER_EXECUTION_FINISHED),
                                 any(WorkflowExecutionCompleted.class)));
 
-        assertThat(manager.drainExitSignal(caseId)).isEqualTo("researcher");
+        assertThat(manager.drainExitSignal(caseId)).isEqualTo("agent");
         assertThat(manager.drainExitSignal(caseId)).isNull(); // drained — second call returns null
     }
 
