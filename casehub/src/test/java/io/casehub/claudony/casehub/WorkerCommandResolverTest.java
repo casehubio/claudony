@@ -11,7 +11,7 @@ class WorkerCommandResolverTest {
     void resolve_exactCapabilityMatch_returnsConfiguredCommand() {
         var config = Map.of(
                 "code-reviewer", "claude --mcp http://localhost:7778/mcp",
-                "researcher", "ollama run llama3",
+                "agent", "ollama run llama3",
                 "default", "claude");
         var resolver = new WorkerCommandResolver(config);
 
@@ -31,11 +31,11 @@ class WorkerCommandResolverTest {
     void resolve_multipleCapabilities_firstMatchWins() {
         var config = Map.of(
                 "code-reviewer", "claude",
-                "researcher", "ollama run llama3",
+                "agent", "ollama run llama3",
                 "default", "claude");
         var resolver = new WorkerCommandResolver(config);
 
-        String result = resolver.resolve(Set.of("researcher", "code-reviewer"));
+        String result = resolver.resolve(Set.of("agent", "code-reviewer"));
         assertThat(result).isIn("claude", "ollama run llama3");
     }
 
@@ -51,12 +51,12 @@ class WorkerCommandResolverTest {
     void getAvailableCapabilities_returnsAllExceptDefault() {
         var config = Map.of(
                 "code-reviewer", "claude",
-                "researcher", "ollama run llama3",
+                "agent", "ollama run llama3",
                 "default", "claude");
         var resolver = new WorkerCommandResolver(config);
 
         Set<String> caps = resolver.getAvailableCapabilities();
-        assertThat(caps).containsExactlyInAnyOrder("code-reviewer", "researcher");
+        assertThat(caps).containsExactlyInAnyOrder("code-reviewer", "agent");
         assertThat(caps).doesNotContain("default");
     }
 

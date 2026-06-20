@@ -6,7 +6,7 @@ scope: repo
 applies_to: "All CaseHub YAML case definitions and Java DSL case definitions in claudony-casehub"
 severity: critical
 refs:
-  - casehub/src/main/resources/casehub/researcher.yaml
+  - casehub/src/main/resources/casehub/agent.yaml
 violation_hint: "contextChange: {} binding with no when: clause — second worker provisioned on exit signal context patch before goal transition fires"
 garden_ref: "GE-20260608-1a56c3"
 created: 2026-06-08

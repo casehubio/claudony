@@ -52,7 +52,7 @@ public class CaseEngineRoundTripTest {
         public Map<String, String> getConfigOverrides() {
             return Map.of(
                     "claudony.casehub.enabled", "true",
-                    "claudony.casehub.workers.commands.researcher", "claude",
+                    "claudony.casehub.workers.commands.agent", "claude",
                     "claudony.casehub.workers.commands.default", "claude",
                     // Fast poll for tests — watcher detects exit in ≤200ms rather than ≤5000ms
                     "claudony.casehub.worker-exit-poll-ms", "200",
@@ -65,11 +65,11 @@ public class CaseEngineRoundTripTest {
                     "quarkus.index-dependency.casehub-engine.group-id", "io.casehub",
                     "quarkus.index-dependency.casehub-engine.artifact-id", "casehub-engine",
                     // Mirrors %test.quarkus.arc.exclude-types from application.properties but
-                    // re-includes TestResearcherCase (needed for the engine round-trip).
+                    // re-includes TestAgentCase (needed for the engine round-trip).
                     // CaseStartedEventHandler and SchedulerService are now included —
                     // blocking=true (engine#367) makes the handler safe on a blocking thread;
                     // NoOpJobScheduler (@DefaultBean) satisfies JobScheduler injection since
-                    // TestResearcherCase has no schedule bindings (no-op safe).
+                    // TestAgentCase has no schedule bindings (no-op safe).
                     "quarkus.arc.exclude-types",
                     "io.casehub.ledger.repository.CaseLedgerEntryRepository,"
                     + "io.casehub.ledger.service.CaseLedgerEventCapture,"
@@ -96,12 +96,12 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
                     + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
                     + "io.casehub.engine.internal.bridge.QhorusMessageSignalBridge,"
-                    + "io.casehub.claudony.casehub.ResearcherCase"
+                    + "io.casehub.claudony.casehub.AgentCase"
             );
         }
     }
 
-    @Inject TestResearcherCase researcherCase;
+    @Inject TestAgentCase agentCase;
     @Inject JpaCaseLineageQuery lineageQuery;
     @Inject SessionRegistry sessionRegistry;
     @Inject ClaudonyWorkerExecutionManager execManager;
@@ -117,7 +117,7 @@ public class CaseEngineRoundTripTest {
         // removing the session from the registry before we can inspect it.
         when(tmuxService.sessionExists(anyString())).thenReturn(true);
 
-        UUID caseId = researcherCase.startCase()
+        UUID caseId = agentCase.startCase()
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
 
@@ -138,7 +138,7 @@ public class CaseEngineRoundTripTest {
         // WorkerExecutionCompleted carries actorId="system", not the worker name).
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
                 caseId, "default", "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
-                "researcher", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
+                "agent", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
 
         // Trigger watcher exit: sessionExists()→false causes the auto-started watcher to detect
         // session gone and publish WorkflowExecutionCompleted.
@@ -160,8 +160,8 @@ public class CaseEngineRoundTripTest {
         WorkerSummary summary = lineageQuery.findCompletedWorkers(caseId)
                 .await().atMost(Duration.ofSeconds(5))
                 .get(0);
-        assertThat(summary.workerName()).as("workerName").isEqualTo("researcher");
-        assertThat(summary.workerId()).as("workerId").isEqualTo("researcher");
+        assertThat(summary.workerName()).as("workerName").isEqualTo("agent");
+        assertThat(summary.workerId()).as("workerId").isEqualTo("agent");
         assertThat(summary.startedAt()).as("startedAt").isNotNull();
         assertThat(summary.completedAt()).as("completedAt").isNotNull();
         assertThat(summary.ledgerEntryId()).as("ledgerEntryId").isNotNull();

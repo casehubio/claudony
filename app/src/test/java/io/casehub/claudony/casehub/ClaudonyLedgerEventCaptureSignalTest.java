@@ -43,14 +43,14 @@ class ClaudonyLedgerEventCaptureSignalTest {
     @Test
     void workerExecutionCompleted_withPendingSignal_firesContextSignal() throws Exception {
         UUID caseId = UUID.randomUUID();
-        when(execManager.drainExitSignal(caseId)).thenReturn("researcher");
+        when(execManager.drainExitSignal(caseId)).thenReturn("agent");
 
         lifecycleEvents.fireAsync(new CaseLifecycleEvent(
                         caseId, "default", "ExecuteWorker", "WorkerExecutionCompleted",
                         "ACTIVE", "system", "SYSTEM", null))
                 .toCompletableFuture().get(5, TimeUnit.SECONDS);
 
-        verify(runtimeMock).signal(caseId, "workers.researcher.exited", true);
+        verify(runtimeMock).signal(caseId, "workers.agent.exited", true);
     }
 
     @Test

@@ -33,7 +33,7 @@ class SessionResourceCaseEventsTest {
     private Session caseSession(String id, String caseId) {
         return new Session(id, "name-" + id, "/tmp", "cmd", SessionStatus.IDLE,
                 Instant.now(), Instant.now(), Optional.empty(),
-                Optional.of(caseId), Optional.of("researcher"));
+                Optional.of(caseId), Optional.of("agent"));
     }
 
     private Session standaloneSession(String id) {

@@ -33,7 +33,7 @@ class SessionLineageResourceTest {
         var now = Instant.now();
         registry.register(new Session("lin-s1", "claudony-lin-s1", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("550e8400-e29b-41d4-a716-446655440000"), Optional.of("researcher")));
+                Optional.of("550e8400-e29b-41d4-a716-446655440000"), Optional.of("agent")));
 
         given().when().get("/api/sessions/lin-s1/lineage")
                 .then()

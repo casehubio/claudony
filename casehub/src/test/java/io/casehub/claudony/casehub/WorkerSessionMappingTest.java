@@ -49,7 +49,7 @@ class WorkerSessionMappingTest {
     @Test
     void findByCase_wrongRole_returnsEmpty() {
         UUID caseId = UUID.randomUUID();
-        mapping.register("researcher", caseId, "session-uuid-4");
+        mapping.register("agent", caseId, "session-uuid-4");
 
         assertThat(mapping.findByCase(caseId.toString(), "reviewer")).isEmpty();
     }
