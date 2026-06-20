@@ -402,7 +402,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-06-18, after claudony#155 + engine SNAPSHOT realignment):** 6 in `claudony-core` + 172 in `claudony-casehub` + 408 in `claudony-app` = **586 total, 585 passing**. Known failing: 1 × `MeshResourceInterjectionTest.postMessage_eventType_isValid` (Qhorus SNAPSHOT: EVENT dispatch requires gateway registration — pre-existing); `ResearcherCaseCompletionTest` (engine SNAPSHOT: GoalReachedEventHandler→CaseStatusChangedHandler chain — tracked in #154). claudony#155 closed — fixed by qhorus#289 (InMemoryChannelStore no-op), qhorus#290 (LedgerMerkleFrontier tenancyId binding). Engine SNAPSHOT changes absorbed: `WorkflowExecutionCompleted.approved()` gained `bindingName` 5th param; `ProvisionContext` gained `tenancyId` as 2nd field.
+**Baseline (as of 2026-06-20, after claudony#151 engine-worker thread fix):** 6 in `claudony-core` + 173 in `claudony-casehub` + 408 in `claudony-app` = **587 total, 587 passing**. No known failing tests. Engine SNAPSHOT engine#537 added `@ConsumeEvent(blocking=true)` to `CaseContextChangedEventHandler`; fix: use `Context.isOnEventLoopThread()` (not `isEventLoopContext()`) to guard `@WithSession` calls — executeBlocking workers inherit the event loop Context so `isEventLoopContext()` incorrectly returns true. Previous baseline: 586 (2026-06-18, 585 passing, 1 known failure: MeshResourceInterjectionTest.postMessage_eventType_isValid — also fixed this session).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
