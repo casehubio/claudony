@@ -154,7 +154,7 @@ class WorkerLifecycleSequenceTest {
         var contextProvider = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider);
 
         WorkerContext ctx = contextProvider.buildContext("worker-1", null,
-                WorkRequest.of("researcher", Map.of()))
+                WorkRequest.of("agent", Map.of()))
                 .await().indefinitely();
 
         assertThat(ctx.properties()).containsKey("meshParticipation");

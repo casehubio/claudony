@@ -33,7 +33,7 @@ class CasehubStartupServiceTest {
 
     @Test
     void invalidCaseId_logsWarnAndSkips() {
-        registry.register(session("s1", "not-a-uuid", "researcher"));
+        registry.register(session("s1", "not-a-uuid", "agent"));
 
         int started = service.bootstrapWatchers();
 
@@ -44,7 +44,7 @@ class CasehubStartupServiceTest {
     @Test
     void nullCaseInstance_logsInfoAndSkips() {
         UUID caseId = UUID.randomUUID();
-        registry.register(session("s2", caseId.toString(), "researcher"));
+        registry.register(session("s2", caseId.toString(), "agent"));
         when(caseInstanceRepo.findByUuid(caseId))
                 .thenReturn(Uni.createFrom().item((CaseInstance) null));
 

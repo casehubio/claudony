@@ -18,7 +18,7 @@ class MeshSystemPromptTemplateTest {
 
     private static final UUID CASE_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final String WORKER_ID = "worker-abc";
-    private static final String CAPABILITY = "researcher";
+    private static final String CAPABILITY = "agent";
 
     private static final List<ChannelSpec> NORMATIVE_SPECS = List.of(
             new ChannelSpec("work", ChannelSemantic.APPEND, null, null,

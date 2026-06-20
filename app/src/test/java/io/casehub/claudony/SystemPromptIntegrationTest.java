@@ -24,7 +24,7 @@ class SystemPromptIntegrationTest {
     void defaultConfig_activeStrategy_systemPromptPresent(UniAsserter asserter) {
         UUID caseId = UUID.randomUUID();
         asserter.assertThat(
-                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("researcher", Map.of())),
+                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of())),
                 ctx -> assertThat(ctx.properties()).containsKey("systemPrompt"));
     }
 
@@ -33,7 +33,7 @@ class SystemPromptIntegrationTest {
     void defaultConfig_systemPromptContainsCaseId(UniAsserter asserter) {
         UUID caseId = UUID.randomUUID();
         asserter.assertThat(
-                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("researcher", Map.of())),
+                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of())),
                 ctx -> assertThat((String) ctx.properties().get("systemPrompt")).contains(caseId.toString()));
     }
 
@@ -42,7 +42,7 @@ class SystemPromptIntegrationTest {
     void defaultConfig_systemPromptContainsStartupSection(UniAsserter asserter) {
         UUID caseId = UUID.randomUUID();
         asserter.assertThat(
-                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("researcher", Map.of())),
+                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of())),
                 ctx -> assertThat((String) ctx.properties().get("systemPrompt")).contains("STARTUP:"));
     }
 }

@@ -9,10 +9,10 @@ import io.casehub.api.model.Goal;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
- * Minimal case definition for ResearcherCaseCompletionTest.
+ * Minimal case definition for AgentCaseCompletionTest.
  *
  * No bindings — no provision retry timer. Pure goal-evaluation test:
- * signal "workers.researcher.exited=true" → CaseContextChangedEventHandler evaluates goal
+ * signal "workers.agent.exited=true" → CaseContextChangedEventHandler evaluates goal
  * → GoalReachedEventHandler → CaseStatusChangedHandler sets COMPLETED.
  */
 @ApplicationScoped
@@ -21,14 +21,14 @@ public class TestCompletionCase extends CaseHub {
     @Override
     public CaseDefinition getDefinition() {
         var goal = Goal.builder()
-                .name("research-complete")
-                .condition(new JQExpressionEvaluator(".workers.researcher.exited == true"))
+                .name("agent-complete")
+                .condition(new JQExpressionEvaluator(".workers.agent.exited == true"))
                 .kind(GoalKind.SUCCESS)
                 .build();
 
         return CaseDefinition.builder()
                 .namespace("io.casehub.claudony.test")
-                .name("researcher-completion")
+                .name("agent-completion")
                 .version("1.0.0")
                 .goals(goal)
                 .completion(GoalExpression.allOf(goal))

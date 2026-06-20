@@ -5,7 +5,7 @@ Status: Accepted
 
 ## Context and Problem Statement
 
-`ResearcherCase` needs to reach `CaseStatus.COMPLETED` when the researcher's tmux
+`AgentCase` (formerly `ResearcherCase`, renamed in #150) needs to reach `CaseStatus.COMPLETED` when the agent's tmux
 session exits. Claudony workers are Claude Code sessions — they have no programmatic
 output channel back to the case engine. A mechanism is needed to transition cases
 from RUNNING to COMPLETED without changing Claude's workflow.
@@ -34,8 +34,8 @@ drain pattern from `drainCausalContext`.
 
 `CaseHubRuntime.signal(caseId, "workers.<roleName>.exited", true)` patches case context
 via dot-notation path, fires `CONTEXT_CHANGED`, and triggers goal evaluation.
-The YAML case definition goal `.workers.researcher.exited == true` satisfies the
-completion criteria.
+The YAML case definition goal `.workers.<roleName>.exited == true` satisfies the
+completion criteria (e.g. `.workers.agent.exited == true` in `agent.yaml`).
 
 ### Positive Consequences
 

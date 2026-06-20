@@ -84,12 +84,12 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
         var caseId = "e2e-case-001";
         registry.register(new Session("e2e-w1", "claudony-worker-w1", "/tmp", "claude",
                 SessionStatus.ACTIVE, now.minusSeconds(30), now.minusSeconds(30),
-                Optional.empty(), Optional.of(caseId), Optional.of("researcher")));
+                Optional.empty(), Optional.of(caseId), Optional.of("agent")));
         registry.register(new Session("e2e-w2", "claudony-worker-w2", "/tmp", "claude",
                 SessionStatus.IDLE, now, now,
                 Optional.empty(), Optional.of(caseId), Optional.of("coder")));
 
-        page.navigate(BASE_URL + "/app/session.html?id=e2e-w1&name=researcher");
+        page.navigate(BASE_URL + "/app/session.html?id=e2e-w1&name=agent");
 
         // SSE initial snapshot arrives immediately — wait for first worker row
         page.locator(".case-worker-row").first().waitFor(
@@ -105,11 +105,11 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
                 .isEqualTo(2);
 
         assertThat(rows.nth(0).getAttribute("class"))
-                .as("First worker (researcher) should be highlighted as active")
+                .as("First worker (agent) should be highlighted as active")
                 .contains("active-worker");
         assertThat(rows.nth(0).textContent())
-                .as("First row should show researcher role")
-                .contains("researcher");
+                .as("First row should show agent role")
+                .contains("agent");
 
         assertThat(rows.nth(1).getAttribute("class"))
                 .as("Second worker (coder) should not be active")
@@ -206,9 +206,9 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
         var now = Instant.now();
         var caseId = "e2e-sse-case-002";
         registry.register(new Session("sse-upd-w1", "claudony-worker-sse-upd-w1", "/tmp", "claude",
-                SessionStatus.ACTIVE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("researcher")));
+                SessionStatus.ACTIVE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("agent")));
 
-        page.navigate(BASE_URL + "/app/session.html?id=sse-upd-w1&name=researcher");
+        page.navigate(BASE_URL + "/app/session.html?id=sse-upd-w1&name=agent");
 
         // Wait for initial SSE render
         page.locator(".case-worker-row").first().waitFor(new Locator.WaitForOptions().setTimeout(1500));

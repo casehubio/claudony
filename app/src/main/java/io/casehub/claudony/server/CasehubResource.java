@@ -1,6 +1,6 @@
 package io.casehub.claudony.server;
 
-import io.casehub.claudony.casehub.ResearcherCase;
+import io.casehub.claudony.casehub.AgentCase;
 import io.quarkus.security.Authenticated;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
@@ -21,18 +21,18 @@ import java.util.concurrent.CompletionStage;
 public class CasehubResource {
 
     @Inject
-    Instance<ResearcherCase> researcherCase;
+    Instance<AgentCase> agentCase;
 
     @POST
-    @Path("/cases/researcher")
-    public CompletionStage<Response> startResearcher() {
-        if (researcherCase.isUnsatisfied()) {
+    @Path("/cases/agent")
+    public CompletionStage<Response> startAgent() {
+        if (agentCase.isUnsatisfied()) {
             return CompletableFuture.completedFuture(
                 Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(Map.of("error", "CaseHub engine not available"))
                     .build());
         }
-        return researcherCase.get()
+        return agentCase.get()
             .startCase()
             .thenApply(caseId -> Response.accepted(new CaseStartedResponse(caseId)).build());
     }

@@ -4,20 +4,20 @@ import io.casehub.api.engine.YamlCaseHub;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
- * Production researcher case definition loaded from classpath YAML.
+ * Production agent case definition loaded from classpath YAML.
  *
  * When CaseHub is disabled (CaseHubRuntime absent from CDI), this bean exists
  * but startCase() is never called — no effect on non-CaseHub deployments.
  *
- * Completion: case auto-completes when the researcher tmux session exits.
+ * Completion: case auto-completes when the agent tmux session exits.
  * The exit watcher stores a pending signal; ClaudonyLedgerEventCapture drains
  * it on WorkerExecutionCompleted and calls CaseHubRuntime.signal() which sets
- * context.workers.researcher.exited = true, satisfying the goal condition.
+ * context.workers.agent.exited = true, satisfying the goal condition.
  */
 @ApplicationScoped
-public class ResearcherCase extends YamlCaseHub {
+public class AgentCase extends YamlCaseHub {
 
-    public ResearcherCase() {
-        super("casehub/researcher.yaml");
+    public AgentCase() {
+        super("casehub/agent.yaml");
     }
 }

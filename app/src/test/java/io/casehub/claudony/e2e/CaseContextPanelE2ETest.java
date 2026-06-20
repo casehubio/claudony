@@ -43,7 +43,7 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
         // CaseHub session — has caseId and roleName
         registry.register(new Session("ctx-case-session", "claudony-ctx-case", "/tmp", "claude",
                 SessionStatus.ACTIVE, now.minusSeconds(600), now, Optional.empty(),
-                Optional.of(CASE_ID), Optional.of("researcher")));
+                Optional.of(CASE_ID), Optional.of("agent")));
 
         // Standalone session — no caseId
         registry.register(new Session("ctx-standalone", "claudony-ctx-standalone", "/tmp", "claude",
@@ -68,7 +68,7 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
 
     @Test
     void caseSession_showsCaseHeaderWithRoleAndStatus() {
-        page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=researcher");
+        page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=agent");
         openChannelPanel();
 
         // Case header must be present
@@ -76,7 +76,7 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
         assertThat(page.locator(".ch-case-header").count()).isEqualTo(1);
 
         // Role name must appear
-        assertThat(page.locator(".ch-case-role").textContent()).isEqualTo("researcher");
+        assertThat(page.locator(".ch-case-role").textContent()).isEqualTo("agent");
 
         // Status dot must have the 'active' class (session status = ACTIVE)
         assertThat(page.locator(".ch-case-header .worker-status-dot").getAttribute("class"))
@@ -106,7 +106,7 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
 
     @Test
     void lineageToggle_expandsAndCollapses() {
-        page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=researcher");
+        page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=agent");
         openChannelPanel();
 
         page.locator(".ch-lineage-toggle").waitFor(new Locator.WaitForOptions().setTimeout(4000));
@@ -138,7 +138,7 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
         tools.createChannel(caseChannelName, "Case work channel", "APPEND", null, null, null, null, null, null, null, null, null, null, null)
                 .await().atMost(java.time.Duration.ofSeconds(5));
 
-        page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=researcher");
+        page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=agent");
         openChannelPanel();
 
         // Wait for the case channel to be auto-selected in the dropdown

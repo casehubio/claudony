@@ -182,14 +182,14 @@ class SessionResourceTest {
         var now = Instant.now();
         var session = new Session("case-session-id", "claudony-test-case", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("test-case-123"), Optional.of("researcher"));
+                Optional.of("test-case-123"), Optional.of("agent"));
         registry.register(session);
 
         var response = given().get("/api/sessions/case-session-id").then()
                 .statusCode(200).extract().asString();
 
         assertTrue(response.contains("\"caseId\":\"test-case-123\""), "caseId missing: " + response);
-        assertTrue(response.contains("\"roleName\":\"researcher\""), "roleName missing: " + response);
+        assertTrue(response.contains("\"roleName\":\"agent\""), "roleName missing: " + response);
 
         registry.remove("case-session-id");
     }
@@ -200,7 +200,7 @@ class SessionResourceTest {
         var now = Instant.now();
         var s1 = new Session("cq-s1", "claudony-worker-1", "/tmp", "claude",
                 SessionStatus.ACTIVE, now.minusSeconds(5), now.minusSeconds(5), Optional.empty(),
-                Optional.of("case-q"), Optional.of("researcher"));
+                Optional.of("case-q"), Optional.of("agent"));
         var s2 = new Session("cq-s2", "claudony-worker-2", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
                 Optional.of("case-q"), Optional.of("coder"));

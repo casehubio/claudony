@@ -1,0 +1,25 @@
+dsl: "0.1"
+namespace: claudony
+name: agent
+version: "1.0.0"
+title: "Agent Case"
+spec:
+  capabilities:
+    - name: agent
+      description: "Generic Claude Code agent started as a tmux session via Claudony"
+      inputSchema: "{}"
+      outputSchema: "{}"
+  bindings:
+    - name: start-session-on-init
+      capability: agent
+      on:
+        contextChange: {}
+      when: ".workers.agent.started != true and .workers.agent.exited != true"
+  goals:
+    - name: agent-complete
+      condition: ".workers.agent.exited == true"
+      kind: success
+  completion:
+    success:
+      allOf:
+        - agent-complete

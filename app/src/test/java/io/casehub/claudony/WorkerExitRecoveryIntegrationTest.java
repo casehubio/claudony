@@ -64,7 +64,7 @@ class WorkerExitRecoveryIntegrationTest {
     void bootstrapWatchers_startsWatcherForCasehubSession_andPublishesCompletionWhenSessionGone()
             throws Exception {
         var caseId = UUID.randomUUID();
-        var roleName = "researcher";
+        var roleName = "agent";
         seededSessionId = UUID.randomUUID().toString();
         var sessionName = ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + seededSessionId;
 

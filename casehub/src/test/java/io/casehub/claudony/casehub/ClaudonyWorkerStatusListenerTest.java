@@ -47,12 +47,12 @@ class ClaudonyWorkerStatusListenerTest {
     @Test
     void onWorkerStarted_usesCaseIdForPreciseLookup() {
         var caseId = java.util.UUID.randomUUID();
-        sessionMapping.register("researcher", caseId, "uuid-researcher-1");
-        when(registry.find("uuid-researcher-1")).thenReturn(Optional.of(session("uuid-researcher-1", SessionStatus.IDLE)));
+        sessionMapping.register("agent", caseId, "uuid-agent-1");
+        when(registry.find("uuid-agent-1")).thenReturn(Optional.of(session("uuid-agent-1", SessionStatus.IDLE)));
 
-        listener.onWorkerStarted("researcher", java.util.Map.of("caseId", caseId.toString()));
+        listener.onWorkerStarted("agent", java.util.Map.of("caseId", caseId.toString()));
 
-        verify(registry).updateStatus("uuid-researcher-1", SessionStatus.ACTIVE);
+        verify(registry).updateStatus("uuid-agent-1", SessionStatus.ACTIVE);
     }
 
     @Test

@@ -121,7 +121,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
      * Signals workers.{role}.started=true into the case context BEFORE delivering
      * ProvisionResult to the engine. This queues the signal on the Vert.x event bus
      * ahead of the engine's own provisioning context patch, so that when the engine's
-     * CONTEXT_CHANGED fires next, the when-guard (.workers.researcher.started != true)
+     * CONTEXT_CHANGED fires next, the when-guard (.workers.agent.started != true)
      * is already false — preventing duplicate provisioning.
      */
     private Uni<Void> signalStarted(Set<String> capabilities, ProvisionContext context) {

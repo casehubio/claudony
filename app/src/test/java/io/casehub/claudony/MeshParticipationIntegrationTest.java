@@ -35,7 +35,7 @@ class MeshParticipationIntegrationTest {
     @Test
     void defaultConfig_meshParticipationKeyAlwaysPresent() {
         WorkerContext ctx = provider.buildContext("integration-worker", null,
-                WorkRequest.of("researcher", Map.of()))
+                WorkRequest.of("agent", Map.of()))
                 .await().atMost(Duration.ofSeconds(5));
 
         assertThat(ctx.properties()).containsKey("meshParticipation");
