@@ -1,6 +1,8 @@
 package io.casehub.claudony.casehub;
 
 import io.casehub.api.model.WorkerSummary;
+import io.casehub.api.spi.mesh.CaseChannelLayout;
+import io.casehub.api.spi.mesh.MeshParticipationStrategy;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

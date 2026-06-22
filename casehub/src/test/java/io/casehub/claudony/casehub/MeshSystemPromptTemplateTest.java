@@ -1,7 +1,9 @@
 package io.casehub.claudony.casehub;
 
-import io.casehub.claudony.casehub.CaseChannelLayout.ChannelSpec;
 import io.casehub.api.model.WorkerSummary;
+import io.casehub.api.spi.mesh.CaseChannelLayout;
+import io.casehub.api.spi.mesh.CaseChannelLayout.ChannelSpec;
+import io.casehub.api.spi.mesh.MeshParticipationStrategy;
 import io.casehub.qhorus.api.channel.ChannelSemantic;
 import io.casehub.qhorus.api.message.MessageType;
 import org.junit.jupiter.api.Test;

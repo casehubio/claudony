@@ -1,6 +1,8 @@
 package io.casehub.claudony.casehub;
 
 import io.casehub.api.model.CaseChannel;
+import io.casehub.api.spi.mesh.CaseChannelLayout;
+import io.casehub.api.spi.mesh.NormativeChannelLayout;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.qhorus.api.message.DispatchResult;
 import io.casehub.qhorus.api.message.MessageDispatch;

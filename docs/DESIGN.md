@@ -537,7 +537,7 @@ claudony.casehub.mesh-participation=active     # active | reactive | silent
 
 **`ClaudonyInstanceActorIdProvider`** — `@Alternative @Priority(1)` implementation of Qhorus's `InstanceActorIdProvider` SPI. Strips the `claudony-worker-` prefix from tmux session names, looks up the role name via `WorkerSessionMapping`, and returns `claude:{roleName}@v1`. Falls back to the raw instanceId for unknown or terminated sessions.
 
-**Outstanding:** `MeshParticipationStrategy.strategyFor()` currently receives `null` for `context` (context not yet built at call time); shared-data keys from prior workers not yet included in the prompt (requires additional Qhorus integration, tracked as future work under epic #86).
+**Outstanding:** shared-data keys from prior workers not yet included in the prompt (requires additional Qhorus integration, tracked as future work under epic #86).
 
 ### Guard Rails
 
