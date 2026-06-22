@@ -2,6 +2,7 @@ package io.casehub.claudony.casehub;
 
 import io.casehub.api.model.CaseChannel;
 import io.casehub.api.spi.ReactiveCaseChannelProvider;
+import io.casehub.api.spi.mesh.CaseChannelLayout;
 import io.casehub.qhorus.api.message.MessageDispatch;
 import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.channel.ChannelCreateRequest;

@@ -7,6 +7,10 @@ import io.casehub.api.model.WorkerContext;
 import io.casehub.api.model.WorkerSummary;
 import io.casehub.api.spi.ReactiveCaseChannelProvider;
 import io.casehub.api.spi.ReactiveWorkerContextProvider;
+import io.casehub.api.spi.mesh.ActiveParticipationStrategy;
+import io.casehub.api.spi.mesh.CaseChannelLayout;
+import io.casehub.api.spi.mesh.MeshParticipationStrategy;
+import io.casehub.api.spi.mesh.NormativeChannelLayout;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;
 import io.smallrye.common.vertx.VertxContext;
 import io.smallrye.mutiny.Uni;
@@ -52,7 +56,7 @@ public class ClaudonyReactiveWorkerContextProvider implements ReactiveWorkerCont
                                                   CaseHubConfig config,
                                                   Vertx vertx) {
         this(lineageQuery, channelProvider,
-                selectStrategy(config.meshParticipation()),
+                MeshParticipationStrategy.named(config.meshParticipation()),
                 CaseChannelLayout.named(config.channelLayout()),
                 vertx);
     }
@@ -80,7 +84,7 @@ public class ClaudonyReactiveWorkerContextProvider implements ReactiveWorkerCont
                                            ReactiveCaseChannelProvider channelProvider,
                                            CaseHubConfig config) {
         this(lineageQuery, channelProvider,
-                selectStrategy(config.meshParticipation()),
+                MeshParticipationStrategy.named(config.meshParticipation()),
                 CaseChannelLayout.named(config.channelLayout()),
                 null);
     }
@@ -106,7 +110,7 @@ public class ClaudonyReactiveWorkerContextProvider implements ReactiveWorkerCont
 
     @Override
     public Uni<WorkerContext> buildContext(String workerId, UUID caseId, WorkRequest task) {
-        MeshParticipationStrategy.MeshParticipation participation = strategy.strategyFor(workerId, null);
+        MeshParticipationStrategy.MeshParticipation participation = strategy.strategyFor(workerId, caseId);
 
         if (Boolean.TRUE.equals(task.input().get("clean-start"))) {
             return Uni.createFrom().item(new WorkerContext(task.capability(), null, List.of(),
@@ -167,15 +171,4 @@ public class ClaudonyReactiveWorkerContextProvider implements ReactiveWorkerCont
                 priorWorkers, PropagationContext.createRoot(), props);
     }
 
-    private static MeshParticipationStrategy selectStrategy(String name) {
-        return switch (name) {
-            case "active"   -> new ActiveParticipationStrategy();
-            case "reactive" -> new ReactiveParticipationStrategy();
-            case "silent"   -> new SilentParticipationStrategy();
-            default -> {
-                log.errorf("Unknown mesh-participation '%s' — valid values: active, reactive, silent", name);
-                throw new IllegalArgumentException("Unknown mesh participation: " + name);
-            }
-        };
-    }
 }
