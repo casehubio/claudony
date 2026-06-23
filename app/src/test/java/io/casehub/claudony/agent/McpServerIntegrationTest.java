@@ -234,12 +234,13 @@ class McpServerIntegrationTest {
                 """)
             .when().post("/mcp")
             .then().statusCode(200)
-            // 8 Claudony tools + 41 Qhorus tools = 49 total at the unified /mcp endpoint
-            .body("result.tools.size()", greaterThanOrEqualTo(8))
+            // Exactly 8 Claudony tools — no Qhorus tools on the default server
+            .body("result.tools.size()", equalTo(8))
             .body("result.tools.name", hasItems(
                 "list_sessions", "create_session", "delete_session",
                 "rename_session", "send_input", "get_output",
-                "open_in_terminal", "get_server_info"));
+                "open_in_terminal", "get_server_info"))
+            .body("result.tools.name", not(hasItems("register", "send_message", "check_messages")));
     }
 
     // -------------------------------------------------------------------------
@@ -281,7 +282,8 @@ class McpServerIntegrationTest {
     }
 
     @Test
-    void toolsList_includesQhorusTools() {
+    void qhorusToolsAvailableAtSeparateEndpoint() {
+        // Qhorus tools are on a separate named server — needs its own initialize handshake
         var initResponse = given()
             .contentType(ContentType.JSON)
             .accept("application/json, text/event-stream")
@@ -290,8 +292,10 @@ class McpServerIntegrationTest {
                  "params":{"protocolVersion":"2024-11-05","capabilities":{},
                            "clientInfo":{"name":"test","version":"1"}}}
                 """)
-            .when().post("/mcp")
-            .then().statusCode(200).extract().response();
+            .when().post("/qhorus")
+            .then().statusCode(200)
+            .body("result.serverInfo.name", equalTo("qhorus"))
+            .extract().response();
 
         var sid = initResponse.header("Mcp-Session-Id");
 
@@ -302,21 +306,15 @@ class McpServerIntegrationTest {
             .body("""
                 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
                 """)
-            .when().post("/mcp")
+            .when().post("/qhorus")
             .then()
             .statusCode(200)
-            // Claudony's 8 tools
-            .body("result.tools.name", hasItems("list_sessions", "get_server_info"))
-            // Key Qhorus tools — confirms Qhorus embedding is working
+            // Key Qhorus tools present — flexible count, no hardcoded total
             .body("result.tools.name", hasItems(
-                "check_messages", "register", "list_pending_commitments",
-                "create_channel", "list_ledger_entries", "get_channel_timeline"))
-            // 62 total: 8 Claudony + 54 Qhorus (pagination disabled via page-size=0; count updated as Qhorus evolves)
-            .body("result.tools.size()", equalTo(62));
+                "register", "send_message", "check_messages",
+                "create_channel", "list_channels"))
+            .body("result.tools.size()", greaterThanOrEqualTo(40))
+            // No Claudony tools on the Qhorus server
+            .body("result.tools.name", not(hasItems("list_sessions", "create_session")));
     }
 }
-
-    // -------------------------------------------------------------------------
-    // Phase 8 — Qhorus tools present at unified /mcp endpoint
-    // -------------------------------------------------------------------------
-

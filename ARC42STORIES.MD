@@ -69,7 +69,7 @@ The integration layer has three jobs:
 
 - `TmuxService`, `SessionRegistry`, and `TerminalWebSocket` must stay clean of CaseHub/Qhorus concepts; SPI implementations are the only coupling point
 - The named datasource `qhorus` isolates Qhorus schema from any future Claudony-owned schema — all Flyway migrations are Qhorus-managed
-- HTTP JSON-RPC for MCP (`POST /mcp`) is non-negotiable — native image requires no stdio subprocess
+- HTTP JSON-RPC for MCP (`POST /mcp` session tools, `POST /qhorus` agent mesh) is non-negotiable — native image requires no stdio subprocess
 - WebAuthn requires HTTPS; TLS is terminated by Caddy in production, not Quarkus
 - `casehub-ledger`'s own CDI beans (`CaseLedgerEntryRepository`, `CaseLedgerEventCapture`) are excluded via `quarkus.arc.exclude-types` to avoid `LedgerEntryRepository` ambiguity; only `CaseLedgerEntry` (JPA entity) is used directly
 
@@ -94,7 +94,7 @@ C4Context
   System_Ext(peers, "Peer Claudony nodes", "Other instances in the fleet. Session federation via symmetric REST mesh.")
 
   Rel(dev, claudony, "Browser / PWA — WebSocket terminal, dashboard, REST API")
-  Rel(controller, claudony, "POST /mcp — JSON-RPC session management + Qhorus mesh tools")
+  Rel(controller, claudony, "POST /mcp (session tools) + POST /qhorus (agent mesh tools)")
   Rel(claudony, tmux, "ProcessBuilder — new-session, pipe-pane, send-keys, capture-pane, has-session")
   Rel(claudony, engine, "CDI — ReactiveWorkerProvisioner, WorkerExecutionManager, CaseLifecycleEvent bus")
   Rel(claudony, qhorus, "Named datasource (qhorus) + CDI ChannelGateway / QhorusDashboardService")
@@ -157,7 +157,7 @@ Hard dependencies — order is non-negotiable:
 - C3 after C1: federation proxies session REST — requires C1 sessions to exist
 - C3 after C2: fleet endpoints use fleet-key auth (from C2's auth framework)
 - C4 after C1: Agent mode proxies session REST — requires running Server with C1
-- C5 after C4: Qhorus tools join the same MCP endpoint alongside C4's session tools
+- C5 after C4: Qhorus tools served at separate `/qhorus` endpoint alongside C4's session tools at `/mcp`
 - C6 after C5: CaseHub SPIs write Qhorus channels and use the qhorus named datasource (C5)
 - C7 after C6: identity bridge wraps the CaseHub worker model established in C6
 - C8 after C6: case worker panel reads caseId/roleName stamped by C6's provisioner
@@ -253,7 +253,7 @@ Browser keystroke → onMessage() → TmuxService.sendKeys(name, text)
 ### Scenario 2 — Channel message delivery (Qhorus → SSE → browser)
 
 ```
-Agent (Claude session) → POST /mcp → ClaudonyMcpTools → QhorusMcpTools.sendMessage()
+Agent (Claude session) → POST /qhorus → ReactiveQhorusMcpTools.sendMessage()
   → messageService.send() (persist to qhorus PU)
   → ChannelGateway.fanOut(channelId, message)
   → ClaudonyChannelBackend.post(ref, message)  [virtual thread]
@@ -471,7 +471,7 @@ flowchart LR
 - C2 after C1: auth protects existing endpoints — nothing to protect without C1
 - C3 after C1+C2: federation requires sessions (C1) and fleet-key auth (C2)
 - C4 after C1: Agent proxies session REST — requires running Server
-- C5 after C4: Qhorus tools join the same MCP endpoint as C4's session tools; `qhorus` datasource co-configured
+- C5 after C4: Qhorus tools served at separate `/qhorus` endpoint (#105); `qhorus` datasource co-configured
 - C6 after C5: CaseHub SPIs write Qhorus channels and use the `qhorus` named datasource from C5
 - C7 after C6: identity bridge wraps the CaseHub worker model established in C6
 - C8 after C6: case worker panel reads `caseId`/`roleName` stamped by C6's provisioner
@@ -547,7 +547,7 @@ Multiple Claudony instances visible from one dashboard. Symmetric peer mesh (no 
 **Delivered:** ~2026-03-20 | **Issues:** pre-issue-tracking | **Blog:** `blog/2026-04-18-mdp01-phase-8-mesh-you-can-see.md` (references 8 session management tools as pre-existing)
 
 **What this delivers**
-`claudony.mode=agent` activates `POST /mcp` with 8 session management tools (JSON-RPC over HTTP — GraalVM-native compatible, no stdio subprocess). iTerm2 integration for co-located session launching. A controller Claude can now create, read, resize, and command any session via MCP.
+`claudony.mode=agent` activates `POST /mcp` with 8 session management tools (JSON-RPC over HTTP — GraalVM-native compatible, no stdio subprocess). Qhorus agent mesh tools are served at a separate `POST /qhorus` endpoint (#105). iTerm2 integration for co-located session launching. A controller Claude can now create, read, resize, and command any session via MCP, and reach agent mesh tools at `/qhorus`.
 
 **Accountability gaps closed**
 - No programmatic session control → HTTP JSON-RPC MCP endpoint (ADR-0002)
@@ -566,7 +566,7 @@ Multiple Claudony instances visible from one dashboard. Symmetric peer mesh (no 
 **Delivered:** 2026-04-18, 2026-04-20 | **Issues:** pre-#80 range | **Blog:** `blog/2026-04-18-mdp01-phase-8-mesh-you-can-see.md`, `blog/2026-04-20-mdp01-speaking-into-the-mesh.md`
 
 **What this delivers**
-Qhorus embedded as Maven dependency. Named datasource `qhorus` (H2 file, Flyway-managed). Qhorus tools join the MCP endpoint. Dashboard Mesh panel (three views: Overview, Channel, Feed). Human interjection dock — humans post to any channel. `ClaudonyChannelBackend` hooks `ChannelGateway.fanOut()` into the in-process `ChannelEventBus` for SSE delivery.
+Qhorus embedded as Maven dependency. Named datasource `qhorus` (H2 file, Flyway-managed). Qhorus tools served at `/qhorus` (separate named MCP server, #105). Dashboard Mesh panel (three views: Overview, Channel, Feed). Human interjection dock — humans post to any channel. `ClaudonyChannelBackend` hooks `ChannelGateway.fanOut()` into the in-process `ChannelEventBus` for SSE delivery.
 
 **Accountability gaps closed**
 - Agent communication invisible to operator → Mesh panel with real-time SSE delivery (ADR-0006, ADR-0007)
@@ -575,7 +575,7 @@ Qhorus embedded as Maven dependency. Named datasource `qhorus` (H2 file, Flyway-
 | Layer | Delta |
 |---|---|
 | L5 Qhorus Integration | High — entire layer introduced |
-| L4 Agent Mode + MCP | Low — Qhorus tools join existing `/mcp` endpoint |
+| L4 Agent Mode + MCP | Low — Qhorus tools served at separate `/qhorus` endpoint (#105) |
 | L3 Fleet / Peer Mesh | Low — ChannelFleetBroadcaster and FleetMessageRelayObserver added for cross-node channel sync |
 
 ---
@@ -804,7 +804,7 @@ Symmetric multi-node mesh where any node can see any other's sessions. Circuit b
 
 #### Layer — L4: Agent Mode + MCP
 
-**Participates in chapters:** C4 (primary), C5 (Qhorus tools join)
+**Participates in chapters:** C4 (primary), C5 (Qhorus tools at /qhorus)
 **Architectural patterns:** Two-mode binary, HTTP JSON-RPC for MCP
 **ADRs:** ADR-0002
 **Blog:** implied in `blog/2026-04-18-mdp01-phase-8-mesh-you-can-see.md`
