@@ -204,6 +204,8 @@ docker compose up
 - Health: `http://localhost:7777/q/health`
 - Sessions API: `http://localhost:7777/api/sessions`
 - MCP endpoint (Agent): `http://localhost:7778/mcp`
+- Qhorus MCP endpoint (Server): `http://localhost:7777/qhorus`
+- Qhorus MCP endpoint (Agent): `http://localhost:7778/qhorus`
 - WebSocket terminal: `ws://localhost:7777/ws/{session-id}`
 - Register passkey: `http://localhost:7777/auth/register` (first run, or with invite token)
 - Login: `http://localhost:7777/auth/login`
@@ -410,7 +412,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 ```
 Quarkus resolves `${quarkus.http.port}` to the actual assigned random port. Without this, the client silently connects to the default port (7777) and all such tests fail with `Connection refused`.
 
-**Qhorus tool count:** `McpServerIntegrationTest.toolsList_includesQhorusTools` asserts exactly 62 tools (8 Claudony + 54 Qhorus) — update this assertion and the count here when Qhorus ships new tools; the count changes with each Qhorus release. `quarkus.mcp.server.tools.page-size=0` in `application.properties` disables the default 50-tool pagination cap; the long-term fix (separate endpoints) is tracked in #105.
+**MCP endpoint separation (#105):** Claudony session tools (8) are served at `/mcp` (default server). Qhorus agent mesh tools are served at `/qhorus` (named server `"qhorus"`, configured via Qhorus's `META-INF/microprofile-config.properties`). `McpServerIntegrationTest.qhorusToolsAvailableAtSeparateEndpoint` verifies key Qhorus tools are present at `/qhorus` with a flexible count (`greaterThanOrEqualTo(40)`) — no hardcoded total. `fullHandshakeSequence_asClaudeWouldSendIt` asserts exactly 8 tools at `/mcp`. Override the Qhorus endpoint path via `quarkus.mcp.server.qhorus.http.root-path` in `application.properties`.
 
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash

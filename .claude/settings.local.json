@@ -749,7 +749,12 @@
       "Bash(kill -3 69099)",
       "Bash(kill 69099)",
       "Bash(kill 9667)",
-      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) java -version)"
+      "Bash(JAVA_HOME=$\\(/usr/libexec/java_home -v 26\\) java -version)",
+      "mcp__intellij-index__ide_file_structure",
+      "mcp__intellij-index__ide_read_file",
+      "mcp__intellij-index__ide_find_symbol",
+      "mcp__intellij-index__ide_open_project",
+      "Bash(bash *)"
     ]
   }
 }
