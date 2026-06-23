@@ -470,7 +470,9 @@ Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTes
 
 ## Design Document
 
-`docs/DESIGN.md` is the living architectural overview — updated via `/update-design` (or automatically by `java-git-commit`). For point-in-time snapshots, see `docs/design-snapshots/`.
+`ARC42STORIES.MD` (project root) is the primary architecture record — Arc42Stories format with 3 Journeys, 9 Chapters, 9 Layer entries, quality requirements, risks, and glossary. Maintained via `/update-design` at session wrap.
+
+`docs/DESIGN.md` is the operational reference — component structure, data flows, key design decisions in tabular form. Also updated via `/update-design`. For point-in-time snapshots, see `docs/design-snapshots/`.
 
 ## Ecosystem Context
 
@@ -535,8 +537,9 @@ filtering or dropping commits that touch these paths.
 | Path | What it is |
 |------|------------|
 | `CLAUDE.md` | Project conventions (build, test, naming) |
+| `ARC42STORIES.MD` | Primary architecture record (Arc42Stories format) |
 | `docs/adr/` | Architecture decision records |
-| `docs/DESIGN.md` | Design document |
+| `docs/DESIGN.md` | Operational design reference |
 
 ## Work Tracking
 
