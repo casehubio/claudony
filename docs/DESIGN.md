@@ -2,6 +2,8 @@
 
 **Status:** Active
 
+> **Architecture record:** `ARC42STORIES.MD` (project root) is the formal Arc42Stories architecture record — Journeys, Chapters, Layer entries, quality requirements, and risks. This document covers operational reference material: component structure, data flows, technology decisions, and key design decisions in tabular form.
+
 **See also:** [Fleet Architecture](FLEET.md) — multi-instance peer mesh, Docker deployment, session federation
 
 ---
