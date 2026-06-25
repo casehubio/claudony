@@ -70,7 +70,7 @@ class CasehubStartupServiceTest {
                 eq("s3"),
                 anyString(),
                 eq(inst),
-                argThat(w -> "worker".equals(w.getName())));
+                argThat(w -> "worker".equals(w.name())));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

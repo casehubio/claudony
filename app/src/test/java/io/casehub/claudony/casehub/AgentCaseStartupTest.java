@@ -29,7 +29,7 @@ class AgentCaseStartupTest {
         assertThat(def.getName()).isEqualTo("agent");
         assertThat(def.getNamespace()).isEqualTo("claudony");
         assertThat(def.getCapabilities())
-                .anyMatch(c -> "agent".equals(c.getName()));
+                .anyMatch(c -> "agent".equals(c.name()));
         assertThat(def.getBindings())
                 .anyMatch(b ->
                         "start-session-on-init".equals(b.getName())

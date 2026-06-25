@@ -1,7 +1,9 @@
 package io.casehub.claudony.casehub;
 
-import io.casehub.api.model.Capability;
-import io.casehub.api.model.Worker;
+import io.casehub.worker.api.Capability;
+import io.casehub.worker.api.Worker;
+import io.casehub.worker.api.WorkerFunction;
+import io.casehub.worker.api.WorkerResult;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
@@ -332,8 +334,8 @@ class ClaudonyWorkerExecutionManagerTest {
     private Worker worker(String name) {
         return Worker.builder()
                 .name(name)
-                .capabilities(List.of(new Capability(name, "{}", "{}")))
-                .function(ctx -> io.casehub.api.model.WorkerResult.of(Map.of()))
+                .capabilities(List.of(Capability.of(name, "{}", "{}")))
+                .function(new WorkerFunction.Sync(ctx -> WorkerResult.of(Map.of())))
                 .build();
     }
 

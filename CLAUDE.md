@@ -404,7 +404,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-06-20, after claudony#151 engine-worker thread fix):** 6 in `claudony-core` + 173 in `claudony-casehub` + 408 in `claudony-app` = **587 total, 587 passing**. No known failing tests. Engine SNAPSHOT engine#537 added `@ConsumeEvent(blocking=true)` to `CaseContextChangedEventHandler`; fix: use `Context.isOnEventLoopThread()` (not `isEventLoopContext()`) to guard `@WithSession` calls — executeBlocking workers inherit the event loop Context so `isEventLoopContext()` incorrectly returns true. Previous baseline: 586 (2026-06-18, 585 passing, 1 known failure: MeshResourceInterjectionTest.postMessage_eventType_isValid — also fixed this session).
+**Baseline (as of 2026-06-25, after claudony#157 worker-api migration):** 6 in `claudony-core` + 143 in `claudony-casehub` + 408 in `claudony-app` = **557 total, 557 passing**. No known failing tests. casehub module dropped from 173 to 143 after #159 migrated CaseChannelLayout + MeshParticipationStrategy tests to casehub-engine-api. Previous baseline: 587 (2026-06-20, after #151 engine-worker thread fix).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties

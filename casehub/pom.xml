@@ -22,6 +22,12 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Worker primitives (record types: Worker, Capability, WorkerResult) -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-worker-api</artifactId>
+        </dependency>
+
         <!-- CaseHub SPI interfaces -->
         <dependency>
             <groupId>io.casehub</groupId>

@@ -1,7 +1,8 @@
 package io.casehub.claudony.server;
 
-import io.casehub.api.model.Worker;
-import io.casehub.api.model.WorkerResult;
+import io.casehub.worker.api.Worker;
+import io.casehub.worker.api.WorkerFunction;
+import io.casehub.worker.api.WorkerResult;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
@@ -52,7 +53,7 @@ class CasehubStartupService {
                     continue;
                 }
                 var roleName = session.roleName().orElse("worker");
-                var worker = Worker.builder().name(roleName).capabilities(List.of()).function(ctx -> WorkerResult.of(Map.of())).build();
+                var worker = Worker.builder().name(roleName).capabilities(List.of()).function(new WorkerFunction.Sync(ctx -> WorkerResult.of(Map.of()))).build();
                 execManager.watch(session.id(), session.name(), instance, worker);
                 started++;
             } catch (Exception e) {

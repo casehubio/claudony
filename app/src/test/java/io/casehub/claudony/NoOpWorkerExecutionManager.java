@@ -1,7 +1,7 @@
 package io.casehub.claudony;
 
-import io.casehub.api.model.Capability;
-import io.casehub.api.model.Worker;
+import io.casehub.worker.api.Capability;
+import io.casehub.worker.api.Worker;
 import io.casehub.engine.common.internal.history.EventLog;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.scheduler.WorkerExecutionManager;
