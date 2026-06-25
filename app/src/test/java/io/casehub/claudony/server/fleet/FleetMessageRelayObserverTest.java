@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -44,7 +45,7 @@ class FleetMessageRelayObserverTest {
         assertThatCode(() -> {
             observer.onMessage(new MessageReceivedEvent(
                     "case-no-peers/work", UUID.randomUUID(), "default",
-                    MessageType.STATUS, "sender-1", null, "content"));
+                    MessageType.STATUS, "sender-1", null, Instant.now(), "content"));
             Thread.sleep(100);
         }).doesNotThrowAnyException();
     }
@@ -62,7 +63,7 @@ class FleetMessageRelayObserverTest {
 
         observer.onMessage(new MessageReceivedEvent(
                 channelName, UUID.randomUUID(), "default",
-                MessageType.STATUS, "sender-1", null, "content"));
+                MessageType.STATUS, "sender-1", null, Instant.now(), "content"));
 
         Thread.sleep(500);
 
@@ -77,7 +78,7 @@ class FleetMessageRelayObserverTest {
         assertThatCode(() -> {
             observer.onMessage(new MessageReceivedEvent(
                     "case-down-test/work", UUID.randomUUID(), "default",
-                    MessageType.STATUS, "sender-1", null, "content"));
+                    MessageType.STATUS, "sender-1", null, Instant.now(), "content"));
             Thread.sleep(300);
         }).doesNotThrowAnyException();
 
