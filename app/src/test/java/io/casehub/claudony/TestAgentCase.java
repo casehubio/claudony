@@ -2,7 +2,7 @@ package io.casehub.claudony;
 
 import io.casehub.api.engine.CaseHub;
 import io.casehub.api.model.Binding;
-import io.casehub.api.model.Capability;
+import io.casehub.worker.api.Capability;
 import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.ContextChangeTrigger;
 import io.casehub.api.model.evaluator.ExpressionEvaluator;

@@ -1,7 +1,9 @@
 package io.casehub.claudony.casehub;
 
-import io.casehub.api.model.Capability;
-import io.casehub.api.model.Worker;
+import io.casehub.worker.api.Capability;
+import io.casehub.worker.api.Worker;
+import io.casehub.worker.api.WorkerFunction;
+import io.casehub.worker.api.WorkerResult;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
@@ -70,7 +72,7 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
         if (!config.enabled()) return Uni.createFrom().voidItem();
 
         var caseId = instance.getUuid();
-        var roleName = worker.getName();
+        var roleName = worker.name();
         var sessionIdOpt = sessionMapping.findByCase(caseId.toString(), roleName);
         if (sessionIdOpt.isEmpty()) {
             LOG.warnf("No session found for case %s / role %s — watcher not started", caseId, roleName);
@@ -91,7 +93,7 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
                 .unstarted(runnable);
 
         // Put role before putIfAbsent so getActiveWorkCount() never transiently undercounts
-        sessionToRole.put(sessionId, worker.getName());
+        sessionToRole.put(sessionId, worker.name());
         if (watchers.putIfAbsent(sessionId, watcher) != null) {
             sessionToRole.remove(sessionId);
             LOG.warnf("Duplicate watch request for session %s — ignoring", sessionId);
@@ -121,11 +123,11 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
             return;
         }
         String sessionName = ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + sessionId;
-        var cap = new Capability(roleName, "{}", "{}");
+        var cap = Capability.of(roleName, "{}", "{}");
         var worker = Worker.builder()
                 .name(roleName)
                 .capabilities(java.util.List.of(cap))
-                .function(ctx -> io.casehub.api.model.WorkerResult.of(java.util.Map.of()))
+                .function(new WorkerFunction.Sync(ctx -> WorkerResult.of(java.util.Map.of())))
                 .build();
         watch(sessionId, sessionName, instance, worker);
     }
@@ -184,9 +186,9 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
                         if (!exists) {
                             // Atomic gate: whichever caller wins registry.remove() publishes
                             if (registry.remove(sessionId) != null) {
-                                pendingExitSignals.put(instance.getUuid(), worker.getName()); // store before send
+                                pendingExitSignals.put(instance.getUuid(), worker.name()); // store before send
                                 final String idempotencyKey =
-                                        instance.getUuid() + ":" + worker.getName() + ":" + sessionId;
+                                        instance.getUuid() + ":" + worker.name() + ":" + sessionId;
                                 eventBus.send(EventBusAddresses.WORKER_EXECUTION_FINISHED,
                                         WorkflowExecutionCompleted.approved(instance, worker, idempotencyKey, Map.of(), null));
                             }
