@@ -1,14 +1,14 @@
 package io.casehub.claudony.casehub;
 
-import io.casehub.claudony.server.SessionRegistry;
-import io.casehub.claudony.server.TmuxService;
-import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.api.context.PropagationContext;
 import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkResult;
 import io.casehub.api.model.WorkerContext;
 import io.casehub.api.spi.ReactiveCaseChannelProvider;
+import io.casehub.claudony.server.SessionRegistry;
+import io.casehub.claudony.server.TmuxService;
+import io.casehub.claudony.server.model.SessionStatus;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.event.Event;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,10 +52,20 @@ class WorkerLifecycleSequenceTest {
         tmux = mock(TmuxService.class);
         events = mock(Event.class);
 
-        var resolver = new WorkerCommandResolver(Map.of("default", "claude"));
+        ProviderConfigSource configSource = new ProviderConfigSource() {
+            @Override
+            public ClaudonyProviderConfig forAgent(String agentId) {
+                return ClaudonyProviderConfig.EMPTY;
+            }
+
+            @Override
+            public Set<String> declaredAgentIds() {
+                return Set.of("default", "reviewer");
+            }
+        };
 
         provisioner = new ClaudonyReactiveWorkerProvisioner(
-                true, tmux, registry, resolver, sessionMapping, "/workspace", null, null, null);
+                true, tmux, registry, configSource, sessionMapping, "claude", "/workspace", null, null, null);
         listener = new ClaudonyWorkerStatusListener(registry, tmux, events, sessionMapping);
     }
 

@@ -52,8 +52,7 @@ public class CaseEngineRoundTripTest {
         public Map<String, String> getConfigOverrides() {
             return Map.of(
                     "claudony.casehub.enabled", "true",
-                    "claudony.casehub.workers.commands.agent", "claude",
-                    "claudony.casehub.workers.commands.default", "claude",
+                    "claudony.casehub.workers.provider-config.agent.command", "claude",
                     // Fast poll for tests — watcher detects exit in ≤200ms rather than ≤5000ms
                     "claudony.casehub.worker-exit-poll-ms", "200",
                     // Suppress ServerStartup.checkTmux() — @InjectMock replaces TmuxService
