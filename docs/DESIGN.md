@@ -26,7 +26,10 @@ Three Maven modules: `claudony-core` (shared services), `claudony-casehub` (opti
 ```
 claudony-casehub — io.casehub.claudony.casehub
 ├── CaseHubConfig                   — @ConfigMapping for claudony.casehub.*
-├── WorkerCommandResolver           — capability→command lookup with default fallback
+├── ProviderConfigSource             — SPI: per-agent config lookup by agentId
+├── ConfigMappingProviderConfigSource — @DefaultBean: reads from application.properties
+├── ClaudonyProviderConfig           — per-agent config record (command, model, tools, etc.)
+├── WorkerCommandBuilder             — builds enriched CLI command with shell-safe quoting
 ├── CaseLineageQuery                — interface for prior-worker lineage queries
 ├── EmptyCaseLineageQuery           — @DefaultBean stub (active when ledger not configured)
 ├── ClaudonyLedgerEventCapture      — replaces casehub-ledger's CaseLedgerEventCapture (excluded via

@@ -48,7 +48,6 @@ class AgentCaseCompletionTest {
         public Map<String, String> getConfigOverrides() {
             return Map.of(
                     "claudony.casehub.enabled", "true",
-                    "claudony.casehub.workers.commands.default", "claude",
                     "claudony.mode", "agent",
                     "quarkus.index-dependency.casehub-engine.group-id", "io.casehub",
                     "quarkus.index-dependency.casehub-engine.artifact-id", "casehub-engine",

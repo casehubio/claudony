@@ -144,7 +144,7 @@ See `../parent/docs/repos/claudony.md` for the platform deep-dive.
 | L3 Fleet / Peer Mesh | PeerRegistry, peer discovery (static/manual/mDNS), session federation fan-out, fleet key auth, channel fleet sync |
 | L4 Agent Mode + MCP | ClaudonyMcpTools (HTTP JSON-RPC), ServerClient, ClipboardChecker, ITerm2Adapter, two-mode binary activation |
 | L5 Qhorus Integration | Named datasource (qhorus/H2/Flyway), ClaudonyChannelBackend, ChannelEventBus, MeshResource (channels/instances/timeline/feed/events SSE), human interjection |
-| L6 CaseHub SPI Foundation | ClaudonyReactiveWorkerProvisioner, ClaudonyReactiveCaseChannelProvider, ClaudonyReactiveWorkerContextProvider, ClaudonyWorkerStatusListener, CaseLineageQuery, ClaudonyLedgerEventCapture, WorkerCommandResolver |
+| L6 CaseHub SPI Foundation | ClaudonyReactiveWorkerProvisioner, ClaudonyReactiveCaseChannelProvider, ClaudonyReactiveWorkerContextProvider, ClaudonyWorkerStatusListener, CaseLineageQuery, ClaudonyLedgerEventCapture, ProviderConfigSource, ConfigMappingProviderConfigSource, ClaudonyProviderConfig, WorkerCommandBuilder |
 | L7 Agent Mesh Framework | WorkerSessionMapping (role↔instance identity bridge), ClaudonyInstanceActorIdProvider, MeshSystemPromptTemplate, CaseChannelLayout SPI, MeshParticipationStrategy SPI (both in engine-api) |
 | L8 Case Worker Panel | Session.caseId/roleName (provision-time stamp), SessionRegistry.findByCaseId, CaseEventBroadcaster, CaseWorkerUpdateStrategy SPI, three-panel terminal UI, case-events SSE |
 | L9 Production Case Orchestration | createWorkerSession (command-direct tmux, session dies on exit), ClaudonyWorkerExecutionManager (virtual thread watcher, atomic gate), AgentCase YAML definition, signal drain, CasehubStartupService crash recovery |
@@ -198,7 +198,7 @@ C4Container
   }
 
   Container_Boundary(b6, "Layer: L6 CaseHub SPI Foundation") {
-    Container(casehub, "claudony-casehub", "Java 21 library", "ClaudonyReactiveWorkerProvisioner, ClaudonyReactiveCaseChannelProvider, ClaudonyReactiveWorkerContextProvider, ClaudonyWorkerStatusListener, CaseLineageQuery SPI (+ EmptyCaseLineageQuery, JpaCaseLineageQuery), ClaudonyLedgerEventCapture, WorkerCommandResolver, QhorusCausalLinkResolver")
+    Container(casehub, "claudony-casehub", "Java 21 library", "ClaudonyReactiveWorkerProvisioner, ClaudonyReactiveCaseChannelProvider, ClaudonyReactiveWorkerContextProvider, ClaudonyWorkerStatusListener, CaseLineageQuery SPI (+ EmptyCaseLineageQuery, JpaCaseLineageQuery), ClaudonyLedgerEventCapture, ProviderConfigSource (+ ConfigMappingProviderConfigSource), ClaudonyProviderConfig, WorkerCommandBuilder, QhorusCausalLinkResolver")
   }
 
   Container_Boundary(b7, "Layer: L7 Agent Mesh Framework") {
@@ -276,8 +276,9 @@ Fleet cross-node: message on Node B → FleetMessageRelayObserver.onMessage()
 ```
 casehub-engine → ReactiveWorkerProvisioner.provision(context)
   → ClaudonyReactiveWorkerProvisioner.provision(context)
-  → WorkerCommandResolver.resolve(context.capability()) → command string
-  → TmuxService.createWorkerSession("claudony-worker-<uuid>", command, workingDir)
+  → ProviderConfigSource.forAgent(context.taskType()) → ClaudonyProviderConfig
+  → WorkerCommandBuilder.build(config.command() ?? defaultCommand, config) → enriched command
+  → TmuxService.createWorkerSession("claudony-worker-<uuid>", enrichedCommand, effectiveWorkingDir)
        → tmux new-session -d -s name "sh -c <command>" + remain-on-exit off
        → tmux set-option @casehub_case_id <caseId>
        → tmux set-option @casehub_role <roleName>
@@ -655,7 +656,7 @@ Worker exit detected by `ClaudonyWorkerExecutionManager` (virtual thread polls `
 | Layer | Delta |
 |---|---|
 | L9 Production Orchestration | High — entire layer introduced |
-| L6 CaseHub SPI Foundation | Medium — ClaudonyLedgerEventCapture gains signal drain; WorkerCommandResolver used by provisioner |
+| L6 CaseHub SPI Foundation | Medium — ClaudonyLedgerEventCapture gains signal drain; ProviderConfigSource used by provisioner |
 | L8 Case Worker Panel | Low — CasehubStartupService restarts watchers bootstrapped by panel's server restart path |
 | L1 Core Session Engine | Low — createWorkerSession() added to TmuxService |
 
@@ -895,7 +896,10 @@ Four casehub-engine worker SPIs. `EmptyCaseLineageQuery` @DefaultBean keeps CDI 
 - `casehub/src/main/java/io/casehub/claudony/casehub/EmptyCaseLineageQuery.java` — `@DefaultBean`; returns `Uni.createFrom().item(List.of())`
 - `casehub/src/main/java/io/casehub/claudony/casehub/JpaCaseLineageQuery.java` — `@Alternative @Priority(1)`; queries `case_ledger_entry` via `@LedgerPersistenceUnit` EM
 - `casehub/src/main/java/io/casehub/claudony/casehub/ClaudonyLedgerEventCapture.java` — `@ObservesAsync CaseLifecycleEvent`; writes `CaseLedgerEntry`; drains `pendingExitSignals` on `WorkerExecutionCompleted`
-- `casehub/src/main/java/io/casehub/claudony/casehub/WorkerCommandResolver.java` — capability → command; default fallback
+- `casehub/src/main/java/io/casehub/claudony/casehub/ProviderConfigSource.java` — SPI: per-agent config lookup by agentId
+- `casehub/src/main/java/io/casehub/claudony/casehub/ConfigMappingProviderConfigSource.java` — `@DefaultBean`: reads from `application.properties`
+- `casehub/src/main/java/io/casehub/claudony/casehub/ClaudonyProviderConfig.java` — per-agent config record (command, model, tools, etc.)
+- `casehub/src/main/java/io/casehub/claudony/casehub/WorkerCommandBuilder.java` — builds enriched CLI command with shell-safe quoting
 - `casehub/src/main/java/io/casehub/claudony/casehub/QhorusCausalLinkResolver.java` — extracts `correlationId` from COMMAND/QUERY; resolves to `CaseLedgerEntry` UUID
 
 #### Key wiring

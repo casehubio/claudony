@@ -39,8 +39,9 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
     private final boolean enabled;
     private final TmuxService tmux;
     private final SessionRegistry registry;
-    private final WorkerCommandResolver resolver;
+    private final ProviderConfigSource providerConfigSource;
     private final WorkerSessionMapping sessionMapping;
+    private final String defaultCommand;
     private final String defaultWorkingDir;
     // Optional: absent when engine is not on the classpath (non-CaseHub deployments).
     // Used to signal workers.{role}.started=true before delivering ProvisionResult to
@@ -56,18 +57,20 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
             CaseHubConfig config,
             TmuxService tmux,
             SessionRegistry registry,
-            WorkerCommandResolver resolver,
+            ProviderConfigSource providerConfigSource,
             WorkerSessionMapping sessionMapping,
             Instance<CaseHubRuntime> caseHubRuntime,
             ClaudonyWorkerExecutionManager execManager,
             QhorusCausalLinkResolver causalLinkResolver) {
-        this(config.enabled(), tmux, registry, resolver, sessionMapping,
-                config.workers().defaultWorkingDir(), caseHubRuntime, execManager, causalLinkResolver);
+        this(config.enabled(), tmux, registry, providerConfigSource, sessionMapping,
+                config.workers().defaultCommand(), config.workers().defaultWorkingDir(),
+                caseHubRuntime, execManager, causalLinkResolver);
     }
 
     ClaudonyReactiveWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
-                                       WorkerCommandResolver resolver,
+                                       ProviderConfigSource providerConfigSource,
                                        WorkerSessionMapping sessionMapping,
+                                       String defaultCommand,
                                        String defaultWorkingDir,
                                        Instance<CaseHubRuntime> caseHubRuntime,
                                        ClaudonyWorkerExecutionManager execManager,
@@ -75,8 +78,9 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         this.enabled = enabled;
         this.tmux = tmux;
         this.registry = registry;
-        this.resolver = resolver;
+        this.providerConfigSource = providerConfigSource;
         this.sessionMapping = sessionMapping;
+        this.defaultCommand = defaultCommand;
         this.defaultWorkingDir = defaultWorkingDir;
         this.caseHubRuntime = caseHubRuntime;
         this.execManager = execManager;
@@ -156,7 +160,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
 
     @Override
     public Uni<Set<String>> getCapabilities() {
-        return Uni.createFrom().item(resolver.getAvailableCapabilities());
+        return Uni.createFrom().item(providerConfigSource.declaredAgentIds());
     }
 
     /**
@@ -182,11 +186,15 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         String roleName = context.taskType() != null
                 ? context.taskType()
                 : capabilities.stream().findFirst().orElse("worker");
-        String command = resolver.resolve(capabilities);
+
+        ClaudonyProviderConfig config = providerConfigSource.forAgent(roleName);
+        String baseCommand = config.command().orElse(defaultCommand);
+        String enrichedCommand = WorkerCommandBuilder.build(baseCommand, config);
+        String effectiveWorkingDir = config.workingDir().orElse(defaultWorkingDir);
         String sessionName = SESSION_PREFIX + sessionId;
 
         try {
-            tmux.createWorkerSession(sessionName, defaultWorkingDir, command);
+            tmux.createWorkerSession(sessionName, effectiveWorkingDir, enrichedCommand);
             // Persist caseId and roleName in tmux session options for recovery after server restart
             if (context.caseId() != null) {
                 tmux.setSessionOption(sessionName, "@casehub_case_id", context.caseId().toString());
@@ -196,7 +204,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
             throw new ProvisioningException("Failed to create tmux session for worker " + sessionId, e);
         }
 
-        var session = new Session(sessionId, sessionName, defaultWorkingDir, command,
+        var session = new Session(sessionId, sessionName, effectiveWorkingDir, enrichedCommand,
                 SessionStatus.IDLE, Instant.now(), Instant.now(), Optional.empty(),
                 Optional.ofNullable(context.caseId()).map(UUID::toString),
                 Optional.of(roleName));

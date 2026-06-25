@@ -250,7 +250,10 @@ claudony-core/src/main/java/dev/claudony/
 
 claudony-casehub/src/main/java/dev/claudony/casehub/
 ├── CaseHubConfig.java                  — @ConfigMapping for claudony.casehub.* properties
-├── WorkerCommandResolver.java          — capability→command lookup with default fallback
+├── ProviderConfigSource.java            — SPI: per-agent config lookup by agentId
+├── ConfigMappingProviderConfigSource.java — @DefaultBean: reads from application.properties
+├── ClaudonyProviderConfig.java           — per-agent config record (command, model, tools, etc.)
+├── WorkerCommandBuilder.java             — builds enriched CLI command with shell-safe quoting
 ├── CaseLineageQuery.java               — interface for prior worker queries (default: empty stub)
 ├── EmptyCaseLineageQuery.java          — @DefaultBean no-op impl (swap for JPA impl when casehub DB configured)
 ├── ClaudonyWorkerProvisioner.java      — WorkerProvisioner SPI: creates tmux sessions
@@ -326,8 +329,9 @@ Enabled via `claudony.casehub.enabled=true`. Add to `application.properties`:
 
 ```properties
 claudony.casehub.enabled=true
-claudony.casehub.workers.commands.default=claude
-# claudony.casehub.workers.commands."code-reviewer"=claude --mcp http://localhost:7778/mcp
+# claudony.casehub.workers.default-command=claude  (default; override if needed)
+claudony.casehub.workers.provider-config.code-reviewer.command=claude
+claudony.casehub.workers.provider-config.code-reviewer.model=opus
 claudony.casehub.workers.default-working-dir=~/claudony-workspace
 claudony.casehub.channel-layout=normative      # normative | simple
 claudony.casehub.mesh-participation=active     # active | reactive | silent
@@ -404,7 +408,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-06-25, after claudony#157 worker-api migration):** 6 in `claudony-core` + 143 in `claudony-casehub` + 408 in `claudony-app` = **557 total, 557 passing**. No known failing tests. casehub module dropped from 173 to 143 after #159 migrated CaseChannelLayout + MeshParticipationStrategy tests to casehub-engine-api. Previous baseline: 587 (2026-06-20, after #151 engine-worker thread fix).
+**Baseline (as of 2026-06-25, after claudony#156 ops-provider-config):** 6 in `claudony-core` + 162 in `claudony-casehub` + 408 in `claudony-app` = **576 total, 576 passing**. No known failing tests. casehub module rose from 143 to 162 after #156 added ClaudonyProviderConfig (8), WorkerCommandBuilder (9), ConfigMappingProviderConfigSource (4), and new provisioner tests (4), minus deleted WorkerCommandResolverTest (6). Previous baseline: 557 (2026-06-25, after #157 worker-api migration).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -421,8 +425,10 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 ```
 
 `claudony-casehub` tests:
-- `WorkerCommandResolverTest` — capability-to-command resolution, default fallback
-- `ClaudonyReactiveWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness, caseId/roleName stamped; returns ProvisionResult; 2 causal context tests: trigger fields → storesCausalContextAndReturnsEntryId, null trigger fields → guardShortCircuits (engine#390 changed return type from Worker; claudony#94 added causedByEntryId provision path)
+- `ClaudonyProviderConfigTest` — fromMap, fromConfigMapping, EMPTY sentinel, fromMap empty map
+- `WorkerCommandBuilderTest` — base command only, model flag, all flags, shell quoting, empty config
+- `ConfigMappingProviderConfigSourceTest` — forAgent known/unknown, declaredAgentIds
+- `ClaudonyReactiveWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness, caseId/roleName stamped; returns ProvisionResult; enriched command, workingDir override, defaultCommand fallback, session records effective values, getCapabilities returns declaredAgentIds; 2 causal context tests: trigger fields → storesCausalContextAndReturnsEntryId, null trigger fields → guardShortCircuits (engine#390 changed return type from Worker; claudony#94 added causedByEntryId provision path)
 - `QhorusCausalLinkResolverTest` — 8 unit tests: null channelId, null correlationId, repo unsatisfied, invalid UUID, blank correlationId, empty channelId, entry found → returns UUID, entry not found → empty
 - `ClaudonyReactiveCaseChannelProviderTest` — Qhorus channel creation (ReactiveChannelService), list filtering, postToChannel (including correlationId extraction for COMMAND/QUERY via #122), cache-hit no-op, concurrent init race (CountDownLatch barrier, #120), failed init eviction retry (#120), fires CaseChannelCreatedEvent on open (#102), createQhorusChannel calls initChannel (#102)
 - `ClaudonyReactiveWorkerContextProviderTest` — lineage, channel, clean-start, missing caseId; Uni<WorkerContext> unwrapped
