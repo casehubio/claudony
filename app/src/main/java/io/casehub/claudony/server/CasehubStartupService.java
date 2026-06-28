@@ -36,7 +36,7 @@ class CasehubStartupService {
 
     int bootstrapWatchers() {
         int started = 0;
-        for (var session : registry.all()) {
+        for (var session : registry.allUnscoped()) {
             if (session.caseId().isEmpty()) continue;
             UUID caseId;
             try {

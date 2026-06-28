@@ -15,6 +15,7 @@ import io.casehub.claudony.server.model.SendInputRequest;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionResponse;
 import io.casehub.claudony.server.model.SessionStatus;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.quarkus.security.Authenticated;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
@@ -60,6 +61,7 @@ public class SessionResource {
     @Inject CaseLineageQuery lineageQuery;
     @Inject CaseEventBroadcaster caseEventBroadcaster;
     @Inject ObjectMapper MAPPER;
+    @Inject TenantContext tenantContext;
 
     @GET
     public List<SessionResponse> list(
@@ -191,22 +193,25 @@ public class SessionResource {
                 ? config.defaultWorkingDir() : req.workingDir();
 
         // Duplicate name check
-        var existing = registry.all().stream()
-                .filter(s -> s.name().equals(name))
-                .findFirst();
-        if (existing.isPresent()) {
+        var existingByName = registry.existsByName(name);
+        if (existingByName) {
             if (!overwrite) {
                 return Response.status(409)
                         .entity("{\"error\":\"Session '" + name + "' already exists\"}")
                         .build();
             }
             // Overwrite: remove existing session first
-            try {
-                tmux.killSession(name);
-                registry.remove(existing.get().id());
-                LOG.infof("Overwrote existing session '%s'", name);
-            } catch (IOException | InterruptedException e) {
-                LOG.warnf("Could not clean up existing session '%s': %s", name, e.getMessage());
+            var existingSession = registry.allUnscoped().stream()
+                    .filter(s -> s.name().equals(name))
+                    .findFirst().orElse(null);
+            if (existingSession != null) {
+                try {
+                    tmux.killSession(name);
+                    registry.remove(existingSession.id());
+                    LOG.infof("Overwrote existing session '%s'", name);
+                } catch (IOException | InterruptedException e) {
+                    LOG.warnf("Could not clean up existing session '%s': %s", name, e.getMessage());
+                }
             }
         }
 
@@ -217,7 +222,8 @@ public class SessionResource {
         }
         var now = Instant.now();
         var session = new Session(id, name, workingDir, command, SessionStatus.IDLE, now, now,
-                                  Optional.ofNullable(req.expiryPolicy()), Optional.empty(), Optional.empty());
+                                  Optional.ofNullable(req.expiryPolicy()), Optional.empty(), Optional.empty(),
+                                  tenantContext.currentTenantId());
         try {
             tmux.createSession(name, workingDir, command);
             registry.register(session);
@@ -255,7 +261,7 @@ public class SessionResource {
         return registry.find(id).map(session -> {
             try {
                 var newTmuxName = config.tmuxPrefix() + newName;
-                boolean duplicate = registry.all().stream().anyMatch(s -> s.name().equals(newTmuxName));
+                boolean duplicate = registry.existsByName(newTmuxName);
                 if (duplicate) {
                     return Response.status(409)
                             .entity("{\"error\":\"Session '" + newTmuxName + "' already exists\"}")
@@ -271,7 +277,7 @@ public class SessionResource {
                 }
                 var renamed = new Session(id, newTmuxName, session.workingDir(),
                         session.command(), session.status(), session.createdAt(), Instant.now(),
-                        session.expiryPolicy(), session.caseId(), session.roleName());
+                        session.expiryPolicy(), session.caseId(), session.roleName(), session.tenancyId());
                 registry.register(renamed);
                 return Response.ok(SessionResponse.from(renamed, config.port(), resolvedPolicy(renamed))).build();
             } catch (IOException | InterruptedException e) {

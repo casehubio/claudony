@@ -37,7 +37,7 @@ class ClaudonyWorkerStatusListenerTest {
     void onWorkerStarted_updatesSessionToActive() {
         // roleName="code-reviewer", sessionId="session-uuid-123" registered in mapping
         sessionMapping.register("code-reviewer", null, "session-uuid-123");
-        when(registry.find("session-uuid-123")).thenReturn(Optional.of(session("session-uuid-123", SessionStatus.IDLE)));
+        when(registry.findUnscoped("session-uuid-123")).thenReturn(Optional.of(session("session-uuid-123", SessionStatus.IDLE)));
 
         listener.onWorkerStarted("code-reviewer", java.util.Map.of());
 
@@ -48,7 +48,7 @@ class ClaudonyWorkerStatusListenerTest {
     void onWorkerStarted_usesCaseIdForPreciseLookup() {
         var caseId = java.util.UUID.randomUUID();
         sessionMapping.register("agent", caseId, "uuid-agent-1");
-        when(registry.find("uuid-agent-1")).thenReturn(Optional.of(session("uuid-agent-1", SessionStatus.IDLE)));
+        when(registry.findUnscoped("uuid-agent-1")).thenReturn(Optional.of(session("uuid-agent-1", SessionStatus.IDLE)));
 
         listener.onWorkerStarted("agent", java.util.Map.of("caseId", caseId.toString()));
 
@@ -66,7 +66,7 @@ class ClaudonyWorkerStatusListenerTest {
     @Test
     void onWorkerCompleted_completedResult_updatesSessionToIdle() {
         sessionMapping.register("analyst", null, "session-analyst-1");
-        when(registry.find("session-analyst-1")).thenReturn(Optional.of(session("session-analyst-1", SessionStatus.ACTIVE)));
+        when(registry.findUnscoped("session-analyst-1")).thenReturn(Optional.of(session("session-analyst-1", SessionStatus.ACTIVE)));
         var result = WorkResult.completed("corr-1", java.util.Map.of(), "analyst");
 
         listener.onWorkerCompleted("analyst", result);
@@ -77,7 +77,7 @@ class ClaudonyWorkerStatusListenerTest {
     @Test
     void onWorkerCompleted_faultedResult_terminatesSession() throws Exception {
         sessionMapping.register("code-reviewer", null, "session-cr-1");
-        when(registry.find("session-cr-1")).thenReturn(Optional.of(session("session-cr-1", SessionStatus.ACTIVE)));
+        when(registry.findUnscoped("session-cr-1")).thenReturn(Optional.of(session("session-cr-1", SessionStatus.ACTIVE)));
         var result = WorkResult.faulted("corr-1", "code-reviewer");
 
         listener.onWorkerCompleted("code-reviewer", result);
@@ -89,7 +89,7 @@ class ClaudonyWorkerStatusListenerTest {
     @Test
     void onWorkerCompleted_faultedAndTerminateFails_stillRemovesFromRegistry() throws Exception {
         sessionMapping.register("worker-x", null, "session-x-1");
-        when(registry.find("session-x-1")).thenReturn(Optional.of(session("session-x-1", SessionStatus.ACTIVE)));
+        when(registry.findUnscoped("session-x-1")).thenReturn(Optional.of(session("session-x-1", SessionStatus.ACTIVE)));
         doThrow(new java.io.IOException("tmux gone")).when(tmux).killSession(anyString());
         var result = WorkResult.faulted("corr-1", "worker-x");
 
@@ -109,7 +109,7 @@ class ClaudonyWorkerStatusListenerTest {
     void onWorkerCompleted_withCaseId_usesPreciseLookup() {
         var caseId = java.util.UUID.randomUUID();
         sessionMapping.register("analyst", caseId, "session-analyst-precise");
-        when(registry.find("session-analyst-precise"))
+        when(registry.findUnscoped("session-analyst-precise"))
                 .thenReturn(Optional.of(session("session-analyst-precise", SessionStatus.ACTIVE)));
         var result = WorkResult.completed("corr-1", java.util.Map.of(), "analyst", caseId);
 
@@ -126,9 +126,9 @@ class ClaudonyWorkerStatusListenerTest {
         sessionMapping.register("code-reviewer", caseA, "session-cr-case-a");
         sessionMapping.register("code-reviewer", caseB, "session-cr-case-b");
 
-        when(registry.find("session-cr-case-a"))
+        when(registry.findUnscoped("session-cr-case-a"))
                 .thenReturn(Optional.of(session("session-cr-case-a", SessionStatus.ACTIVE)));
-        when(registry.find("session-cr-case-b"))
+        when(registry.findUnscoped("session-cr-case-b"))
                 .thenReturn(Optional.of(session("session-cr-case-b", SessionStatus.ACTIVE)));
 
         // Case A completes
@@ -145,7 +145,7 @@ class ClaudonyWorkerStatusListenerTest {
     void onWorkerCompleted_withNullCaseId_fallsBackToByRole() {
         // No caseId in result — falls back to byRole (legacy/external callers)
         sessionMapping.register("writer", null, "session-writer-1");
-        when(registry.find("session-writer-1"))
+        when(registry.findUnscoped("session-writer-1"))
                 .thenReturn(Optional.of(session("session-writer-1", SessionStatus.ACTIVE)));
         var result = WorkResult.completed("corr-1", java.util.Map.of(), "writer");
 
@@ -172,6 +172,20 @@ class ClaudonyWorkerStatusListenerTest {
 
         assertThat(firedEvents).hasSize(1);
         assertThat(firedEvents.get(0).caseId()).isEqualTo(caseId.toString());
+        assertThat(firedEvents.get(0).tenancyId()).isEqualTo(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
+    }
+
+    @Test
+    void onWorkerStarted_firesCaseLifecycleEvent_withDefaultTenancyId_whenSessionNotFound() {
+        var caseId = java.util.UUID.randomUUID();
+        var firedEvents = new java.util.ArrayList<WorkerCaseLifecycleEvent>();
+        doAnswer(inv -> { firedEvents.add(inv.getArgument(0)); return null; })
+                .when(events).fire(any(WorkerCaseLifecycleEvent.class));
+
+        listener.onWorkerStarted("ghost", java.util.Map.of("caseId", caseId.toString()));
+
+        assertThat(firedEvents).hasSize(1);
+        assertThat(firedEvents.get(0).tenancyId()).isEqualTo(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     @Test
@@ -187,6 +201,7 @@ class ClaudonyWorkerStatusListenerTest {
 
         assertThat(firedEvents).hasSize(1);
         assertThat(firedEvents.get(0).caseId()).isEqualTo(caseId.toString());
+        assertThat(firedEvents.get(0).tenancyId()).isEqualTo(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     @Test
@@ -198,6 +213,7 @@ class ClaudonyWorkerStatusListenerTest {
 
     private Session session(String id, SessionStatus status) {
         return new Session(id, ClaudonyWorkerStatusListener.SESSION_PREFIX + id, "/tmp", "claude",
-                status, Instant.now(), Instant.now(), Optional.empty(), Optional.empty(), Optional.empty());
+                status, Instant.now(), Instant.now(), Optional.empty(), Optional.empty(), Optional.empty(),
+                io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
     }
 }

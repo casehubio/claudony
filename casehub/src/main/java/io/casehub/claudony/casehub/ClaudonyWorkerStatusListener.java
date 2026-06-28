@@ -7,6 +7,7 @@ import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.api.model.WorkResult;
 import io.casehub.api.model.WorkStatus;
 import io.casehub.api.spi.WorkerStatusListener;
+import io.casehub.platform.api.identity.TenancyConstants;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
@@ -45,14 +46,16 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
             registry.updateStatus(sessionId, SessionStatus.ACTIVE);
         }
         if (caseId != null) {
-            events.fire(new WorkerCaseLifecycleEvent(caseId));
+            String tenancyId = sessionId != null
+                    ? registry.findUnscoped(sessionId).map(s -> s.tenancyId()).orElse(TenancyConstants.DEFAULT_TENANT_ID)
+                    : TenancyConstants.DEFAULT_TENANT_ID;
+            events.fire(new WorkerCaseLifecycleEvent(caseId, tenancyId));
         }
         LOG.debugf("Worker started: role=%s sessionId=%s", roleName, sessionId);
     }
 
     @Override
     public void onWorkerCompleted(String roleName, WorkResult result) {
-        // Use precise caseId:role lookup when caseId is available; fall back to byRole otherwise
         String sessionId = result.caseId() != null
                 ? sessionMapping.findByCase(result.caseId().toString(), roleName)
                         .orElseGet(() -> sessionMapping.findByRole(roleName).orElse(null))
@@ -61,6 +64,7 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
             LOG.warnf("No session found for worker role: %s", roleName);
             return;
         }
+        String tenancyId = registry.findUnscoped(sessionId).map(s -> s.tenancyId()).orElse(TenancyConstants.DEFAULT_TENANT_ID);
         if (result.status() == WorkStatus.FAULTED) {
             try {
                 tmux.killSession(SESSION_PREFIX + sessionId);
@@ -71,11 +75,11 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
             registry.remove(sessionId);
             sessionMapping.remove(roleName);
         } else {
-            registry.find(sessionId).ifPresent(session ->
+            registry.findUnscoped(sessionId).ifPresent(session ->
                     registry.updateStatus(sessionId, SessionStatus.IDLE));
         }
         if (result.caseId() != null) {
-            events.fire(new WorkerCaseLifecycleEvent(result.caseId().toString()));
+            events.fire(new WorkerCaseLifecycleEvent(result.caseId().toString(), tenancyId));
         }
         LOG.debugf("Worker completed: role=%s sessionId=%s status=%s caseId=%s",
                 roleName, sessionId, result.status(), result.caseId());
@@ -86,9 +90,9 @@ public class ClaudonyWorkerStatusListener implements WorkerStatusListener {
         LOG.warnf("Worker stalled: %s", workerId);
         events.fire(new WorkerStalledEvent(workerId));
         sessionMapping.findByRole(workerId)
-                .flatMap(registry::find)
-                .flatMap(s -> s.caseId())
-                .ifPresent(caseId -> events.fire(new WorkerCaseLifecycleEvent(caseId)));
+                .flatMap(registry::findUnscoped)
+                .ifPresent(session -> session.caseId()
+                        .ifPresent(caseId -> events.fire(new WorkerCaseLifecycleEvent(caseId, session.tenancyId()))));
     }
 
     public record WorkerStalledEvent(String workerId) {}

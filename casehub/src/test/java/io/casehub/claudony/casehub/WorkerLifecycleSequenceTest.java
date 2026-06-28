@@ -38,7 +38,7 @@ import static org.mockito.Mockito.*;
 class WorkerLifecycleSequenceTest {
 
     // Real registry and mapping — lets us assert actual state transitions end-to-end.
-    private final SessionRegistry      registry       = new SessionRegistry();
+    private final SessionRegistry      registry       = new SessionRegistry(() -> io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
     private final WorkerSessionMapping sessionMapping = new WorkerSessionMapping();
 
     private TmuxService                          tmux;
@@ -125,7 +125,7 @@ class WorkerLifecycleSequenceTest {
         final ProvisionContext ctx1 = provisionContext(caseId);
         provisioner.provision(Set.of("default"), ctx1).await().indefinitely();
         // Create a second worker with a different taskType
-        final ProvisionContext ctx2 = new ProvisionContext(caseId, null, "reviewer",
+        final ProvisionContext ctx2 = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "reviewer",
                 new io.casehub.api.model.WorkerContext("review", caseId, null, List.of(),
                         io.casehub.api.context.PropagationContext.createRoot(), Map.of()),
                 io.casehub.api.context.PropagationContext.createRoot(), null, null);
@@ -173,6 +173,6 @@ class WorkerLifecycleSequenceTest {
     private ProvisionContext provisionContext(final UUID caseId) {
         final var wc = new WorkerContext(
                 "task", caseId, null, List.of(), PropagationContext.createRoot(), Map.of());
-        return new ProvisionContext(caseId, null, "default", wc, PropagationContext.createRoot(), null, null);
+        return new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "default", wc, PropagationContext.createRoot(), null, null);
     }
 }

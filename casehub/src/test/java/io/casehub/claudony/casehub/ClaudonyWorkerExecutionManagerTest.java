@@ -43,7 +43,7 @@ class ClaudonyWorkerExecutionManagerTest {
     @BeforeEach
     void setUp() {
         tmuxService = mock(TmuxService.class);
-        registry = new SessionRegistry();
+        registry = new SessionRegistry(() -> io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
         sessionMapping = new WorkerSessionMapping();
         config = mock(CaseHubConfig.class);
         eventBus = mock(EventBus.class);
@@ -322,7 +322,8 @@ class ClaudonyWorkerExecutionManagerTest {
     private Session session(String id, UUID caseId, String roleName) {
         return new Session(id, SESSION_PREFIX + id, "/tmp", "claude",
                 SessionStatus.IDLE, Instant.now(), Instant.now(),
-                Optional.empty(), Optional.of(caseId.toString()), Optional.of(roleName));
+                Optional.empty(), Optional.of(caseId.toString()), Optional.of(roleName),
+                io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     private CaseInstance caseInstance(UUID caseId) {

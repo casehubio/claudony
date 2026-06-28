@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 class SessionTest {
 
@@ -11,7 +12,7 @@ class SessionTest {
     void sessionHasRequiredFields() {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
-                                  "claude", SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty());
+                                  "claude", SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
 
         assertEquals("id-1", session.id());
         assertEquals("myproject", session.name());
@@ -25,7 +26,7 @@ class SessionTest {
     void withStatusReturnsCopyWithUpdatedStatusAndPreservesExpiryPolicy() {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
-                "claude", SessionStatus.IDLE, now, now, Optional.of("terminal-output"), Optional.empty(), Optional.empty());
+                "claude", SessionStatus.IDLE, now, now, Optional.of("terminal-output"), Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
 
         var updated = session.withStatus(SessionStatus.ACTIVE);
 
@@ -38,7 +39,7 @@ class SessionTest {
     void withLastActivePreservesExpiryPolicy() {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
-                "claude", SessionStatus.IDLE, now, now, Optional.of("status-aware"), Optional.empty(), Optional.empty());
+                "claude", SessionStatus.IDLE, now, now, Optional.of("status-aware"), Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
 
         var updated = session.withLastActive();
 
@@ -58,7 +59,7 @@ class SessionTest {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
                 "claude", SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.empty(), Optional.empty());
+                Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
         assertTrue(session.caseId().isEmpty());
         assertTrue(session.roleName().isEmpty());
     }
@@ -68,7 +69,7 @@ class SessionTest {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
                 "claude", SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("case-abc"), Optional.of("agent"));
+                Optional.of("case-abc"), Optional.of("agent"), TenancyConstants.DEFAULT_TENANT_ID);
         var updated = session.withStatus(SessionStatus.ACTIVE);
         assertEquals(Optional.of("case-abc"), updated.caseId());
         assertEquals(Optional.of("agent"), updated.roleName());
@@ -79,7 +80,7 @@ class SessionTest {
         var now = Instant.now();
         var session = new Session("id-1", "myproject", "/home/user/proj",
                 "claude", SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("case-abc"), Optional.of("coder"));
+                Optional.of("case-abc"), Optional.of("coder"), TenancyConstants.DEFAULT_TENANT_ID);
         var updated = session.withLastActive();
         assertEquals(Optional.of("case-abc"), updated.caseId());
         assertEquals(Optional.of("coder"), updated.roleName());

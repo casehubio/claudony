@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -33,7 +34,7 @@ class SessionLineageResourceTest {
         var now = Instant.now();
         registry.register(new Session("lin-s1", "claudony-lin-s1", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("550e8400-e29b-41d4-a716-446655440000"), Optional.of("agent")));
+                Optional.of("550e8400-e29b-41d4-a716-446655440000"), Optional.of("agent"), TenancyConstants.DEFAULT_TENANT_ID));
 
         given().when().get("/api/sessions/lin-s1/lineage")
                 .then()
@@ -48,7 +49,7 @@ class SessionLineageResourceTest {
         var now = Instant.now();
         registry.register(new Session("lin-s2", "claudony-lin-s2", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.empty(), Optional.empty()));
+                Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID));
 
         given().when().get("/api/sessions/lin-s2/lineage")
                 .then()
@@ -72,7 +73,7 @@ class SessionLineageResourceTest {
         var now = Instant.now();
         registry.register(new Session("lin-s3", "claudony-lin-s3", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("not-a-uuid"), Optional.of("analyst")));
+                Optional.of("not-a-uuid"), Optional.of("analyst"), TenancyConstants.DEFAULT_TENANT_ID));
 
         given().when().get("/api/sessions/lin-s3/lineage")
                 .then()

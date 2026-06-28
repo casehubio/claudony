@@ -32,9 +32,10 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
     // Permanent side-channel: CaseLifecycleEvent deliberately has no causedByEntryId field
     // (shared events must not carry consumer-specific fields — see engine#389 design spec).
     // This map bridges ProvisionResult.causedByEntryId → CaseLedgerEntry.causedByEntryId.
-    // Keyed by caseId; drained when WorkerStarted fires. Safe for concurrent access;
+    // Keyed by (tenancyId, caseId); drained when WorkerStarted fires. Safe for concurrent access;
     // one provisioning per case at a time is the architectural invariant.
-    private final ConcurrentHashMap<UUID, UUID> causalContext = new ConcurrentHashMap<>();
+    private record CausalKey(String tenancyId, UUID caseId) {}
+    private final ConcurrentHashMap<CausalKey, UUID> causalContext = new ConcurrentHashMap<>();
 
     private final boolean enabled;
     private final TmuxService tmux;
@@ -103,7 +104,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         return Uni.combine().all().unis(setup, causedBy).asTuple()
             .invoke(tuple -> {
                 if (context.caseId() != null) {
-                    tuple.getItem2().ifPresent(id -> causalContext.put(context.caseId(), id));
+                    tuple.getItem2().ifPresent(id -> causalContext.put(new CausalKey(context.tenancyId(), context.caseId()), id));
                 }
             })
             .map(tuple -> new ProvisionResult(tuple.getItem2().orElse(null)))
@@ -164,17 +165,17 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
     }
 
     /**
-     * Drains the causal context entry for the given caseId.
+     * Drains the causal context entry for the given tenancyId and caseId.
      * Called by {@link io.casehub.claudony.casehub.ClaudonyLedgerEventCapture} when
      * a WorkerStarted event is observed.
      */
-    UUID drainCausalContext(UUID caseId) {
-        return causalContext.remove(caseId);
+    UUID drainCausalContext(String tenancyId, UUID caseId) {
+        return causalContext.remove(new CausalKey(tenancyId, caseId));
     }
 
     /** Seeded by tests to simulate a resolved causedByEntryId without engine#231. */
-    void seedCausalContextForTest(UUID caseId, UUID entryId) {
-        causalContext.put(caseId, entryId);
+    void seedCausalContextForTest(String tenancyId, UUID caseId, UUID entryId) {
+        causalContext.put(new CausalKey(tenancyId, caseId), entryId);
     }
 
     private void setupSession(Set<String> capabilities, ProvisionContext context) {
@@ -199,6 +200,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
             if (context.caseId() != null) {
                 tmux.setSessionOption(sessionName, "@casehub_case_id", context.caseId().toString());
                 tmux.setSessionOption(sessionName, "@casehub_role", roleName);
+                tmux.setSessionOption(sessionName, "@casehub_tenant_id", context.tenancyId());
             }
         } catch (IOException | InterruptedException e) {
             throw new ProvisioningException("Failed to create tmux session for worker " + sessionId, e);
@@ -207,7 +209,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
         var session = new Session(sessionId, sessionName, effectiveWorkingDir, enrichedCommand,
                 SessionStatus.IDLE, Instant.now(), Instant.now(), Optional.empty(),
                 Optional.ofNullable(context.caseId()).map(UUID::toString),
-                Optional.of(roleName));
+                Optional.of(roleName), context.tenancyId());
         registry.register(session);
         sessionMapping.register(roleName, context.caseId(), sessionId);
     }

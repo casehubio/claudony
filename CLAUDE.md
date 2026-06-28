@@ -240,12 +240,16 @@ claudony-core/src/main/java/dev/claudony/
 ├── config/ClaudonyConfig.java          — all config properties
 └── server/
     ├── model/                          — Session (id, name, workingDir, command, status, createdAt,
-    │                                       lastActive, expiryPolicy, caseId, roleName),
+    │                                       lastActive, expiryPolicy, caseId, roleName, tenancyId),
     │                                       SessionStatus, SessionExpiredEvent
+    ├── TenantContext.java              — tenant resolution interface (single method: currentTenantId())
+    ├── DefaultTenantContext.java       — @ApplicationScoped impl; delegates to CurrentPrincipal when
+    │                                       request scope active, falls back to DEFAULT_TENANT_ID
     ├── TmuxService.java                — ProcessBuilder wrappers for tmux commands
-    ├── SessionRegistry.java            — in-memory ConcurrentHashMap session store;
-    │                                       findByCaseId(caseId) returns workers ordered by createdAt
-    ├── WorkerCaseLifecycleEvent.java   — CDI event bridging casehub→app (avoids circular dep)
+    ├── SessionRegistry.java            — in-memory ConcurrentHashMap session store; tenant-filtered
+    │                                       all()/find()/findByCaseId(); unscoped allUnscoped()/
+    │                                       findUnscoped()/existsByName() for system operations
+    ├── WorkerCaseLifecycleEvent.java   — CDI event bridging casehub→app (carries tenancyId)
     └── expiry/                         — ExpiryPolicy SPI + implementations + scheduler
 
 claudony-casehub/src/main/java/dev/claudony/casehub/
@@ -408,7 +412,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-06-25, after claudony#156 ops-provider-config):** 6 in `claudony-core` + 162 in `claudony-casehub` + 408 in `claudony-app` = **576 total, 576 passing**. No known failing tests. casehub module rose from 143 to 162 after #156 added ClaudonyProviderConfig (8), WorkerCommandBuilder (9), ConfigMappingProviderConfigSource (4), and new provisioner tests (4), minus deleted WorkerCommandResolverTest (6). Previous baseline: 557 (2026-06-25, after #157 worker-api migration).
+**Baseline (as of 2026-06-27, after claudony#121 multitenancy-foundation):** 16 in `claudony-core` + 162 in `claudony-casehub` + 408 in `claudony-app` = **586 total, 586 passing**. No known failing tests. Core module rose from 6 to 16 after #121 added DefaultTenantContextTest (1) and SessionRegistryTenantFilterTest (9). Previous baseline: 576 (2026-06-25, after #156 ops-provider-config).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties

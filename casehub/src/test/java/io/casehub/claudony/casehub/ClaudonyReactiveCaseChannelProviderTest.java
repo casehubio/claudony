@@ -42,7 +42,8 @@ class ClaudonyReactiveCaseChannelProviderTest {
         channelCreatedEvent = mock(jakarta.enterprise.event.Event.class);
         provider = new ClaudonyReactiveCaseChannelProvider(
                 channelService, messageService, new NormativeChannelLayout(),
-                gateway, channelCreatedEvent);
+                gateway, channelCreatedEvent,
+                () -> io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -262,8 +263,11 @@ class ClaudonyReactiveCaseChannelProviderTest {
 
         provider.openChannel(caseId, "work").await().indefinitely();
 
-        verify(channelCreatedEvent, times(3)).fire(
-                any(io.casehub.claudony.server.CaseChannelCreatedEvent.class));
+        var captor = org.mockito.ArgumentCaptor.forClass(io.casehub.claudony.server.CaseChannelCreatedEvent.class);
+        verify(channelCreatedEvent, times(3)).fire(captor.capture());
+        captor.getAllValues().forEach(event ->
+                org.assertj.core.api.Assertions.assertThat(event.tenancyId())
+                        .isEqualTo(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID));
     }
 
     // ── listChannels ─────────────────────────────────────────────────────────

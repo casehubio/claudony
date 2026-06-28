@@ -13,15 +13,16 @@ public record Session(
         Instant lastActive,
         Optional<String> expiryPolicy,  // internal only; never serialised — see SessionResponse for the API shape
         Optional<String> caseId,
-        Optional<String> roleName) {
+        Optional<String> roleName,
+        String tenancyId) {
 
     public Session withStatus(SessionStatus newStatus) {
         return new Session(id, name, workingDir, command, newStatus, createdAt, Instant.now(),
-                expiryPolicy, caseId, roleName);
+                expiryPolicy, caseId, roleName, tenancyId);
     }
 
     public Session withLastActive() {
         return new Session(id, name, workingDir, command, status, createdAt, Instant.now(),
-                expiryPolicy, caseId, roleName);
+                expiryPolicy, caseId, roleName, tenancyId);
     }
 }

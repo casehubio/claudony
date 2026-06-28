@@ -7,6 +7,7 @@ import io.casehub.claudony.server.auth.ApiKeyService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -78,10 +79,12 @@ public class ServerStartup {
                 var now = Instant.now();
                 Optional<String> caseId = Optional.empty();
                 Optional<String> roleName = Optional.empty();
+                Optional<String> tenancyId = Optional.empty();
                 try {
                     // Read casehub metadata from tmux session options (set during provision)
                     caseId = tmux.getSessionOption(name, "@casehub_case_id");
                     roleName = tmux.getSessionOption(name, "@casehub_role");
+                    tenancyId = tmux.getSessionOption(name, "@casehub_tenant_id");
                 } catch (IOException | InterruptedException e) {
                     // A single session option read failure must not abort the loop.
                     // Register without metadata — session is visible, but recovery watcher won't start.
@@ -91,7 +94,8 @@ public class ServerStartup {
                 registry.register(new Session(
                         UUID.randomUUID().toString(), name,
                         "unknown", config.claudeCommand(),
-                        SessionStatus.IDLE, now, now, Optional.empty(), caseId, roleName));
+                        SessionStatus.IDLE, now, now, Optional.empty(), caseId, roleName,
+                        tenancyId.orElse(TenancyConstants.DEFAULT_TENANT_ID)));
                 count++;
             }
             LOG.infof("Bootstrapped %d existing session(s) from tmux", count);

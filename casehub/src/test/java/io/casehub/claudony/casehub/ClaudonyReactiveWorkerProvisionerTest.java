@@ -184,24 +184,24 @@ class ClaudonyReactiveWorkerProvisionerTest {
         UUID caseId = UUID.randomUUID();
         UUID entryId = UUID.randomUUID();
 
-        provisioner.seedCausalContextForTest(caseId, entryId);
+        provisioner.seedCausalContextForTest(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId, entryId);
 
-        assertThat(provisioner.drainCausalContext(caseId)).isEqualTo(entryId);
+        assertThat(provisioner.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId)).isEqualTo(entryId);
     }
 
     @Test
     void drainCausalContext_withoutSeed_returnsNull() {
-        assertThat(provisioner.drainCausalContext(UUID.randomUUID())).isNull();
+        assertThat(provisioner.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, UUID.randomUUID())).isNull();
     }
 
     @Test
     void drainCausalContext_isDraining_secondCallReturnsNull() {
         UUID caseId = UUID.randomUUID();
-        provisioner.seedCausalContextForTest(caseId, UUID.randomUUID());
+        provisioner.seedCausalContextForTest(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId, UUID.randomUUID());
 
-        provisioner.drainCausalContext(caseId);
+        provisioner.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId);
 
-        assertThat(provisioner.drainCausalContext(caseId)).isNull();
+        assertThat(provisioner.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId)).isNull();
     }
 
     @Test
@@ -213,14 +213,14 @@ class ClaudonyReactiveWorkerProvisionerTest {
         var prov = new ClaudonyReactiveWorkerProvisioner(
             true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver);
         UUID caseId = UUID.randomUUID();
-        var ctx = new ProvisionContext(caseId, null, "code-reviewer", null, null, "ch-123", "corr-456");
+        var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, "ch-123", "corr-456");
 
         ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx)
             .await().indefinitely();
 
         assertThat(result.causedByEntryId()).isEqualTo(entryId);
-        assertThat(prov.drainCausalContext(caseId)).isEqualTo(entryId);
-        assertThat(prov.drainCausalContext(caseId)).isNull(); // drained — second call returns null
+        assertThat(prov.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId)).isEqualTo(entryId);
+        assertThat(prov.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId)).isNull(); // drained — second call returns null
     }
 
     @Test
@@ -229,13 +229,13 @@ class ClaudonyReactiveWorkerProvisionerTest {
         var prov = new ClaudonyReactiveWorkerProvisioner(
             true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver);
         UUID caseId = UUID.randomUUID();
-        var ctx = new ProvisionContext(caseId, null, "code-reviewer", null, null, null, null);
+        var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null);
 
         ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx)
             .await().indefinitely();
 
         assertThat(result.causedByEntryId()).isNull();
-        assertThat(prov.drainCausalContext(caseId)).isNull();
+        assertThat(prov.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId)).isNull();
         // null trigger fields → guard short-circuits before resolver is called
         verifyNoInteractions(mockResolver);
     }
@@ -351,6 +351,6 @@ class ClaudonyReactiveWorkerProvisionerTest {
     }
 
     private ProvisionContext provisionContext(UUID caseId) {
-        return new ProvisionContext(caseId, null, "code-reviewer", null, null, null, null);
+        return new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null);
     }
 }

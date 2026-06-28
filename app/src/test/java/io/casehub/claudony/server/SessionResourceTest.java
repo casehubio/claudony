@@ -13,6 +13,7 @@ import static io.restassured.RestAssured.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -182,7 +183,7 @@ class SessionResourceTest {
         var now = Instant.now();
         var session = new Session("case-session-id", "claudony-test-case", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("test-case-123"), Optional.of("agent"));
+                Optional.of("test-case-123"), Optional.of("agent"), TenancyConstants.DEFAULT_TENANT_ID);
         registry.register(session);
 
         var response = given().get("/api/sessions/case-session-id").then()
@@ -200,13 +201,13 @@ class SessionResourceTest {
         var now = Instant.now();
         var s1 = new Session("cq-s1", "claudony-worker-1", "/tmp", "claude",
                 SessionStatus.ACTIVE, now.minusSeconds(5), now.minusSeconds(5), Optional.empty(),
-                Optional.of("case-q"), Optional.of("agent"));
+                Optional.of("case-q"), Optional.of("agent"), TenancyConstants.DEFAULT_TENANT_ID);
         var s2 = new Session("cq-s2", "claudony-worker-2", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("case-q"), Optional.of("coder"));
+                Optional.of("case-q"), Optional.of("coder"), TenancyConstants.DEFAULT_TENANT_ID);
         var s3 = new Session("cq-s3", "claudony-worker-3", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.of("case-other"), Optional.of("reviewer"));
+                Optional.of("case-other"), Optional.of("reviewer"), TenancyConstants.DEFAULT_TENANT_ID);
         registry.register(s1);
         registry.register(s2);
         registry.register(s3);
