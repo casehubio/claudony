@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 class UserInteractionExpiryPolicyTest {
 
@@ -45,6 +46,6 @@ class UserInteractionExpiryPolicyTest {
     private Session sessionWith(Instant lastActive) {
         var now = Instant.now();
         return new Session("id", "name", "/tmp", "claude",
-                SessionStatus.IDLE, now, lastActive, Optional.empty(), Optional.empty(), Optional.empty());
+                SessionStatus.IDLE, now, lastActive, Optional.empty(), Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
     }
 }

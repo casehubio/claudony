@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -40,7 +41,7 @@ class ServiceHealthTest {
                 "test-svc-id", "claudony-test-svc", "/tmp",
                 "bash", SessionStatus.IDLE,
                 java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty(),
-                java.util.Optional.empty(), java.util.Optional.empty());
+                java.util.Optional.empty(), java.util.Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
         registry.register(session);
 
         // Returns a JSON array (may be empty if no services are running on test ports)
@@ -57,7 +58,7 @@ class ServiceHealthTest {
                 "test-svc-up-id", "claudony-test-svc-up", "/tmp",
                 "bash", SessionStatus.IDLE,
                 java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty(),
-                java.util.Optional.empty(), java.util.Optional.empty());
+                java.util.Optional.empty(), java.util.Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
         registry.register(session);
 
         // All returned entries must have up=true

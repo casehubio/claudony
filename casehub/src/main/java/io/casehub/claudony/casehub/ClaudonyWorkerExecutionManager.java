@@ -178,7 +178,7 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
             try {
                 do {
                     if (Thread.currentThread().isInterrupted()) break;
-                    if (registry.find(sessionId).isEmpty()) break; // terminated — no publish
+                    if (registry.findUnscoped(sessionId).isEmpty()) break; // terminated — no publish
 
                     try {
                         final boolean exists = tmuxService.sessionExists(sessionName);

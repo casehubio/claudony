@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
 @TestProfile(RegistryHooksStrategyIntegrationTest.RegistryHooksProfile.class)
@@ -40,7 +41,7 @@ class RegistryHooksStrategyIntegrationTest {
     private Session caseSession(String id, String caseId) {
         return new Session(id, "name-" + id, "/tmp", "cmd", SessionStatus.IDLE,
                 Instant.now(), Instant.now(), Optional.empty(),
-                Optional.of(caseId), Optional.of("worker"));
+                Optional.of(caseId), Optional.of("worker"), TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     @Test

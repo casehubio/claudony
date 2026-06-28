@@ -82,7 +82,7 @@ public class ClaudonyLedgerEventCapture {
         entry.occurredAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         if ("WorkerStarted".equals(event.eventType())) {
-            UUID causedBy = provisioner.drainCausalContext(event.caseId());
+            UUID causedBy = provisioner.drainCausalContext(tenancyId, event.caseId());
             if (causedBy != null) entry.causedByEntryId = causedBy;
         }
 

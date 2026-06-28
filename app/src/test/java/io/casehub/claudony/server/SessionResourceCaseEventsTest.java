@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -33,13 +34,13 @@ class SessionResourceCaseEventsTest {
     private Session caseSession(String id, String caseId) {
         return new Session(id, "name-" + id, "/tmp", "cmd", SessionStatus.IDLE,
                 Instant.now(), Instant.now(), Optional.empty(),
-                Optional.of(caseId), Optional.of("agent"));
+                Optional.of(caseId), Optional.of("agent"), TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     private Session standaloneSession(String id) {
         return new Session(id, "name-" + id, "/tmp", "cmd", SessionStatus.IDLE,
                 Instant.now(), Instant.now(), Optional.empty(),
-                Optional.empty(), Optional.empty());
+                Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     @Test

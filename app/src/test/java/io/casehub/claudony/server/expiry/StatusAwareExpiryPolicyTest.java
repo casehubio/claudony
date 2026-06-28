@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
 class StatusAwareExpiryPolicyTest {
@@ -80,6 +81,6 @@ class StatusAwareExpiryPolicyTest {
 
     private Session session(String name, Instant lastActive) {
         var now = Instant.now();
-        return new Session("id", name, "/tmp", "bash", SessionStatus.IDLE, now, lastActive, Optional.empty(), Optional.empty(), Optional.empty());
+        return new Session("id", name, "/tmp", "bash", SessionStatus.IDLE, now, lastActive, Optional.empty(), Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
     }
 }

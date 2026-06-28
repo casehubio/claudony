@@ -2,6 +2,7 @@ package io.casehub.claudony.server;
 
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
+import io.casehub.platform.api.identity.TenancyConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,12 +18,12 @@ class SessionRegistryTest {
     private SessionRegistry registry;
 
     @BeforeEach
-    void setUp() { registry = new SessionRegistry(); }
+    void setUp() { registry = new SessionRegistry(() -> TenancyConstants.DEFAULT_TENANT_ID); }
 
     private Session session(String id, String caseId) {
         return new Session(id, "name-" + id, "/tmp", "cmd", SessionStatus.IDLE,
                 Instant.now(), Instant.now(), Optional.empty(),
-                Optional.ofNullable(caseId), Optional.empty());
+                Optional.ofNullable(caseId), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     @Test

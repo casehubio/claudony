@@ -9,6 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -41,7 +42,7 @@ class GitStatusTest {
                 "test-git-unknown-id", "claudony-test-git-unknown", "unknown",
                 "bash", SessionStatus.IDLE,
                 java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty(),
-                java.util.Optional.empty(), java.util.Optional.empty());
+                java.util.Optional.empty(), java.util.Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
         registry.register(session);
 
         given().when().get("/api/sessions/test-git-unknown-id/git-status")
@@ -56,7 +57,7 @@ class GitStatusTest {
                 "test-git-nogit-id", "claudony-test-git-nogit", "/tmp",
                 "bash", SessionStatus.IDLE,
                 java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty(),
-                java.util.Optional.empty(), java.util.Optional.empty());
+                java.util.Optional.empty(), java.util.Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
         registry.register(session);
 
         // /tmp is not a git repo
@@ -74,7 +75,7 @@ class GitStatusTest {
                 "test-git-repo-id", "claudony-test-git-repo", projectDir,
                 "bash", SessionStatus.IDLE,
                 java.time.Instant.now(), java.time.Instant.now(), java.util.Optional.empty(),
-                java.util.Optional.empty(), java.util.Optional.empty());
+                java.util.Optional.empty(), java.util.Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID);
         registry.register(session);
 
         given().when().get("/api/sessions/test-git-repo-id/git-status")

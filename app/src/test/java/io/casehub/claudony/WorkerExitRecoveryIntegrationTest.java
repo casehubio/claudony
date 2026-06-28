@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 /**
  * Integration test for the recovery path: server restart with in-flight casehub sessions.
@@ -71,7 +72,8 @@ class WorkerExitRecoveryIntegrationTest {
         // Simulate what bootstrapRegistry() produces for a recovered casehub session
         registry.register(new Session(seededSessionId, sessionName, "unknown", "claude",
                 SessionStatus.IDLE, Instant.now(), Instant.now(),
-                Optional.empty(), Optional.of(caseId.toString()), Optional.of(roleName)));
+                Optional.empty(), Optional.of(caseId.toString()), Optional.of(roleName),
+                TenancyConstants.DEFAULT_TENANT_ID));
 
         var instance = new CaseInstance();
         instance.setUuid(caseId);

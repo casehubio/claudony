@@ -29,7 +29,7 @@ public class SessionIdleScheduler {
 
     void expiryCheck() {
         var timeout = config.sessionTimeout();
-        for (var session : registry.all()) {
+        for (var session : registry.allUnscoped()) {
             var policy = policyRegistry.resolve(session.expiryPolicy().orElse(null));
             if (!policy.isExpired(session, timeout)) continue;
             LOG.infof("Expiring session '%s' (policy=%s, lastActive=%s)",

@@ -25,18 +25,21 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
 
     private static final Logger log = Logger.getLogger(ClaudonyReactiveCaseChannelProvider.class);
     private static final String QHORUS_NAME_KEY = "qhorus-name";
+    private record CacheKey(String tenancyId, UUID caseId) {}
     private final ReactiveChannelService channelService;
     private final ReactiveMessageService messageService;
     private final CaseChannelLayout layout;
-    private final ConcurrentHashMap<UUID, Uni<Map<String, CaseChannel>>> layoutCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<CacheKey, Uni<Map<String, CaseChannel>>> layoutCache = new ConcurrentHashMap<>();
     private final io.casehub.qhorus.runtime.gateway.ChannelGateway gateway;
     private final jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent;
+    private final io.casehub.claudony.server.TenantContext tenantContext;
 
     @Inject
     public ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
             ReactiveMessageService messageService, CaseHubConfig config,
             io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
-            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent) {
+            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent,
+            io.casehub.claudony.server.TenantContext tenantContext) {
         this.channelService = channelService;
         this.messageService = messageService;
         try {
@@ -47,25 +50,29 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
         }
         this.gateway = gateway;
         this.channelCreatedEvent = channelCreatedEvent;
+        this.tenantContext = tenantContext;
     }
 
     /** Package-private constructor for tests (no CDI, no Vert.x injection needed). */
     ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
             ReactiveMessageService messageService, CaseChannelLayout layout,
             io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
-            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent) {
+            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent,
+            io.casehub.claudony.server.TenantContext tenantContext) {
         this.channelService = channelService;
         this.messageService = messageService;
         this.layout = layout;
         this.gateway = gateway;
         this.channelCreatedEvent = channelCreatedEvent;
+        this.tenantContext = tenantContext;
     }
 
     @Override
     public Uni<CaseChannel> openChannel(UUID caseId, String purpose) {
-        return layoutCache.computeIfAbsent(caseId,
-                        id -> initializeLayout(id)
-                                .onFailure().invoke(err -> layoutCache.remove(id))
+        var key = new CacheKey(tenantContext.currentTenantId(), caseId);
+        return layoutCache.computeIfAbsent(key,
+                        k -> initializeLayout(caseId)
+                                .onFailure().invoke(err -> layoutCache.remove(k))
                                 .memoize().indefinitely())
                 .map(channels -> {
                     CaseChannel ch = channels.get(purpose);
@@ -183,7 +190,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
                     gateway.initChannel(detail.id,
                             new io.casehub.qhorus.api.gateway.ChannelRef(detail.id, detail.name));
                     channelCreatedEvent.fire(
-                            new io.casehub.claudony.server.CaseChannelCreatedEvent(detail.id, detail.name));
+                            new io.casehub.claudony.server.CaseChannelCreatedEvent(detail.id, detail.name, tenantContext.currentTenantId()));
                     return new CaseChannel(
                             detail.id.toString(),
                             detail.name,

@@ -4,6 +4,7 @@ import io.casehub.claudony.casehub.ClaudonyReactiveWorkerProvisioner;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class CasehubStartupServiceTest {
 
     @BeforeEach
     void setUp() {
-        registry = new SessionRegistry();
+        registry = new SessionRegistry(() -> TenancyConstants.DEFAULT_TENANT_ID);
         caseInstanceRepo = mock(CrossTenantCaseInstanceRepository.class);
         execManager = mock(ClaudonyWorkerExecutionManager.class);
         service = new CasehubStartupService(registry, caseInstanceRepo, execManager);
@@ -85,7 +86,8 @@ class CasehubStartupServiceTest {
                 Instant.now(), Instant.now(),
                 Optional.empty(),
                 Optional.of(caseId),
-                Optional.of(role));
+                Optional.of(role),
+                TenancyConstants.DEFAULT_TENANT_ID);
     }
 
     private io.casehub.claudony.server.model.Session sessionNoRole(String id, String caseId) {
@@ -97,6 +99,7 @@ class CasehubStartupServiceTest {
                 Instant.now(), Instant.now(),
                 Optional.empty(),
                 Optional.of(caseId),
-                Optional.empty());
+                Optional.empty(),
+                TenancyConstants.DEFAULT_TENANT_ID);
     }
 }

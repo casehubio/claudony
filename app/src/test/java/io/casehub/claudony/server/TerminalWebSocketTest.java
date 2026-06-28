@@ -17,6 +17,7 @@ import io.casehub.claudony.server.model.SessionStatus;
 import jakarta.websocket.Session;
 import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -40,7 +41,8 @@ class TerminalWebSocketTest {
         registry.register(new io.casehub.claudony.server.model.Session(
             "ws-test-id", TEST_SESSION, System.getProperty("user.home"),
             "bash", SessionStatus.IDLE, now, now, java.util.Optional.empty(),
-            java.util.Optional.empty(), java.util.Optional.empty()));
+            java.util.Optional.empty(), java.util.Optional.empty(),
+            TenancyConstants.DEFAULT_TENANT_ID));
         Await.until(() -> {
             try { return !tmux.capturePane(TEST_SESSION, 5).isBlank(); }
             catch (Exception e) { return false; }
@@ -457,7 +459,8 @@ class TerminalWebSocketTest {
         registry.register(new io.casehub.claudony.server.model.Session(
             extraId, extraSession, System.getProperty("user.home"),
             "bash", SessionStatus.IDLE, now, now, java.util.Optional.empty(),
-            java.util.Optional.empty(), java.util.Optional.empty()));
+            java.util.Optional.empty(), java.util.Optional.empty(),
+            TenancyConstants.DEFAULT_TENANT_ID));
 
         try {
             Await.until(() -> {

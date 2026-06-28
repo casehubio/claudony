@@ -2,6 +2,7 @@ package io.casehub.claudony.server.fleet;
 
 import io.casehub.claudony.server.CaseChannelCreatedEvent;
 import io.casehub.claudony.server.ClaudonyChannelBackend;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
@@ -40,7 +41,7 @@ class ChannelFleetBroadcasterTest {
 
         assertThatCode(() -> {
             channelCreatedEvent.fire(
-                    new CaseChannelCreatedEvent(channelId, "case-" + channelId + "/work"));
+                    new CaseChannelCreatedEvent(channelId, "case-" + channelId + "/work", TenancyConstants.DEFAULT_TENANT_ID));
             Thread.sleep(100);
         }).doesNotThrowAnyException();
     }
@@ -54,7 +55,7 @@ class ChannelFleetBroadcasterTest {
         peerRegistry.addPeer("loopback-peer", "http://localhost:" + testPort,
                 "Loopback Test Peer", DiscoverySource.MANUAL, TerminalMode.DIRECT);
 
-        channelCreatedEvent.fire(new CaseChannelCreatedEvent(channelId, channelName));
+        channelCreatedEvent.fire(new CaseChannelCreatedEvent(channelId, channelName, TenancyConstants.DEFAULT_TENANT_ID));
 
         Thread.sleep(500);
 
@@ -71,7 +72,7 @@ class ChannelFleetBroadcasterTest {
 
         assertThatCode(() -> {
             channelCreatedEvent.fire(
-                    new CaseChannelCreatedEvent(channelId, "case-fail/work"));
+                    new CaseChannelCreatedEvent(channelId, "case-fail/work", TenancyConstants.DEFAULT_TENANT_ID));
             Thread.sleep(300);
         }).doesNotThrowAnyException();
 

@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 /**
  * E2E tests for the case worker panel on the session view page (/app/session.html).
@@ -46,7 +47,7 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
     void standaloneSession_panelIsCollapsedWithPlaceholder() {
         var now = Instant.now();
         registry.register(new Session("e2e-standalone", "claudony-e2e-standalone", "/tmp", "claude",
-                SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty()));
+                SessionStatus.IDLE, now, now, Optional.empty(), Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID));
 
         page.navigate(BASE_URL + "/app/session.html?id=e2e-standalone&name=e2e-standalone");
         page.waitForTimeout(1500);
@@ -84,10 +85,10 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
         var caseId = "e2e-case-001";
         registry.register(new Session("e2e-w1", "claudony-worker-w1", "/tmp", "claude",
                 SessionStatus.ACTIVE, now.minusSeconds(30), now.minusSeconds(30),
-                Optional.empty(), Optional.of(caseId), Optional.of("agent")));
+                Optional.empty(), Optional.of(caseId), Optional.of("agent"), TenancyConstants.DEFAULT_TENANT_ID));
         registry.register(new Session("e2e-w2", "claudony-worker-w2", "/tmp", "claude",
                 SessionStatus.IDLE, now, now,
-                Optional.empty(), Optional.of(caseId), Optional.of("coder")));
+                Optional.empty(), Optional.of(caseId), Optional.of("coder"), TenancyConstants.DEFAULT_TENANT_ID));
 
         page.navigate(BASE_URL + "/app/session.html?id=e2e-w1&name=agent");
 
@@ -128,10 +129,10 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
         var caseId = "e2e-case-002";
         registry.register(new Session("e2e-c1", "claudony-worker-c1", "/tmp", "claude",
                 SessionStatus.ACTIVE, now.minusSeconds(10), now.minusSeconds(10),
-                Optional.empty(), Optional.of(caseId), Optional.of("planner")));
+                Optional.empty(), Optional.of(caseId), Optional.of("planner"), TenancyConstants.DEFAULT_TENANT_ID));
         registry.register(new Session("e2e-c2", "claudony-worker-c2", "/tmp", "claude",
                 SessionStatus.IDLE, now, now,
-                Optional.empty(), Optional.of(caseId), Optional.of("executor")));
+                Optional.empty(), Optional.of(caseId), Optional.of("executor"), TenancyConstants.DEFAULT_TENANT_ID));
 
         page.navigate(BASE_URL + "/app/session.html?id=e2e-c1&name=planner");
 
@@ -186,7 +187,7 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
         var now = Instant.now();
         var caseId = "e2e-sse-case-001";
         registry.register(new Session("sse-w1", "claudony-worker-sse-w1", "/tmp", "claude",
-                SessionStatus.ACTIVE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("analyst")));
+                SessionStatus.ACTIVE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("analyst"), TenancyConstants.DEFAULT_TENANT_ID));
 
         page.navigate(BASE_URL + "/app/session.html?id=sse-w1&name=analyst");
 
@@ -206,7 +207,7 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
         var now = Instant.now();
         var caseId = "e2e-sse-case-002";
         registry.register(new Session("sse-upd-w1", "claudony-worker-sse-upd-w1", "/tmp", "claude",
-                SessionStatus.ACTIVE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("agent")));
+                SessionStatus.ACTIVE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("agent"), TenancyConstants.DEFAULT_TENANT_ID));
 
         page.navigate(BASE_URL + "/app/session.html?id=sse-upd-w1&name=agent");
 
@@ -215,7 +216,7 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
 
         // Add a second worker to the case and push via SSE
         registry.register(new Session("sse-upd-w2", "claudony-worker-sse-upd-w2", "/tmp", "claude",
-                SessionStatus.IDLE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("coder")));
+                SessionStatus.IDLE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("coder"), TenancyConstants.DEFAULT_TENANT_ID));
         broadcaster.emit(caseId);
 
         // Panel should update without waiting for any poll cycle
@@ -233,7 +234,7 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
         var now = Instant.now();
         var caseId = "e2e-sse-case-003";
         registry.register(new Session("sse-close-w1", "claudony-worker-sse-close-w1", "/tmp", "claude",
-                SessionStatus.ACTIVE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("planner")));
+                SessionStatus.ACTIVE, now, now, Optional.empty(), Optional.of(caseId), Optional.of("planner"), TenancyConstants.DEFAULT_TENANT_ID));
 
         page.addInitScript("window.__CLAUDONY_TEST_MODE__ = true;");
         page.navigate(BASE_URL + "/app/session.html?id=sse-close-w1&name=planner");

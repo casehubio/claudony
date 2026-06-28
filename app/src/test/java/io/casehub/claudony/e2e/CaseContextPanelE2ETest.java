@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.platform.api.identity.TenancyConstants;
 
 /**
  * E2E tests for the case context section of the channel panel.
@@ -43,12 +44,12 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
         // CaseHub session — has caseId and roleName
         registry.register(new Session("ctx-case-session", "claudony-ctx-case", "/tmp", "claude",
                 SessionStatus.ACTIVE, now.minusSeconds(600), now, Optional.empty(),
-                Optional.of(CASE_ID), Optional.of("agent")));
+                Optional.of(CASE_ID), Optional.of("agent"), TenancyConstants.DEFAULT_TENANT_ID));
 
         // Standalone session — no caseId
         registry.register(new Session("ctx-standalone", "claudony-ctx-standalone", "/tmp", "claude",
                 SessionStatus.IDLE, now, now, Optional.empty(),
-                Optional.empty(), Optional.empty()));
+                Optional.empty(), Optional.empty(), TenancyConstants.DEFAULT_TENANT_ID));
     }
 
     @AfterEach
