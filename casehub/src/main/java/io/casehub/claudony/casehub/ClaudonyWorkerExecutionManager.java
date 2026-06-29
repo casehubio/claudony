@@ -67,6 +67,11 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
     }
 
     @Override
+    public boolean supports(String providerName, String capabilityName) {
+        return "claudony".equals(providerName);
+    }
+
+    @Override
     public Uni<Void> submit(Long eventLogId, CaseInstance instance, Worker worker,
                             Capability capability, Map<String, Object> inputData) {
         if (!config.enabled()) return Uni.createFrom().voidItem();
