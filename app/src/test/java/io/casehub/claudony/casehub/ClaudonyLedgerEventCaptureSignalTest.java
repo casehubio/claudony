@@ -3,6 +3,7 @@ package io.casehub.claudony.casehub;
 import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.claudony.CaseEngineRoundTripTest;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -30,6 +31,7 @@ class ClaudonyLedgerEventCaptureSignalTest {
     Event<CaseLifecycleEvent> lifecycleEvents;
 
     @InjectMock
+    @WorkerBackend
     ClaudonyWorkerExecutionManager execManager;
 
     @InjectMock

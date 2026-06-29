@@ -3,6 +3,7 @@ package io.casehub.claudony;
 import io.casehub.claudony.casehub.ClaudonyReactiveWorkerProvisioner;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.claudony.server.SessionRegistry;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
@@ -43,7 +44,7 @@ import io.casehub.platform.api.identity.TenancyConstants;
 class WorkerExitRecoveryIntegrationTest {
 
     @Inject SessionRegistry registry;
-    @Inject ClaudonyWorkerExecutionManager execManager;
+    @Inject @WorkerBackend ClaudonyWorkerExecutionManager execManager;
     @Inject EventBus eventBus;
 
     @InjectMock TmuxService tmuxService;

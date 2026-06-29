@@ -4,6 +4,7 @@ import io.casehub.api.model.WorkerSummary;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.claudony.casehub.JpaCaseLineageQuery;
 import io.casehub.claudony.server.SessionRegistry;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.quarkus.test.InjectMock;
@@ -103,7 +104,7 @@ public class CaseEngineRoundTripTest {
     @Inject TestAgentCase agentCase;
     @Inject JpaCaseLineageQuery lineageQuery;
     @Inject SessionRegistry sessionRegistry;
-    @Inject ClaudonyWorkerExecutionManager execManager;
+    @Inject @WorkerBackend ClaudonyWorkerExecutionManager execManager;
     @Inject Event<CaseLifecycleEvent> lifecycleEvents;
 
     @InjectMock TmuxService tmuxService;
