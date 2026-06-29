@@ -30,7 +30,7 @@ class MeshSystemPromptTemplate {
                 + "ROLE: " + capability + "\n\n"
                 + "MESH CHANNELS:\n" + formatChannels(caseId, channelSpecs) + "\n"
                 + "STARTUP:\n"
-                + "  1. register(\"" + workerId + "\", \"Starting " + capability + "\", [\"" + capability + "\"])\n"
+                + "  1. " + registrationInstruction(workerId, capability)
                 + "  2. send_message(\"case-" + caseId + "/work\", STATUS, \"Starting: " + capability + "\")\n\n"
                 + "PRIOR WORKERS:\n" + formatPriorWorkers(priorWorkers) + "\n"
                 + "MESSAGE DISCIPLINE:\n"
@@ -42,6 +42,11 @@ class MeshSystemPromptTemplate {
                 + "  - If you cannot proceed: DECLINE with a clear reason\n"
                 + "  - Check work channel every few steps: check_messages(\"case-" + caseId + "/work\", afterId=N)\n"
                 + "  - Check oversight if expecting human input\n";
+    }
+
+    private static String registrationInstruction(String workerId, String capability) {
+        String id = workerId != null ? "\"" + workerId + "\"" : "<your-session-id>";
+        return "register(" + id + ", \"Starting " + capability + "\", [\"" + capability + "\"])\n";
     }
 
     private static String buildReactive(String capability, UUID caseId,
