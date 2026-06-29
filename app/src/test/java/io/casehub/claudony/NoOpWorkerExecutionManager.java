@@ -25,6 +25,11 @@ import java.util.Map;
 class NoOpWorkerExecutionManager implements WorkerExecutionManager {
 
     @Override
+    public boolean supports(String providerName, String capabilityName) {
+        return true;
+    }
+
+    @Override
     public Uni<Void> submit(Long eventLogId, CaseInstance instance, Worker worker,
             Capability capability, Map<String, Object> inputData) {
         return Uni.createFrom().voidItem();
