@@ -27,7 +27,7 @@ Three Maven modules: `claudony-core` (shared services), `claudony-casehub` (opti
 claudony-casehub — io.casehub.claudony.casehub
 ├── CaseHubConfig                   — @ConfigMapping for claudony.casehub.*
 ├── ProviderConfigSource             — SPI: per-agent config lookup by agentId
-├── ConfigMappingProviderConfigSource — @DefaultBean: reads from application.properties
+├── CompositeProviderConfigSource     — @ApplicationScoped: registry primary, config-mapping fallback
 ├── ClaudonyProviderConfig           — per-agent config record (command, model, tools, etc.)
 ├── WorkerCommandBuilder             — builds enriched CLI command with shell-safe quoting
 ├── CaseLineageQuery                — interface for prior-worker lineage queries

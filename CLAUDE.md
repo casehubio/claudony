@@ -255,9 +255,14 @@ claudony-core/src/main/java/dev/claudony/
 claudony-casehub/src/main/java/dev/claudony/casehub/
 ├── CaseHubConfig.java                  — @ConfigMapping for claudony.casehub.* properties
 ├── ProviderConfigSource.java            — SPI: per-agent config lookup by agentId
-├── ConfigMappingProviderConfigSource.java — @DefaultBean: reads from application.properties
+├── CompositeProviderConfigSource.java      — @ApplicationScoped: registry primary (ProvisionerConfigRegistry
+│                                             from engine-api), config-mapping fallback (application.properties);
+│                                             replaces ConfigMappingProviderConfigSource (#164)
 ├── ClaudonyProviderConfig.java           — per-agent config record (command, model, tools, etc.)
-├── WorkerCommandBuilder.java             — builds enriched CLI command with shell-safe quoting
+├── WorkerCommandBuilder.java             — builds enriched CLI command with shell-safe quoting;
+│                                             3-arg build(baseCommand, config, dynamicAppendPrompt);
+│                                             --system-prompt and --append-system-prompt coexist (not mutual exclusive);
+│                                             mergeAppendPrompts() combines static (operator) + dynamic (mesh) prompts
 ├── CaseLineageQuery.java               — interface for prior worker queries (default: empty stub)
 ├── EmptyCaseLineageQuery.java          — @DefaultBean no-op impl (swap for JPA impl when casehub DB configured)
 ├── ClaudonyWorkerProvisioner.java      — WorkerProvisioner SPI: creates tmux sessions
@@ -412,7 +417,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-06-27, after claudony#121 multitenancy-foundation):** 16 in `claudony-core` + 162 in `claudony-casehub` + 408 in `claudony-app` = **586 total, 586 passing**. No known failing tests. Core module rose from 6 to 16 after #121 added DefaultTenantContextTest (1) and SessionRegistryTenantFilterTest (9). Previous baseline: 576 (2026-06-25, after #156 ops-provider-config).
+**Baseline (as of 2026-06-29, after claudony#163/#164 mesh-prompt-ops-config):** 16 in `claudony-core` + 177 in `claudony-casehub` + 408 in `claudony-app` = **601 total, 601 passing**. No known failing tests. Casehub module rose from 162 to 177 after #163 added WorkerCommandBuilder dynamic prompt tests (7), MeshSystemPromptTemplate null-workerId test (1), provisioner mesh prompt tests (4), and #164 added CompositeProviderConfigSource tests (7); net -4 from deleted ConfigMappingProviderConfigSourceTest (4). Previous baseline: 586 (2026-06-27, after #121 multitenancy-foundation).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -431,7 +436,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 `claudony-casehub` tests:
 - `ClaudonyProviderConfigTest` — fromMap, fromConfigMapping, EMPTY sentinel, fromMap empty map
 - `WorkerCommandBuilderTest` — base command only, model flag, all flags, shell quoting, empty config
-- `ConfigMappingProviderConfigSourceTest` — forAgent known/unknown, declaredAgentIds
+- `CompositeProviderConfigSourceTest` — registry-has-config, registry-empty-fallback, unknown-agent-returns-EMPTY, registry-displaces-config-mapping, declaredAgentIds-union, registry-only-agent-discovered, noOp-registry-behaves-like-config-only
 - `ClaudonyReactiveWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness, caseId/roleName stamped; returns ProvisionResult; enriched command, workingDir override, defaultCommand fallback, session records effective values, getCapabilities returns declaredAgentIds; 2 causal context tests: trigger fields → storesCausalContextAndReturnsEntryId, null trigger fields → guardShortCircuits (engine#390 changed return type from Worker; claudony#94 added causedByEntryId provision path)
 - `QhorusCausalLinkResolverTest` — 8 unit tests: null channelId, null correlationId, repo unsatisfied, invalid UUID, blank correlationId, empty channelId, entry found → returns UUID, entry not found → empty
 - `ClaudonyReactiveCaseChannelProviderTest` — Qhorus channel creation (ReactiveChannelService), list filtering, postToChannel (including correlationId extraction for COMMAND/QUERY via #122), cache-hit no-op, concurrent init race (CountDownLatch barrier, #120), failed init eviction retry (#120), fires CaseChannelCreatedEvent on open (#102), createQhorusChannel calls initChannel (#102)
