@@ -2,6 +2,7 @@ package io.casehub.claudony.casehub;
 
 import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorTypeResolver;
 import io.casehub.ledger.api.model.LedgerEntryType;
@@ -44,6 +45,7 @@ public class ClaudonyLedgerEventCapture {
     ClaudonyReactiveWorkerProvisioner provisioner;
 
     @Inject
+    @WorkerBackend
     ClaudonyWorkerExecutionManager execManager;
 
     @Inject

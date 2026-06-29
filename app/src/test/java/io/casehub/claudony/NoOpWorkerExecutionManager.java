@@ -25,8 +25,8 @@ import java.util.Map;
 class NoOpWorkerExecutionManager implements WorkerExecutionManager {
 
     @Override
-    public boolean supports(String providerName, String capabilityName) {
-        return true;
+    public boolean supports(String capabilityName, String tenancyId) {
+        return false;
     }
 
     @Override

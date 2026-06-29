@@ -11,10 +11,12 @@ import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
 import io.casehub.engine.common.internal.history.EventLog;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.engine.common.spi.scheduler.WorkerExecutionManager;
 import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -30,6 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * WorkflowExecutionCompleted when the session exits naturally. Cancellation
  * is signalled by removing the session from SessionRegistry before killing tmux.
  */
+@WorkerBackend
+@Priority(10)
 @ApplicationScoped
 public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
 
@@ -67,8 +71,8 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
     }
 
     @Override
-    public boolean supports(String providerName, String capabilityName) {
-        return "claudony".equals(providerName);
+    public boolean supports(String capabilityName, String tenancyId) {
+        return true;
     }
 
     @Override
@@ -137,11 +141,6 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
         watch(sessionId, sessionName, instance, worker);
     }
 
-    @Override
-    public Uni<Void> schedulePersistedEvent(EventLog scheduledEventLog) {
-        // Tmux workers have no Quartz persistent events — no-op
-        return Uni.createFrom().voidItem();
-    }
 
     @Override
     public int getActiveWorkCount(String workerId) {
