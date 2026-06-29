@@ -6,6 +6,7 @@ import io.casehub.worker.api.WorkerResult;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import org.jboss.logging.Logger;
 
 import java.time.Duration;
@@ -28,7 +29,7 @@ class CasehubStartupService {
     CasehubStartupService(
             SessionRegistry registry,
             CrossTenantCaseInstanceRepository caseInstanceRepo,
-            ClaudonyWorkerExecutionManager execManager) {
+            @WorkerBackend ClaudonyWorkerExecutionManager execManager) {
         this.registry = registry;
         this.caseInstanceRepo = caseInstanceRepo;
         this.execManager = execManager;

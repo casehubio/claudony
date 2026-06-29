@@ -10,6 +10,7 @@ import io.casehub.api.model.WorkerContext;
 import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
 import io.casehub.api.spi.ReactiveWorkerProvisioner;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -62,7 +63,7 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
             ProviderConfigSource providerConfigSource,
             WorkerSessionMapping sessionMapping,
             Instance<CaseHubRuntime> caseHubRuntime,
-            ClaudonyWorkerExecutionManager execManager,
+            @WorkerBackend ClaudonyWorkerExecutionManager execManager,
             QhorusCausalLinkResolver causalLinkResolver) {
         this(config.enabled(), tmux, registry, providerConfigSource, sessionMapping,
                 config.workers().defaultCommand(), config.workers().defaultWorkingDir(),

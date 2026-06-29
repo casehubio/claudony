@@ -7,6 +7,7 @@ import io.casehub.claudony.server.auth.ApiKeyService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -31,7 +32,7 @@ public class ServerStartup {
     @Inject TmuxService     tmux;
     @Inject SessionRegistry registry;
     @Inject ApiKeyService   apiKeyService;
-    @Inject Instance<ClaudonyWorkerExecutionManager> workerExecManager;
+    @Inject @WorkerBackend Instance<ClaudonyWorkerExecutionManager> workerExecManager;
     @Inject Instance<CrossTenantCaseInstanceRepository> caseInstanceRepo;
 
     void onStart(@Observes StartupEvent event) {
