@@ -6,6 +6,7 @@ import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.api.model.ProvisionContext;
+import io.casehub.api.model.WorkerContext;
 import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
 import io.casehub.api.spi.ReactiveWorkerProvisioner;
@@ -190,7 +191,13 @@ public class ClaudonyReactiveWorkerProvisioner implements ReactiveWorkerProvisio
 
         ClaudonyProviderConfig config = providerConfigSource.forAgent(roleName);
         String baseCommand = config.command().orElse(defaultCommand);
-        String enrichedCommand = WorkerCommandBuilder.build(baseCommand, config);
+
+        Optional<String> meshPrompt = Optional.ofNullable(context.workerContext())
+                .map(wc -> wc.properties().get("systemPrompt"))
+                .filter(String.class::isInstance)
+                .map(String.class::cast);
+
+        String enrichedCommand = WorkerCommandBuilder.build(baseCommand, config, meshPrompt);
         String effectiveWorkingDir = config.workingDir().orElse(defaultWorkingDir);
         String sessionName = SESSION_PREFIX + sessionId;
 

@@ -127,6 +127,17 @@ class MeshSystemPromptTemplateTest {
     }
 
     @Test
+    void active_nullWorkerId_producesPlaceholder() {
+        String prompt = MeshSystemPromptTemplate.generate(
+                null, CAPABILITY, CASE_ID, NORMATIVE_SPECS,
+                List.of(), MeshParticipationStrategy.MeshParticipation.ACTIVE).orElseThrow();
+
+        assertThat(prompt)
+                .contains("register(<your-session-id>")
+                .doesNotContain("register(\"null\"");
+    }
+
+    @Test
     void active_containsMessageDisciplineSection() {
         String prompt = MeshSystemPromptTemplate.generate(
                 WORKER_ID, CAPABILITY, CASE_ID, NORMATIVE_SPECS,

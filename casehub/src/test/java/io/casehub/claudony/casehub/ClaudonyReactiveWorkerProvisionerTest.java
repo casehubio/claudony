@@ -4,6 +4,8 @@ import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.api.model.ProvisionContext;
+import io.casehub.api.model.WorkerContext;
+import io.casehub.api.context.PropagationContext;
 import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
 import io.smallrye.mutiny.Uni;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -352,5 +355,66 @@ class ClaudonyReactiveWorkerProvisionerTest {
 
     private ProvisionContext provisionContext(UUID caseId) {
         return new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null);
+    }
+
+    private ProvisionContext provisionContextWithWorkerContext(UUID caseId, Map<String, Object> properties) {
+        var wc = new WorkerContext("code-reviewer", caseId, List.of(), List.of(),
+                PropagationContext.createRoot(), properties);
+        return new ProvisionContext(caseId,
+                io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID,
+                "code-reviewer", wc, null, null, null);
+    }
+
+    @Test
+    void provision_withMeshPrompt_passesItToCommand() throws Exception {
+        var caseId = UUID.randomUUID();
+        var ctx = provisionContextWithWorkerContext(caseId,
+                Map.of("systemPrompt", "You are on case " + caseId));
+
+        provisioner.provision(Set.of("code-reviewer"), ctx)
+                .await().indefinitely();
+
+        var captor = ArgumentCaptor.forClass(String.class);
+        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
+        assertThat(captor.getValue()).contains("--append-system-prompt");
+        assertThat(captor.getValue()).contains("You are on case " + caseId);
+    }
+
+    @Test
+    void provision_withNullWorkerContext_noAppendFlag() throws Exception {
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
+                .await().indefinitely();
+
+        var captor = ArgumentCaptor.forClass(String.class);
+        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
+        assertThat(captor.getValue()).doesNotContain("--append-system-prompt");
+    }
+
+    @Test
+    void provision_silentParticipation_noSystemPromptProperty_noAppendFlag() throws Exception {
+        var caseId = UUID.randomUUID();
+        var ctx = provisionContextWithWorkerContext(caseId,
+                Map.of("meshParticipation", "SILENT"));
+
+        provisioner.provision(Set.of("code-reviewer"), ctx)
+                .await().indefinitely();
+
+        var captor = ArgumentCaptor.forClass(String.class);
+        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
+        assertThat(captor.getValue()).doesNotContain("--append-system-prompt");
+    }
+
+    @Test
+    void provision_cleanStart_noSystemPromptProperty_noAppendFlag() throws Exception {
+        var caseId = UUID.randomUUID();
+        var ctx = provisionContextWithWorkerContext(caseId,
+                Map.of("meshParticipation", "ACTIVE", "clean-start", true));
+
+        provisioner.provision(Set.of("code-reviewer"), ctx)
+                .await().indefinitely();
+
+        var captor = ArgumentCaptor.forClass(String.class);
+        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
+        assertThat(captor.getValue()).doesNotContain("--append-system-prompt");
     }
 }

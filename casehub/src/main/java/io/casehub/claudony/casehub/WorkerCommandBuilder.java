@@ -7,23 +7,32 @@ public final class WorkerCommandBuilder {
 
     private WorkerCommandBuilder() {}
 
-    public static String build(String baseCommand, ClaudonyProviderConfig config) {
+    public static String build(String baseCommand, ClaudonyProviderConfig config,
+                               Optional<String> dynamicAppendPrompt) {
         var sb = new StringBuilder(baseCommand);
 
         appendString(sb, "--model", config.model());
-        if (config.systemPrompt().isPresent()) {
-            appendString(sb, "--system-prompt", config.systemPrompt());
-        } else {
-            appendString(sb, "--append-system-prompt", config.appendSystemPrompt());
-        }
+        appendString(sb, "--system-prompt", config.systemPrompt());
+        Optional<String> effectiveAppend = mergeAppendPrompts(
+                config.appendSystemPrompt(), dynamicAppendPrompt);
+        appendString(sb, "--append-system-prompt", effectiveAppend);
         appendString(sb, "--effort", config.effort());
         appendString(sb, "--permission-mode", config.permissionMode());
         appendList(sb, "--tools", config.tools());
         appendList(sb, "--allowedTools", config.allowedTools());
         appendList(sb, "--disallowedTools", config.disallowedTools());
-        config.addDirs().ifPresent(dirs -> dirs.forEach(dir -> appendString(sb, "--add-dir", Optional.of(dir))));
+        config.addDirs().ifPresent(dirs ->
+            dirs.forEach(dir -> appendString(sb, "--add-dir", Optional.of(dir))));
 
         return sb.toString();
+    }
+
+    static Optional<String> mergeAppendPrompts(Optional<String> staticAppend,
+                                                Optional<String> dynamicAppend) {
+        if (staticAppend.isEmpty() && dynamicAppend.isEmpty()) return Optional.empty();
+        if (staticAppend.isEmpty()) return dynamicAppend;
+        if (dynamicAppend.isEmpty()) return staticAppend;
+        return Optional.of(staticAppend.get() + "\n\n" + dynamicAppend.get());
     }
 
     private static void appendString(StringBuilder sb, String flag, Optional<String> value) {
