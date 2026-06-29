@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.when;
 
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.platform.api.identity.TenancyConstants;
@@ -53,6 +54,7 @@ class ClaudonyLedgerEventCaptureTest {
     ClaudonyReactiveWorkerProvisioner provisioner;
 
     @InjectMock
+    @WorkerBackend
     ClaudonyWorkerExecutionManager execManager;
 
     @Test
