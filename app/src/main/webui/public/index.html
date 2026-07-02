@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#1e1e1e">
-    <title>RemoteCC Terminal</title>
+    <meta name="theme-color" content="#007acc">
+    <title>Claudony</title>
     <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="/app/style.css">
-    <link rel="stylesheet" href="/app/terminal.css">
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; background: #1e1e1e; color: #ccc; }
+      #app { height: 100%; }
+    </style>
 </head>
-<body class="terminal-page">
+<body>
     <div id="app"></div>
-    <script type="module" src="/app/terminal.js"></script>
+    <script type="module" src="app.js"></script>
     <script>
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');

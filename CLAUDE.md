@@ -322,14 +322,27 @@ claudony-app/src/main/java/dev/claudony/
         ├── ITerm2Adapter.java          — macOS AppleScript + tmux -CC
         └── TerminalAdapterFactory.java — auto-detection
 
-claudony-app/src/main/resources/META-INF/resources/  — static frontend served by Quarkus
+claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
+├── esbuild.config.mjs                 — two entry points (app.ts, terminal.ts), code splitting
+├── src/
+│   ├── app.ts                         — dashboard entry point (loadSite + session-grid)
+│   ├── terminal.ts                    — terminal entry point (loadSite + compose overlay + lifecycle)
+│   ├── theme.ts                       — shared CSS variables
+│   ├── util/auth.ts + time.ts         — shared utilities
+│   └── components/
+│       ├── session-grid.ts            — dashboard session card grid
+│       ├── terminal-header.ts         — back link, session name, status badge, toggle buttons
+│       ├── terminal-workspace.ts      — three-column flex coordinator (workers | terminal | channels)
+│       ├── worker-panel.ts            — SSE worker list, click-to-switch
+│       ├── channel-panel.ts           — channel feed, SSE/polling, stale cursor, case context, lineage
+│       └── key-bar.ts                 — touch device special keys
+
+claudony-app/src/main/resources/META-INF/resources/  — static files served by Quarkus
 ├── manifest.json + sw.js              — PWA
 └── app/
-    ├── index.html + dashboard.js      — session management dashboard
-    ├── session.html + terminal.js     — xterm.js terminal view + iPad key bar;
-    │                                    when session.caseId set: case context panel
-    │                                    (role, status, elapsed, lineage, channel auto-select)
-    └── style.css                      — shared dark theme
+    ├── index.html + dashboard.js      — session management dashboard (pre-migration)
+    ├── session.html                   — terminal page shell (loads Quinoa-built terminal.js)
+    └── style.css                      — shared dark theme + dashboard styles
 ```
 
 ### CaseHub integration
@@ -417,7 +430,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-06-29, after claudony#163/#164 mesh-prompt-ops-config):** 16 in `claudony-core` + 177 in `claudony-casehub` + 408 in `claudony-app` = **601 total, 601 passing**. No known failing tests. Casehub module rose from 162 to 177 after #163 added WorkerCommandBuilder dynamic prompt tests (7), MeshSystemPromptTemplate null-workerId test (1), provisioner mesh prompt tests (4), and #164 added CompositeProviderConfigSource tests (7); net -4 from deleted ConfigMappingProviderConfigSourceTest (4). Previous baseline: 586 (2026-06-27, after #121 multitenancy-foundation).
+**Baseline (as of 2026-07-01, after claudony#161 terminal page migration):** 16 in `claudony-core` + 177 in `claudony-casehub` + 407 in `claudony-app` = **600 total, 600 passing**. App module dropped by 1 after StaticFilesTest was updated for Quinoa coexistence (removed source-content assertions that referenced deleted terminal.js). Previous baseline: 601 (2026-06-29, after #163/#164 mesh-prompt-ops-config). No known failing tests. Casehub module rose from 162 to 177 after #163 added WorkerCommandBuilder dynamic prompt tests (7), MeshSystemPromptTemplate null-workerId test (1), provisioner mesh prompt tests (4), and #164 added CompositeProviderConfigSource tests (7); net -4 from deleted ConfigMappingProviderConfigSourceTest (4). Previous baseline: 586 (2026-06-27, after #121 multitenancy-foundation).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties

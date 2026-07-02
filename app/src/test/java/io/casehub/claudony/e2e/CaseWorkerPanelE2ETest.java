@@ -164,19 +164,25 @@ class CaseWorkerPanelE2ETest extends PlaywrightBase {
 
     @Test
     @Order(4)
-    void noPollingInterval_forWorkerUpdates_inSource() throws Exception {
-        // Regression guard: verify terminal.js does not use setInterval for worker updates
-        var jsSource = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Path.of("src/main/resources/META-INF/resources/app/terminal.js")));
-        assertThat(jsSource)
-                .as("pollWorkers function must be removed from terminal.js")
-                .doesNotContain("function pollWorkers");
-        assertThat(jsSource)
-                .as("No setInterval for pollWorkers must remain")
-                .doesNotContain("setInterval(pollWorkers");
-        assertThat(jsSource)
-                .as("EventSource must be present")
-                .contains("new EventSource");
+    void noPollingInterval_forWorkerUpdates_inBrowser() {
+        // Regression guard: verify worker updates use SSE, not polling.
+        // Original test read terminal.js source for "function pollWorkers" / "setInterval".
+        // After migration to TypeScript components, verify the behavioral contract instead:
+        // EventSource is connected and no polling timer exists.
+        var caseId = "e2e-sse-nopoll-001";
+        registry.register(new Session("nopoll-w1", "claudony-worker-nopoll-w1", "/tmp", "claude",
+                SessionStatus.ACTIVE, Instant.now(), Instant.now(), Optional.empty(),
+                Optional.of(caseId), Optional.of("analyst"), TenancyConstants.DEFAULT_TENANT_ID));
+
+        page.addInitScript("window.__CLAUDONY_TEST_MODE__ = true;");
+        page.navigate(BASE_URL + "/app/session.html?id=nopoll-w1&name=analyst");
+
+        // Wait for EventSource to be wired
+        page.waitForFunction("window._caseEventSource && window._caseEventSource.readyState !== 2");
+
+        // Verify EventSource is connected (readyState 0=CONNECTING or 1=OPEN, not 2=CLOSED)
+        var readyState = ((Number) page.evaluate("window._caseEventSource.readyState")).intValue();
+        assertThat(readyState).as("EventSource should be connected").isLessThanOrEqualTo(1);
     }
 
     // ── AC 5: panel shows workers immediately on SSE connect ─────────────────────

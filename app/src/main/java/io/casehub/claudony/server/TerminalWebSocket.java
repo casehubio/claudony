@@ -87,33 +87,11 @@ public class TerminalWebSocket {
             var raw = new String(cap.getInputStream().readAllBytes());
             cap.waitFor();
             if (!raw.isBlank()) {
-                // Find first and last non-blank lines to determine the content range.
-                // CRITICAL: blank lines WITHIN the range must be preserved so that
-                // xterm.js row N == pane row N for all visible content. If internal
-                // blank lines are removed, content shifts up in xterm.js, causing TUI
-                // apps (Claude Code, vim) that use absolute cursor positioning
-                // (ESC[row;col H) to land on the wrong row — one row below the stale
-                // history copy — producing a visible duplicate prompt.
-                // We only strip leading blanks (old scrollback) and trailing blanks
-                // (pane row padding).
-                var lines = raw.split("\n", -1);
-                int firstContent = -1, lastContent = -1;
-                for (int i = 0; i < lines.length; i++) {
-                    var plain = lines[i].replaceAll("\u001B\\[[0-9;]*[a-zA-Z]", "").stripTrailing();
-                    if (!plain.isEmpty()) {
-                        if (firstContent < 0) firstContent = i;
-                        lastContent = i;
-                    }
-                }
-                if (firstContent >= 0) {
-                    var contentLines = new java.util.ArrayList<String>();
-                    for (int i = firstContent; i <= lastContent; i++) {
-                        var plain = lines[i].replaceAll("\u001B\\[[0-9;]*[a-zA-Z]", "").stripTrailing();
-                        // Visually blank lines (only ANSI codes, no printable text) must be
-                        // stored as truly empty strings so they produce \r\n\r\n in the join
-                        // and xterm.js renders a blank row, preserving pane row alignment.
-                        contentLines.add(plain.isEmpty() ? "" : lines[i].stripTrailing());
-                    }
+                var result = processHistory(raw);
+                var contentLines = result.contentLines();
+                var lines = result.rawLines();
+                var firstContent = result.firstContent();
+                if (!contentLines.isEmpty()) {
 
                     // Get pane cursor position so we can reposition xterm.js cursor
                     // to exactly where the pane cursor is after sending history.
@@ -231,6 +209,30 @@ public class TerminalWebSocket {
         cleanup(connection);
     }
 
+    private static final java.util.regex.Pattern ANSI_ESCAPE = java.util.regex.Pattern.compile(
+            "(?:\\[[0-9;]*[a-zA-Z]|[()][A-Z0-9]|[=>]|\\][^]*)");
+
+    record HistoryResult(java.util.List<String> contentLines, String[] rawLines, int firstContent) {}
+
+    static HistoryResult processHistory(String raw) {
+        var lines = raw.split("\n", -1);
+        int firstContent = -1, lastContent = -1;
+        for (int i = 0; i < lines.length; i++) {
+            var plain = ANSI_ESCAPE.matcher(lines[i]).replaceAll("").stripTrailing();
+            if (!plain.isEmpty()) {
+                if (firstContent < 0) firstContent = i;
+                lastContent = i;
+            }
+        }
+        if (firstContent < 0) return new HistoryResult(java.util.List.of(), lines, 0);
+        var contentLines = new java.util.ArrayList<String>();
+        for (int i = firstContent; i <= lastContent; i++) {
+            var plain = ANSI_ESCAPE.matcher(lines[i]).replaceAll("").stripTrailing();
+            contentLines.add(plain.isEmpty() ? "" : lines[i].stripTrailing());
+        }
+        return new HistoryResult(contentLines, lines, firstContent);
+    }
+
     private static int parsePathInt(String value) {
         try { return value != null ? Integer.parseInt(value) : 0; }
         catch (NumberFormatException e) { return 0; }
@@ -243,9 +245,9 @@ public class TerminalWebSocket {
                 .map(e -> connections.get(e.getKey()))
                 .filter(java.util.Objects::nonNull)
                 .forEach(conn -> Thread.ofVirtual().start(() -> {
-                    try { conn.sendTextAndAwait("{\"type\":\"session-expired\"}"); }
+                    try { conn.closeAndAwait(new io.quarkus.websockets.next.CloseReason(4001, "session-expired")); }
                     catch (Exception e) {
-                        LOG.debugf("Could not send session-expired to connection: %s", e.getMessage());
+                        LOG.debugf("Could not close session-expired connection: %s", e.getMessage());
                     }
                 }));
     }

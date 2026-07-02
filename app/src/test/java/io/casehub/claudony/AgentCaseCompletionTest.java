@@ -77,7 +77,10 @@ class AgentCaseCompletionTest {
                     + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
                     + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
                     + "io.casehub.claudony.TestAgentCase,"
-                    + "io.casehub.claudony.casehub.AgentCase"
+                    + "io.casehub.claudony.casehub.AgentCase,"
+                    + "io.casehub.qhorus.persistence.memory.*,"
+                    + "io.casehub.qhorus.runtime.store.jpa.*,"
+                    + "io.casehub.qhorus.runtime.identity.CrossTenantProducer"
             );
         }
     }

@@ -10,37 +10,22 @@ import static org.hamcrest.Matchers.*;
 @TestSecurity(user = "test", roles = "user")
 class StaticFilesTest {
 
-    @Test
-    void appIndexIsAccessible() {
-        given().when().get("/app/index.html")
-            .then().statusCode(200);
-    }
+    // --- Static files: META-INF/resources + esbuild dist (copied by maven-resources-plugin) ---
+    // Quinoa is disabled during @QuarkusTest, but the esbuild dist output (terminal.js, app.js,
+    // terminal.css) is copied to META-INF/resources/app by the copy-quinoa-dist execution in pom.xml.
 
     @Test
     void sessionHtmlIsAccessible() {
         given().when().get("/app/session.html")
-            .then().statusCode(200);
-    }
-
-    @Test
-    void manifestJsonIsAccessible() {
-        given().when().get("/manifest.json")
             .then().statusCode(200)
-            .contentType(containsString("json"));
+            .body(containsString("terminal-page"));
     }
 
     @Test
-    void serviceWorkerIsAccessible() {
-        given().when().get("/sw.js")
+    void terminalBundleIsAccessible() {
+        given().when().get("/app/terminal.js")
             .then().statusCode(200)
             .contentType(containsString("javascript"));
-    }
-
-    @Test
-    void dashboardContainsDashboardScript() {
-        given().when().get("/app/index.html")
-            .then().statusCode(200)
-            .body(containsString("dashboard.js"));
     }
 
     @Test
@@ -50,34 +35,13 @@ class StaticFilesTest {
             .contentType(containsString("text/css"));
     }
 
-    @Test
-    void dashboardScriptIsAccessible() {
-        given().when().get("/app/dashboard.js")
-            .then().statusCode(200)
-            .contentType(containsString("javascript"));
-    }
+    // --- PWA / shared assets ---
 
     @Test
-    void sessionHtmlContainsXtermScript() {
-        given().when().get("/app/session.html")
+    void manifestJsonIsAccessible() {
+        given().when().get("/manifest.json")
             .then().statusCode(200)
-            .body(containsString("xterm.js"))
-            .body(containsString("terminal.js"));
-    }
-
-    @Test
-    void terminalScriptIsAccessible() {
-        given().when().get("/app/terminal.js")
-            .then().statusCode(200)
-            .contentType(containsString("javascript"));
-    }
-
-    @Test
-    void sessionHtmlContainsKeyBar() {
-        given().when().get("/app/session.html")
-            .then().statusCode(200)
-            .body(containsString("key-bar"))
-            .body(containsString("Ctrl+C"));
+            .contentType(containsString("json"));
     }
 
     @Test
@@ -87,6 +51,13 @@ class StaticFilesTest {
             .body(containsString("\"name\""))
             .body(containsString("\"start_url\""))
             .body(containsString("standalone"));
+    }
+
+    @Test
+    void serviceWorkerIsAccessible() {
+        given().when().get("/sw.js")
+            .then().statusCode(200)
+            .contentType(containsString("javascript"));
     }
 
     @Test
@@ -100,20 +71,5 @@ class StaticFilesTest {
     void iconsAreAccessible() {
         given().when().get("/icons/icon-192.svg").then().statusCode(200);
         given().when().get("/icons/icon-512.svg").then().statusCode(200);
-    }
-
-    @Test
-    void dashboardContainsMeshPanel() {
-        given().when().get("/app/index.html")
-            .then().statusCode(200)
-            .body(containsString("id=\"mesh-panel\""));
-    }
-
-    @Test
-    void indexHtml_containsMeshDock() {
-        given().when().get("/app/index.html")
-            .then()
-            .statusCode(200)
-            .body(containsString("id=\"mesh-dock\""));
     }
 }

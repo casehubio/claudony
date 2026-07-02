@@ -25,10 +25,15 @@ class TerminalPageE2ETest extends PlaywrightBase {
         // terminal.js shows reconnecting state
         page.navigate(BASE_URL + "/app/session.html?id=fake-id&name=test-terminal");
 
-        // xterm.js container must be rendered in the DOM
-        assertThat(page.locator("#terminal-container").isVisible()).isTrue();
+        // Wait for JS modules to load and components to render
+        page.waitForTimeout(3000);
 
-        // Status badge shows "reconnecting" after WebSocket close (terminal.js ws.onclose handler)
+        // xterm.js terminal component must be rendered in the DOM (async — loadSite() is a Promise)
+        page.locator("pages-component-terminal").waitFor(
+                new Locator.WaitForOptions().setTimeout(5000));
+        assertThat(page.locator("pages-component-terminal").isVisible()).isTrue();
+
+        // Status badge shows "reconnecting" after WebSocket close (ws.onclose handler)
         // Wait up to 5s for the reconnect cycle to begin
         page.locator("#status-badge").waitFor(
                 new Locator.WaitForOptions().setTimeout(5000));

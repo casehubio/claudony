@@ -283,13 +283,67 @@ class TerminalWebSocketTest {
      * (pane padding). This ensures xterm.js row N == pane row N for visible content.
      */
     @Test
-    void internalBlankLinesPreservedInHistoryToPreservePaneRowPositions() throws Exception {
+    void processHistory_preservesInternalBlankLines() {
+        var result = TerminalWebSocket.processHistory("MARK-A\n\n\nMARK-B\n");
+        var lines = result.contentLines();
+        assertEquals(4, lines.size());
+        assertTrue(lines.get(0).contains("MARK-A"));
+        assertEquals("", lines.get(1));
+        assertEquals("", lines.get(2));
+        assertTrue(lines.get(3).contains("MARK-B"));
+    }
+
+    @Test
+    void processHistory_preservesBlankLineWithAnsiOnly() {
+        var result = TerminalWebSocket.processHistory("MARK-A\n[0m\nMARK-B\n");
+        var lines = result.contentLines();
+        assertEquals(3, lines.size());
+        assertTrue(lines.get(0).contains("MARK-A"));
+        assertEquals("", lines.get(1));
+        assertTrue(lines.get(2).contains("MARK-B"));
+    }
+
+    @Test
+    void processHistory_stripsLeadingAndTrailingBlanks() {
+        var result = TerminalWebSocket.processHistory("\n\nMARK-A\nMARK-B\n\n\n");
+        var lines = result.contentLines();
+        assertEquals(2, lines.size());
+        assertTrue(lines.get(0).contains("MARK-A"));
+        assertTrue(lines.get(1).contains("MARK-B"));
+    }
+
+    @Test
+    void processHistory_handlesNonCsiEscapeSequences() {
+        var result = TerminalWebSocket.processHistory("content\n(B\n[0m\nmore\n");
+        var lines = result.contentLines();
+        assertEquals(4, lines.size());
+        assertTrue(lines.get(0).contains("content"));
+        assertEquals("", lines.get(1));
+        assertEquals("", lines.get(2));
+        assertTrue(lines.get(3).contains("more"));
+    }
+
+    @Test
+    void processHistory_preservesColoredContentLines() {
+        var result = TerminalWebSocket.processHistory("[31mred text[0m\n\nplain\n");
+        var lines = result.contentLines();
+        assertEquals(3, lines.size());
+        assertTrue(lines.get(0).contains("red text"));
+        assertEquals("", lines.get(1));
+        assertTrue(lines.get(2).contains("plain"));
+    }
+
+    @Test
+    void processHistory_emptyInputReturnsEmptyList() {
+        var result = TerminalWebSocket.processHistory("\n\n\n");
+        assertTrue(result.contentLines().isEmpty());
+    }
+
+    @Test
+    void reconnectHistoryContainsOutputFromPreviousSession() throws Exception {
         var container = ContainerProvider.getWebSocketContainer();
         var cec = ClientEndpointConfig.Builder.create().build();
 
-        // Connect with real dimensions so resize always fires and pane is a known 80x24.
-        // 0/0 skips resize, leaving the pane size undefined — which can cause the printf
-        // output to scroll differently and put the blank line in an ambiguous position.
         var live = new LinkedBlockingQueue<String>();
         var session1 = container.connectToServer(new Endpoint() {
             @Override public void onOpen(Session s, EndpointConfig c) {
@@ -298,10 +352,8 @@ class TerminalWebSocketTest {
         }, cec, URI.create(wsBaseUri + "ws-test-id/80/24"));
         awaitHistoryBurst(live);
 
-        // printf interprets \n in format strings: outputs MARK-A, blank line, MARK-B.
         session1.getBasicRemote().sendText("printf 'MARK-A\\n\\nMARK-B\\n'\n");
 
-        // Wait for MARK-B in live output (confirms both lines appeared in pane).
         var liveText = new StringBuilder();
         long deadline = System.currentTimeMillis() + 5000;
         while (System.currentTimeMillis() < deadline) {
@@ -309,21 +361,8 @@ class TerminalWebSocketTest {
             if (chunk != null) { liveText.append(chunk); if (liveText.toString().contains("MARK-B")) break; }
         }
         assertTrue(liveText.toString().contains("MARK-B"), "MARK-B must appear in live output. Got: " + liveText);
-
-        // Wait until capture-pane itself confirms both markers are in the pane.
-        // This eliminates timing races between the live FIFO delivery and the
-        // pane grid state — they are independent code paths in tmux.
-        Await.until(() -> {
-            try {
-                var pane = tmux.capturePane(TEST_SESSION, 50);
-                return pane.contains("MARK-A") && pane.contains("MARK-B");
-            } catch (Exception e) { return false; }
-        }, "MARK-A and MARK-B to appear in captured pane");
-
         session1.close();
-        Thread.sleep(200); // brief pause for pipe-pane teardown
 
-        // Second connection: capture history and verify blank line is preserved.
         var history = new LinkedBlockingQueue<String>();
         var session2 = container.connectToServer(new Endpoint() {
             @Override public void onOpen(Session s, EndpointConfig c) {
@@ -331,35 +370,17 @@ class TerminalWebSocketTest {
             }
         }, cec, URI.create(wsBaseUri + "ws-test-id/80/24"));
 
-        // The regex: MARK-A on its own line → blank/ANSI line → MARK-B on its own line.
-        // The echoed command "printf 'MARK-A\n\nMARK-B\n'" has both markers on ONE line
-        // with LITERAL \n chars — this regex requires actual newlines, so it only matches
-        // the actual printf output, not the echo. Break when this pattern appears.
-        var blankLinePattern = java.util.regex.Pattern.compile("MARK-A[^\n]*\n[^\n]*\n[^\n]*MARK-B");
-
         var historyText = new StringBuilder();
         deadline = System.currentTimeMillis() + 5000;
         while (System.currentTimeMillis() < deadline) {
             var chunk = history.poll(100, TimeUnit.MILLISECONDS);
-            if (chunk != null) {
-                historyText.append(chunk);
-                if (blankLinePattern.matcher(historyText.toString()).find()) break;
-            }
+            if (chunk != null) historyText.append(chunk);
         }
         session2.close();
 
         String hist = historyText.toString();
-        assertTrue(hist.contains("MARK-A"), "History must contain MARK-A");
-        assertTrue(hist.contains("MARK-B"), "History must contain MARK-B");
-
-        // Blank line must be preserved between MARK-A and MARK-B output.
-        // Without it TUI app absolute cursor (ESC[row;colH) lands one row below the stale
-        // history copy, producing a visible duplicate prompt.
-        assertTrue(blankLinePattern.matcher(hist).find(),
-            "A blank line must be preserved between MARK-A and MARK-B output. " +
-            "Regression: removing it shifts rows in xterm.js causing duplicate TUI prompts. " +
-            "History (first 500 chars): [" +
-            hist.substring(0, Math.min(500, hist.length())).replace('\n', '|').replace('\r', '|') + "]");
+        assertTrue(hist.contains("MARK-A"), "Reconnect history must contain MARK-A. Got: " + hist.substring(0, Math.min(500, hist.length())));
+        assertTrue(hist.contains("MARK-B"), "Reconnect history must contain MARK-B. Got: " + hist.substring(0, Math.min(500, hist.length())));
     }
 
     @Test

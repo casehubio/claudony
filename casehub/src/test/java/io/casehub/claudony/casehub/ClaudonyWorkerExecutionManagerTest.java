@@ -1,6 +1,5 @@
 package io.casehub.claudony.casehub;
 
-import io.casehub.worker.api.Capability;
 import io.casehub.worker.api.Worker;
 import io.casehub.worker.api.WorkerFunction;
 import io.casehub.worker.api.WorkerResult;
@@ -335,7 +334,7 @@ class ClaudonyWorkerExecutionManagerTest {
     private Worker worker(String name) {
         return Worker.builder()
                 .name(name)
-                .capabilities(List.of(Capability.of(name, "{}", "{}")))
+                .capabilityName(name)
                 .function(new WorkerFunction.Sync(ctx -> WorkerResult.of(Map.of())))
                 .build();
     }
