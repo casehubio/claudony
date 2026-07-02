@@ -132,10 +132,9 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
             return;
         }
         String sessionName = ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + sessionId;
-        var cap = Capability.of(roleName, "{}", "{}");
         var worker = Worker.builder()
                 .name(roleName)
-                .capabilities(java.util.List.of(cap))
+                .capabilityName(roleName)
                 .function(new WorkerFunction.Sync(ctx -> WorkerResult.of(java.util.Map.of())))
                 .build();
         watch(sessionId, sessionName, instance, worker);

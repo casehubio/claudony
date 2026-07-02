@@ -5,8 +5,8 @@ import com.microsoft.playwright.options.RequestOptions;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import io.casehub.qhorus.api.channel.ChannelSemantic;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.runtime.channel.Channel;
-import io.casehub.qhorus.runtime.message.Message;
+import io.casehub.qhorus.api.channel.Channel;
+import io.casehub.qhorus.api.message.Message;
 import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
@@ -46,12 +46,12 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     @BeforeEach
     void createChannel() {
         channelName = "ch-panel-e2e-" + System.nanoTime();
-        Channel ch = new Channel();
-        ch.name = channelName;
-        ch.description = "E2E test channel";
-        ch.semantic = ChannelSemantic.APPEND;
+        Channel ch = Channel.builder(channelName)
+                .description("E2E test channel")
+                .semantic(ChannelSemantic.APPEND)
+                .build();
         channelStore.put(ch);
-        channelId = ch.id;
+        channelId = ch.id();
     }
 
     @AfterEach
@@ -372,11 +372,11 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     void interjectionDock_typeDropdown_filteredToChannelAllowedTypes() {
         // Create a channel restricted to COMMAND and QUERY only
         String restrictedChannel = "restricted-" + System.nanoTime();
-        Channel restricted = new Channel();
-        restricted.name = restrictedChannel;
-        restricted.description = "Governance channel";
-        restricted.semantic = ChannelSemantic.APPEND;
-        restricted.allowedTypes = "COMMAND,QUERY";
+        Channel restricted = Channel.builder(restrictedChannel)
+                .description("Governance channel")
+                .semantic(ChannelSemantic.APPEND)
+                .allowedTypes(java.util.Set.of(MessageType.COMMAND, MessageType.QUERY))
+                .build();
         channelStore.put(restricted);
 
         page.navigate(BASE_URL + "/app/session.html?id=fake-session-id&name=test-session");
@@ -666,11 +666,12 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
         // Insert a message AFTER fullLoad completes.
         // The next pollChannel() tick (POLL_MS=3000ms after EventSource onerror) will deliver it.
-        Message msg = new Message();
-        msg.channelId = channelId;
-        msg.sender = "agent:poll-fallback-test";
-        msg.messageType = MessageType.STATUS;
-        msg.content = "poll-delivers-this";
+        Message msg = Message.builder()
+                .channelId(channelId)
+                .sender("agent:poll-fallback-test")
+                .messageType(MessageType.STATUS)
+                .content("poll-delivers-this")
+                .build();
         messageStore.put(msg);
 
         // Wait up to 6s for poll cycle to deliver the message (POLL_MS=3000ms + 2s margin).

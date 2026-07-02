@@ -1,7 +1,7 @@
 package io.casehub.claudony.server;
 
 import io.casehub.qhorus.api.channel.ChannelSemantic;
-import io.casehub.qhorus.runtime.channel.Channel;
+import io.casehub.qhorus.api.channel.Channel;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -28,11 +28,11 @@ class MeshResourceInterjectionTest {
     @BeforeEach
     void createChannel() {
         channelName = "test-interjection-" + System.nanoTime();
-        Channel channel = new Channel();
-        channel.name = channelName;
-        channel.description = "test channel for interjection";
-        channel.semantic = ChannelSemantic.APPEND;
-        channelStore.put(channel);
+        channelStore.put(Channel.builder(channelName)
+                .description("test channel for interjection")
+                .semantic(ChannelSemantic.APPEND)
+                .allowedWriters(java.util.List.of())
+                .build());
     }
 
     @AfterEach

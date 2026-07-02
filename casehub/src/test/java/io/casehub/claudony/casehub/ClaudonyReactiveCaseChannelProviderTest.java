@@ -7,8 +7,8 @@ import io.casehub.platform.api.identity.ActorType;
 import io.casehub.qhorus.api.message.DispatchResult;
 import io.casehub.qhorus.api.message.MessageDispatch;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.runtime.channel.Channel;
-import io.casehub.qhorus.runtime.channel.ChannelCreateRequest;
+import io.casehub.qhorus.api.channel.Channel;
+import io.casehub.qhorus.api.channel.ChannelCreateRequest;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
 import io.casehub.qhorus.runtime.message.ReactiveMessageService;
 import io.smallrye.mutiny.Uni;
@@ -49,10 +49,9 @@ class ClaudonyReactiveCaseChannelProviderTest {
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private Channel stubChannel(UUID channelId, String name) {
-        Channel ch = new Channel();
-        ch.id   = channelId;
-        ch.name = name;
-        return ch;
+        return Channel.builder(name)
+                .id(channelId)
+                .build();
     }
 
     /** Stubs channelService.create(ChannelCreateRequest) for any name containing caseId. */

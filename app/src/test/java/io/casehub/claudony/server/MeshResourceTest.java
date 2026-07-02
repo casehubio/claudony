@@ -2,8 +2,8 @@ package io.casehub.claudony.server;
 
 import io.casehub.qhorus.api.channel.ChannelSemantic;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.runtime.channel.Channel;
-import io.casehub.qhorus.runtime.message.Message;
+import io.casehub.qhorus.api.channel.Channel;
+import io.casehub.qhorus.api.message.Message;
 import io.casehub.qhorus.testing.InMemoryChannelStore;
 import io.casehub.qhorus.testing.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -84,70 +84,74 @@ class MeshResourceTest {
 
     @Test
     void meshFeed_withMessages_returnsEntriesTaggedWithChannelName() {
-        Channel ch = new Channel();
-        ch.name = "feed-tagged-" + System.nanoTime();
-        ch.semantic = ChannelSemantic.APPEND;
-        channelStore.put(ch);
+        String channelName = "feed-tagged-" + System.nanoTime();
+        Channel ch = channelStore.put(Channel.builder(channelName)
+                .semantic(ChannelSemantic.APPEND)
+                .build());
 
-        Message msg = new Message();
-        msg.channelId = ch.id;
-        msg.sender = "agent:test";
-        msg.messageType = MessageType.STATUS;
-        msg.content = "hello from channel";
+        Message msg = Message.builder()
+                .channelId(ch.id())
+                .sender("agent:test")
+                .messageType(MessageType.STATUS)
+                .content("hello from channel")
+                .build();
         messageStore.put(msg);
 
         given().when().get("/api/mesh/feed")
             .then()
             .statusCode(200)
             .body("$", hasSize(greaterThan(0)))
-            .body("[0].channel", equalTo(ch.name));
+            .body("[0].channel", equalTo(ch.name()));
     }
 
     @Test
     void meshFeed_multiChannel_returnsMergedEntries() {
-        Channel ch1 = new Channel();
-        ch1.name = "feed-multi-a-" + System.nanoTime();
-        ch1.semantic = ChannelSemantic.APPEND;
-        channelStore.put(ch1);
+        String ch1Name = "feed-multi-a-" + System.nanoTime();
+        Channel ch1 = channelStore.put(Channel.builder(ch1Name)
+                .semantic(ChannelSemantic.APPEND)
+                .build());
 
-        Channel ch2 = new Channel();
-        ch2.name = "feed-multi-b-" + System.nanoTime();
-        ch2.semantic = ChannelSemantic.APPEND;
-        channelStore.put(ch2);
+        String ch2Name = "feed-multi-b-" + System.nanoTime();
+        Channel ch2 = channelStore.put(Channel.builder(ch2Name)
+                .semantic(ChannelSemantic.APPEND)
+                .build());
 
-        Message m1 = new Message();
-        m1.channelId = ch1.id;
-        m1.sender = "a";
-        m1.messageType = MessageType.STATUS;
-        m1.content = "from ch1";
+        Message m1 = Message.builder()
+                .channelId(ch1.id())
+                .sender("a")
+                .messageType(MessageType.STATUS)
+                .content("from ch1")
+                .build();
         messageStore.put(m1);
 
-        Message m2 = new Message();
-        m2.channelId = ch2.id;
-        m2.sender = "b";
-        m2.messageType = MessageType.STATUS;
-        m2.content = "from ch2";
+        Message m2 = Message.builder()
+                .channelId(ch2.id())
+                .sender("b")
+                .messageType(MessageType.STATUS)
+                .content("from ch2")
+                .build();
         messageStore.put(m2);
 
         given().when().get("/api/mesh/feed")
             .then()
             .statusCode(200)
-            .body("channel", containsInAnyOrder(ch1.name, ch2.name));
+            .body("channel", containsInAnyOrder(ch1.name(), ch2.name()));
     }
 
     @Test
     void meshFeed_limitTruncates() {
-        Channel ch = new Channel();
-        ch.name = "feed-limit-" + System.nanoTime();
-        ch.semantic = ChannelSemantic.APPEND;
-        channelStore.put(ch);
+        String channelName = "feed-limit-" + System.nanoTime();
+        Channel ch = channelStore.put(Channel.builder(channelName)
+                .semantic(ChannelSemantic.APPEND)
+                .build());
 
         for (int i = 0; i < 10; i++) {
-            Message msg = new Message();
-            msg.channelId = ch.id;
-            msg.sender = "agent:test";
-            msg.messageType = MessageType.STATUS;
-            msg.content = "msg-" + i;
+            Message msg = Message.builder()
+                    .channelId(ch.id())
+                    .sender("agent:test")
+                    .messageType(MessageType.STATUS)
+                    .content("msg-" + i)
+                    .build();
             messageStore.put(msg);
         }
 
@@ -280,15 +284,15 @@ class MeshResourceTest {
 
     @Test
     void channelEvents_returnsEventStreamContentType() throws Exception {
-        Channel ch = new Channel();
-        ch.name = "sse-test-" + System.nanoTime();
-        ch.semantic = ChannelSemantic.APPEND;
-        channelStore.put(ch);
+        String channelName = "sse-test-" + System.nanoTime();
+        Channel ch = channelStore.put(Channel.builder(channelName)
+                .semantic(ChannelSemantic.APPEND)
+                .build());
 
         int port = io.restassured.RestAssured.port;
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
             new java.net.URL("http://localhost:" + port +
-                "/api/mesh/channels/" + ch.name + "/events").openConnection();
+                "/api/mesh/channels/" + ch.name() + "/events").openConnection();
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(500);
         try {
@@ -305,17 +309,18 @@ class MeshResourceTest {
 
     @Test
     void meshFeed_returnsNewestMessages_oldestFallOff() {
-        Channel ch = new Channel();
-        ch.name = "feed-newest-" + System.nanoTime();
-        ch.semantic = ChannelSemantic.APPEND;
-        channelStore.put(ch);
+        String channelName = "feed-newest-" + System.nanoTime();
+        Channel ch = channelStore.put(Channel.builder(channelName)
+                .semantic(ChannelSemantic.APPEND)
+                .build());
 
         for (int i = 0; i < 10; i++) {
-            Message msg = new Message();
-            msg.channelId = ch.id;
-            msg.sender = "agent:test";
-            msg.messageType = MessageType.STATUS;
-            msg.content = "msg-" + i;
+            Message msg = Message.builder()
+                    .channelId(ch.id())
+                    .sender("agent:test")
+                    .messageType(MessageType.STATUS)
+                    .content("msg-" + i)
+                    .build();
             messageStore.put(msg);
         }
 
@@ -333,31 +338,33 @@ class MeshResourceTest {
 
     @Test
     void meshFeed_noChannelStarvation_allChannelsRepresented() {
-        Channel busy = new Channel();
-        busy.name = "feed-busy-" + System.nanoTime();
-        busy.semantic = ChannelSemantic.APPEND;
-        channelStore.put(busy);
+        String busyName = "feed-busy-" + System.nanoTime();
+        Channel busy = channelStore.put(Channel.builder(busyName)
+                .semantic(ChannelSemantic.APPEND)
+                .build());
 
-        Channel quiet = new Channel();
-        quiet.name = "feed-quiet-" + System.nanoTime();
-        quiet.semantic = ChannelSemantic.APPEND;
-        channelStore.put(quiet);
+        String quietName = "feed-quiet-" + System.nanoTime();
+        Channel quiet = channelStore.put(Channel.builder(quietName)
+                .semantic(ChannelSemantic.APPEND)
+                .build());
 
         // Insert 1 message in quiet channel first (lower ID)
-        Message quietMsg = new Message();
-        quietMsg.channelId = quiet.id;
-        quietMsg.sender = "agent:q";
-        quietMsg.messageType = MessageType.STATUS;
-        quietMsg.content = "quiet-msg";
+        Message quietMsg = Message.builder()
+                .channelId(quiet.id())
+                .sender("agent:q")
+                .messageType(MessageType.STATUS)
+                .content("quiet-msg")
+                .build();
         messageStore.put(quietMsg);
 
         // Insert 5 messages in busy channel (higher IDs)
         for (int i = 0; i < 5; i++) {
-            Message msg = new Message();
-            msg.channelId = busy.id;
-            msg.sender = "agent:b";
-            msg.messageType = MessageType.STATUS;
-            msg.content = "busy-" + i;
+            Message msg = Message.builder()
+                    .channelId(busy.id())
+                    .sender("agent:b")
+                    .messageType(MessageType.STATUS)
+                    .content("busy-" + i)
+                    .build();
             messageStore.put(msg);
         }
 
@@ -365,7 +372,7 @@ class MeshResourceTest {
         given().when().get("/api/mesh/feed?limit=100")
             .then()
             .statusCode(200)
-            .body("channel", hasItems(busy.name, quiet.name));
+            .body("channel", hasItems(busy.name(), quiet.name()));
     }
 }
 

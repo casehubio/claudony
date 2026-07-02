@@ -5,7 +5,7 @@ import io.casehub.api.spi.ReactiveCaseChannelProvider;
 import io.casehub.api.spi.mesh.CaseChannelLayout;
 import io.casehub.qhorus.api.message.MessageDispatch;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.runtime.channel.ChannelCreateRequest;
+import io.casehub.qhorus.api.channel.ChannelCreateRequest;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.casehub.qhorus.runtime.message.ReactiveMessageService;
@@ -145,11 +145,11 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
         return channelService.findByNamePrefix(prefix)
                 .map(channels -> channels.stream()
                         .map(ch -> new CaseChannel(
-                                ch.id.toString(),
-                                ch.name,
-                                extractPurpose(ch.name, caseId),
+                                ch.id().toString(),
+                                ch.name(),
+                                extractPurpose(ch.name(), caseId),
                                 "qhorus",
-                                Map.of(QHORUS_NAME_KEY, ch.name)))
+                                Map.of(QHORUS_NAME_KEY, ch.name())))
                         .toList());
     }
 
@@ -187,16 +187,16 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
                 null, null, null, null);
         return channelService.create(request)
                 .map(detail -> {
-                    gateway.initChannel(detail.id,
-                            new io.casehub.qhorus.api.gateway.ChannelRef(detail.id, detail.name));
+                    gateway.initChannel(detail.id(),
+                            new io.casehub.qhorus.api.gateway.ChannelRef(detail.id(), detail.name()));
                     channelCreatedEvent.fire(
-                            new io.casehub.claudony.server.CaseChannelCreatedEvent(detail.id, detail.name, tenantContext.currentTenantId()));
+                            new io.casehub.claudony.server.CaseChannelCreatedEvent(detail.id(), detail.name(), tenantContext.currentTenantId()));
                     return new CaseChannel(
-                            detail.id.toString(),
-                            detail.name,
+                            detail.id().toString(),
+                            detail.name(),
                             purpose,
                             "qhorus",
-                            Map.of(QHORUS_NAME_KEY, detail.name));
+                            Map.of(QHORUS_NAME_KEY, detail.name()));
                 });
     }
 }

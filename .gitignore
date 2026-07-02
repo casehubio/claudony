@@ -6,3 +6,5 @@ docs/vendor/
 target/
 wksp
 /io/
+
+.idea/
