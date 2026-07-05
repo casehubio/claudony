@@ -6,8 +6,7 @@ import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorTypeResolver;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerEntry;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.enterprise.inject.Instance;
@@ -71,13 +70,7 @@ public class ClaudonyLedgerEventCapture {
         entry.commandType = event.commandType();
         entry.eventType = event.eventType();
         entry.caseStatus = event.caseStatus();
-        // CaseLedgerEntry.tenancyId (nullable=false, case_ledger_entry table) shadows
-        // LedgerEntry.tenancyId (nullable=false, ledger_entry table). Both must be set
-        // explicitly; setting entry.tenancyId alone only reaches the child's shadow field.
-        // TODO: remove the cast once CaseLedgerEntry stops shadowing LedgerEntry.tenancyId
-        //       (field shadowing in JPA JOINED inheritance is a design smell — track upstream).
         entry.tenancyId = tenancyId;
-        ((LedgerEntry) entry).tenancyId = tenancyId;
         entry.actorId = event.actorId() != null ? event.actorId() : "system";
         entry.actorType = ActorTypeResolver.resolve(entry.actorId);
         entry.actorRole = event.actorRole() != null ? event.actorRole() : "System";

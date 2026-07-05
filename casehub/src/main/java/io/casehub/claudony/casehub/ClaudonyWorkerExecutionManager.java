@@ -125,8 +125,7 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
             LOG.warnf("startWatcherForSession: no session for case %s role %s", caseId, roleName);
             return;
         }
-        CaseInstance instance = caseInstanceRepository.findByUuid(caseId)
-                .await().atMost(java.time.Duration.ofSeconds(5));
+        CaseInstance instance = caseInstanceRepository.findByUuid(caseId);
         if (instance == null) {
             LOG.warnf("startWatcherForSession: case %s not found", caseId);
             return;

@@ -78,7 +78,6 @@ class AgentCaseCompletionTest {
                     + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
                     + "io.casehub.claudony.TestAgentCase,"
                     + "io.casehub.claudony.casehub.AgentCase,"
-                    + "io.casehub.qhorus.persistence.memory.*,"
                     + "io.casehub.qhorus.runtime.store.jpa.*,"
                     + "io.casehub.qhorus.runtime.identity.CrossTenantProducer"
             );
@@ -103,8 +102,7 @@ class AgentCaseCompletionTest {
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(300))
                 .untilAsserted(() -> {
-                    CaseInstance updated = caseInstanceRepository.findByUuid(caseId)
-                            .await().atMost(Duration.ofSeconds(5));
+                    CaseInstance updated = caseInstanceRepository.findByUuid(caseId);
                     assertThat(updated.getState())
                             .as("case state after agent exit")
                             .isEqualTo(CaseStatus.COMPLETED);
