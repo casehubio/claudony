@@ -2,8 +2,8 @@ package io.casehub.claudony.server;
 
 import io.casehub.qhorus.api.channel.ChannelSemantic;
 import io.casehub.qhorus.api.channel.Channel;
-import io.casehub.qhorus.testing.InMemoryChannelStore;
-import io.casehub.qhorus.testing.InMemoryMessageStore;
+import io.casehub.qhorus.persistence.memory.InMemoryChannelStore;
+import io.casehub.qhorus.persistence.memory.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
