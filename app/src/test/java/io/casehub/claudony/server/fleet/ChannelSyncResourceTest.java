@@ -2,8 +2,8 @@ package io.casehub.claudony.server.fleet;
 
 import io.casehub.claudony.server.ClaudonyChannelBackend;
 import io.casehub.qhorus.runtime.gateway.ChannelGateway;
-import io.casehub.qhorus.testing.InMemoryChannelStore;
-import io.casehub.qhorus.testing.InMemoryMessageStore;
+import io.casehub.qhorus.persistence.memory.InMemoryChannelStore;
+import io.casehub.qhorus.persistence.memory.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
