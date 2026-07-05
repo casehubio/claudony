@@ -97,7 +97,6 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
                     + "io.casehub.engine.internal.bridge.QhorusMessageSignalBridge,"
                     + "io.casehub.claudony.casehub.AgentCase,"
-                    + "io.casehub.qhorus.persistence.memory.*,"
                     + "io.casehub.qhorus.runtime.store.jpa.*,"
                     + "io.casehub.qhorus.runtime.identity.CrossTenantProducer"
             );

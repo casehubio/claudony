@@ -5,7 +5,6 @@ import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
 import io.casehub.platform.api.identity.TenancyConstants;
-import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +46,7 @@ class CasehubStartupServiceTest {
         UUID caseId = UUID.randomUUID();
         registry.register(session("s2", caseId.toString(), "agent"));
         when(caseInstanceRepo.findByUuid(caseId))
-                .thenReturn(Uni.createFrom().item((CaseInstance) null));
+                .thenReturn(null);
 
         int started = service.bootstrapWatchers();
 
@@ -62,7 +61,7 @@ class CasehubStartupServiceTest {
         CaseInstance inst = new CaseInstance();
         inst.setUuid(caseId);
         when(caseInstanceRepo.findByUuid(caseId))
-                .thenReturn(Uni.createFrom().item(inst));
+                .thenReturn(inst);
 
         int started = service.bootstrapWatchers();
 
