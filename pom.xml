@@ -105,6 +105,16 @@
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
+        <artifactId>casehub-qhorus-postgres-broadcaster</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-qhorus-persistence-memory</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
         <artifactId>casehub-engine-testing</artifactId>
         <version>${casehub.version}</version>
       </dependency>

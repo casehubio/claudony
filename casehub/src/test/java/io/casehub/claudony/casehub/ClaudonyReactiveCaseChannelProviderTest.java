@@ -31,18 +31,15 @@ class ClaudonyReactiveCaseChannelProviderTest {
     private ReactiveMessageService  messageService;
     private ClaudonyReactiveCaseChannelProvider provider;
     private io.casehub.qhorus.runtime.gateway.ChannelGateway gateway;
-    @SuppressWarnings("unchecked")
-    private jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent;
 
     @BeforeEach
     void setUp() {
         channelService = mock(ReactiveChannelService.class);
         messageService = mock(ReactiveMessageService.class);
         gateway = mock(io.casehub.qhorus.runtime.gateway.ChannelGateway.class);
-        channelCreatedEvent = mock(jakarta.enterprise.event.Event.class);
         provider = new ClaudonyReactiveCaseChannelProvider(
                 channelService, messageService, new NormativeChannelLayout(),
-                gateway, channelCreatedEvent,
+                gateway,
                 () -> io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
     }
 
@@ -253,20 +250,6 @@ class ClaudonyReactiveCaseChannelProviderTest {
         verify(gateway).initChannel(
                 any(UUID.class),
                 argThat(ref -> ref.name().equals("case-" + caseId + "/work")));
-    }
-
-    @Test
-    void openChannel_firesCaseChannelCreatedEvent() {
-        UUID caseId = UUID.randomUUID();
-        stubCreate(caseId);
-
-        provider.openChannel(caseId, "work").await().indefinitely();
-
-        var captor = org.mockito.ArgumentCaptor.forClass(io.casehub.claudony.server.CaseChannelCreatedEvent.class);
-        verify(channelCreatedEvent, times(3)).fire(captor.capture());
-        captor.getAllValues().forEach(event ->
-                org.assertj.core.api.Assertions.assertThat(event.tenancyId())
-                        .isEqualTo(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID));
     }
 
     // ── listChannels ─────────────────────────────────────────────────────────

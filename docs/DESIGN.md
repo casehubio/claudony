@@ -116,16 +116,8 @@ io.casehub.claudony — claudony-core + claudony-app
 │   │   └── WebAuthnPatcher        — startup bean that swaps the "none" handler via reflection
 │   └── fleet/
 │       ├── PeerRegistry           — healthy peer list, circuit breaker, atomic peers.json persistence
-│       ├── PeerClient             — typed REST client for peer-to-peer fleet calls (sessions, sync, notify)
+│       ├── PeerClient             — typed REST client for peer-to-peer fleet calls (sessions)
 │       ├── FleetKeyClientFilter   — injects X-Api-Key fleet key on outbound PeerClient calls
-│       ├── ChannelSyncResource    — POST /api/internal/channels/sync (gateway.initChannel on peer);
-│       │                           POST /api/internal/channels/notify (channelEventBus.emit on peer)
-│       ├── ChannelFleetBroadcaster — observes CaseChannelCreatedEvent; syncs new channels to peers
-│       │                            via POST /api/internal/channels/sync (#102)
-│       ├── FleetMessageRelayObserver — CLUSTER-scoped MessageObserver; relays a channel-name tick
-│       │                              to all healthy peers via POST /api/internal/channels/notify
-│       │                              on every Qhorus message dispatch (#118)
-│       ├── ChannelNotifyRequest   — record {channelName} — fleet tick relay payload
 │       ├── StaticConfigDiscovery  — loads claudony.peers at startup
 │       ├── ManualRegistrationDiscovery — REST-triggered peer management; persists to peers.json
 │       └── MdnsDiscovery          — mDNS advertise/discover (scaffold; full impl follow-on)
@@ -316,12 +308,12 @@ Agent → QhorusMcpTools.sendMessage() → messageService.send() (persist)
   → chCursors[name] updated in sessionStorage
 ```
 
-Fleet cross-node path (requires shared PostgreSQL Qhorus, #118):
+Fleet cross-node path (requires shared PostgreSQL Qhorus, #168):
 ```
-Message posted on Node B → MessageObserverDispatcher → FleetMessageRelayObserver.onMessage()
-  → virtual thread per healthy peer → POST /api/internal/channels/notify {channelName} to Node A
-  → ChannelSyncResource.notify() → ChannelEventBus.emit(channelName) on Node A
-  → Node A SSE subscribers tick → browser fetches from shared PG via QhorusDashboardService
+Message posted on Node B → ChannelGateway.fanOut()
+  → ChannelActivityBroadcaster SPI (postgres-broadcaster impl) → PostgreSQL NOTIFY
+  → Node A PostgreSQL LISTEN → ChannelEventBus.emit(channelName) on Node A
+  → Node A SSE subscribers tick → browser fetches from shared PostgreSQL via QhorusDashboardService
 ```
 
 Fallback: `EventSource.onerror` → close → `pollChannel()` (3s timer).

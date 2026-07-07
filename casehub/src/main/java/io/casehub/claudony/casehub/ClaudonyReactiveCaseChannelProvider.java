@@ -31,14 +31,12 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     private final CaseChannelLayout layout;
     private final ConcurrentHashMap<CacheKey, Uni<Map<String, CaseChannel>>> layoutCache = new ConcurrentHashMap<>();
     private final io.casehub.qhorus.runtime.gateway.ChannelGateway gateway;
-    private final jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent;
     private final io.casehub.claudony.server.TenantContext tenantContext;
 
     @Inject
     public ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
             ReactiveMessageService messageService, CaseHubConfig config,
             io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
-            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent,
             io.casehub.claudony.server.TenantContext tenantContext) {
         this.channelService = channelService;
         this.messageService = messageService;
@@ -49,7 +47,6 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
             throw e;
         }
         this.gateway = gateway;
-        this.channelCreatedEvent = channelCreatedEvent;
         this.tenantContext = tenantContext;
     }
 
@@ -57,13 +54,11 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
     ClaudonyReactiveCaseChannelProvider(ReactiveChannelService channelService,
             ReactiveMessageService messageService, CaseChannelLayout layout,
             io.casehub.qhorus.runtime.gateway.ChannelGateway gateway,
-            jakarta.enterprise.event.Event<io.casehub.claudony.server.CaseChannelCreatedEvent> channelCreatedEvent,
             io.casehub.claudony.server.TenantContext tenantContext) {
         this.channelService = channelService;
         this.messageService = messageService;
         this.layout = layout;
         this.gateway = gateway;
-        this.channelCreatedEvent = channelCreatedEvent;
         this.tenantContext = tenantContext;
     }
 
@@ -189,8 +184,6 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
                 .map(detail -> {
                     gateway.initChannel(detail.id(),
                             new io.casehub.qhorus.api.gateway.ChannelRef(detail.id(), detail.name()));
-                    channelCreatedEvent.fire(
-                            new io.casehub.claudony.server.CaseChannelCreatedEvent(detail.id(), detail.name(), tenantContext.currentTenantId()));
                     return new CaseChannel(
                             detail.id().toString(),
                             detail.name(),

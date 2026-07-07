@@ -304,6 +304,7 @@ claudony-app/src/main/java/dev/claudony/
 │   │   ├── PeerClient.java             — @RegisterRestClient for peer /api/sessions calls
 │   │   ├── StaticConfigDiscovery.java  — loads claudony.peers at startup
 │   │   ├── ManualRegistrationDiscovery.java — REST-triggered peer management, persisted to peers.json
+│   │   ├── ProxyWebSocket.java         — WebSocket proxy for terminal sessions on peers behind NAT
 │   │   └── MdnsDiscovery.java          — mDNS advertise/discover (scaffold; full impl follow-on)
 │   └── auth/
 │       ├── ApiKeyService.java          — key resolution (config → file → generate), first-run banner
@@ -387,6 +388,7 @@ See `docs/BUGS-AND-ODDITIES.md` for comprehensive details. Key ones:
 3. **TUI apps (Claude Code, vim) history replay imperfect** — terminal resize triggers correct redraw
 4. **Native binary staleness** — rebuild after adding new endpoints
 5. **GraalVM not on PATH** — must set JAVA_HOME for native-image
+6. **Docker required for dev/test** — PostgreSQL Dev Services container needed for Qhorus datasource
 
 ---
 
@@ -414,23 +416,25 @@ claudony.case-worker-heartbeat-ms=30000 # heartbeat interval for hybrid strategy
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
 
 # Qhorus persistence (named datasource, Flyway-managed schema)
-quarkus.datasource.qhorus.db-kind=h2
+# PostgreSQL all profiles — Dev Services provides container automatically in dev/test
+quarkus.datasource.qhorus.db-kind=postgresql
 quarkus.datasource.qhorus.reactive=true
-quarkus.datasource.qhorus.reactive.url=h2:file:~/.claudony/qhorus
-quarkus.datasource.qhorus.jdbc.url=jdbc:h2:file:~/.claudony/qhorus;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE
+# Dev/test: omit URL, let Dev Services provide container (requires Docker)
+# Production: explicit PostgreSQL URL
+%prod.quarkus.datasource.qhorus.reactive.url=postgresql://localhost:5432/claudony_qhorus
+%prod.quarkus.datasource.qhorus.jdbc.url=jdbc:postgresql://localhost:5432/claudony_qhorus
 quarkus.hibernate-orm.qhorus.datasource=qhorus
-quarkus.hibernate-orm.qhorus.packages=io.casehub.qhorus.runtime,io.casehub.ledger.runtime.model,io.casehub.ledger.model
+quarkus.hibernate-orm.qhorus.packages=io.casehub.qhorus.runtime,io.casehub.ledger.runtime.model,io.casehub.ledger.api.model,io.casehub.ledger.model
 quarkus.flyway.qhorus.migrate-at-start=true
-# In future: change jdbc.url to PostgreSQL connection string for multi-instance fleet
 ```
 
-**Directory convention:** `~/.claudony/` holds config/credentials (hidden, system); `~/.claudony/qhorus` is the Qhorus H2 database (shared data for fleet); `~/claudony-workspace/` is the default session working directory (visible, user-facing). All are created on server startup.
+**Directory convention:** `~/.claudony/` holds config/credentials (hidden, system); `~/claudony-workspace/` is the default session working directory (visible, user-facing). Both are created on server startup. Qhorus data lives in PostgreSQL (Dev Services container in dev/test; explicit URL in production).
 
 ---
 
 ## Test Count and Status
 
-**Baseline (as of 2026-07-01, after claudony#161 terminal page migration):** 16 in `claudony-core` + 177 in `claudony-casehub` + 407 in `claudony-app` = **600 total, 600 passing**. App module dropped by 1 after StaticFilesTest was updated for Quinoa coexistence (removed source-content assertions that referenced deleted terminal.js). Previous baseline: 601 (2026-06-29, after #163/#164 mesh-prompt-ops-config). No known failing tests. Casehub module rose from 162 to 177 after #163 added WorkerCommandBuilder dynamic prompt tests (7), MeshSystemPromptTemplate null-workerId test (1), provisioner mesh prompt tests (4), and #164 added CompositeProviderConfigSource tests (7); net -4 from deleted ConfigMappingProviderConfigSourceTest (4). Previous baseline: 586 (2026-06-27, after #121 multitenancy-foundation).
+**Baseline (as of 2026-07-07, after claudony#168 broadcaster migration):** 16 in `claudony-core` + 176 in `claudony-casehub` + 399 in `claudony-app` = **591 total, 591 passing**. App module dropped by 8 after removing ChannelSyncResourceTest (4), ChannelFleetBroadcasterTest (3), and FleetMessageRelayObserverTest (3) — replaced by PostgreSQL LISTEN/NOTIFY broadcaster (casehub-qhorus-postgres-broadcaster dependency). Casehub module dropped by 1 (removed CaseChannelCreatedEvent-related test). Previous baseline: 600 (2026-07-01, after #161 terminal page migration). No known failing tests. Docker now required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -471,7 +475,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `server/auth/` — ApiKeyService, ApiKeyAuthMechanism, AuthResource, AuthRateLimiter (+ AuthRateLimiterHttpTest for HTTP-level), CredentialStore, InviteService, FleetKeyService, FleetKeyAuth
 - `server/expiry/` — ExpiryPolicyRegistryTest, UserInteractionExpiryPolicyTest, TerminalOutputExpiryPolicyTest, StatusAwareExpiryPolicyTest, SessionIdleSchedulerTest
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
-- `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest + proxy resize), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest), ChannelSyncResourceTest (4 tests: fleet-gated sync endpoint, accepts sync payload, notify 401 no key, notify 204 + ChannelEventBus tick), ChannelFleetBroadcasterTest (3 unit tests: no peers does nothing, healthy peer syncs channel to loopback, peer-down no crash + peer still in registry), FleetMessageRelayObserverTest (3 unit tests: no peers early return, loopback tick via notify endpoint, peer-down no crash + registry intact)
+- `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest + proxy resize), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — engine integration (CasehubEnabledProfile): startCase()→CaseStartedEventHandler(blocking=true, engine#367)→CONTEXT_CHANGED→tryProvision()→WorkflowExecutionCompleted→ClaudonyLedgerEventCapture→findCompletedWorkers() round-trip; TmuxService mocked; real `ClaudonyReactiveWorkerContextProvider` exercised (no @InjectMock); `TestAgentCase` + `NoOpWorkerExecutionManager` + `NoOpJobScheduler` support beans in test sources; test manually fires `WorkerExecutionStarted` CaseLifecycleEvent before completion (engine#390 changed `WorkerExecutionCompleted` actorId to "system" — worker name now resolved from preceding started entry by sequence number); `ClaudonyLedgerEventCaptureTest` — 13 tests: happy path fields, sequence increment per case, sequence independence, null guards (2), worker event type, WorkerStarted drain sets causedByEntryId, WorkerStarted without pre-stored context causedByEntryId is null, drain is idempotent on second fire, tenancyId propagated from event (#143), tenancyId defaults to "default" when null (#143), WorkerExecutionCompleted drain fires exit signal, WorkerExecutionCompleted drain no-op when empty; `ClaudonyLedgerEventCaptureSignalTest` — 2 tests (CasehubEnabledProfile): signal fires with mock runtime, no signal when drain empty; `AgentCaseStartupTest` — plain JUnit: YAML loads, 5 field assertions (name, namespace, capability, binding, goal); `AgentCaseCompletionTest` — CompletionTestProfile: 1 E2E test: full chain from startCase to CaseStatus.COMPLETED; `CasehubStartupServiceTest` — plain JUnit (no Quarkus): 3 tests: UUID guard, null instance, roleName fallback; `ClaudonyReactiveCaseChannelProviderPostgresIT` — 4 PostgreSQL IT tests (profile-gated, not run in default `mvn test`): openChannel, listChannels via findByNamePrefix (asserts work/observe/oversight purposes), listChannels excludes other cases, postToChannel; uses `@RunOnVertxContext + UniAsserter` (Panache.withTransaction() requires Vert.x context on the test thread), `PostgresTestResource` (QuarkusTestResourceLifecycleManager starts `postgres:17-alpine` before augmentation — highest config priority), `ReactivePostgresTestProfile`
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
