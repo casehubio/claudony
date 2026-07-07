@@ -75,22 +75,11 @@ This repo is one component of the casehubio multi-repo platform. **Before implem
 
 The protocol asks: Does this already exist elsewhere? Is this the right repo for it? Does this create a consolidation opportunity? Is this consistent with how the platform handles the same concern in other repos?
 
-**Platform architecture (fetch before any implementation decision):**
-```
-../parent/docs/PLATFORM.md
-```
-
-**This repo's deep-dive:**
-```
-../parent/docs/repos/claudony.md
-```
-
-**Other repo deep-dives** (fetch the relevant ones when your implementation touches their domain):
-- casehub-ledger: `../parent/docs/repos/casehub-ledger.md`
-- casehub-work: `../parent/docs/repos/casehub-work.md`
-- casehub-qhorus: `../parent/docs/repos/casehub-qhorus.md`
-- casehub-engine: `../parent/docs/repos/casehub-engine.md`
-- casehub-connectors: `../parent/docs/repos/casehub-connectors.md`
+## Platform Docs
+- [Platform Index](https://raw.githubusercontent.com/casehubio/parent/main/docs/INDEX.md) — discovery index (start here)
+- [Building Apps](https://raw.githubusercontent.com/casehubio/parent/main/docs/guides/building-apps.md) — app developer guide
+- [Building Platform](https://raw.githubusercontent.com/casehubio/parent/main/docs/guides/building-platform.md) — platform contributor guide
+- [This repo's deep-dive](https://raw.githubusercontent.com/casehubio/parent/main/docs/repos/claudony.md)
 
 ---
 
