@@ -92,6 +92,15 @@
     </dependency>
     <dependency>
       <groupId>io.casehub</groupId>
+      <artifactId>casehub-qhorus-persistence-memory</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-qhorus-postgres-broadcaster</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
       <artifactId>casehub-engine-testing</artifactId>
       <scope>test</scope>
       <exclusions>
@@ -141,17 +150,6 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- JDBC driver for Qhorus + ledger tables (Flyway uses this) -->
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-jdbc-h2</artifactId>
-    </dependency>
-    <!-- Reactive H2 client — enables quarkus.datasource.qhorus.reactive=true for Hibernate Reactive -->
-    <dependency>
-      <groupId>io.quarkiverse.quarkus-reactive-h2-client</groupId>
-      <artifactId>quarkus-reactive-h2-client</artifactId>
-      <version>0.6.0</version>
-    </dependency>
     <!-- PostgreSQL reactive client — enables reactive Vert.x pool for PostgreSQL datasources -->
     <dependency>
       <groupId>io.quarkus</groupId>

@@ -754,7 +754,17 @@
       "mcp__intellij-index__ide_read_file",
       "mcp__intellij-index__ide_find_symbol",
       "mcp__intellij-index__ide_open_project",
-      "Bash(bash *)"
+      "Bash(bash *)",
+      "Bash(gh search *)",
+      "Bash(jar tf *)",
+      "Bash(python3 *)",
+      "Bash(git *)",
+      "Bash(bash ~/.claude/skills/subagent-driven-development/scripts/task-brief /Users/mdproctor/claude/public/casehub/claudony/plans/issue-168-qhorus-broadcaster-migration/2026-07-07-broadcaster-migration-plan.md 1)",
+      "Bash(docker info *)",
+      "Bash(mvn dependency:tree -pl app)",
+      "Bash(mvn dependency:tree -pl app -Dincludes=io.casehub:casehub-qhorus-testing)",
+      "Bash(mvn dependency:tree -pl app -Dscope=test)",
+      "Bash(bash ~/.claude/skills/subagent-driven-development/scripts/task-brief /Users/mdproctor/claude/public/casehub/claudony/plans/issue-168-qhorus-broadcaster-migration/2026-07-07-broadcaster-migration-plan.md 2)"
     ]
   }
 }

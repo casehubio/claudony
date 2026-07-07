@@ -42,14 +42,4 @@ public interface PeerClient {
     Response resize(@PathParam("sessionId") String sessionId,
                     @QueryParam("cols") int cols,
                     @QueryParam("rows") int rows);
-
-    @POST
-    @Path("/internal/channels/sync")
-    @Consumes(MediaType.APPLICATION_JSON)
-    Response syncChannel(ChannelSyncRequest request);
-
-    @POST
-    @Path("/internal/channels/notify")
-    @Consumes(MediaType.APPLICATION_JSON)
-    Response notifyChannel(ChannelNotifyRequest request);
 }

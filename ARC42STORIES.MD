@@ -100,7 +100,7 @@ C4Context
   Rel(claudony, qhorus, "Named datasource (qhorus) + CDI ChannelGateway / QhorusDashboardService")
   Rel(claudony, ledger, "LedgerPersistenceUnit EM — writes CaseLedgerEntry rows directly")
   Rel(claudony, platform, "PreferenceProvider — reads ChannelCursorStaleness default (30 min)")
-  Rel(claudony, peers, "REST /api/sessions, /api/internal/channels/sync — fleet federation")
+  Rel(claudony, peers, "REST /api/sessions — fleet federation")
 ```
 
 ### Boundary Rules
@@ -184,7 +184,7 @@ C4Container
   }
 
   Container_Boundary(b3, "Layer: L3 Fleet / Peer Mesh") {
-    Container(fleet, "claudony-app / server/fleet.*", "Quarkus extension", "PeerRegistry (circuit breaker), PeerClient, PeerHealthScheduler, StaticConfigDiscovery, ManualRegistrationDiscovery, MdnsDiscovery (scaffold), ChannelSyncResource, ChannelFleetBroadcaster, FleetMessageRelayObserver, ProxyWebSocket")
+    Container(fleet, "claudony-app / server/fleet.*", "Quarkus extension", "PeerRegistry (circuit breaker), PeerClient, PeerHealthScheduler, StaticConfigDiscovery, ManualRegistrationDiscovery, MdnsDiscovery (scaffold), ProxyWebSocket")
     ContainerDb(peersjson, "peers.json", "File", "Atomic-write persistent peer registry; loaded on startup")
   }
 
@@ -194,7 +194,7 @@ C4Container
 
   Container_Boundary(b5, "Layer: L5 Qhorus Integration") {
     Container(channelbus, "claudony-app / server (Qhorus)", "Quarkus extension", "ClaudonyChannelBackend (HumanObserverChannelBackend SPI), ChannelEventBus (in-process SSE tick), MeshResource (REST /api/mesh/*), CasehubResource")
-    ContainerDb(qhorusdb, "qhorus datasource (H2 / PostgreSQL)", "Named datasource", "Channels, messages, shared data, ledger entries — all Flyway-managed via qhorus PU")
+    ContainerDb(qhorusdb, "qhorus datasource (PostgreSQL)", "Named datasource", "Channels, messages, shared data, ledger entries — all Flyway-managed via qhorus PU; casehub-qhorus-postgres-broadcaster SPI impl handles LISTEN/NOTIFY fleet synchronization")
   }
 
   Container_Boundary(b6, "Layer: L6 CaseHub SPI Foundation") {
@@ -265,10 +265,10 @@ Browser EventSource → MeshResource.channelEvents() 500ms server tick
   → Browser EventSource.onmessage → appendMessages(entries)
   → chCursors[channelName] updated in sessionStorage
 
-Fleet cross-node: message on Node B → FleetMessageRelayObserver.onMessage()
-  → virtual thread per healthy peer → POST /api/internal/channels/notify {channelName} to Node A
-  → ChannelSyncResource.notify() → ChannelEventBus.emit(channelName) on Node A
-  → Node A SSE tick → browser fetches from shared PG QhorusDashboardService
+Fleet cross-node: message on Node B → ChannelActivityBroadcaster SPI (postgres-broadcaster impl)
+  → PostgreSQL LISTEN/NOTIFY → Node A receives notification
+  → ChannelEventBus.emit(channelName) on Node A
+  → Node A SSE tick → browser fetches from shared PostgreSQL via QhorusDashboardService
 ```
 
 ### Scenario 3 — CaseHub worker provision
@@ -324,10 +324,10 @@ Published as JVM runnable jar from `claudony-app`. Native image (GraalVM 25) is 
        ↓                                                ↓
    [tmux sessions]                             [iTerm2 / terminal]
        ↓
-[Named datasource: qhorus (H2 single-node / PostgreSQL multi-node)]
+[Named datasource: qhorus (PostgreSQL all profiles)]
 ```
 
-Fleet deployment: two or more nodes running `docker compose up` with `CLAUDONY_FLEET_KEY` env var and static peer config (`claudony.peers=http://mac-mini:7777`). Nodes federate session lists and relay channel events. Multi-node requires shared PostgreSQL for Qhorus — H2 is single-instance only.
+Fleet deployment: two or more nodes running `docker compose up` with `CLAUDONY_FLEET_KEY` env var and static peer config (`claudony.peers=http://mac-mini:7777`). Nodes federate session lists. Channel events synchronize cross-node via PostgreSQL LISTEN/NOTIFY (ChannelActivityBroadcaster SPI with casehub-qhorus-postgres-broadcaster implementation). PostgreSQL required for all environments — Dev Services provides it automatically in dev/test.
 
 ---
 
@@ -781,9 +781,6 @@ Symmetric multi-node mesh where any node can see any other's sessions. Circuit b
 - `app/src/main/java/io/casehub/claudony/server/fleet/PeerClient.java` — `@RegisterRestClient` for peer API calls
 - `app/src/main/java/io/casehub/claudony/server/fleet/StaticConfigDiscovery.java` — loads `claudony.peers` at startup
 - `app/src/main/java/io/casehub/claudony/server/fleet/ManualRegistrationDiscovery.java` — REST-triggered; exchanges peer lists on first contact; persists to `peers.json`
-- `app/src/main/java/io/casehub/claudony/server/fleet/ChannelSyncResource.java` — POST `/api/internal/channels/sync` + `/notify` — fleet channel backend sync and SSE tick relay
-- `app/src/main/java/io/casehub/claudony/server/fleet/ChannelFleetBroadcaster.java` — `@ObservesAsync CaseChannelCreatedEvent`; syncs new channel to all healthy peers
-- `app/src/main/java/io/casehub/claudony/server/fleet/FleetMessageRelayObserver.java` — CLUSTER-scoped `MessageObserver`; relays channel-name tick to healthy peers on every Qhorus message dispatch
 - `app/src/main/java/io/casehub/claudony/server/fleet/ProxyWebSocket.java` — WebSocket proxy for terminal sessions on peers behind NAT
 
 #### Key wiring
@@ -799,7 +796,7 @@ Symmetric multi-node mesh where any node can see any other's sessions. Circuit b
 1. Each `DiscoverySource` implementation feeds `PeerRegistry` independently
 2. Circuit breaker at registry level; `healthyPeers()` callers need no circuit awareness
 3. `?local=true` guard on all federated endpoints to prevent recursive fan-out
-4. Channel sync: `@ObservesAsync CaseChannelCreatedEvent` to broadcast; CLUSTER-scoped `MessageObserver` to relay ticks
+4. Channel sync: handled by `ChannelActivityBroadcaster` SPI (casehub-qhorus-postgres-broadcaster) via PostgreSQL LISTEN/NOTIFY; no HTTP fan-out needed
 
 ---
 
@@ -1080,7 +1077,7 @@ Named `claudony` (Claude + colony metaphor). Visual language: void-black, violet
 | Risk | Severity | Mitigation |
 |---|---|---|
 | Engine crash + server restart leaves orphaned workers | Medium | `CasehubStartupService` recovers watchers if engine is running; if engine has also restarted, session stays orphaned until next case provision — accepted limitation |
-| Shared H2 `qhorus` datasource is single-instance | High for multi-node | Fleet channel sync requires shared PostgreSQL; H2 is documented as single-node only; postgres URL swap is the migration path |
+| Shared H2 `qhorus` datasource is single-instance | RESOLVED (#168) | Migrated to PostgreSQL all profiles; Dev Services provides automatic container in dev/test; production uses explicit URL |
 | `SignalReceivedEventHandler` must remain active in `CasehubEnabledProfile` | Low | Excluding it causes `(NO_HANDLERS,-1) No handlers for address casehub.signal.received`; signals silently dropped; provision loops — covered by protocol PP-20260617-52285f |
 
 ### Technical Debt
