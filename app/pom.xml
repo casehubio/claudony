@@ -171,6 +171,11 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>
+    <!-- OpenTelemetry — provides Tracer bean required by Qhorus MessageService -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-opentelemetry</artifactId>
+    </dependency>
     <!-- Quinoa — builds src/main/webui TypeScript and serves the output -->
     <dependency>
       <groupId>io.quarkiverse.quinoa</groupId>
@@ -242,6 +247,29 @@
               <goal>generate-code</goal>
               <goal>generate-code-tests</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Fail fast if esbuild output is missing — turns a silent 404 test failure into
+           a clear build error with instructions. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-frontend-built</id>
+            <phase>process-classes</phase>
+            <goals><goal>enforce</goal></goals>
+            <configuration>
+              <rules>
+                <requireFilesExist>
+                  <files>
+                    <file>${project.basedir}/src/main/webui/dist/terminal.js</file>
+                  </files>
+                  <message>Frontend not built: src/main/webui/dist/terminal.js missing. Run 'npm install &amp;&amp; npm run build' in app/src/main/webui/ first.</message>
+                </requireFilesExist>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>
