@@ -7,9 +7,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@casehubio/pages-component-terminal": "file:/Users/mdproctor/claude/casehub/pages/components/pages-component-terminal",
-    "@casehubio/pages-runtime": "file:/Users/mdproctor/claude/casehub/pages/packages/pages-runtime",
-    "@casehubio/pages-ui": "file:/Users/mdproctor/claude/casehub/pages/packages/pages-ui"
+    "@casehubio/pages-component-terminal": "^0.2.0",
+    "@casehubio/pages-runtime": "^0.3.0",
+    "@casehubio/pages-ui": "^0.3.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

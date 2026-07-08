@@ -45,14 +45,14 @@ class AgentCaseStartupTest {
                         "agent-complete".equals(g.getName())
                         && g.getCondition() instanceof JQExpressionEvaluator jq
                         && ".workers.agent.exited == true".equals(jq.expression())
-                        && GoalKind.SUCCESS == g.getKind());
+                        && GoalKind.SUCCESS.value().equals(g.getKind()));
 
         // Verify completion
         assertThat(def.getCompletion())
                 .isNotNull()
                 .isInstanceOf(GoalBasedCompletion.class);
 
-        var completion = (GoalBasedCompletion) def.getCompletion();
-        assertThat(completion.getSuccess()).isNotNull();
+        var completion = (GoalBasedCompletion<?>) def.getCompletion();
+        assertThat(completion.getGoals()).isNotEmpty();
     }
 }
