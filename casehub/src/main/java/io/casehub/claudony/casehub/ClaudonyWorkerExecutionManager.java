@@ -134,7 +134,7 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
         var worker = Worker.builder()
                 .name(roleName)
                 .capabilityName(roleName)
-                .function(new WorkerFunction.Sync(ctx -> WorkerResult.of(java.util.Map.of())))
+                .function(new WorkerFunction.Sync<>(Void.class, ctx -> WorkerResult.of(java.util.Map.of())))
                 .build();
         watch(sessionId, sessionName, instance, worker);
     }

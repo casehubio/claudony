@@ -136,7 +136,7 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
     @Test
     void caseSession_autoSelectsCaseChannel() {
         var caseChannelName = "case-" + CASE_ID + "/work";
-        tools.createChannel(caseChannelName, "Case work channel", "APPEND", null, null, null, null, null, null, null, null, null, null, null)
+        tools.createChannel(caseChannelName, "Case work channel", "APPEND", null, null, null, null, null, null, null, null, null, null, null, null)
                 .await().atMost(java.time.Duration.ofSeconds(5));
 
         page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=agent");
