@@ -179,7 +179,7 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
                 null, null, null, null, null,
                 allowedTypes != null ? allowedTypes : Set.of(),
                 deniedTypes != null ? deniedTypes : Set.of(),
-                null, null, null, null);
+                null, null, null, null, null);
         return channelService.create(request)
                 .map(detail -> {
                     gateway.initChannel(detail.id(),

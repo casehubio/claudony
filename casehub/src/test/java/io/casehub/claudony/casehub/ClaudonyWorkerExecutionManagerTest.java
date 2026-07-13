@@ -335,7 +335,7 @@ class ClaudonyWorkerExecutionManagerTest {
         return Worker.builder()
                 .name(name)
                 .capabilityName(name)
-                .function(new WorkerFunction.Sync(ctx -> WorkerResult.of(Map.of())))
+                .function(new WorkerFunction.Sync<>(Void.class, ctx -> WorkerResult.of(Map.of())))
                 .build();
     }
 

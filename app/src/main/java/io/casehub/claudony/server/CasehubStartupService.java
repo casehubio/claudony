@@ -53,7 +53,7 @@ class CasehubStartupService {
                     continue;
                 }
                 var roleName = session.roleName().orElse("worker");
-                var worker = Worker.builder().name(roleName).capabilityName(roleName).function(new WorkerFunction.Sync(ctx -> WorkerResult.of(Map.of()))).build();
+                var worker = Worker.builder().name(roleName).capabilityName(roleName).function(new WorkerFunction.Sync<>(Void.class, ctx -> WorkerResult.of(Map.of()))).build();
                 execManager.watch(session.id(), session.name(), instance, worker);
                 started++;
             } catch (Exception e) {
