@@ -43,7 +43,7 @@ jobs:
         working-directory: app/src/main/webui
         run: npm install && npm run build
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Build and test
         run: mvn --batch-mode verify
