@@ -138,7 +138,7 @@ public class CaseEngineRoundTripTest {
         // Simulate WorkerExecutionStarted BEFORE triggering exit.
         // Lineage resolves the worker name from the preceding Started entry (engine#390:
         // WorkerExecutionCompleted carries actorId="system", not the worker name).
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                 caseId, "default", "ExecuteWorker", "WorkerExecutionStarted", "ACTIVE",
                 "agent", "WORKER", null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
 

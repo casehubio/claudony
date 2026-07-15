@@ -62,7 +62,7 @@ class ClaudonyLedgerEventCaptureTest {
     void happyPath_singleEvent_writesLedgerEntry() {
         UUID caseId = UUID.randomUUID();
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
 
@@ -89,7 +89,7 @@ class ClaudonyLedgerEventCaptureTest {
     void nullTenancyId_eventDropped_noLedgerEntryWritten() {
         UUID caseId = UUID.randomUUID();
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, null, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
 
@@ -101,13 +101,13 @@ class ClaudonyLedgerEventCaptureTest {
     void sequenceNumbers_incrementPerCase() {
         UUID caseId = UUID.randomUUID();
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "SuspendCase", "CaseSuspended", "SUSPENDED", null, "System", null))
                 .toCompletableFuture().join();
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ResumeCase", "CaseResumed", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
 
@@ -124,13 +124,13 @@ class ClaudonyLedgerEventCaptureTest {
         UUID caseA = UUID.randomUUID();
         UUID caseB = UUID.randomUUID();
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseA, "tenant-1", "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseB, "tenant-1", "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseA, "tenant-1", "CompleteCase", "CaseCompleted", "COMPLETED", null, "System", null))
                 .toCompletableFuture().join();
 
@@ -143,7 +143,7 @@ class ClaudonyLedgerEventCaptureTest {
     @Test
     void nullCaseId_observerCompletesWithoutException() {
         assertThatCode(() ->
-                lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+                lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                                 null, null, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                         .toCompletableFuture().join()
         ).doesNotThrowAnyException();
@@ -152,7 +152,7 @@ class ClaudonyLedgerEventCaptureTest {
     @Test
     void nullEventType_observerCompletesWithoutException() {
         assertThatCode(() ->
-                lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+                lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                                 UUID.randomUUID(), null, "StartCase", null, "RUNNING", null, "System", null))
                         .toCompletableFuture().join()
         ).doesNotThrowAnyException();
@@ -164,7 +164,7 @@ class ClaudonyLedgerEventCaptureTest {
         UUID caseId = UUID.randomUUID();
         String workerId = "agent-worker-" + UUID.randomUUID();
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ExecuteWorker", "WorkerExecutionStarted", null, workerId, "WORKER", null))
                 .toCompletableFuture().join();
 
@@ -185,7 +185,7 @@ class ClaudonyLedgerEventCaptureTest {
         UUID expectedCausedBy = UUID.randomUUID();
         provisioner.seedCausalContextForTest(TenancyConstants.DEFAULT_TENANT_ID, caseId, expectedCausedBy);
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ProvisionWorker", "WorkerStarted", null, null, "System", null))
                 .toCompletableFuture().join();
 
@@ -199,7 +199,7 @@ class ClaudonyLedgerEventCaptureTest {
     void workerStarted_withoutPreStoredCausalContext_causedByEntryIdIsNull() {
         UUID caseId = UUID.randomUUID();
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ProvisionWorker", "WorkerStarted", null, null, "System", null))
                 .toCompletableFuture().join();
 
@@ -214,10 +214,10 @@ class ClaudonyLedgerEventCaptureTest {
         UUID caseId = UUID.randomUUID();
         provisioner.seedCausalContextForTest(TenancyConstants.DEFAULT_TENANT_ID, caseId, UUID.randomUUID());
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ProvisionWorker", "WorkerStarted", null, null, "System", null))
                 .toCompletableFuture().join();
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ProvisionWorker", "WorkerStarted", null, null, "System", null))
                 .toCompletableFuture().join();
 
@@ -233,7 +233,7 @@ class ClaudonyLedgerEventCaptureTest {
         UUID caseId = UUID.randomUUID();
         when(execManager.drainExitSignal(caseId)).thenReturn(null);
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ExecuteWorker", "WorkerExecutionCompleted",
                         "ACTIVE", "system", "SYSTEM", null))
                 .toCompletableFuture().join();
@@ -253,10 +253,10 @@ class ClaudonyLedgerEventCaptureTest {
         provisioner.seedCausalContextForTest(TenancyConstants.DEFAULT_TENANT_ID, caseId, causedBy);
         when(execManager.drainExitSignal(caseId)).thenReturn(null);
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ProvisionWorker", "WorkerStarted", null, null, "System", null))
                 .toCompletableFuture().join();
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "ExecuteWorker", "WorkerExecutionCompleted",
                         "ACTIVE", "system", "SYSTEM", null))
                 .toCompletableFuture().join();
@@ -275,7 +275,7 @@ class ClaudonyLedgerEventCaptureTest {
     void tenancyId_nonNull_storedAsIs() {
         UUID caseId = UUID.randomUUID();
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, TenancyConstants.DEFAULT_TENANT_ID, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                 .toCompletableFuture().join();
 

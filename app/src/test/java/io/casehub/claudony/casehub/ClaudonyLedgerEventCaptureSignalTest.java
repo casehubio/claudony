@@ -47,7 +47,7 @@ class ClaudonyLedgerEventCaptureSignalTest {
         UUID caseId = UUID.randomUUID();
         when(execManager.drainExitSignal(caseId)).thenReturn("agent");
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, "default", "ExecuteWorker", "WorkerExecutionCompleted",
                         "ACTIVE", "system", "SYSTEM", null))
                 .toCompletableFuture().get(5, TimeUnit.SECONDS);
@@ -60,7 +60,7 @@ class ClaudonyLedgerEventCaptureSignalTest {
         UUID caseId = UUID.randomUUID();
         when(execManager.drainExitSignal(caseId)).thenReturn(null);
 
-        lifecycleEvents.fireAsync(new CaseLifecycleEvent(
+        lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
                         caseId, "default", "ExecuteWorker", "WorkerExecutionCompleted",
                         "ACTIVE", "system", "SYSTEM", null))
                 .toCompletableFuture().get(5, TimeUnit.SECONDS);
