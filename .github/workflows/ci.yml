@@ -46,7 +46,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Build and test
+        if: github.event_name == 'pull_request'
         run: mvn --batch-mode verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build, test, and publish
+        if: github.event_name != 'pull_request'
+        run: mvn --batch-mode deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -60,9 +67,3 @@ jobs:
             **/target/failsafe-reports/*
           if-no-files-found: ignore
           retention-days: 5
-
-      - name: Publish to GitHub Packages
-        if: github.event_name != 'pull_request'
-        run: mvn --batch-mode deploy -DskipTests
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
