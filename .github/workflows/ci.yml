@@ -43,7 +43,7 @@ jobs:
         working-directory: app/src/main/webui
         run: npm install && npm run build
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and test
         if: github.event_name == 'pull_request'
