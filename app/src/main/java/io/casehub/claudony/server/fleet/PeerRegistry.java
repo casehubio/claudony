@@ -148,20 +148,27 @@ public class PeerRegistry {
 
     // ─── Persistence ──────────────────────────────────────────────────────────
 
-    private volatile Thread lastPersistThread;
+    private final Set<Thread> activeThreads = ConcurrentHashMap.newKeySet();
 
     private void persistAsync() {
-        lastPersistThread = Thread.ofVirtual().start(this::persist);
+        Thread t = Thread.ofVirtual().unstarted(() -> {
+            try {
+                persist();
+            } finally {
+                activeThreads.remove(Thread.currentThread());
+            }
+        });
+        activeThreads.add(t);
+        t.start();
     }
 
     /**
-     * Joins the last in-flight persistAsync() thread.
+     * Joins all in-flight persistAsync() threads.
      * Package-private for use in unit test @AfterEach to drain before @TempDir cleanup.
      */
     void drainAsync() {
-        Thread t = lastPersistThread;
-        if (t != null) {
-            try { t.join(1000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        for (Thread t : activeThreads) {
+            try { t.join(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
     }
 
