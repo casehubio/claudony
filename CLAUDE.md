@@ -95,7 +95,7 @@ The protocol asks: Does this already exist elsewhere? Is this the right repo for
 
 **Type:** java
 
-**Stack:** Java 21 (on Java 26 JVM), Quarkus 3.32.2, GraalVM 25 (native image), tmux, xterm.js
+**Stack:** Java 21 (on Java 26 JVM), Quarkus 3.32.2, GraalVM 25 (native image), tmux, xterm.js, Lit 3, `@casehubio/blocks-ui-channel-activity`, `@casehubio/pages-ui-tokens`
 
 ---
 
@@ -112,8 +112,11 @@ Two Quarkus modes from the same binary:
 ## Build and Test
 
 ```bash
-# Run all tests (all 3 modules)
+# Run all tests (all 3 modules — Java)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test
+
+# Run frontend unit tests (vitest — requires GITHUB_TOKEN for @casehubio packages)
+GITHUB_TOKEN=$(gh auth token) npm --prefix app/src/main/webui test
 
 # Run only claudony-casehub integration tests
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl claudony-casehub
@@ -315,17 +318,21 @@ claudony-app/src/main/java/dev/claudony/
 claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 ├── esbuild.config.mjs                 — two entry points (app.ts, terminal.ts), code splitting
 ├── src/
-│   ├── app.ts                         — dashboard entry point (loadSite + session-grid)
-│   ├── terminal.ts                    — terminal entry point (loadSite + compose overlay + lifecycle)
-│   ├── theme.ts                       — shared CSS variables
+│   ├── app.ts                         — dashboard entry point (loadSite + session-grid + initTheme)
+│   ├── terminal.ts                    — terminal entry point (loadSite + compose overlay + lifecycle + initTheme)
+│   ├── theme.ts                       — pages-ui-tokens integration: initTheme() injects --pages-* design tokens,
+│   │                                       THEME_CSS bridges --pages-* to claudony's legacy var names
 │   ├── util/auth.ts + time.ts         — shared utilities
+│   ├── util/channel-adapter.ts        — pure mapping: TimelineEntry→QhorusMessage, ChannelInfo→QhorusChannel
+│   ├── util/channel-adapter.test.ts   — 15 vitest unit tests for the adapter layer
 │   └── components/
-│       ├── session-grid.ts            — dashboard session card grid
-│       ├── terminal-header.ts         — back link, session name, status badge, toggle buttons
-│       ├── terminal-workspace.ts      — three-column flex coordinator (workers | terminal | channels)
-│       ├── worker-panel.ts            — SSE worker list, click-to-switch
-│       ├── channel-panel.ts           — channel feed, SSE/polling, stale cursor, case context, lineage
-│       └── key-bar.ts                 — touch device special keys
+│       ├── session-grid.ts            — dashboard session card grid (vanilla HTMLElement)
+│       ├── terminal-header.ts         — back link, session name, status badge, toggle buttons (vanilla HTMLElement)
+│       ├── terminal-workspace.ts      — three-column flex coordinator (vanilla HTMLElement)
+│       ├── worker-panel.ts            — SSE worker list, click-to-switch (vanilla HTMLElement)
+│       ├── channel-panel.ts           — LitElement composing blocks-ui <channel-feed> + <channel-input>;
+│       │                                  owns SSE/polling, cursor persistence, case context header, lineage
+│       └── key-bar.ts                 — touch device special keys (vanilla HTMLElement)
 
 claudony-app/src/main/resources/META-INF/resources/  — static files served by Quarkus
 ├── manifest.json + sw.js              — PWA

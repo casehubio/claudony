@@ -1,6 +1,9 @@
 import "@casehubio/pages-component-terminal/xterm.css";
 import { loadSite, registerPanel } from "@casehubio/pages-runtime";
 import { hostPanel, rows } from "@casehubio/pages-ui";
+import { initTheme } from "./theme";
+
+initTheme();
 import "./components/terminal-header";
 import "./components/terminal-workspace";
 import "./components/key-bar";

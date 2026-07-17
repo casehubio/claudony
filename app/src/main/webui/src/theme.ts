@@ -1,15 +1,22 @@
+import { injectTheme, applyThemeMode, DEFAULT_THEME } from '@casehubio/pages-ui-tokens';
+
+export function initTheme(): void {
+  injectTheme(DEFAULT_THEME);
+  applyThemeMode(document.documentElement, 'dark');
+}
+
 export const THEME_CSS = `
   :host {
-    --bg: #1e1e1e;
-    --surface: #252526;
-    --border: #3e3e42;
-    --text: #cccccc;
-    --text-muted: #888;
-    --accent: #007acc;
-    --active: #4ec9b0;
-    --danger: #f44747;
-    --radius: 6px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --bg: var(--pages-neutral-1);
+    --surface: var(--pages-neutral-2);
+    --border: var(--pages-neutral-4);
+    --text: var(--pages-neutral-11);
+    --text-muted: var(--pages-neutral-8);
+    --accent: var(--pages-accent-9);
+    --active: var(--pages-success-9);
+    --danger: var(--pages-danger-9);
+    --radius: var(--pages-radius-md);
+    font-family: var(--pages-font-family);
     color: var(--text);
   }
 `;
