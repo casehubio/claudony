@@ -1,16 +1,16 @@
 :root {
-    --bg: #1e1e1e;
-    --surface: #252526;
-    --border: #3e3e42;
-    --text: #cccccc;
-    --text-dim: #888;
-    --accent: #007acc;
-    --active: #4ec9b0;
-    --waiting: #dcdcaa;
-    --idle: #888;
-    --danger: #f44747;
-    --radius: 6px;
-    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --bg: var(--pages-neutral-1, #1e1e1e);
+    --surface: var(--pages-neutral-2, #252526);
+    --border: var(--pages-neutral-4, #3e3e42);
+    --text: var(--pages-neutral-11, #cccccc);
+    --text-dim: var(--pages-neutral-8, #888);
+    --accent: var(--pages-accent-9, #007acc);
+    --active: var(--pages-success-9, #4ec9b0);
+    --waiting: var(--pages-warning-9, #dcdcaa);
+    --idle: var(--pages-neutral-8, #888);
+    --danger: var(--pages-danger-9, #f44747);
+    --radius: var(--pages-radius-md, 6px);
+    --font: var(--pages-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
     --mono: Menlo, Monaco, 'Courier New', monospace;
 }
 
