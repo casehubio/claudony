@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from 'lit';
+import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import type { QhorusMessage, QhorusChannel, MessageType } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
@@ -157,9 +157,14 @@ export class ClaudonyChannelPanel extends LitElement {
     .error { font-size: 11px; color: var(--pages-danger-9, #f44747); padding: 4px 8px; }
   `;
 
+  override updated(changed: PropertyValues): void {
+    if (changed.has('_collapsed')) {
+      this.classList.toggle('collapsed', this._collapsed);
+    }
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
-    this.classList.add('collapsed');
     this._loadCursors();
     this._fetchMeshConfig();
   }
@@ -187,7 +192,6 @@ export class ClaudonyChannelPanel extends LitElement {
 
   open(): void {
     this._collapsed = false;
-    this.classList.remove('collapsed');
     if (this._caseId && !this._lineageLoaded) {
       this._loadLineage();
       this._startElapsedTicker();
@@ -197,7 +201,6 @@ export class ClaudonyChannelPanel extends LitElement {
 
   close(): void {
     this._collapsed = true;
-    this.classList.add('collapsed');
     this._showStalePrompt = false;
     this._closeEventSource();
     if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
