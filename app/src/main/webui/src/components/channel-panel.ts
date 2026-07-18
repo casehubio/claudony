@@ -159,6 +159,7 @@ export class ClaudonyChannelPanel extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    this.classList.add('collapsed');
     this._loadCursors();
     this._fetchMeshConfig();
   }

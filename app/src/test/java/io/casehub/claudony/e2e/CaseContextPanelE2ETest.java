@@ -73,18 +73,18 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
         openChannelPanel();
 
         // Case header must be present
-        page.locator(".ch-case-header").waitFor(new Locator.WaitForOptions().setTimeout(4000));
-        assertThat(page.locator(".ch-case-header").count()).isEqualTo(1);
+        page.locator(".case-header").waitFor(new Locator.WaitForOptions().setTimeout(4000));
+        assertThat(page.locator(".case-header").count()).isEqualTo(1);
 
         // Role name must appear
-        assertThat(page.locator(".ch-case-role").textContent()).isEqualTo("agent");
+        assertThat(page.locator(".case-role").textContent()).isEqualTo("agent");
 
         // Status dot must have the 'active' class (session status = ACTIVE)
-        assertThat(page.locator(".ch-case-header .worker-status-dot").getAttribute("class"))
+        assertThat(page.locator(".case-header .status-dot").getAttribute("class"))
                 .contains("active");
 
         // Elapsed display must be present (non-empty — session is 10 minutes old)
-        var elapsed = page.locator(".ch-case-elapsed").textContent();
+        var elapsed = page.locator(".case-elapsed").textContent();
         assertThat(elapsed).isNotBlank();
     }
 
@@ -98,7 +98,7 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
         // Wait for session fetch + channel load to complete before asserting absence
         page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE);
 
-        assertThat(page.locator(".ch-case-header").count())
+        assertThat(page.locator(".case-header").count())
                 .as("No case header for standalone session")
                 .isEqualTo(0);
     }
@@ -110,25 +110,24 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
         page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=agent");
         openChannelPanel();
 
-        page.locator(".ch-lineage-toggle").waitFor(new Locator.WaitForOptions().setTimeout(4000));
+        page.locator(".lineage-toggle").waitFor(new Locator.WaitForOptions().setTimeout(4000));
 
-        // Lineage section starts hidden
-        assertThat(page.locator(".ch-lineage").getAttribute("class"))
-                .contains("ch-lineage-hidden");
+        // Lineage section starts hidden (Lit conditional render — element absent)
+        assertThat(page.locator(".lineage").count()).isEqualTo(0);
 
-        // Click toggle → expands
-        page.locator(".ch-lineage-toggle").click();
-        assertThat(page.locator(".ch-lineage").getAttribute("class"))
-                .doesNotContain("ch-lineage-hidden");
+        // Click toggle → expands (element appears)
+        page.locator(".lineage-toggle").click();
+        page.locator(".lineage").waitFor(new Locator.WaitForOptions().setTimeout(4000));
+        assertThat(page.locator(".lineage").count()).isEqualTo(1);
 
         // Toggle row shows "0 prior workers" (EmptyCaseLineageQuery)
-        assertThat(page.locator(".ch-lineage-count").textContent())
-                .isEqualTo("0 prior workers");
+        assertThat(page.locator(".lineage-toggle").textContent())
+                .contains("0 prior workers");
 
-        // Click again → collapses
-        page.locator(".ch-lineage-toggle").click();
-        assertThat(page.locator(".ch-lineage").getAttribute("class"))
-                .contains("ch-lineage-hidden");
+        // Click again → collapses (element removed)
+        page.locator(".lineage-toggle").click();
+        page.locator(".lineage").waitFor(
+                new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(4000));
     }
 
     // ── AC 4: channel auto-selects to case-{caseId}/work ─────────────────────
@@ -136,18 +135,20 @@ class CaseContextPanelE2ETest extends PlaywrightBase {
     @Test
     void caseSession_autoSelectsCaseChannel() {
         var caseChannelName = "case-" + CASE_ID + "/work";
-        tools.createChannel(caseChannelName, "Case work channel", "APPEND", null, null, null, null, null, null, null, null, null, null, null, null)
-                .await().atMost(java.time.Duration.ofSeconds(5));
+        channelStore.put(io.casehub.qhorus.api.channel.Channel.builder(caseChannelName)
+                .description("Case work channel")
+                .semantic(io.casehub.qhorus.api.channel.ChannelSemantic.APPEND)
+                .build());
 
         page.navigate(BASE_URL + "/app/session.html?id=ctx-case-session&name=agent");
         openChannelPanel();
 
         // Wait for the case channel to be auto-selected in the dropdown
         // <option> elements are never "visible" in Playwright — use ATTACHED
-        page.locator("#ch-select option[value='" + caseChannelName + "']").waitFor(
+        page.locator(".ch-select option[value='" + caseChannelName + "']").waitFor(
                 new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED).setTimeout(5000));
 
-        var selectedValue = page.evaluate("document.getElementById('ch-select').value");
+        var selectedValue = page.evaluate("document.querySelector('claudony-channel-panel').shadowRoot.querySelector('.ch-select').value");
         assertThat(selectedValue.toString()).isEqualTo(caseChannelName);
     }
 }

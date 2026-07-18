@@ -82,7 +82,9 @@ class ChannelPanelE2ETest extends PlaywrightBase {
     }
 
     private String feedText() {
-        return panelShadow().locator("channel-feed").textContent();
+        Object result = panelShadow().locator("channel-message").evaluateAll(
+                "els => els.map(el => el.shadowRoot ? el.shadowRoot.textContent : el.textContent).join(' ')");
+        return result != null ? result.toString() : "";
     }
 
     @Test
@@ -138,7 +140,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
         feedMessages().first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
 
-        var badges = panelShadow().locator("channel-feed >> channel-message >> .msg-badge");
+        var badges = panelShadow().locator("channel-feed >> channel-message >> .speech-act-badge");
         assertThat(badges.count()).isGreaterThanOrEqualTo(2);
 
         var badgeTexts = badges.allTextContents();
@@ -222,9 +224,12 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
     @Test
     void eventMessage_rendersWithEventBadgeAndTelemetryFields() {
-        tools.sendMessage(channelName, "system", "event",
-                "{\"tool_name\":\"read_file\",\"duration_ms\":250,\"token_count\":150}",
-                null, null, null, null, null, null, null).await().atMost(Duration.ofSeconds(5));
+        messageStore.put(Message.builder()
+                .channelId(channelId)
+                .sender("system")
+                .messageType(MessageType.EVENT)
+                .content("{\"tool_name\":\"read_file\",\"duration_ms\":250,\"token_count\":150}")
+                .build());
 
         navigateToSessionPageWithChannel();
         openPanel();
@@ -237,8 +242,12 @@ class ChannelPanelE2ETest extends PlaywrightBase {
 
     @Test
     void eventMessage_withMissingTelemetryFields_rendersDash() {
-        tools.sendMessage(channelName, "system", "event", "{}", null, null, null, null, null, null, null)
-                .await().atMost(Duration.ofSeconds(5));
+        messageStore.put(Message.builder()
+                .channelId(channelId)
+                .sender("system")
+                .messageType(MessageType.EVENT)
+                .content("{}")
+                .build());
 
         navigateToSessionPageWithChannel();
         openPanel();
@@ -254,8 +263,10 @@ class ChannelPanelE2ETest extends PlaywrightBase {
         var typeSelect = panelShadow().locator("channel-input >> select");
         typeSelect.waitFor(new Locator.WaitForOptions().setTimeout(5000));
 
-        var defaultType = typeSelect.inputValue();
-        assertThat(defaultType).isEqualToIgnoringCase("command");
+        var defaultType = page.evaluate(
+                "() => document.querySelector('claudony-channel-panel')" +
+                ".shadowRoot.querySelector('channel-input')._selectedType");
+        assertThat(defaultType.toString()).isEqualToIgnoringCase("command");
     }
 
     @Test
@@ -455,7 +466,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
                 new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED).setTimeout(5000));
 
         var optionTexts = typeOptions.allTextContents();
-        assertThat(optionTexts).hasSize(8);
+        assertThat(optionTexts).hasSize(9);
         assertThat(optionTexts).anyMatch(s -> s.toUpperCase().contains("COMMAND"));
         assertThat(optionTexts).anyMatch(s -> s.toUpperCase().contains("QUERY"));
         assertThat(optionTexts).anyMatch(s -> s.toUpperCase().contains("STATUS"));
