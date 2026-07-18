@@ -58,13 +58,23 @@ class TerminalPageE2ETest extends PlaywrightBase {
 
         page.navigate(BASE_URL + "/app/session.html?id=fake-session&name=test&proxyPeer=" + proxyPeerId);
 
-        // fitAddon.fit() may be a no-op in headless (terminal initialises at 80×24 and the
-        // headless container computes the same dimensions). Force onResize by calling
-        // terminal.resize() with dimensions that differ from the xterm.js default (80×24).
-        // window._xtermTerminal is exposed by terminal.js for E2E test purposes.
-        page.evaluate("() => { if (window._xtermTerminal) window._xtermTerminal.resize(100, 30); }");
+        // Wait for workspace to configure (session fetch completes and wires events)
+        page.locator("claudony-terminal-workspace").waitFor(
+                new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(5000));
+        page.waitForTimeout(1000);
 
-        // Wait up to 3s for onResize → fetch to arrive
+        // Dispatch terminal-resize event directly — xterm.js terminal.resize() does not
+        // reliably fire pages-component-terminal's event in headless Chromium. The test
+        // target is the proxy URL construction in handleResize(), not xterm resize detection.
+        page.evaluate("() => { " +
+                "var term = document.querySelector('pages-component-terminal'); " +
+                "if (term) term.dispatchEvent(new CustomEvent('pages-event', { " +
+                "  bubbles: true, composed: true, " +
+                "  detail: { topic: 'terminal-resize', payload: { cols: 100, rows: 30 } } " +
+                "})); " +
+                "}");
+
+        // Wait up to 3s for handleResize → fetch to arrive
         var deadline = System.currentTimeMillis() + 3000;
         while (capturedUrl.get() == null && System.currentTimeMillis() < deadline) {
             page.waitForTimeout(100);

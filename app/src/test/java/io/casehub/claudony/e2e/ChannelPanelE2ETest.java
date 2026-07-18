@@ -37,7 +37,7 @@ class ChannelPanelE2ETest extends PlaywrightBase {
                 .description("E2E test channel")
                 .semantic(ChannelSemantic.APPEND)
                 .build();
-        channelStore.put(ch);
+        ch = channelStore.put(ch);
         channelId = ch.id();
     }
 
