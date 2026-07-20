@@ -301,7 +301,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         when(messageService.dispatch(any(MessageDispatch.class)))
                 .thenReturn(Uni.createFrom().item(dr(channelId, "alice", MessageType.STATUS)));
 
-        provider.postToChannel(ch, "alice", "hello", MessageType.STATUS, null, null).await().indefinitely();
+        provider.postToChannel(ch, "alice", "hello", MessageType.STATUS, null, null, null).await().indefinitely();
 
         verify(messageService).dispatch(argThat(d ->
                 channelId.equals(d.channelId()) &&
@@ -322,7 +322,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         // null type is now rejected by MessageDispatch.builder().build() — null was a silent pass-through
         // with the old send() flat-param API; the builder enforces the 9-type taxonomy invariant.
         assertThatThrownBy(() ->
-                provider.postToChannel(ch, "alice", "hello", null, null, null).await().indefinitely())
+                provider.postToChannel(ch, "alice", "hello", null, null, null, null).await().indefinitely())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("type is required");
     }
@@ -337,7 +337,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         when(messageService.dispatch(any(MessageDispatch.class)))
                 .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.COMMAND)));
 
-        provider.postToChannel(ch, "engine", content, MessageType.COMMAND, "42", null)
+        provider.postToChannel(ch, "engine", content, MessageType.COMMAND, "42", null, null)
                 .await().indefinitely();
 
         verify(messageService).dispatch(argThat(d ->
@@ -357,7 +357,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         when(messageService.dispatch(any(MessageDispatch.class)))
                 .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.QUERY)));
 
-        provider.postToChannel(ch, "engine", content, MessageType.QUERY, "q-99", null)
+        provider.postToChannel(ch, "engine", content, MessageType.QUERY, "q-99", null, null)
                 .await().indefinitely();
 
         verify(messageService).dispatch(argThat(d ->
@@ -374,7 +374,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         when(messageService.dispatch(any(MessageDispatch.class)))
                 .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.COMMAND)));
 
-        provider.postToChannel(ch, "engine", "{}", MessageType.COMMAND, "42", deadline)
+        provider.postToChannel(ch, "engine", "{}", MessageType.COMMAND, "42", deadline, null)
                 .await().indefinitely();
 
         verify(messageService).dispatch(argThat(d ->

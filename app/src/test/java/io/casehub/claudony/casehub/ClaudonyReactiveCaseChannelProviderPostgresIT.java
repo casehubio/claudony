@@ -94,6 +94,7 @@ class ClaudonyReactiveCaseChannelProviderPostgresIT {
                                 "status update",
                                 MessageType.STATUS,
                                 null,
+                                null,
                                 null)),
                 result -> { /* no assertion needed — assertThat verifies it completes without error */ });
     }

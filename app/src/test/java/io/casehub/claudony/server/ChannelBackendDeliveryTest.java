@@ -59,7 +59,7 @@ class ChannelBackendDeliveryTest {
 
         OutboundMessage msg = new OutboundMessage(
                 UUID.randomUUID(), "agent:claude", MessageType.STATUS,
-                "test message", null, null, ActorType.AGENT, null);
+                "test message", null, null, ActorType.AGENT, null, null);
 
         gateway.fanOut(channelId, channelName, msg);
 

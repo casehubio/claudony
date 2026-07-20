@@ -1,9 +1,11 @@
 package io.casehub.claudony.server;
 
-import io.casehub.qhorus.api.channel.ChannelSemantic;
-import io.casehub.qhorus.api.message.MessageType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.qhorus.api.channel.Channel;
+import io.casehub.qhorus.api.channel.ChannelSemantic;
 import io.casehub.qhorus.api.message.Message;
+import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.persistence.memory.InMemoryChannelStore;
 import io.casehub.qhorus.persistence.memory.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -11,10 +13,14 @@ import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import static io.restassured.RestAssured.*;
-import static org.hamcrest.Matchers.*;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.hasSize;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -374,6 +380,79 @@ class MeshResourceTest {
             .statusCode(200)
             .body("channel", hasItems(busy.name(), quiet.name()));
     }
+
+    private Channel createTestChannel(String name) {
+        return channelStore.put(Channel.builder(name)
+                                       .semantic(ChannelSemantic.APPEND).build());
+    }
+
+    @Test
+    void postMessage_response_withoutInReplyTo_returns400() {
+        createTestChannel("val-test-" + System.nanoTime());
+        given().contentType("application/json")
+               .body("{\"content\":\"reply\",\"type\":\"RESPONSE\",\"correlationId\":\"c1\"}")
+               .post("/api/mesh/channels/val-test-" + System.nanoTime() + "/messages")
+               .then().statusCode(400);
+    }
+
+    @Test
+    void postMessage_handoff_withoutTarget_returns400() {
+        String name = "val-handoff-" + System.nanoTime();
+        createTestChannel(name);
+        given().contentType("application/json")
+               .body("{\"content\":\"handoff\",\"type\":\"HANDOFF\",\"inReplyTo\":1,\"correlationId\":\"c1\"}")
+               .post("/api/mesh/channels/" + name + "/messages")
+               .then().statusCode(400);
+    }
+
+    @Test
+    void postMessage_command_withTarget_succeeds() {
+        String name = "val-cmd-" + System.nanoTime();
+        createTestChannel(name);
+        given().contentType("application/json")
+               .body("{\"content\":\"do this\",\"type\":\"COMMAND\",\"target\":\"agent-2\",\"topic\":\"work\"}")
+               .post("/api/mesh/channels/" + name + "/messages")
+               .then().statusCode(200);
+    }
+
+    @Test
+    void commitments_endpoint_returnsEmptyList() {
+        String name = "commit-test-" + System.nanoTime();
+        createTestChannel(name);
+        given().get("/api/mesh/channels/" + name + "/commitments")
+               .then().statusCode(200)
+               .body("$", hasSize(0));
+    }
+
+    @Test
+    void commitments_endpoint_unknownChannel_returnsEmptyList() {
+        given().get("/api/mesh/channels/no-such-channel/commitments")
+               .then().statusCode(200)
+               .body("$", hasSize(0));
+    }
+
+    @Test
+    void timeline_enrichedFields_includesInReplyToAndTarget() {
+        String  name = "enrich-" + System.nanoTime();
+        Channel ch   = createTestChannel(name);
+        Message msg = Message.builder()
+                             .channelId(ch.id())
+                             .sender("agent-1")
+                             .messageType(MessageType.COMMAND)
+                             .content("do it")
+                             .target("agent-2")
+                             .inReplyTo(99L)
+                             .topic("work")
+                             .build();
+        messageStore.put(msg);
+
+        given().get("/api/mesh/channels/" + name + "/timeline")
+               .then().statusCode(200)
+               .body("[0].target", equalTo("agent-2"))
+               .body("[0].in_reply_to", equalTo(99))
+               .body("[0].topic", equalTo("work"));
+    }
+
 }
 
 @QuarkusTest

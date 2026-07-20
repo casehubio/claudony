@@ -144,7 +144,7 @@ class ClaudonyLedgerEventCaptureTest {
     void nullCaseId_observerCompletesWithoutException() {
         assertThatCode(() ->
                 lifecycleEvents.fireAsync(CaseLifecycleEvent.of(
-                                null, null, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
+                                (UUID) null, null, "StartCase", "CaseStarted", "RUNNING", null, "System", null))
                         .toCompletableFuture().join()
         ).doesNotThrowAnyException();
     }
