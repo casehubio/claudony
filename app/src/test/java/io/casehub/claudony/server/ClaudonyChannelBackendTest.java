@@ -62,7 +62,7 @@ class ClaudonyChannelBackendTest {
         ChannelRef ref = new ChannelRef(UUID.randomUUID(), channelName);
         OutboundMessage msg = new OutboundMessage(
                 UUID.randomUUID(), "agent:claude", MessageType.STATUS,
-                "hello", null, null, ActorType.AGENT, null);
+                "hello", null, null, ActorType.AGENT, null, null);
 
         backend.post(ref, msg);
 
@@ -76,7 +76,7 @@ class ClaudonyChannelBackendTest {
 
         ChannelRef ref = new ChannelRef(UUID.randomUUID(), "case-abc/work");
         backend.post(ref, new OutboundMessage(UUID.randomUUID(), "agent", MessageType.STATUS,
-                "msg", null, null, ActorType.AGENT, null));
+                "msg", null, null, ActorType.AGENT, null, null));
 
         assertThat(otherReceived).isEmpty();
     }

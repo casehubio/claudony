@@ -74,20 +74,40 @@ loadSite(container, app).then(() => {
   header.querySelector("#ch-toggle-btn")!.addEventListener("click", () => workspace.toggleChannels());
   header.querySelector("#compose-btn")!.addEventListener("click", () => openCompose());
 
-  // Fetch session and configure workspace
+  // Fetch session and configure workspace or workbench
   fetchWithAuth("/api/sessions/" + sessionId)
     .then(r => r.ok ? r.json() : null)
-    .then((session: { caseId?: string; roleName?: string; status?: string; createdAt?: string } | null) => {
-      workspace.configure({
-        sessionId,
-        sessionName,
-        proxyPeer,
-        caseId: session?.caseId,
-        roleName: session?.roleName,
-        status: session?.status,
-        createdAt: session?.createdAt,
-        channel,
-      });
+    .then(async (session: { caseId?: string; roleName?: string; status?: string; createdAt?: string } | null) => {
+      if (session?.caseId) {
+        const { ClaudonyWorkbench } = await import('./components/claudony-workbench.js');
+        void ClaudonyWorkbench;
+        const workbench = document.createElement('claudony-workbench') as InstanceType<typeof ClaudonyWorkbench>;
+        workspace.replaceWith(workbench);
+        workbench.configure({
+          sessionId,
+          sessionName,
+          proxyPeer,
+          caseId: session.caseId,
+          roleName: session.roleName,
+          status: session.status,
+          createdAt: session.createdAt,
+          channel,
+        });
+
+        header.querySelector("#workers-toggle-btn")!.style.display = 'none';
+        header.querySelector("#ch-toggle-btn")!.style.display = 'none';
+      } else {
+        workspace.configure({
+          sessionId,
+          sessionName,
+          proxyPeer,
+          caseId: session?.caseId,
+          roleName: session?.roleName,
+          status: session?.status,
+          createdAt: session?.createdAt,
+          channel,
+        });
+      }
     })
     .catch(() => {
       workspace.configure({ sessionId, sessionName, proxyPeer, channel });

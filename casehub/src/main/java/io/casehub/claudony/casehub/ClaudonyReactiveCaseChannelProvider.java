@@ -3,22 +3,22 @@ package io.casehub.claudony.casehub;
 import io.casehub.api.model.CaseChannel;
 import io.casehub.api.spi.ReactiveCaseChannelProvider;
 import io.casehub.api.spi.mesh.CaseChannelLayout;
+import io.casehub.qhorus.api.channel.ChannelCreateRequest;
 import io.casehub.qhorus.api.message.MessageDispatch;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.api.channel.ChannelCreateRequest;
 import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
-import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.casehub.qhorus.runtime.message.ReactiveMessageService;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelProvider {
@@ -81,17 +81,18 @@ public class ClaudonyReactiveCaseChannelProvider implements ReactiveCaseChannelP
 
     @Override
     public Uni<Void> postToChannel(CaseChannel channel, String from, String content,
-            MessageType type, String correlationId, String deadline) {
+                                   MessageType type, String correlationId, String deadline, String target) {
         return messageService.dispatch(MessageDispatch.builder()
-                        .channelId(UUID.fromString(channel.id()))
-                        .sender(from)
-                        .type(type)
-                        .content(content)
-                        .correlationId(correlationId)
-                        .deadline(deadline != null ? java.time.Instant.parse(deadline) : null)
-                        .actorType(io.casehub.platform.api.identity.ActorType.AGENT)
-                        .build())
-                .replaceWithVoid();
+                                                      .channelId(UUID.fromString(channel.id()))
+                                                      .sender(from)
+                                                      .type(type)
+                                                      .content(content)
+                                                      .correlationId(correlationId)
+                                                      .deadline(deadline != null ? java.time.Instant.parse(deadline) : null)
+                                                      .target(target)
+                                                      .actorType(io.casehub.platform.api.identity.ActorType.AGENT)
+                                                      .build())
+                             .replaceWithVoid();
     }
 
     @Override
