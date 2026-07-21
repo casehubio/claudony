@@ -4,11 +4,9 @@ import type { QhorusMessage, QhorusChannel, MessageType, ArtefactRef } from '@ca
 import { ChannelEventTopics } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
 import { attachTerminal, type TerminalHandle } from '../util/terminal-controller.js';
-import { toQhorusMessage, toQhorusChannel, toCommitmentMap, type TimelineEntry, type ChannelInfo, type CommitmentRecord } from '../util/channel-adapter.js';
+import { toQhorusMessage, toQhorusChannel, type TimelineEntry, type ChannelInfo } from '../util/channel-adapter.js';
+import { toCommitmentMap, type CommitmentRecord } from '@casehubio/blocks-ui-channel-activity';
 import { fetchWithAuth } from '../util/auth.js';
-import './claudony-task-panel.js';
-import './claudony-correlation-panel.js';
-import './claudony-artifact-panel.js';
 
 interface WorkbenchConfig {
   sessionId: string;
@@ -662,18 +660,18 @@ export class ClaudonyWorkbench extends LitElement {
   private _renderContextPanel(panelId: string) {
     switch (panelId) {
       case 'tasks':
-        return html`<claudony-task-panel
+        return html`<channel-task-panel
           .messages=${this._messages}
           .commitments=${this._commitments}
-          .selectedMessageId=${this._selectedMessageId}></claudony-task-panel>`;
+          .selectedMessageId=${this._selectedMessageId}></channel-task-panel>`;
       case 'correlation':
-        return html`<claudony-correlation-panel
+        return html`<channel-correlation-panel
           .messages=${this._messages}
           .commitments=${this._commitments}
-          .selectedMessageId=${this._selectedMessageId}></claudony-correlation-panel>`;
+          .selectedMessageId=${this._selectedMessageId}></channel-correlation-panel>`;
       case 'artifacts':
-        return html`<claudony-artifact-panel
-          .selectedArtefactRef=${this._selectedArtefactRef}></claudony-artifact-panel>`;
+        return html`<channel-artifact-panel
+          .selectedArtefactRef=${this._selectedArtefactRef}></channel-artifact-panel>`;
       default:
         return nothing;
     }

@@ -331,9 +331,8 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 │   │                                       THEME_CSS bridges --pages-* to claudony's legacy var names
 │   ├── util/auth.ts + time.ts         — shared utilities
 │   ├── util/auth.ts + time.ts         — shared utilities
-│   ├── util/channel-adapter.ts        — pure mapping: TimelineEntry→QhorusMessage, ChannelInfo→QhorusChannel,
-│   │                                       CommitmentRecord type + toCommitmentMap
-│   ├── util/channel-adapter.test.ts   — 22 vitest unit tests for the adapter layer
+│   ├── util/channel-adapter.ts        — pure mapping: TimelineEntry→QhorusMessage, ChannelInfo→QhorusChannel
+│   ├── util/channel-adapter.test.ts   — 19 vitest unit tests for the adapter layer
 │   ├── util/terminal-controller.ts    — shared terminal setup: attachTerminal(), TerminalHandle (WebSocket,
 │   │                                       resize, session switching). Used by both workbench and fleet mode.
 │   └── components/
@@ -345,9 +344,9 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 │       │                                  channel-nav, channel-feed, channel-input, task/correlation/artifact
 │       │                                  panels. Owns SSE lifecycle, cursor persistence, case context, commitments.
 │       │                                  Conditionally loaded via dynamic import when session has caseId.
-│       ├── claudony-task-panel.ts     — commitment tracking panel (active/overdue/completed). blocks-ui candidate.
-│       ├── claudony-correlation-panel.ts — conversation chain visualization by correlationId. blocks-ui candidate.
-│       ├── claudony-artifact-panel.ts — artifact reference viewer (v1: metadata only). blocks-ui candidate.
+│       │                                  Task, correlation, and artifact panels promoted to
+│       │                                  @casehubio/blocks-ui-channel-activity (channel-task-panel,
+│       │                                  channel-correlation-panel, channel-artifact-panel).
 │       ├── worker-panel.ts            — SSE worker list, click-to-switch (vanilla HTMLElement)
 │       ├── channel-panel.ts           — LitElement composing blocks-ui <channel-feed> + <channel-input>;
 │       │                                  owns SSE/polling, cursor persistence, case context header, lineage.
@@ -450,7 +449,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-07-20, after claudony#175 workbench integration):** 16 in `claudony-core` + 176 in `claudony-casehub` + 405 in `claudony-app` = **597 total, 597 passing**. App module gained 6 tests (MeshResource validation, commitment endpoint, timeline enrichment). Previous baseline: 591 (2026-07-07, after #168 broadcaster migration). Frontend: 22 vitest (was 15; +7 adapter enrichment + CommitmentRecord tests). E2E: 4 new workbench tests (WorkbenchE2ETest). No known failing tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-07-20, after claudony#175 workbench integration):** 16 in `claudony-core` + 176 in `claudony-casehub` + 405 in `claudony-app` = **597 total, 597 passing**. App module gained 6 tests (MeshResource validation, commitment endpoint, timeline enrichment). Previous baseline: 591 (2026-07-07, after #168 broadcaster migration). Frontend: 19 vitest (was 22; -3 CommitmentRecord tests promoted to blocks-ui). E2E: 4 new workbench tests (WorkbenchE2ETest). No known failing tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
