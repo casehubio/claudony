@@ -8,12 +8,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@casehubio/blocks-ui-channel-activity": "^0.3.1",
-    "@casehubio/blocks-ui-core": "^0.2.2",
-    "@casehubio/pages-component-terminal": "^0.2.0",
-    "@casehubio/pages-runtime": "^0.3.0",
-    "@casehubio/pages-ui": "^0.3.0",
-    "@casehubio/pages-ui-tokens": "^0.2.1",
+    "@casehubio/blocks-ui-channel-activity": "file:../../../../../blocks-ui/components/channel-activity",
+    "@casehubio/blocks-ui-core": "file:../../../../../blocks-ui/packages/blocks-ui-core",
+    "@casehubio/pages-component-terminal": "file:../../../../../pages/components/pages-component-terminal",
+    "@casehubio/pages-runtime": "file:../../../../../pages/packages/pages-runtime",
+    "@casehubio/pages-ui": "file:../../../../../pages/packages/pages-ui",
+    "@casehubio/pages-ui-tokens": "file:../../../../../pages/packages/pages-ui-tokens",
     "lit": "^3.3.3"
   },
   "devDependencies": {
