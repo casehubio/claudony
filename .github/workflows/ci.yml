@@ -29,14 +29,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: casehubio/casehub-pages
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           path: ../pages
 
       - name: Checkout blocks-ui (sibling)
         uses: actions/checkout@v4
         with:
           repository: casehubio/blocks-ui
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           path: ../blocks-ui
 
       - name: Set up Java 21
