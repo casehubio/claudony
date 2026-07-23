@@ -84,7 +84,7 @@ public class MeshResource {
     @Path("/config")
     public MeshConfig config() {
         int staleness = preferenceProvider
-                                .resolve(SettingsScope.of("casehubio", "claudony"))
+                                .resolve(SettingsScope.of(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, io.casehub.platform.api.path.Path.of("casehubio", "claudony")))
                                 .getOrDefault(ChannelCursorStaleness.KEY)
                                 .minutes();
         return new MeshConfig(config.meshRefreshStrategy(), config.meshRefreshInterval(), staleness);

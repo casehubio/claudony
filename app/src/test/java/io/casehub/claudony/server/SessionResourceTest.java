@@ -2,18 +2,24 @@ package io.casehub.claudony.server;
 
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.AfterEach;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
 import java.time.Instant;
 import java.util.Optional;
-import static io.restassured.RestAssured.*;
+
+import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
-import io.casehub.platform.api.identity.TenancyConstants;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -234,5 +240,18 @@ class SessionResourceTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void createSession_noWorkingDir_usesDefaultDirPlusName() {
+        var response = given().contentType("application/json")
+                              .body("{\"name\":\"my-project\",\"command\":\"echo hello\"}")
+                              .when().post("/api/sessions")
+                              .then().statusCode(201)
+                              .extract().jsonPath();
+
+        var workingDir = response.getString("workingDir");
+        assertThat(workingDir).endsWith("/my-project");
+    }
+
 
 }

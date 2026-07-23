@@ -190,7 +190,7 @@ public class SessionResource {
         var name = config.tmuxPrefix() + req.name();
         var command = req.effectiveCommand(config.claudeCommand());
         var workingDir = (req.workingDir() == null || req.workingDir().isBlank())
-                ? config.defaultWorkingDir() : req.workingDir();
+                ? config.defaultWorkingDir() + "/" + req.name() : req.workingDir();
 
         // Duplicate name check
         var existingByName = registry.existsByName(name);
