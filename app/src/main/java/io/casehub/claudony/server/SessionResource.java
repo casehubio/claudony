@@ -154,8 +154,7 @@ public class SessionResource {
                                 id, session.caseId().get());
                         return Response.ok(List.of()).build();
                     }
-                    return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)
-                            .await().indefinitely()).build();
+                    return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)).build();
                 })
                 .orElse(Response.status(404).build());
     }

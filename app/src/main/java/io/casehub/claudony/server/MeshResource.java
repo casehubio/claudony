@@ -7,7 +7,7 @@ import io.casehub.platform.api.preferences.SettingsScope;
 import io.casehub.qhorus.api.channel.ChannelDetail;
 import io.casehub.qhorus.api.instance.InstanceInfo;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
+import io.casehub.qhorus.runtime.channel.ChannelService;
 import io.casehub.qhorus.runtime.dashboard.QhorusDashboardService;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -57,9 +57,9 @@ public class MeshResource {
     @Inject
     PreferenceProvider     preferenceProvider;
     @Inject
-    ReactiveChannelService channelService;
+    ChannelService channelService;
     @Inject
-    io.casehub.qhorus.api.store.ReactiveCommitmentStore commitmentStore;
+    io.casehub.qhorus.api.store.CommitmentStore commitmentStore;
 
     private static long maxFeedId(List<Map<String, Object>> feed) {
         return feed.stream()
@@ -92,19 +92,19 @@ public class MeshResource {
 
     @GET
     @Path("/channels")
-    public Uni<List<ChannelDetail>> channels() {
+    public List<ChannelDetail> channels() {
         return dashboard.listChannels();
     }
 
     @GET
     @Path("/instances")
-    public Uni<List<InstanceInfo>> instances() {
+    public List<InstanceInfo> instances() {
         return dashboard.listInstances();
     }
 
     @GET
     @Path("/channels/{name}/timeline")
-    public Uni<List<Map<String, Object>>> timeline(
+    public List<Map<String, Object>> timeline(
             @PathParam("name") String name,
             @QueryParam("after") Long after,
             @QueryParam("limit") @DefaultValue("50") int limit) {
@@ -113,7 +113,7 @@ public class MeshResource {
 
     @GET
     @Path("/feed")
-    public Uni<List<Map<String, Object>>> feed(
+    public List<Map<String, Object>> feed(
             @QueryParam("limit") @DefaultValue("100") int limit) {
         return dashboard.getFeed(limit);
     }
@@ -127,11 +127,29 @@ public class MeshResource {
         return Multi.createFrom().ticks().every(Duration.ofMillis(intervalMs))
                     .onItem().transformToUniAndConcatenate(tick -> {
                     Uni<List<ChannelDetail>> channels =
-                            dashboard.listChannels().onFailure().recoverWithItem(List.of());
+                            Uni.createFrom().item(() -> {
+                                try {
+                                    return dashboard.listChannels();
+                                } catch (Exception e) {
+                                    return List.<ChannelDetail>of();
+                                }
+                            });
                     Uni<List<InstanceInfo>> instances =
-                            dashboard.listInstances().onFailure().recoverWithItem(List.of());
+                            Uni.createFrom().item(() -> {
+                                try {
+                                    return dashboard.listInstances();
+                                } catch (Exception e) {
+                                    return List.<InstanceInfo>of();
+                                }
+                            });
                     Uni<List<Map<String, Object>>> feed =
-                            dashboard.getFeed(100).onFailure().recoverWithItem(List.of());
+                            Uni.createFrom().item(() -> {
+                                try {
+                                    return dashboard.getFeed(100);
+                                } catch (Exception e) {
+                                    return List.<Map<String, Object>>of();
+                                }
+                            });
                     return Uni.combine().all().unis(channels, instances, feed)
                               .combinedWith((ch, inst, f) -> {
                                   long eventId = maxFeedId(f);
@@ -165,8 +183,8 @@ public class MeshResource {
         // Resolve channel synchronously before returning the Multi — RESTEasy Reactive
         // sends 200 + text/event-stream headers before the first emission, so any
         // NotFoundException thrown inside transformToMulti arrives too late to affect
-        // the status code. @Blocking + await() here gives us a real 404.
-        var opt = channelService.findByName(channelName).await().indefinitely();
+        // the status code. @Blocking + direct call here gives us a real 404.
+        var opt = channelService.findByName(channelName);
         if (opt.isEmpty()) {
             throw new NotFoundException("Channel not found: " + channelName);
         }
@@ -174,9 +192,9 @@ public class MeshResource {
 
         // Initial catch-up: fetch messages since cursor
         Multi<String> catchUp = Multi.createFrom().uni(
-                dashboard.getTimeline(channelName, lastSentId.get(), 50)
-                         .invoke(entries -> updateLastSentId(lastSentId, entries))
-                         .map(entries -> entries.isEmpty() ? null : serializeEntries(entries))
+                Uni.createFrom().item(() -> dashboard.getTimeline(channelName, lastSentId.get(), 50))
+                   .invoke(entries -> updateLastSentId(lastSentId, entries))
+                   .map(entries -> entries.isEmpty() ? null : serializeEntries(entries))
                                                       ).filter(Objects::nonNull);
 
         // Live: poll every 500ms for new messages since lastSentId.
@@ -185,13 +203,13 @@ public class MeshResource {
         // caused the emitted SSE frame to not be flushed to the browser reliably.
         Multi<String> live = Multi.createFrom().ticks().every(Duration.ofMillis(500))
                                   .onItem().transformToUniAndConcatenate(tick ->
-                                                                                 dashboard.getTimeline(channelName, lastSentId.get(), 50)
-                                                                                          .invoke(entries -> updateLastSentId(lastSentId, entries))
-                                                                                          .map(entries -> entries.isEmpty() ? null : serializeEntries(entries))
-                                                                                          .onFailure().invoke(e -> LOG.warnf(
-                                                                                                  "channelEvents tick failed for '%s': %s",
-                                                                                                  channelName, e.getMessage()))
-                                                                                          .onFailure().recoverWithItem((String) null)
+                                                                                 Uni.createFrom().item(() -> dashboard.getTimeline(channelName, lastSentId.get(), 50))
+                                                                                    .invoke(entries -> updateLastSentId(lastSentId, entries))
+                                                                                    .map(entries -> entries.isEmpty() ? null : serializeEntries(entries))
+                                                                                    .onFailure().invoke(e -> LOG.warnf(
+                                                                                            "channelEvents tick failed for '%s': %s",
+                                                                                            channelName, e.getMessage()))
+                                                                                    .onFailure().recoverWithItem((String) null)
                                                                         )
                                   .filter(Objects::nonNull);
 
@@ -209,16 +227,15 @@ public class MeshResource {
 
     @GET
     @Path("/channels/{name}/commitments")
-    public Uni<java.util.List<java.util.Map<String, Object>>> commitments(@PathParam("name") String name) {
-        return channelService.findByName(name)
-                             .flatMap(opt -> {
-                                 if (opt.isEmpty()) {
-                                     return Uni.createFrom().item(java.util.List.<java.util.Map<String, Object>>of());
-                                 }
-                                 return commitmentStore.findByChannel(opt.get().id())
-                                                       .map(commitments -> commitments.stream()
-                                                                                      .map(this::toCommitmentMap).toList());
-                             });
+    public java.util.List<java.util.Map<String, Object>> commitments(@PathParam("name") String name) {
+        var opt = channelService.findByName(name);
+        if (opt.isEmpty()) {
+            return java.util.List.of();
+        }
+        var commitments = commitmentStore.findByChannel(opt.get().id());
+        return commitments.stream()
+                          .map(this::toCommitmentMap)
+                          .toList();
     }
 
     private java.util.Map<String, Object> toCommitmentMap(io.casehub.qhorus.api.message.Commitment c) {
@@ -239,44 +256,42 @@ public class MeshResource {
     @POST
     @Path("/channels/{name}/messages")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Uni<Response> postMessage(
+    public Response postMessage(
             @PathParam("name") String name,
             PostMessageRequest req) {
         MessageType type;
         try {
             type = MessageType.valueOf((req == null || req.type() == null ? "status" : req.type()).toUpperCase());
         } catch (IllegalArgumentException e) {
-            return Uni.createFrom().item(
-                    Response.status(400).entity("invalid type: " + (req == null ? null : req.type())).build());
+            return Response.status(400).entity("invalid type: " + (req == null ? null : req.type())).build();
         }
         if (!VALID_HUMAN_TYPES.contains(type)) {
-            return Uni.createFrom().item(
-                    Response.status(400).entity("invalid type: " + req.type()).build());
+            return Response.status(400).entity("invalid type: " + req.type()).build();
         }
 
         switch (type) {
             case RESPONSE, DONE, DECLINE -> {
                 if (req.inReplyTo() == null) {
-                    return Uni.createFrom().item(Response.status(400)
-                                                         .entity(type.name() + " requires inReplyTo").build());
+                    return Response.status(400)
+                                   .entity(type.name() + " requires inReplyTo").build();
                 }
                 if (req.correlationId() == null || req.correlationId().isBlank()) {
-                    return Uni.createFrom().item(Response.status(400)
-                                                         .entity(type.name() + " requires correlationId").build());
+                    return Response.status(400)
+                                   .entity(type.name() + " requires correlationId").build();
                 }
             }
             case HANDOFF -> {
                 if (req.inReplyTo() == null) {
-                    return Uni.createFrom().item(Response.status(400)
-                                                         .entity("HANDOFF requires inReplyTo").build());
+                    return Response.status(400)
+                                   .entity("HANDOFF requires inReplyTo").build();
                 }
                 if (req.correlationId() == null || req.correlationId().isBlank()) {
-                    return Uni.createFrom().item(Response.status(400)
-                                                         .entity("HANDOFF requires correlationId").build());
+                    return Response.status(400)
+                                   .entity("HANDOFF requires correlationId").build();
                 }
                 if (req.target() == null || req.target().isBlank()) {
-                    return Uni.createFrom().item(Response.status(400)
-                                                         .entity("HANDOFF requires target").build());
+                    return Response.status(400)
+                                   .entity("HANDOFF requires target").build();
                 }
             }
             default -> {}
@@ -284,7 +299,7 @@ public class MeshResource {
 
         boolean contentRequired = type != MessageType.EVENT;
         if (contentRequired && (req == null || req.content() == null || req.content().isBlank())) {
-            return Uni.createFrom().item(Response.status(400).entity("content must not be blank").build());
+            return Response.status(400).entity("content must not be blank").build();
         }
         String content = (req != null && req.content() != null && !req.content().isBlank()) ? req.content() : null;
         String sender  = "human:" + securityIdentity.getPrincipal().getName();
@@ -294,22 +309,24 @@ public class MeshResource {
             try {
                 deadline = java.time.Instant.parse(req.deadline());
             } catch (java.time.format.DateTimeParseException e) {
-                return Uni.createFrom().item(Response.status(400).entity("invalid deadline format").build());
+                return Response.status(400).entity("invalid deadline format").build();
             }
         }
 
-        return dashboard.sendHumanMessage(name, sender, type, content,
-                                          req != null ? req.inReplyTo() : null,
-                                          req != null ? req.correlationId() : null,
-                                          req != null ? req.artefactRefs() : null,
-                                          req != null ? req.target() : null,
-                                          deadline,
-                                          req != null ? req.topic() : null)
-                        .map(result -> Response.ok(result).build())
-                        .onFailure(IllegalArgumentException.class)
-                        .recoverWithItem(e -> Response.status(404).entity(e.getMessage()).build())
-                        .onFailure(IllegalStateException.class)
-                        .recoverWithItem(e -> Response.status(409).entity(e.getMessage()).build());
+        try {
+            var result = dashboard.sendHumanMessage(name, sender, type, content,
+                                                    req != null ? req.inReplyTo() : null,
+                                                    req != null ? req.correlationId() : null,
+                                                    req != null ? req.artefactRefs() : null,
+                                                    req != null ? req.target() : null,
+                                                    deadline,
+                                                    req != null ? req.topic() : null);
+            return Response.ok(result).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(404).entity(e.getMessage()).build();
+        } catch (IllegalStateException e) {
+            return Response.status(409).entity(e.getMessage()).build();
+        }
     }
 
     record MeshConfig(String strategy, int interval, int cursorStalenessMinutes) {}

@@ -1,6 +1,6 @@
 package io.casehub.claudony.server;
 
-import io.casehub.claudony.casehub.ClaudonyReactiveWorkerProvisioner;
+import io.casehub.claudony.casehub.ClaudonyWorkerProvisioner;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
@@ -79,7 +79,7 @@ class CasehubStartupServiceTest {
             String id, String caseId, String role) {
         return new io.casehub.claudony.server.model.Session(
                 id,
-                ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + id,
+                ClaudonyWorkerProvisioner.SESSION_PREFIX + id,
                 "/tmp", "claude",
                 io.casehub.claudony.server.model.SessionStatus.IDLE,
                 Instant.now(), Instant.now(),
@@ -92,7 +92,7 @@ class CasehubStartupServiceTest {
     private io.casehub.claudony.server.model.Session sessionNoRole(String id, String caseId) {
         return new io.casehub.claudony.server.model.Session(
                 id,
-                ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + id,
+                ClaudonyWorkerProvisioner.SESSION_PREFIX + id,
                 "/tmp", "claude",
                 io.casehub.claudony.server.model.SessionStatus.IDLE,
                 Instant.now(), Instant.now(),

@@ -5,11 +5,10 @@ import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkResult;
 import io.casehub.api.model.WorkerContext;
-import io.casehub.api.spi.ReactiveCaseChannelProvider;
+import io.casehub.api.spi.CaseChannelProvider;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.SessionStatus;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.event.Event;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Verifies the full SPI lifecycle sequence across ClaudonyReactiveWorkerProvisioner and
@@ -41,9 +43,9 @@ class WorkerLifecycleSequenceTest {
     private final SessionRegistry      registry       = new SessionRegistry(() -> io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
     private final WorkerSessionMapping sessionMapping = new WorkerSessionMapping();
 
-    private TmuxService                          tmux;
-    private ClaudonyReactiveWorkerProvisioner    provisioner;
-    private ClaudonyWorkerStatusListener         listener;
+    private TmuxService                  tmux;
+    private ClaudonyWorkerProvisioner    provisioner;
+    private ClaudonyWorkerStatusListener listener;
     private Event<Object>                        events;
 
     @BeforeEach
@@ -64,7 +66,7 @@ class WorkerLifecycleSequenceTest {
             }
         };
 
-        provisioner = new ClaudonyReactiveWorkerProvisioner(
+        provisioner = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/workspace", null, null, null);
         listener = new ClaudonyWorkerStatusListener(registry, tmux, events, sessionMapping);
     }
@@ -73,7 +75,7 @@ class WorkerLifecycleSequenceTest {
     void happyPath_provisionThenActiveIdleThenStall() throws Exception {
         final UUID caseId = UUID.randomUUID();
         final ProvisionContext ctx = provisionContext(caseId);
-        provisioner.provision(Set.of("default"), ctx).await().indefinitely();
+        provisioner.provision(Set.of("default"), ctx);
         // Role name comes from the taskType in the context.
         final String roleName = ctx.taskType();
         final String sessionId = sessionMapping.findByRole(roleName).orElseThrow();
@@ -82,7 +84,7 @@ class WorkerLifecycleSequenceTest {
         assertThat(registry.find(sessionId)).isPresent();
         assertThat(registry.find(sessionId).get().status()).isEqualTo(SessionStatus.IDLE);
         verify(tmux).createWorkerSession(
-                contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX), anyString(), anyString());
+                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX), anyString(), anyString());
 
         // CaseEngine signals work started → ACTIVE (passes caseId in sessionMeta)
         listener.onWorkerStarted(roleName, Map.of("caseId", caseId.toString()));
@@ -104,7 +106,7 @@ class WorkerLifecycleSequenceTest {
     void faultPath_faultedWorkerIsKilledAndRemovedFromRegistry() throws Exception {
         final UUID caseId = UUID.randomUUID();
         final ProvisionContext ctx = provisionContext(caseId);
-        provisioner.provision(Set.of("default"), ctx).await().indefinitely();
+        provisioner.provision(Set.of("default"), ctx);
         final String roleName = ctx.taskType();
         final String sessionId = sessionMapping.findByRole(roleName).orElseThrow();
 
@@ -123,13 +125,13 @@ class WorkerLifecycleSequenceTest {
         // Use two DIFFERENT roles — same-role concurrent workers are a known MVP limitation
         final UUID caseId = UUID.randomUUID();
         final ProvisionContext ctx1 = provisionContext(caseId);
-        provisioner.provision(Set.of("default"), ctx1).await().indefinitely();
+        provisioner.provision(Set.of("default"), ctx1);
         // Create a second worker with a different taskType
         final ProvisionContext ctx2 = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "reviewer",
                 new io.casehub.api.model.WorkerContext("review", caseId, null, List.of(),
                         io.casehub.api.context.PropagationContext.createRoot(), Map.of()),
                 io.casehub.api.context.PropagationContext.createRoot(), null, null);
-        provisioner.provision(Set.of("default"), ctx2).await().indefinitely();
+        provisioner.provision(Set.of("default"), ctx2);
 
         final String role1 = ctx1.taskType();   // "default"
         final String role2 = ctx2.taskType();   // "reviewer"
@@ -157,15 +159,14 @@ class WorkerLifecycleSequenceTest {
     @Test
     void workerContext_alwaysContainsMeshParticipationKey() {
         CaseLineageQuery lineageQuery = mock(CaseLineageQuery.class);
-        ReactiveCaseChannelProvider channelProvider = mock(ReactiveCaseChannelProvider.class);
-        when(lineageQuery.findCompletedWorkers(any())).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(any())).thenReturn(Uni.createFrom().item(List.of()));
+        CaseChannelProvider channelProvider = mock(CaseChannelProvider.class);
+        when(lineageQuery.findCompletedWorkers(any())).thenReturn(List.of());
+        when(channelProvider.listChannels(any())).thenReturn(List.of());
 
-        var contextProvider = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider);
+        var contextProvider = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider);
 
         WorkerContext ctx = contextProvider.buildContext("worker-1", null,
-                WorkRequest.of("agent", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("agent", Map.of()));
 
         assertThat(ctx.properties()).containsKey("meshParticipation");
     }

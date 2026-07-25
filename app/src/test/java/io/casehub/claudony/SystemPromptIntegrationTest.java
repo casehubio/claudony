@@ -1,6 +1,6 @@
 package io.casehub.claudony;
 
-import io.casehub.claudony.casehub.ClaudonyReactiveWorkerContextProvider;
+import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
 import io.casehub.api.model.WorkRequest;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.*;
 class SystemPromptIntegrationTest {
 
     @Inject
-    ClaudonyReactiveWorkerContextProvider provider;
+    ClaudonyWorkerContextProvider provider;
 
     @Test
     @RunOnVertxContext
