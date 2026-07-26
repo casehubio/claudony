@@ -8,3 +8,5 @@ wksp
 /io/
 
 .idea/
+.claude
+package-lock.json
