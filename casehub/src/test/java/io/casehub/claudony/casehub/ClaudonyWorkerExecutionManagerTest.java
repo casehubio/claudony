@@ -1,8 +1,5 @@
 package io.casehub.claudony.casehub;
 
-import io.casehub.worker.api.Worker;
-import io.casehub.worker.api.WorkerFunction;
-import io.casehub.worker.api.WorkerResult;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
@@ -10,6 +7,9 @@ import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
 import io.casehub.engine.common.internal.model.CaseInstance;
+import io.casehub.worker.api.Worker;
+import io.casehub.worker.api.WorkerFunction;
+import io.casehub.worker.api.WorkerResult;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,15 +18,22 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 class ClaudonyWorkerExecutionManagerTest {
 
@@ -37,7 +44,7 @@ class ClaudonyWorkerExecutionManagerTest {
     private EventBus eventBus;
     private ClaudonyWorkerExecutionManager manager;
 
-    private static final String SESSION_PREFIX = ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX;
+    private static final String SESSION_PREFIX = ClaudonyWorkerProvisioner.SESSION_PREFIX;
 
     @BeforeEach
     void setUp() {
@@ -68,7 +75,7 @@ class ClaudonyWorkerExecutionManagerTest {
         when(tmuxService.sessionExists(sessionName)).thenReturn(true, false);
 
         manager.submit(null, instance, worker, null, Map.of())
-                .await().indefinitely();
+                ;
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(2))
@@ -93,7 +100,7 @@ class ClaudonyWorkerExecutionManagerTest {
         doAnswer(inv -> { captured.set(inv.getArgument(1)); return null; })
                 .when(eventBus).send(anyString(), any());
 
-        manager.submit(null, instance, worker, null, Map.of()).await().indefinitely();
+        manager.submit(null, instance, worker, null, Map.of());
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(2))
@@ -122,7 +129,7 @@ class ClaudonyWorkerExecutionManagerTest {
         });
 
         manager.submit(null, caseInstance(caseId), worker("analyst"), null, Map.of())
-                .await().indefinitely();
+                ;
 
         Thread.sleep(300);
         verify(eventBus, never()).send(anyString(), any());
@@ -146,7 +153,7 @@ class ClaudonyWorkerExecutionManagerTest {
         });
 
         manager.submit(null, caseInstance(caseId), worker("racer"), null, Map.of())
-                .await().indefinitely();
+                ;
 
         // Phase 2: wait for watcher to be at the gate, then simulate terminate() winning
         watcherAtGate.await();
@@ -165,7 +172,7 @@ class ClaudonyWorkerExecutionManagerTest {
         when(config.enabled()).thenReturn(false);
 
         manager.submit(null, caseInstance(UUID.randomUUID()), worker("agent"), null, Map.of())
-                .await().indefinitely();
+                ;
 
         verifyNoInteractions(tmuxService, eventBus);
     }
@@ -176,7 +183,7 @@ class ClaudonyWorkerExecutionManagerTest {
     void submit_doesNothing_whenNoSessionFoundForCase() {
         // No session registered for this caseId
         manager.submit(null, caseInstance(UUID.randomUUID()), worker("agent"), null, Map.of())
-                .await().indefinitely();
+                ;
 
         verifyNoInteractions(tmuxService, eventBus);
     }
@@ -192,7 +199,7 @@ class ClaudonyWorkerExecutionManagerTest {
         when(tmuxService.sessionExists(sessionName)).thenThrow(new IOException("tmux error"));
 
         manager.submit(null, caseInstance(caseId), worker("validator"), null, Map.of())
-                .await().indefinitely();
+                ;
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(2))
@@ -220,9 +227,9 @@ class ClaudonyWorkerExecutionManagerTest {
         });
 
         manager.submit(null, caseInstance(caseId), worker("reviewer"), null, Map.of())
-                .await().indefinitely();
+                ;
         manager.submit(null, caseInstance(caseId), worker("reviewer"), null, Map.of())
-                .await().indefinitely();
+                ;
 
         assertThat(manager.activeWatcherCount()).isEqualTo(1);
         countdown.countDown();
@@ -246,9 +253,9 @@ class ClaudonyWorkerExecutionManagerTest {
         });
 
         manager.submit(null, caseInstance(caseId1), worker("agent"), null, Map.of())
-                .await().indefinitely();
+                ;
         manager.submit(null, caseInstance(caseId2), worker("agent"), null, Map.of())
-                .await().indefinitely();
+                ;
 
         assertThat(manager.getActiveWorkCount("agent")).isEqualTo(2);
         assertThat(manager.getActiveWorkCount("other-role")).isEqualTo(0);
@@ -259,7 +266,7 @@ class ClaudonyWorkerExecutionManagerTest {
 
     @Test
     void schedulePersistedEvent_isNoOp() {
-        manager.schedulePersistedEvent(null).await().indefinitely();
+        manager.schedulePersistedEvent(null);
         verifyNoInteractions(tmuxService, eventBus);
         assertThat(registry.all()).isEmpty();
     }
@@ -280,7 +287,7 @@ class ClaudonyWorkerExecutionManagerTest {
         });
 
         manager.submit(null, caseInstance(caseId), worker("auditor"), null, Map.of())
-                .await().indefinitely();
+                ;
 
         Thread.sleep(100); // Let watcher start
         manager.shutdown();
@@ -335,7 +342,7 @@ class ClaudonyWorkerExecutionManagerTest {
         return Worker.builder()
                 .name(name)
                 .capabilityName(name)
-                .function(new WorkerFunction.Sync<>(Void.class, ctx -> WorkerResult.of(Map.of())))
+                .function(new WorkerFunction.None())
                 .build();
     }
 

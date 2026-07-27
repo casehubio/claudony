@@ -8,3 +8,7 @@ wksp
 /io/
 
 .idea/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude
+package-lock.json

@@ -154,8 +154,7 @@ public class SessionResource {
                                 id, session.caseId().get());
                         return Response.ok(List.of()).build();
                     }
-                    return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)
-                            .await().indefinitely()).build();
+                    return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)).build();
                 })
                 .orElse(Response.status(404).build());
     }
@@ -190,7 +189,7 @@ public class SessionResource {
         var name = config.tmuxPrefix() + req.name();
         var command = req.effectiveCommand(config.claudeCommand());
         var workingDir = (req.workingDir() == null || req.workingDir().isBlank())
-                ? config.defaultWorkingDir() : req.workingDir();
+                ? config.defaultWorkingDir() + "/" + req.name() : req.workingDir();
 
         // Duplicate name check
         var existingByName = registry.existsByName(name);

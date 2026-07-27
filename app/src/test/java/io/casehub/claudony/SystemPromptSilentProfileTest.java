@@ -1,6 +1,6 @@
 package io.casehub.claudony;
 
-import io.casehub.claudony.casehub.ClaudonyReactiveWorkerContextProvider;
+import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
 import io.casehub.api.model.WorkRequest;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -12,7 +12,6 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.UUID;
-import static org.assertj.core.api.Assertions.*;
 
 /**
  * Integration test that verifies system prompt is absent when
@@ -31,7 +30,7 @@ class SystemPromptSilentProfileTest {
     }
 
     @Inject
-    ClaudonyReactiveWorkerContextProvider provider;
+    ClaudonyWorkerContextProvider provider;
 
     @Test
     @RunOnVertxContext
