@@ -122,8 +122,8 @@ Two Quarkus modes from the same binary:
 # Run all tests (all 3 modules — Java)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test
 
-# Run frontend unit tests (vitest — requires GITHUB_TOKEN for @casehubio packages)
-GITHUB_TOKEN=$(gh auth token) npm --prefix app/src/main/webui test
+# Run frontend unit tests (vitest — run mvn initialize -pl app first to unpack @casehubio packages)
+npm --prefix app/src/main/webui test
 
 # Run only claudony-casehub integration tests
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl claudony-casehub
