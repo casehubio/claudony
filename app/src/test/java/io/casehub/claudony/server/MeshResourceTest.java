@@ -453,6 +453,70 @@ class MeshResourceTest {
                .body("[0].topic", equalTo("work"));
     }
 
+
+    @Test
+    void reactionBatch_unknownChannel_returns404() {
+        given()
+                .contentType("application/json")
+                .body("{\"messageIds\":[1,2,3]}")
+                .when()
+                .post("/api/mesh/channels/nonexistent/reactions/batch")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void reactionBatch_emptyMessageIds_returnsEmptyMap() {
+        channelStore.put(io.casehub.qhorus.api.channel.Channel.builder("test-ch").build());
+        given()
+                .contentType("application/json")
+                .body("{\"messageIds\":[]}")
+                .when()
+                .post("/api/mesh/channels/test-ch/reactions/batch")
+                .then()
+                .statusCode(200)
+                .body("$", org.hamcrest.Matchers.anEmptyMap());
+    }
+
+    @Test
+    void topics_unknownChannel_returns404() {
+        given()
+                .when()
+                .get("/api/mesh/channels/nonexistent/topics")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void members_unknownChannel_returns404() {
+        given()
+                .when()
+                .get("/api/mesh/channels/nonexistent/members")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void topics_emptyChannel_returnsEmptyList() {
+        channelStore.put(io.casehub.qhorus.api.channel.Channel.builder("topics-ch").build());
+        given()
+                .when()
+                .get("/api/mesh/channels/topics-ch/topics")
+                .then()
+                .statusCode(200)
+                .body("$", org.hamcrest.Matchers.hasSize(0));
+    }
+
+    @Test
+    void members_emptyChannel_returnsEmptyList() {
+        channelStore.put(io.casehub.qhorus.api.channel.Channel.builder("members-ch").build());
+        given()
+                .when()
+                .get("/api/mesh/channels/members-ch/members")
+                .then()
+                .statusCode(200)
+                .body("$", org.hamcrest.Matchers.hasSize(0));
+    }
 }
 
 @QuarkusTest
