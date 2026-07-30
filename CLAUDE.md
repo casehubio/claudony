@@ -111,7 +111,7 @@ Claudony is a work platform for getting things done through agents and humans. I
 The terminal session is the starting point — how work gets done. Everything else is how you see, understand, and steer it. A "controller" Claude instance manages sessions via MCP. Sessions persist independently — closing a browser tab or iTerm2 window never kills a session.
 
 Two Quarkus modes from the same binary:
-- **Server** — owns tmux sessions, WebSocket terminal streaming, web dashboard, REST API
+- **Server** — owns tmux sessions, WebSocket terminal streaming, web UI, REST API
 - **Agent** — local MCP endpoint for controller Claude, iTerm2 integration, clipboard detection
 
 ---
@@ -323,21 +323,22 @@ claudony-app/src/main/java/dev/claudony/
 
 claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 ├── esbuild.config.mjs                 — two entry points (app.ts, terminal.ts), code splitting
+├── vitest.config.ts                   — test config (excludes .casehub-packages from discovery)
 ├── src/
-│   ├── app.ts                         — dashboard entry point (loadSite + session-grid + initTheme)
+│   ├── app.ts                         — fleet home entry point (loadSite + session-grid + fleet-panel + mesh-panel + initTheme)
 │   ├── terminal.ts                    — terminal entry point (loadSite + compose overlay + lifecycle + initTheme)
 │   ├── theme.ts                       — pages-ui-tokens integration: initTheme() injects --pages-* design tokens,
 │   │                                       THEME_CSS bridges --pages-* to claudony's legacy var names
 │   ├── util/auth.ts + time.ts         — shared utilities
 │   ├── util/auth.ts + time.ts         — shared utilities
 │   ├── util/channel-adapter.ts        — pure mapping: TimelineEntry→QhorusMessage, ChannelInfo→QhorusChannel
-│   ├── util/channel-adapter.test.ts   — 19 vitest unit tests for the adapter layer
+│   ├── util/channel-adapter.test.ts   — 25 vitest unit tests for the adapter layer
 │   ├── util/terminal-controller.ts    — shared terminal setup: attachTerminal(), TerminalHandle (WebSocket,
 │   │                                       resize, session switching). Used by both workbench and fleet mode.
 │   └── components/
-│       ├── session-grid.ts            — dashboard session card grid (vanilla HTMLElement)
-│       ├── terminal-header.ts         — back link, session name, status badge, toggle buttons (vanilla HTMLElement)
-│       ├── terminal-workspace.ts      — three-column flex coordinator for fleet mode (vanilla HTMLElement,
+│       ├── session-grid.ts            — session card grid with git/PR/service status, dialogs, auth (LitElement)
+│       ├── terminal-header.ts         — back link, session name, status badge, toggle buttons (LitElement)
+│       ├── terminal-workspace.ts      — three-column flex coordinator for fleet mode (LitElement,
 │       │                                  delegates to terminal-controller.ts)
 │       ├── claudony-workbench.ts      — LitElement composition root for case-bound sessions; composes terminal,
 │       │                                  channel-nav, channel-feed, channel-input, task/correlation/artifact
@@ -346,18 +347,20 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 │       │                                  Task, correlation, and artifact panels promoted to
 │       │                                  @casehubio/blocks-ui-channel-activity (channel-task-panel,
 │       │                                  channel-correlation-panel, channel-artifact-panel).
-│       ├── worker-panel.ts            — SSE worker list, click-to-switch (vanilla HTMLElement)
+│       ├── claudony-fleet-panel.ts     — fleet peer management: health dots, circuit state, add/ping/remove (LitElement)
+│       ├── claudony-mesh-panel.ts     — mesh panel: overview/channel/feed views, SSE/polling, interjection dock (LitElement)
+│       ├── worker-panel.ts            — SSE worker list, click-to-switch (LitElement)
 │       ├── channel-panel.ts           — LitElement composing blocks-ui <channel-feed> + <channel-input>;
 │       │                                  owns SSE/polling, cursor persistence, case context header, lineage.
 │       │                                  Superseded by claudony-workbench for case-bound sessions.
-│       └── key-bar.ts                 — touch device special keys (vanilla HTMLElement)
+│       └── key-bar.ts                 — touch device special keys (LitElement)
 
 claudony-app/src/main/resources/META-INF/resources/  — static files served by Quarkus
 ├── manifest.json + sw.js              — PWA
 └── app/
-    ├── index.html + dashboard.js      — session management dashboard (pre-migration)
+    ├── index.html                     — fleet home shell (loads Quinoa-built app.js)
     ├── session.html                   — terminal page shell (loads Quinoa-built terminal.js)
-    └── style.css                      — shared dark theme + dashboard styles
+    └── style.css                      — shared dark theme styles (--pages-* tokens)
 ```
 
 ### CaseHub integration
@@ -422,7 +425,7 @@ claudony.agent.api-key=                  # auto-generated on first server run; s
 claudony.fleet-key=                     # shared secret for peer-to-peer API calls; generate with POST /api/peers/generate-fleet-key
 claudony.peers=                         # comma-separated peer URLs for static discovery (e.g. http://mac-mini:7777)
 claudony.mdns-discovery=false           # enable mDNS auto-discovery on LAN (scaffold; full impl follow-on)
-claudony.name=Claudony                  # instance name shown in fleet dashboard
+claudony.name=Claudony                  # instance name shown in fleet UI
 claudony.case-worker-update=hybrid      # events-only | hybrid | registry-hooks
 claudony.case-worker-heartbeat-ms=30000 # heartbeat interval for hybrid strategy
 # Production — optional; auto-generated and persisted to ~/.claudony/encryption-key on first run.
@@ -448,7 +451,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-07-26, after claudony#184 reactive→blocking migration):** 16 in `claudony-core` + 175 in `claudony-casehub` + 405 in `claudony-app` = **596 total, 596 passing** (casehub -1: dropped reactive-specific event loop test). App module gained 6 tests (MeshResource validation, commitment endpoint, timeline enrichment). Previous baseline: 591 (2026-07-07, after #168 broadcaster migration). Frontend: 19 vitest (was 22; -3 CommitmentRecord tests promoted to blocks-ui). E2E: 4 new workbench tests (WorkbenchE2ETest). No known failing tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-07-26, after claudony#184 reactive→blocking migration):** 16 in `claudony-core` + 175 in `claudony-casehub` + 405 in `claudony-app` = **596 total, 596 passing** (casehub -1: dropped reactive-specific event loop test). App module gained 6 tests (MeshResource validation, commitment endpoint, timeline enrichment). Previous baseline: 591 (2026-07-07, after #168 broadcaster migration). Frontend: 25 vitest (was 19; +6 adapter tests for toChannelMember/toQhorusTopic in #185). E2E: 4 new workbench tests (WorkbenchE2ETest). No known failing tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -493,7 +496,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — engine integration (CasehubEnabledProfile): startCase()→CaseStartedEventHandler(blocking=true, engine#367)→CONTEXT_CHANGED→tryProvision()→WorkflowExecutionCompleted→ClaudonyLedgerEventCapture→findCompletedWorkers() round-trip; TmuxService mocked; real `ClaudonyWorkerContextProvider` exercised (no @InjectMock); `TestAgentCase` + `NoOpWorkerExecutionManager` + `NoOpJobScheduler` support beans in test sources; test manually fires `WorkerExecutionStarted` CaseLifecycleEvent before completion (engine#390 changed `WorkerExecutionCompleted` actorId to "system" — worker name now resolved from preceding started entry by sequence number); `ClaudonyLedgerEventCaptureTest` — 13 tests: happy path fields, sequence increment per case, sequence independence, null guards (2), worker event type, WorkerStarted drain sets causedByEntryId, WorkerStarted without pre-stored context causedByEntryId is null, drain is idempotent on second fire, tenancyId propagated from event (#143), tenancyId defaults to "default" when null (#143), WorkerExecutionCompleted drain fires exit signal, WorkerExecutionCompleted drain no-op when empty; `ClaudonyLedgerEventCaptureSignalTest` — 2 tests (CasehubEnabledProfile): signal fires with mock runtime, no signal when drain empty; `AgentCaseStartupTest` — plain JUnit: YAML loads, 5 field assertions (name, namespace, capability, binding, goal); `AgentCaseCompletionTest` — CompletionTestProfile: 1 E2E test: full chain from startCase to CaseStatus.COMPLETED; `CasehubStartupServiceTest` — plain JUnit (no Quarkus): 3 tests: UUID guard, null instance, roleName fallback; `ClaudonyCaseChannelProviderPostgresIT` — 4 PostgreSQL IT tests (profile-gated, not run in default `mvn test`): openChannel, listChannels via findByNamePrefix (asserts work/observe/oversight purposes), listChannels excludes other cases, postToChannel; uses `@RunOnVertxContext + UniAsserter` (Panache.withTransaction() requires Vert.x context on the test thread), `PostgresTestResource` (QuarkusTestResourceLifecycleManager starts `postgres:17-alpine` before augmentation — highest config priority), `ReactivePostgresTestProfile`
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
-- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 dashboard UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (19: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K, event message ×2, type dropdown ×3, catch-up on reopen, stale cursor prompt, stale catch-up, stale reload, real-time SSE push, EventSource error→poll fallback), CaseWorkerPanelE2ETest (7: standalone placeholder, CaseHub auto-expand + worker list, click-to-switch, regression guard SSE, initial SSE snapshot, SSE push update, EventSource close), CaseContextPanelE2ETest (4: case header with role/status, no header for standalone, lineage toggle expand/collapse, channel auto-select), WorkbenchE2ETest (4: case-bound renders workbench, standalone renders fleet, terminal container present, dock strip buttons) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
+- `e2e/` — ClaudeE2ETest (real `claude` CLI), PlaywrightSetupE2ETest (4 browser infra), DashboardE2ETest (7 fleet home UI), TerminalPageE2ETest (2: structure + proxy resize URL), ChannelPanelE2ETest (19: toggle, dropdown, timeline, badges, human sender, post message, cursor polling, Ctrl+K, event message ×2, type dropdown ×3, catch-up on reopen, stale cursor prompt, stale catch-up, stale reload, real-time SSE push, EventSource error→poll fallback), CaseWorkerPanelE2ETest (7: standalone placeholder, CaseHub auto-expand + worker list, click-to-switch, regression guard SSE, initial SSE snapshot, SSE push update, EventSource close), CaseContextPanelE2ETest (4: case header with role/status, no header for standalone, lineage toggle expand/collapse, channel auto-select), WorkbenchE2ETest (4: case-bound renders workbench, standalone renders fleet, terminal container present, dock strip buttons) — all via `mvn test -Pe2e -Dtest=...`, skipped in default run
 
 **Playwright `<option>` element visibility:** Playwright 1.52+ considers `<option>` elements inside a `<select>` as "hidden" (zero rendered dimensions). Use `waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.ATTACHED))` instead of the default (`visible`) when waiting for options to be added to a dropdown. Default `waitFor()` will timeout even when the option is in the DOM.
 
@@ -527,8 +530,8 @@ Stateful `@ApplicationScoped` beans (e.g. `AuthRateLimiter`) expose `resetForTes
 Claudony is the integration layer in a three-project Quarkus Native AI Agent Ecosystem:
 
 - **CaseHub** (`~/claude/casehub/engine`) — orchestration/choreography engine; defines SPIs that Claudony implements (`~/claude/casehub-poc` is the retiring POC — do not use)
-- **Qhorus** (`~/claude/casehub/qhorus`) — agent communication mesh; Claudony embeds it and provides the dashboard observation layer
-- **Claudony** (this project) — wires everything together; implements CaseHub SPIs, embeds Qhorus, hosts the unified dashboard
+- **Qhorus** (`~/claude/casehub/qhorus`) — agent communication mesh; Claudony embeds it and provides the observation layer
+- **Claudony** (this project) — wires everything together; implements CaseHub SPIs, embeds Qhorus, hosts the unified UI
 
 The canonical ecosystem design document lives here in this repo. It is the master architectural blueprint for all three projects — covering project topology, SPI contracts, MCP tool surfaces, choreography/orchestration use cases, the unified observer dashboard, human-in-the-loop interjection, and the B→C→A build roadmap.
 
