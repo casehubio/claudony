@@ -21,7 +21,7 @@
 <body>
 <div class="card">
   <h1>RemoteCC</h1>
-  <pages-input id="username" label="Username" placeholder="Your name" type="text"></pages-input>
+  <pages-input id="username" label="Username" placeholder="Your name" type="text" autocomplete="username webauthn"></pages-input>
   <pages-button label="Sign in with Passkey" variant="primary" onclick="login()"></pages-button>
   <div class="error" id="error"></div>
   <p class="hint">Use Touch ID or Face ID to authenticate.</p>

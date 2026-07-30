@@ -359,6 +359,8 @@ public class MeshResource {
                                 AddReactionRequest req) {
         var channel = channelService.findByName(name);
         if (channel.isEmpty()) {return Response.status(404).build();}
+        if (req == null || req.emoji() == null || req.emoji().isBlank())
+            return Response.status(400).entity("emoji is required").build();
         String actorId = securityIdentity.getPrincipal().getName();
         reactionService.react(messageId, req.emoji(), actorId,
                               io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
@@ -372,6 +374,8 @@ public class MeshResource {
                                    @QueryParam("emoji") String emoji) {
         var channel = channelService.findByName(name);
         if (channel.isEmpty()) {return Response.status(404).build();}
+        if (emoji == null || emoji.isBlank())
+            return Response.status(400).entity("emoji query param is required").build();
         String actorId = securityIdentity.getPrincipal().getName();
         reactionService.unreact(messageId, emoji, actorId);
         return Response.ok().build();

@@ -115,7 +115,7 @@ export class ClaudonyMeshPanel extends LitElement {
 
   private async _initStrategy(): Promise<void> {
     try {
-      const cfg = await fetch('/api/mesh/config').then(r => r.json());
+      const cfg = await fetchWithAuth('/api/mesh/config').then(r => r.json());
       this._strategy = cfg.strategy === 'sse' ? 'sse' : 'poll';
       this._pollInterval = cfg.interval || 3000;
       this._startStrategy();
@@ -131,8 +131,11 @@ export class ClaudonyMeshPanel extends LitElement {
     }
   }
 
+  private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
   private _stopStrategy(): void {
     if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+    if (this._reconnectTimer) { clearTimeout(this._reconnectTimer); this._reconnectTimer = null; }
     if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
   }
 
@@ -148,16 +151,16 @@ export class ClaudonyMeshPanel extends LitElement {
     };
     this._eventSource.onerror = () => {
       if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
-      setTimeout(() => { if (!this._eventSource) this._connectSSE(); }, 2000);
+      this._reconnectTimer = setTimeout(() => { this._reconnectTimer = null; if (!this._eventSource) this._connectSSE(); }, 2000);
     };
   }
 
   private async _poll(): Promise<void> {
     try {
       const [channels, instances, feed] = await Promise.all([
-        fetch('/api/mesh/channels').then(r => r.json()),
-        fetch('/api/mesh/instances').then(r => r.json()),
-        fetch('/api/mesh/feed?limit=100').then(r => r.json()),
+        fetchWithAuth('/api/mesh/channels').then(r => r.json()),
+        fetchWithAuth('/api/mesh/instances').then(r => r.json()),
+        fetchWithAuth('/api/mesh/feed?limit=100').then(r => r.json()),
       ]);
       this._update({ channels, instances, feed });
     } catch { /* ignore */ }
@@ -198,7 +201,7 @@ export class ClaudonyMeshPanel extends LitElement {
     const content = textarea?.value?.trim();
     if (!content || !this._dockChannel) return;
     try {
-      const resp = await fetch(
+      const resp = await fetchWithAuth(
         '/api/mesh/channels/' + encodeURIComponent(this._dockChannel) + '/messages',
         { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, type: this._dockType }) }
       );
@@ -307,15 +310,14 @@ export class ClaudonyMeshPanel extends LitElement {
     const { channels, feed } = this._data;
     if (!channels.length) return html`<div class="empty">No active channels</div>`;
 
-    if (!this._selectedChannel || !channels.find(c => c.name === this._selectedChannel)) {
-      this._selectedChannel = channels[0]!.name;
-    }
+    const selected = (!this._selectedChannel || !channels.find(c => c.name === this._selectedChannel))
+      ? channels[0]!.name : this._selectedChannel;
 
-    const filtered = (feed || []).filter(m => m.channel === this._selectedChannel);
+    const filtered = (feed || []).filter(m => m.channel === selected);
     return html`
       <select class="ch-select" style="margin-bottom:8px"
         @change=${(e: Event) => { this._selectedChannel = (e.target as HTMLSelectElement).value; this._dockChannel = this._selectedChannel; }}>
-        ${channels.map(ch => html`<option value=${ch.name} ?selected=${ch.name === this._selectedChannel}>#${ch.name}</option>`)}
+        ${channels.map(ch => html`<option value=${ch.name} ?selected=${ch.name === selected}>#${ch.name}</option>`)}
       </select>
       <div>
         ${filtered.length
