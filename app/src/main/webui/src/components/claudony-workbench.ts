@@ -3,6 +3,7 @@ import { customElement, state } from 'lit/decorators.js';
 import type { QhorusMessage, QhorusChannel, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
 import { ChannelEventTopics } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
+import '@casehubio/pages-ui-components';
 import { attachTerminal, type TerminalHandle } from '../util/terminal-controller.js';
 import { toQhorusMessage, toQhorusChannel, type TimelineEntry, type ChannelInfo } from '../util/channel-adapter.js';
 import { toCommitmentMap, type CommitmentRecord } from '@casehubio/blocks-ui-channel-activity';
@@ -622,8 +623,8 @@ export class ClaudonyWorkbench extends LitElement {
         ${this._showStalePrompt ? html`
           <div class="stale-prompt">
             <span class="stale-msg">You were away for a while.</span>
-            <button class="stale-btn" @click=${() => this._onCatchUp()}>Catch up from where you left off</button>
-            <button class="stale-btn secondary" @click=${() => this._onReload()}>Reload full history</button>
+            <pages-button variant="ghost" size="sm" label="Catch up from where you left off" @click=${() => this._onCatchUp()}></pages-button>
+            <pages-button variant="ghost" size="sm" label="Reload full history" @click=${() => this._onReload()}></pages-button>
           </div>
         ` : nothing}
 
@@ -640,12 +641,12 @@ export class ClaudonyWorkbench extends LitElement {
         ${this._error ? html`<div class="error">${this._error}</div>` : nothing}
 
         <div class="dock-strip">
-          <button class="dock-btn ${this._dockState['tasks'] ? 'active' : ''}"
-            @click=${() => this._toggleDock('tasks')}>Tasks</button>
-          <button class="dock-btn ${this._dockState['correlation'] ? 'active' : ''}"
-            @click=${() => this._toggleDock('correlation')}>Correlation</button>
-          <button class="dock-btn ${this._dockState['artifacts'] ? 'active' : ''}"
-            @click=${() => this._toggleDock('artifacts')}>Artifacts</button>
+          <pages-button size="xs" variant=${this._dockState['tasks'] ? 'secondary' : 'ghost'} label="Tasks"
+            @click=${() => this._toggleDock('tasks')}></pages-button>
+          <pages-button size="xs" variant=${this._dockState['correlation'] ? 'secondary' : 'ghost'} label="Correlation"
+            @click=${() => this._toggleDock('correlation')}></pages-button>
+          <pages-button size="xs" variant=${this._dockState['artifacts'] ? 'secondary' : 'ghost'} label="Artifacts"
+            @click=${() => this._toggleDock('artifacts')}></pages-button>
         </div>
       </div>
 
@@ -684,7 +685,7 @@ export class ClaudonyWorkbench extends LitElement {
       <div class="case-header">
         <div class="case-info">
           <span class="case-role">${role}</span>
-          <span class="status-dot ${status}"></span>
+          <pages-status-dot variant=${status === 'active' ? 'success' : status === 'waiting' ? 'warning' : status === 'faulted' ? 'danger' : 'neutral'}></pages-status-dot>
           <span class="case-elapsed">${this._elapsed}</span>
         </div>
         <div class="lineage-toggle" @click=${() => { this._lineageExpanded = !this._lineageExpanded; }}>
@@ -731,7 +732,7 @@ export class ClaudonyWorkbench extends LitElement {
             return html`
               <div class="worker-row ${isActive ? 'active-worker' : ''}"
                 @click=${() => { if (!isActive) this._handleWorkerSwitch(w.id, displayName); }}>
-                <span class="worker-status-dot ${status}"></span>
+                <pages-status-dot variant=${status === 'active' ? 'success' : status === 'waiting' ? 'warning' : status === 'faulted' ? 'danger' : 'neutral'}></pages-status-dot>
                 <span class="worker-name">${displayName}</span>
                 <span class="worker-time">${timeAgo}</span>
               </div>`;

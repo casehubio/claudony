@@ -115,63 +115,67 @@ loadSite(container, app).then(() => {
       workspace.configure({ sessionId, sessionName, proxyPeer, channel });
     });
 
-  // ── Compose overlay ────────────────────────────────────────────────────
+  // ── Compose modal ──────────────────────────────────────────────────────
 
-  const overlay = document.createElement("div");
-  overlay.id = "compose-overlay";
-  overlay.className = "compose-overlay hidden";
-  overlay.innerHTML = `
-    <div class="compose-dialog">
-      <div class="compose-header">
-        <span>Compose</span>
-        <span class="compose-hint">Ctrl+Enter to send · Esc to cancel</span>
-      </div>
-      <textarea id="compose-textarea" class="compose-textarea" placeholder="Type your message here — full mouse editing supported" rows="6" spellcheck="false"></textarea>
-      <div class="compose-actions">
-        <button id="compose-send-btn" class="compose-send">Send</button>
-        <button id="compose-cancel-btn" class="compose-cancel">Cancel</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
+  import('@casehubio/pages-primitives/modal');
+  import('@casehubio/pages-ui-components');
 
-  const composeTextarea = overlay.querySelector("#compose-textarea") as HTMLTextAreaElement;
+  const composeModal = document.createElement('pages-modal') as any;
+  composeModal.size = 'md';
+  const headerSlot = document.createElement('span');
+  headerSlot.slot = 'header';
+  headerSlot.textContent = 'Compose';
+  composeModal.appendChild(headerSlot);
+
+  const composeTextarea = document.createElement('pages-textarea') as any;
+  composeTextarea.placeholder = 'Type your message here — full mouse editing supported';
+  composeTextarea.rows = 6;
+  composeModal.appendChild(composeTextarea);
+
+  const actionsSlot = document.createElement('div');
+  actionsSlot.slot = 'actions';
+  const sendBtn = document.createElement('pages-button') as any;
+  sendBtn.variant = 'primary'; sendBtn.label = 'Send';
+  const cancelBtn = document.createElement('pages-button') as any;
+  cancelBtn.variant = 'ghost'; cancelBtn.label = 'Cancel';
+  actionsSlot.appendChild(cancelBtn);
+  actionsSlot.appendChild(sendBtn);
+  composeModal.appendChild(actionsSlot);
+  document.body.appendChild(composeModal);
+
+  let composeOpen = false;
 
   function openCompose(): void {
-    overlay.classList.remove("hidden");
-    composeTextarea.focus();
-    composeTextarea.select();
+    composeOpen = true;
+    composeModal.open = true;
   }
 
   function closeCompose(): void {
-    overlay.classList.add("hidden");
+    composeOpen = false;
+    composeModal.open = false;
     workspace.getTerminal()?.terminal?.focus();
   }
 
   function sendCompose(): void {
     const text = composeTextarea.value;
     if (!text) { closeCompose(); return; }
-    composeTextarea.value = "";
+    composeTextarea.value = '';
     closeCompose();
     workspace.getTerminal()?.paste(text);
   }
 
-  overlay.querySelector("#compose-send-btn")!.addEventListener("click", sendCompose);
-  overlay.querySelector("#compose-cancel-btn")!.addEventListener("click", closeCompose);
+  sendBtn.addEventListener('click', sendCompose);
+  cancelBtn.addEventListener('click', closeCompose);
+  composeModal.addEventListener('pages-modal-close', closeCompose);
 
-  composeTextarea.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendCompose(); }
-    if (e.key === "Escape") { e.preventDefault(); closeCompose(); }
-  });
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeCompose();
+  composeTextarea.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendCompose(); }
   });
 
   // ── Global keyboard shortcuts ──────────────────────────────────────────
 
   document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.key === "g" && overlay.classList.contains("hidden")) {
+    if (e.ctrlKey && e.key === "g" && !composeOpen) {
       e.preventDefault();
       openCompose();
     }

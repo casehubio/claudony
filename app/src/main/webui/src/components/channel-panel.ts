@@ -1,7 +1,8 @@
 import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { QhorusMessage, QhorusChannel, MessageType } from '@casehubio/blocks-ui-channel-activity';
+import type { QhorusMessage, QhorusChannel, MessageType, SelectOption } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
+import '@casehubio/pages-ui-components';
 import { toQhorusMessage, toQhorusChannel } from '../util/channel-adapter';
 import type { TimelineEntry, ChannelInfo } from '../util/channel-adapter';
 
@@ -218,13 +219,12 @@ export class ClaudonyChannelPanel extends LitElement {
 
     return html`
       <div class="header">
-        <select class="ch-select" @change=${(e: Event) => this._onChannelSelect(e)}>
-          <option value="">— select channel —</option>
-          ${this._channels.map(ch => html`
-            <option value=${ch.id} ?selected=${ch.id === this._selectedChannelId}>${ch.name}</option>
-          `)}
-        </select>
-        <button class="close-btn" @click=${() => this.close()} title="Close">&#10005;</button>
+        <pages-select style="flex:1" .options=${[
+          { value: '', label: '— select channel —' },
+          ...this._channels.map(ch => ({ value: ch.id, label: ch.name }))
+        ]} .value=${this._selectedChannelId}
+          @change=${(e: Event) => this._onChannelSelect(e)}></pages-select>
+        <pages-button variant="ghost" size="xs" label="×" title="Close" @click=${() => this.close()}></pages-button>
       </div>
 
       ${this._caseId ? this._renderCaseHeader() : nothing}
@@ -233,8 +233,8 @@ export class ClaudonyChannelPanel extends LitElement {
       ${this._showStalePrompt ? html`
         <div class="stale-prompt">
           <span class="stale-msg">You were away for a while.</span>
-          <button class="stale-btn" @click=${() => this._onCatchUp()}>Catch up from where you left off</button>
-          <button class="stale-btn secondary" @click=${() => this._onReload()}>Reload full history</button>
+          <pages-button variant="ghost" size="sm" label="Catch up from where you left off" @click=${() => this._onCatchUp()}></pages-button>
+          <pages-button variant="ghost" size="sm" label="Reload full history" @click=${() => this._onReload()}></pages-button>
         </div>
       ` : nothing}
 
@@ -257,7 +257,7 @@ export class ClaudonyChannelPanel extends LitElement {
       <div class="case-header">
         <div class="case-info">
           <span class="case-role">${role}</span>
-          <span class="status-dot ${status}"></span>
+          <pages-status-dot variant=${status === 'active' ? 'success' : status === 'waiting' ? 'warning' : status === 'faulted' ? 'danger' : 'neutral'}></pages-status-dot>
           <span class="case-elapsed">${this._elapsed}</span>
         </div>
         <div class="lineage-toggle" @click=${() => this._toggleLineage()}>
