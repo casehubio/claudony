@@ -1,11 +1,11 @@
 import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { QhorusMessage, QhorusChannel, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
+import type { QhorusMessage, QhorusChannel, QhorusTopic, ChannelMember, Reaction, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
 import { ChannelEventTopics } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/pages-ui-components';
 import { attachTerminal, type TerminalHandle } from '../util/terminal-controller.js';
-import { toQhorusMessage, toQhorusChannel, type TimelineEntry, type ChannelInfo } from '../util/channel-adapter.js';
+import { toQhorusMessage, toQhorusChannel, toChannelMember, toQhorusTopic, type TimelineEntry, type ChannelInfo, type MembershipResponse, type TopicSummaryResponse } from '../util/channel-adapter.js';
 import { toCommitmentMap, type CommitmentRecord } from '@casehubio/blocks-ui-channel-activity';
 import { fetchWithAuth } from '../util/auth.js';
 
@@ -68,7 +68,13 @@ export class ClaudonyWorkbench extends LitElement {
   @state() private _workers: WorkerInfo[] = [];
 
   // ── Dock panels ──────────────────────────────────────────────────────────
-  @state() private _dockState: Record<string, boolean> = { tasks: false, correlation: false, artifacts: false };
+  @state() private _dockState: Record<string, boolean> = { tasks: false, correlation: false, artifacts: false, members: false };
+
+  // ── Phase 4: reactions, topics, members, threads ────────────────────────
+  @state() private _reactions: Reaction[] = [];
+  @state() private _topics: QhorusTopic[] = [];
+  @state() private _members: ChannelMember[] = [];
+  @state() private _viewMode: 'flat' | 'threaded' = 'flat';
 
   // ── Non-reactive state ───────────────────────────────────────────────────
   private _sessionId = '';
@@ -342,6 +348,18 @@ export class ClaudonyWorkbench extends LitElement {
       case 'worker-selected':
         this._handleWorkerSwitch(payload.sessionId, payload.name);
         break;
+      case ChannelEventTopics.REACT:
+        this._addReaction(payload.messageId, payload.emoji);
+        break;
+      case ChannelEventTopics.UNREACT:
+        this._removeReaction(payload.messageId, payload.emoji);
+        break;
+      case ChannelEventTopics.SELECT_TOPIC:
+        this._viewMode = 'flat';
+        break;
+      case ChannelEventTopics.VIEW_MODE:
+        this._viewMode = payload.mode === 'threaded' ? 'threaded' : 'flat';
+        break;
     }
   }
 
@@ -407,6 +425,8 @@ export class ClaudonyWorkbench extends LitElement {
       this._fullLoad(name);
     }
     this._fetchCommitments(name);
+    this._fetchTopics();
+    this._fetchMembers();
   }
 
   private _openEventSource(name: string): void {
@@ -419,6 +439,7 @@ export class ClaudonyWorkbench extends LitElement {
         if (Array.isArray(entries) && entries.length) {
           this._appendMessages(name, entries);
           this._fetchCommitments(name);
+          this._fetchReactions();
         }
       } catch { /* ignore */ }
     };
@@ -450,7 +471,7 @@ export class ClaudonyWorkbench extends LitElement {
   private _fullLoad(name: string): void {
     fetch(`/api/mesh/channels/${encodeURIComponent(name)}/timeline?limit=100`)
       .then(r => r.ok ? r.json() : undefined)
-      .then((e: TimelineEntry[] | undefined) => { if (e?.length) this._appendMessages(name, e); })
+      .then((e: TimelineEntry[] | undefined) => { if (e?.length) { this._appendMessages(name, e); this._fetchReactions(); } })
       .catch(() => { this._error = 'Failed to load messages.'; });
   }
 
@@ -484,6 +505,79 @@ export class ClaudonyWorkbench extends LitElement {
         this._commitments = toCommitmentMap(data);
       })
       .catch(() => { /* ignore */ });
+  }
+
+  private _fetchReactions(): void {
+    if (!this._selectedChannelId || this._messages.length === 0) { this._reactions = []; return; }
+    const messageIds = this._messages.map(m => Number(m.id)).filter(id => !isNaN(id));
+    if (messageIds.length === 0) { this._reactions = []; return; }
+    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/reactions/batch`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageIds }),
+    })
+      .then(r => r.ok ? r.json() : {})
+      .then((data: Record<string, Array<{ emoji: string; count: number; actorIds: string[] }>>) => {
+        const reactions: Reaction[] = [];
+        for (const [msgId, groups] of Object.entries(data)) {
+          for (const g of groups) {
+            for (const actorId of g.actorIds) {
+              reactions.push({ messageId: msgId, emoji: g.emoji, actorId, createdAt: '' });
+            }
+          }
+        }
+        this._reactions = reactions;
+      })
+      .catch(() => { this._reactions = []; });
+  }
+
+  private _addReaction(messageId: string, emoji: string): void {
+    if (!this._selectedChannelId) return;
+    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/messages/${messageId}/reactions`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emoji }),
+    }).then(() => this._fetchReactions()).catch(() => { /* ignore */ });
+  }
+
+  private _removeReaction(messageId: string, emoji: string): void {
+    if (!this._selectedChannelId) return;
+    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/messages/${messageId}/reactions?emoji=${encodeURIComponent(emoji)}`, {
+      method: 'DELETE',
+    }).then(() => this._fetchReactions()).catch(() => { /* ignore */ });
+  }
+
+  private _fetchTopics(): void {
+    if (!this._selectedChannelId) { this._topics = []; return; }
+    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/topics`)
+      .then(r => r.ok ? r.json() : [])
+      .then((data: TopicSummaryResponse[]) => {
+        this._topics = data.map(s => toQhorusTopic(s, this._selectedChannelId));
+      })
+      .catch(() => { this._topics = []; });
+  }
+
+  private _fetchMembers(): void {
+    if (!this._selectedChannelId) { this._members = []; return; }
+    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/members`)
+      .then(r => r.ok ? r.json() : [])
+      .then((data: MembershipResponse[]) => {
+        this._members = data.map(m => toChannelMember(m, this._selectedChannelId));
+      })
+      .catch(() => { this._members = []; });
+  }
+
+  private _groupThreads(): Array<{ root: QhorusMessage; replies: QhorusMessage[] }> {
+    const roots: QhorusMessage[] = [];
+    const replyMap = new Map<string, QhorusMessage[]>();
+    for (const msg of this._messages) {
+      if (msg.inReplyTo) {
+        const replies = replyMap.get(msg.inReplyTo) ?? [];
+        replies.push(msg);
+        replyMap.set(msg.inReplyTo, replies);
+      } else {
+        roots.push(msg);
+      }
+    }
+    return roots.map(root => ({ root, replies: replyMap.get(root.id) ?? [] }));
   }
 
   private _sendMessage(content: string, speechAct?: string, inReplyTo?: string): void {
@@ -630,9 +724,19 @@ export class ClaudonyWorkbench extends LitElement {
 
         <channel-nav .channels=${this._channels} .selectedChannelId=${this._selectedChannelId}></channel-nav>
 
+        ${this._topics.length > 0 ? html`
+          <blocks-channel-topic-bar .topics=${this._topics}
+            .viewMode=${this._viewMode}></blocks-channel-topic-bar>
+        ` : nothing}
+
         <div class="feed-container">
-          <channel-feed .messages=${this._messages} .channelId=${this._selectedChannelId}
-            .staleCursorMinutes=${0}></channel-feed>
+          ${this._viewMode === 'threaded'
+            ? this._groupThreads().map(t => html`
+                <blocks-channel-thread .rootMessage=${t.root} .replies=${t.replies}
+                  .reactions=${this._reactions.filter(r => r.messageId === t.root.id || t.replies.some(rp => rp.id === r.messageId))}
+                  .selectedMessageId=${this._selectedMessageId}></blocks-channel-thread>`)
+            : html`<channel-feed .messages=${this._messages} .channelId=${this._selectedChannelId}
+                .reactions=${this._reactions} .staleCursorMinutes=${0}></channel-feed>`}
         </div>
 
         <channel-input .channelId=${this._selectedChannelId} .showTypeSelector=${true}
@@ -647,6 +751,8 @@ export class ClaudonyWorkbench extends LitElement {
             @click=${() => this._toggleDock('correlation')}></pages-button>
           <pages-button size="xs" variant=${this._dockState['artifacts'] ? 'secondary' : 'ghost'} label="Artifacts"
             @click=${() => this._toggleDock('artifacts')}></pages-button>
+          <pages-button size="xs" variant=${this._dockState['members'] ? 'secondary' : 'ghost'} label="Members"
+            @click=${() => this._toggleDock('members')}></pages-button>
         </div>
       </div>
 
@@ -673,6 +779,8 @@ export class ClaudonyWorkbench extends LitElement {
       case 'artifacts':
         return html`<channel-artifact-panel
           .selectedArtefactRef=${this._selectedArtefactRef}></channel-artifact-panel>`;
+      case 'members':
+        return html`<blocks-channel-member-panel .members=${this._members}></blocks-channel-member-panel>`;
       default:
         return nothing;
     }
