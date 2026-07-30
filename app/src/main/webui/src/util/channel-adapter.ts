@@ -1,4 +1,4 @@
-import type { QhorusMessage, QhorusChannel, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
+import type { QhorusMessage, QhorusChannel, QhorusTopic, ChannelMember, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
 
 export interface TimelineEntry {
   id?: number;
@@ -66,6 +66,47 @@ export function toQhorusChannel(info: Partial<ChannelInfo> & { name: string }): 
     semantic: 'APPEND',
     paused: false,
     allowedTypes,
+  };
+}
+
+export interface MembershipResponse {
+  id: number;
+  channelId: string;
+  memberId: string;
+  role: string;
+  tenancyId: string;
+  joinedAt: string;
+  lastReadMessageId: number | null;
+  lastDeliveredMessageId: number | null;
+}
+
+export interface TopicSummaryResponse {
+  name: string;
+  messageCount: number;
+  lastActivityAt: string;
+  resolved: boolean;
+  resolvedAt: string | null;
+}
+
+export function toChannelMember(m: MembershipResponse, channelName: string): ChannelMember {
+  return {
+    channelId: channelName,
+    memberId: m.memberId,
+    displayName: m.memberId,
+    role: m.role as 'PARTICIPANT' | 'OBSERVER' | 'MODERATOR',
+    actorType: resolveActorType(m.memberId),
+  };
+}
+
+export function toQhorusTopic(s: TopicSummaryResponse, channelName: string): QhorusTopic {
+  return {
+    id: `${channelName}:${s.name}`,
+    channelId: channelName,
+    name: s.name,
+    state: s.resolved ? 'RESOLVED' : 'ACTIVE',
+    messageCount: s.messageCount,
+    latestActivityTs: s.lastActivityAt,
+    createdAt: s.lastActivityAt,
   };
 }
 

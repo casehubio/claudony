@@ -34,10 +34,10 @@ class TerminalPageE2ETest extends PlaywrightBase {
         assertThat(page.locator("pages-component-terminal").isVisible()).isTrue();
 
         // Status badge shows "reconnecting" after WebSocket close (ws.onclose handler)
-        // Wait up to 5s for the reconnect cycle to begin
-        page.locator("#status-badge").waitFor(
+        // pages-badge is in shadow DOM — Playwright CSS locators auto-pierce
+        page.locator("pages-badge[id='status-badge']").waitFor(
                 new Locator.WaitForOptions().setTimeout(5000));
-        assertThat(page.locator("#status-badge").textContent()).contains("reconnecting");
+        assertThat(page.locator("pages-badge[id='status-badge']").getAttribute("label")).contains("reconnecting");
 
         // Session name shown in the header
         assertThat(page.locator("#session-name").textContent()).isEqualTo("test-terminal");
