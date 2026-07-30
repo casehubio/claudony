@@ -4,28 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RemoteCC — Sign In</title>
+  <link rel="stylesheet" href="/pages/tokens/casehub-dark.css">
+  <script type="module" src="/pages/ui/components.js"></script>
   <style>
-    body { font-family: system-ui, sans-serif; background: #1a1a1a; color: #e0e0e0;
-           display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-    .card { background: #2a2a2a; border-radius: 12px; padding: 2rem; width: 320px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
-    h1 { margin: 0 0 1.5rem; font-size: 1.4rem; color: #fff; }
-    label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: #aaa; }
-    input { width: 100%; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid #444;
-            background: #1a1a1a; color: #e0e0e0; font-size: 1rem; box-sizing: border-box; }
-    button { width: 100%; padding: 0.75rem; margin-top: 1rem; border-radius: 6px; border: none;
-             background: #4c9aff; color: #fff; font-size: 1rem; cursor: pointer; font-weight: 600; }
-    button:hover { background: #3a89f0; }
-    .error { color: #ff6b6b; font-size: 0.85rem; margin-top: 0.75rem; display: none; }
-    .hint { font-size: 0.8rem; color: #888; margin-top: 1rem; text-align: center; }
+    body { font-family: var(--pages-font-family, system-ui, sans-serif); background: var(--pages-neutral-1);
+           color: var(--pages-neutral-11); display: flex; align-items: center; justify-content: center;
+           min-height: 100vh; margin: 0; }
+    .card { background: var(--pages-neutral-2); border-radius: var(--pages-radius-lg, 12px); padding: 2rem;
+            width: 320px; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+    h1 { margin: 0 0 1.5rem; font-size: 1.4rem; color: var(--pages-neutral-12); }
+    .error { color: var(--pages-danger-9); font-size: 0.85rem; margin-top: 0.75rem; display: none; }
+    .hint { font-size: 0.8rem; color: var(--pages-neutral-8); margin-top: 1rem; text-align: center; }
+    pages-button { display: block; margin-top: 1rem; }
   </style>
 </head>
 <body>
 <div class="card">
   <h1>RemoteCC</h1>
-  <label for="username">Username</label>
-  <input id="username" type="text" placeholder="Your name" autocomplete="username webauthn">
-  <button onclick="login()">Sign in with Passkey</button>
+  <pages-input id="username" label="Username" placeholder="Your name" type="text"></pages-input>
+  <pages-button label="Sign in with Passkey" variant="primary" onclick="login()"></pages-button>
   <div class="error" id="error"></div>
   <p class="hint">Use Touch ID or Face ID to authenticate.</p>
 </div>
