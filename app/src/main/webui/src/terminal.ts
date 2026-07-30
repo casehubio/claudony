@@ -66,13 +66,16 @@ loadSite(container, app).then(() => {
       case "compose-requested":
         openCompose();
         break;
+      case "workers-toggle":
+        workspace.toggleWorkers();
+        break;
+      case "channels-toggle":
+        workspace.toggleChannels();
+        break;
     }
   }) as EventListener);
 
-  // Header button wiring
-  header.querySelector("#workers-toggle-btn")!.addEventListener("click", () => workspace.toggleWorkers());
-  header.querySelector("#ch-toggle-btn")!.addEventListener("click", () => workspace.toggleChannels());
-  header.querySelector("#compose-btn")!.addEventListener("click", () => openCompose());
+  // Header buttons dispatch pages-event — handled in the event listener above
 
   // Fetch session and configure workspace or workbench
   fetchWithAuth("/api/sessions/" + sessionId)
@@ -94,8 +97,7 @@ loadSite(container, app).then(() => {
           channel,
         });
 
-        header.querySelector("#workers-toggle-btn")!.style.display = 'none';
-        header.querySelector("#ch-toggle-btn")!.style.display = 'none';
+        header.hideFleetControls = true;
       } else {
         workspace.configure({
           sessionId,
