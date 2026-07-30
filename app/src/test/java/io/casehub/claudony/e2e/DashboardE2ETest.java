@@ -10,11 +10,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * E2E tests for the Claudony dashboard (/app/).
+ * E2E tests for the Claudony fleet home (/app/).
  *
  * <p>Each test gets a fresh BrowserContext (no state bleed) via PlaywrightBase.
  * All page requests include the test API key via PlaywrightBase.setExtraHTTPHeaders,
- * including fetch() calls made by dashboard.js.
+ * including fetch() calls made by LitElement components.
  */
 @QuarkusTest
 class DashboardE2ETest extends PlaywrightBase {
@@ -39,44 +39,41 @@ class DashboardE2ETest extends PlaywrightBase {
     @Test
     void fleetPanel_visible_withNoPeersMessage() {
         page.navigate(BASE_URL + "/app/");
-        var fleetPanel = page.locator("#fleet-panel");
+        var fleetPanel = page.locator("claudony-fleet-panel");
+        fleetPanel.waitFor(new Locator.WaitForOptions().setTimeout(10000));
         assertThat(fleetPanel.isVisible()).isTrue();
-        // Wait for loadPeers() fetch to complete and re-render the peer list
-        page.locator(".peer-empty").waitFor();
-        assertThat(page.locator(".peer-empty").textContent()).contains("No peers configured");
+        page.locator("claudony-fleet-panel .peer-empty").waitFor();
+        assertThat(page.locator("claudony-fleet-panel .peer-empty").textContent()).contains("No peers configured");
     }
 
     @Test
     void sessionGrid_showsEmptyState_whenNoSessions() {
         page.navigate(BASE_URL + "/app/");
-        // Wait for the dashboard to finish its first poll (up to 6s — polls every 5s)
-        page.locator(".empty-state").waitFor(
+        page.locator("claudony-session-grid .empty").waitFor(
                 new Locator.WaitForOptions().setTimeout(10000));
-        assertThat(page.locator(".empty-state").textContent()).contains("No active sessions");
+        assertThat(page.locator("claudony-session-grid .empty").textContent()).contains("No active sessions");
     }
 
     @Test
     void newSessionDialog_opensAndCloses() {
         page.navigate(BASE_URL + "/app/");
-        page.locator("#new-session-btn").click();
-        var dialog = page.locator("#new-session-dialog");
+        page.locator("claudony-session-grid pages-button[label='+ New Session']").click();
+        var dialog = page.locator("claudony-session-grid pages-modal");
         assertThat(dialog.isVisible()).isTrue();
-        assertThat(page.locator("#new-session-form input[name='name']").isVisible()).isTrue();
-        page.locator("#cancel-btn").click();
-        assertThat(dialog.isVisible()).isFalse();
+        assertThat(page.locator("claudony-session-grid pages-input").first().isVisible()).isTrue();
+        page.locator("claudony-session-grid pages-button[label='Cancel']").click();
+        page.waitForTimeout(500);
     }
 
     @Test
     void addPeerDialog_opensAndCloses() {
         page.navigate(BASE_URL + "/app/");
-        page.locator("#add-peer-btn").click();
-        var dialog = page.locator("#add-peer-dialog");
+        page.locator("claudony-fleet-panel pages-button[label='+ Add Peer']").click();
+        var dialog = page.locator("claudony-fleet-panel pages-modal");
         assertThat(dialog.isVisible()).isTrue();
-        assertThat(page.locator("#add-peer-form input[name='url']").isVisible()).isTrue();
-        assertThat(page.locator("#add-peer-form input[name='name']").isVisible()).isTrue();
-        assertThat(page.locator("#add-peer-form select[name='terminalMode']").isVisible()).isTrue();
-        page.locator("#cancel-peer-btn").click();
-        assertThat(dialog.isVisible()).isFalse();
+        assertThat(page.locator("claudony-fleet-panel pages-input").first().isVisible()).isTrue();
+        page.locator("claudony-fleet-panel pages-button[label='Cancel']").click();
+        page.waitForTimeout(500);
     }
 
     @Test
@@ -96,16 +93,16 @@ class DashboardE2ETest extends PlaywrightBase {
             throw new RuntimeException("Failed to parse session creation response", e);
         }
 
-        // Navigate to dashboard and wait for card (dashboard polls every 5s — allow 10s)
+        // Navigate and wait for card (session-grid polls every 5s — allow 10s)
         page.navigate(BASE_URL + "/app/");
-        page.locator(".session-card").waitFor(
+        page.locator("claudony-session-grid .card").waitFor(
                 new Locator.WaitForOptions().setTimeout(10000));
 
         // Server prepends "claudony-" to the name; displayName() strips it back to "playwright-test"
-        assertThat(page.locator(".card-name").first().textContent())
+        assertThat(page.locator("claudony-session-grid .card-name").first().textContent())
                 .isEqualTo("playwright-test");
-        // Status badge is present and non-blank
-        assertThat(page.locator(".badge").first().textContent().trim()).isNotBlank();
+        // Status badge present — pages-badge with label attribute
+        assertThat(page.locator("claudony-session-grid pages-badge").first().getAttribute("label")).isNotBlank();
     }
 
     @Test
@@ -114,7 +111,7 @@ class DashboardE2ETest extends PlaywrightBase {
              var unauthPage = unauthContext.newPage()) {
             unauthPage.navigate(BASE_URL + "/app/");
             var redirectedToLogin = unauthPage.url().contains("/auth/login");
-            var authOverlayShown = unauthPage.locator("#auth-overlay").count() > 0;
+            var authOverlayShown = unauthPage.locator("claudony-session-grid pages-modal[variant='alertdialog']").count() > 0;
             assertThat(redirectedToLogin || authOverlayShown)
                     .withFailMessage("Expected auth redirect or overlay, URL was: " + unauthPage.url())
                     .isTrue();

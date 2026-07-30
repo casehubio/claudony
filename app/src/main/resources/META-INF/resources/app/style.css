@@ -88,33 +88,33 @@ button.danger { background: var(--danger); }
 .card-meta { font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .card-actions button { font-size: 12px; padding: 6px 12px; }
-.iterm-btn { background: #3a3a5c; color: #a0a0d0; border: 1px solid #5a5a8c; }
-.iterm-btn:hover { background: #4a4a7c; }
-.pr-btn { background: #1c3a1c; color: #6dbf6d; border: 1px solid #3a6b3a; }
-.pr-btn:hover { background: #254a25; }
+.iterm-btn { background: var(--pages-accent-4); color: var(--pages-accent-9); border: 1px solid var(--pages-accent-6); }
+.iterm-btn:hover { background: var(--pages-accent-5); }
+.pr-btn { background: var(--pages-success-3); color: var(--pages-success-9); border: 1px solid var(--pages-success-6); }
+.pr-btn:hover { background: var(--pages-success-4); }
 .pr-btn:disabled { opacity: 0.5; cursor: default; }
 
 .card-git { font-size: 12px; margin-bottom: 6px; min-height: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .card-services { font-size: 12px; margin-bottom: 10px; min-height: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .svc-label { font-size: 11px; color: var(--text-dim); margin-right: 4px; }
-.svc-badge { color: #3fb950; text-decoration: none; font-family: var(--mono); }
+.svc-badge { color: var(--pages-success-9); text-decoration: none; font-family: var(--mono); }
 .svc-badge:hover { text-decoration: underline; }
 .svc-none { color: var(--text-dim); font-style: italic; }
-.svc-btn { background: #1c2a3a; color: #6db0d0; border: 1px solid #2a4a6a; }
-.svc-btn:hover { background: #1c3550; }
+.svc-btn { background: var(--pages-info-3); color: var(--pages-info-9); border: 1px solid var(--pages-info-6); }
+.svc-btn:hover { background: var(--pages-info-4); }
 .svc-btn:disabled { opacity: 0.5; cursor: default; }
 .git-branch { font-family: var(--mono); color: var(--text-dim); }
 .git-none { color: var(--text-dim); font-style: italic; }
-.git-error { color: #e07070; }
-.pr-link { color: #4c9aff; text-decoration: none; }
+.git-error { color: var(--pages-danger-9); }
+.pr-link { color: var(--pages-accent-9); text-decoration: none; }
 .pr-link:hover { text-decoration: underline; }
-.pr-open { color: #4c9aff; }
-.pr-merged { color: #a371f7; }
-.pr-closed { color: #888; }
+.pr-open { color: var(--pages-accent-9); }
+.pr-merged { color: var(--pages-accent-11); }
+.pr-closed { color: var(--pages-neutral-8); }
 .ci-checks { display: inline-flex; gap: 4px; font-family: var(--mono); }
-.ci-pass { color: #3fb950; }
-.ci-pending { color: #d29922; }
-.ci-fail { color: #f85149; }
+.ci-pass { color: var(--pages-success-9); }
+.ci-pending { color: var(--pages-warning-9); }
+.ci-fail { color: var(--pages-danger-9); }
 
 .empty-state { grid-column: 1/-1; text-align: center; padding: 80px 24px; color: var(--text-dim); }
 .empty-state p { margin-bottom: 16px; font-size: 15px; }
@@ -293,9 +293,9 @@ button.small {
     flex-shrink: 0;
 }
 
-.health-dot.up      { background: #3fb950; }
-.health-dot.unknown { background: #d29922; }
-.health-dot.down    { background: #f85149; }
+.health-dot.up      { background: var(--pages-success-9); }
+.health-dot.unknown { background: var(--pages-warning-9); }
+.health-dot.down    { background: var(--pages-danger-9); }
 
 .circuit-label {
     font-size: 10px;
@@ -304,9 +304,9 @@ button.small {
     flex-shrink: 0;
 }
 
-.circuit-label.closed    { background: rgba(63,185,80,.15); color: #3fb950; }
-.circuit-label.open      { background: rgba(248,81,73,.15); color: #f85149; }
-.circuit-label.half-open { background: rgba(210,153,34,.15); color: #d29922; }
+.circuit-label.closed    { background: var(--pages-success-3); color: var(--pages-success-9); }
+.circuit-label.open      { background: var(--pages-danger-3); color: var(--pages-danger-9); }
+.circuit-label.half-open { background: var(--pages-warning-3); color: var(--pages-warning-9); }
 
 /* ─── Fleet: session card instance badge ────────────────────────────────── */
 
@@ -320,21 +320,21 @@ button.small {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    background: rgba(0,122,204,.2);
-    color: #4c9aff;
-    border: 1px solid rgba(76,154,255,.3);
+    background: var(--pages-accent-3);
+    color: var(--pages-accent-9);
+    border: 1px solid var(--pages-accent-5);
 }
 
 /* ─── Fleet: stale session indicator ────────────────────────────────────── */
 
 .session-card.stale {
-    border-color: rgba(210,153,34,.4);
+    border-color: var(--pages-warning-6);
     opacity: .85;
 }
 
 .stale-badge {
     font-size: 10px;
-    color: #d29922;
+    color: var(--pages-warning-9);
     display: flex;
     align-items: center;
     gap: 3px;
@@ -586,7 +586,7 @@ dialog select:focus { outline: none; border-color: var(--accent); }
 
 .mesh-dock-error {
     font-size: 0.7rem;
-    color: var(--error, #e57373);
+    color: var(--pages-danger-9);
     flex: 1;
 }
 

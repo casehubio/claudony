@@ -60,6 +60,13 @@ public class MeshResource {
     ChannelService channelService;
     @Inject
     io.casehub.qhorus.api.store.CommitmentStore commitmentStore;
+    @Inject
+    io.casehub.qhorus.runtime.message.ReactionService reactionService;
+    @Inject
+    io.casehub.qhorus.runtime.message.TopicService topicService;
+    @Inject
+    io.casehub.qhorus.runtime.channel.ChannelMembershipService membershipService;
+
 
     private static long maxFeedId(List<Map<String, Object>> feed) {
         return feed.stream()
@@ -328,6 +335,68 @@ public class MeshResource {
             return Response.status(409).entity(e.getMessage()).build();
         }
     }
+
+    record ReactionBatchRequest(java.util.List<Long> messageIds) {}
+
+    record AddReactionRequest(String emoji) {}
+
+    @POST
+    @Path("/channels/{name}/reactions/batch")
+    public Response reactionsBatch(@PathParam("name") String name, ReactionBatchRequest req) {
+        var channel = channelService.findByName(name);
+        if (channel.isEmpty()) {return Response.status(404).build();}
+        if (req == null || req.messageIds() == null || req.messageIds().isEmpty()) {
+            return Response.ok(java.util.Map.of()).build();
+        }
+        var result = reactionService.getReactionsBatch(req.messageIds());
+        return Response.ok(result).build();
+    }
+
+    @POST
+    @Path("/channels/{name}/messages/{messageId}/reactions")
+    public Response addReaction(@PathParam("name") String name,
+                                @PathParam("messageId") Long messageId,
+                                AddReactionRequest req) {
+        var channel = channelService.findByName(name);
+        if (channel.isEmpty()) {return Response.status(404).build();}
+        if (req == null || req.emoji() == null || req.emoji().isBlank())
+            return Response.status(400).entity("emoji is required").build();
+        String actorId = securityIdentity.getPrincipal().getName();
+        reactionService.react(messageId, req.emoji(), actorId,
+                              io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
+        return Response.ok().build();
+    }
+
+    @jakarta.ws.rs.DELETE
+    @Path("/channels/{name}/messages/{messageId}/reactions")
+    public Response removeReaction(@PathParam("name") String name,
+                                   @PathParam("messageId") Long messageId,
+                                   @QueryParam("emoji") String emoji) {
+        var channel = channelService.findByName(name);
+        if (channel.isEmpty()) {return Response.status(404).build();}
+        if (emoji == null || emoji.isBlank())
+            return Response.status(400).entity("emoji query param is required").build();
+        String actorId = securityIdentity.getPrincipal().getName();
+        reactionService.unreact(messageId, emoji, actorId);
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/channels/{name}/topics")
+    public Response topics(@PathParam("name") String name) {
+        var channel = channelService.findByName(name);
+        if (channel.isEmpty()) {return Response.status(404).build();}
+        return Response.ok(topicService.listTopics(channel.get().id())).build();
+    }
+
+    @GET
+    @Path("/channels/{name}/members")
+    public Response members(@PathParam("name") String name) {
+        var channel = channelService.findByName(name);
+        if (channel.isEmpty()) {return Response.status(404).build();}
+        return Response.ok(membershipService.listMembers(channel.get().id())).build();
+    }
+
 
     record MeshConfig(String strategy, int interval, int cursorStalenessMinutes) {}
 

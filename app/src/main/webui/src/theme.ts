@@ -1,8 +1,7 @@
-import { injectTheme, applyThemeMode, DEFAULT_THEME } from '@casehubio/pages-ui-tokens';
+import { applyTheme } from '@casehubio/pages-ui-tokens';
 
 export function initTheme(): void {
-  injectTheme(DEFAULT_THEME);
-  applyThemeMode(document.documentElement, 'dark');
+  applyTheme('casehub-dark');
 }
 
 export const THEME_CSS = `

@@ -11,101 +11,13 @@
 <body>
     <header>
         <h1>Claudony</h1>
-        <button id="new-session-btn">+ New Session</button>
     </header>
 
     <div class="app-body">
-        <aside id="fleet-panel">
-            <div class="fleet-panel-header">
-                <span class="fleet-panel-title">Fleet</span>
-                <button id="add-peer-btn" class="small">+ Add Peer</button>
-            </div>
-            <div id="peer-list">
-                <div class="peer-empty">No peers configured</div>
-            </div>
-        </aside>
-
-        <main id="session-grid"></main>
-        <aside id="mesh-panel">
-            <div class="mesh-header">
-                <span class="mesh-title">MESH</span>
-                <div class="mesh-view-switcher">
-                    <button class="mesh-view-btn active" data-view="overview" title="Overview">&#9678;</button>
-                    <button class="mesh-view-btn" data-view="channel" title="Channel">#</button>
-                    <button class="mesh-view-btn" data-view="feed" title="Feed">&#8801;</button>
-                </div>
-                <button class="mesh-collapse-btn" id="mesh-collapse-btn" title="Collapse">&larr;</button>
-            </div>
-            <div class="mesh-body" id="mesh-body"></div>
-            <div id="mesh-dock">
-                <div class="mesh-dock-controls">
-                    <select id="mesh-dock-channel" disabled>
-                        <option>— no channels —</option>
-                    </select>
-                    <select id="mesh-dock-type">
-                        <option value="status">status</option>
-                        <option value="query">query</option>
-                        <option value="command">command</option>
-                        <option value="response">response</option>
-                        <option value="decline">decline</option>
-                        <option value="handoff">handoff</option>
-                        <option value="done">done</option>
-                    </select>
-                </div>
-                <textarea id="mesh-dock-textarea" class="mesh-dock-textarea"
-                    rows="2" placeholder="Type a message… (Enter to send)"></textarea>
-                <div class="mesh-dock-footer">
-                    <button id="mesh-dock-send" class="mesh-dock-send" disabled>Send</button>
-                    <span id="mesh-dock-error" class="mesh-dock-error"></span>
-                </div>
-            </div>
-        </aside>
+        <div id="app"></div>
     </div>
-    <button id="mesh-expand-btn" class="mesh-expand" title="Open Mesh panel" style="display:none">MESH</button>
 
-    <!-- New Session dialog (unchanged content) -->
-    <dialog id="new-session-dialog">
-        <form id="new-session-form">
-            <h2>New Session</h2>
-            <label>Name
-                <input name="name" required placeholder="myproject" autocomplete="off">
-                <span id="name-error" style="display:none;color:#ff6b6b;font-size:0.8rem;margin-top:0.25rem;display:none"></span>
-            </label>
-            <label>Working Directory
-                <input name="workingDir" placeholder="~/claudony-workspace/{name} (default)" autocomplete="off">
-            </label>
-            <div class="dialog-actions">
-                <button type="button" id="cancel-btn" class="secondary">Cancel</button>
-                <button type="button" id="overwrite-btn" class="danger" style="display:none">Overwrite</button>
-                <button type="submit" id="create-btn">Create</button>
-            </div>
-        </form>
-    </dialog>
-
-    <!-- Add Peer dialog -->
-    <dialog id="add-peer-dialog">
-        <form id="add-peer-form">
-            <h2>Add Peer</h2>
-            <label>URL
-                <input name="url" required placeholder="http://mac-mini:7777" autocomplete="off">
-            </label>
-            <label>Name
-                <input name="name" placeholder="Mac Mini (optional)" autocomplete="off">
-            </label>
-            <label>Terminal Mode
-                <select name="terminalMode">
-                    <option value="DIRECT">Direct — browser connects to peer directly</option>
-                    <option value="PROXY">Proxy — traffic routed through this server</option>
-                </select>
-            </label>
-            <div class="dialog-actions">
-                <button type="button" id="cancel-peer-btn" class="secondary">Cancel</button>
-                <button type="submit">Add Peer</button>
-            </div>
-        </form>
-    </dialog>
-
-    <script src="/app/dashboard.js"></script>
+    <script type="module" src="/app/dist/app.js"></script>
     <script>
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { toQhorusMessage, toQhorusChannel, formatEventContent } from './channel-adapter';
-import type { TimelineEntry } from './channel-adapter';
+import { toQhorusMessage, toQhorusChannel, toChannelMember, toQhorusTopic, formatEventContent } from './channel-adapter';
+import type { TimelineEntry, MembershipResponse, TopicSummaryResponse } from './channel-adapter';
 
 describe('toQhorusMessage', () => {
   it('maps a regular message with all fields', () => {
@@ -176,4 +176,73 @@ describe('toQhorusMessage enriched fields', () => {
   });
 });
 
+describe('toChannelMember', () => {
+  it('maps membership fields', () => {
+    const m: MembershipResponse = {
+      id: 1, channelId: 'abc-uuid', memberId: 'worker-alpha',
+      role: 'PARTICIPANT', tenancyId: 'default', joinedAt: '2026-01-01T00:00:00Z',
+      lastReadMessageId: null, lastDeliveredMessageId: null,
+    };
+    const result = toChannelMember(m, 'case-123/work');
+    expect(result.channelId).toBe('case-123/work');
+    expect(result.memberId).toBe('worker-alpha');
+    expect(result.displayName).toBe('worker-alpha');
+    expect(result.role).toBe('PARTICIPANT');
+    expect(result.actorType).toBe('AGENT');
+  });
 
+  it('resolves human actorType', () => {
+    const m: MembershipResponse = {
+      id: 2, channelId: 'x', memberId: 'human:mark',
+      role: 'MODERATOR', tenancyId: 'default', joinedAt: '2026-01-01T00:00:00Z',
+      lastReadMessageId: null, lastDeliveredMessageId: null,
+    };
+    const result = toChannelMember(m, 'ch');
+    expect(result.actorType).toBe('HUMAN');
+    expect(result.role).toBe('MODERATOR');
+  });
+
+  it('resolves system actorType', () => {
+    const m: MembershipResponse = {
+      id: 3, channelId: 'x', memberId: 'system',
+      role: 'OBSERVER', tenancyId: 'default', joinedAt: '2026-01-01T00:00:00Z',
+      lastReadMessageId: null, lastDeliveredMessageId: null,
+    };
+    const result = toChannelMember(m, 'ch');
+    expect(result.actorType).toBe('SYSTEM');
+  });
+});
+
+describe('toQhorusTopic', () => {
+  it('maps active topic', () => {
+    const s: TopicSummaryResponse = {
+      name: 'design', messageCount: 5,
+      lastActivityAt: '2026-07-01T12:00:00Z', resolved: false, resolvedAt: null,
+    };
+    const result = toQhorusTopic(s, 'case-123/work');
+    expect(result.id).toBe('case-123/work:design');
+    expect(result.channelId).toBe('case-123/work');
+    expect(result.name).toBe('design');
+    expect(result.state).toBe('ACTIVE');
+    expect(result.messageCount).toBe(5);
+    expect(result.latestActivityTs).toBe('2026-07-01T12:00:00Z');
+  });
+
+  it('maps resolved topic', () => {
+    const s: TopicSummaryResponse = {
+      name: 'bugfix', messageCount: 3,
+      lastActivityAt: '2026-07-01T12:00:00Z', resolved: true, resolvedAt: '2026-07-01T13:00:00Z',
+    };
+    const result = toQhorusTopic(s, 'ch');
+    expect(result.state).toBe('RESOLVED');
+  });
+
+  it('synthesises id from channel and topic name', () => {
+    const s: TopicSummaryResponse = {
+      name: 'general', messageCount: 0,
+      lastActivityAt: '2026-07-01T12:00:00Z', resolved: false, resolvedAt: null,
+    };
+    const result = toQhorusTopic(s, 'my-channel');
+    expect(result.id).toBe('my-channel:general');
+  });
+});
