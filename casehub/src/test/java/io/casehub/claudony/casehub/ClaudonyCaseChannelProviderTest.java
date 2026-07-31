@@ -88,7 +88,7 @@ class ClaudonyCaseChannelProviderTest {
 
         provider.openChannel(caseId, "work");
 
-        // NormativeChannelLayout opens 4 channels on first touch (work, observe, oversight, coordination)
+        // NormativeChannelLayout opens 3 channels on first touch
         verify(channelService, times(4)).create(any(ChannelCreateRequest.class));
     }
 
@@ -100,7 +100,7 @@ class ClaudonyCaseChannelProviderTest {
         provider.openChannel(caseId, "work");
         provider.openChannel(caseId, "observe");
 
-        // Still only 4 createChannel calls total (initialised on first touch)
+        // Still only 3 createChannel calls total (initialised on first touch)
         verify(channelService, times(4)).create(any(ChannelCreateRequest.class));
     }
 
@@ -155,7 +155,7 @@ class ClaudonyCaseChannelProviderTest {
             assertThat(results[i].purpose()).isEqualTo(purposes[i]);
         }
 
-        // NormativeChannelLayout has 4 channels — should create exactly 4, not 8 or 12
+        // NormativeChannelLayout has 3 channels — should create exactly 3, not 6 or 9
         verify(channelService, times(4)).create(any(ChannelCreateRequest.class));
     }
 
@@ -231,28 +231,27 @@ class ClaudonyCaseChannelProviderTest {
     }
 
     @Test
-    void openChannel_callsInitChannelAfterCreate() {
+    void openChannel_doesNotCallInitChannelExplicitly() {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
         provider.openChannel(caseId, "work");
 
-        // NormativeChannelLayout creates 4 channels — initChannel called once per channel
-        verify(gateway, times(4)).initChannel(
+        verify(gateway, times(0)).initChannel(
                 any(UUID.class),
                 any(io.casehub.qhorus.api.gateway.ChannelRef.class));
     }
 
     @Test
-    void openChannel_initChannelCalledWithCorrectChannelName() {
+    void openChannel_noExplicitInitChannel_delegatedToChannelService() {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
         provider.openChannel(caseId, "work");
 
-        verify(gateway).initChannel(
+        verify(gateway, times(0)).initChannel(
                 any(UUID.class),
-                argThat(ref -> ref.name().equals("case-" + caseId + "/work")));
+                any(io.casehub.qhorus.api.gateway.ChannelRef.class));
     }
 
     // ── listChannels ─────────────────────────────────────────────────────────
