@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { toQhorusMessage, toQhorusChannel, toChannelMember, toQhorusTopic, formatEventContent } from './channel-adapter';
-import type { TimelineEntry, MembershipResponse, TopicSummaryResponse } from './channel-adapter';
+import { toQhorusMessage, toQhorusChannel, toChannelMember, toQhorusTopic, toPresenceState, formatEventContent } from './channel-adapter';
+import type { TimelineEntry, MembershipResponse, TopicSummaryResponse, PresenceResponse } from './channel-adapter';
 
 describe('toQhorusMessage', () => {
   it('maps a regular message with all fields', () => {
@@ -244,5 +244,42 @@ describe('toQhorusTopic', () => {
     };
     const result = toQhorusTopic(s, 'my-channel');
     expect(result.id).toBe('my-channel:general');
+  });
+});
+
+describe('toPresenceState', () => {
+  it('maps all fields', () => {
+    const p: PresenceResponse = {
+      memberId: 'worker-alpha',
+      status: 'ONLINE',
+      lastSeenAt: '2026-07-31T10:00:00Z',
+      statusMessage: 'Working on tests',
+    };
+    const result = toPresenceState(p);
+    expect(result.memberId).toBe('worker-alpha');
+    expect(result.status).toBe('ONLINE');
+    expect(result.lastSeenAt).toBe('2026-07-31T10:00:00Z');
+    expect(result.statusMessage).toBe('Working on tests');
+  });
+
+  it('converts null fields to undefined', () => {
+    const p: PresenceResponse = {
+      memberId: 'agent-1',
+      status: 'OFFLINE',
+      lastSeenAt: null,
+      statusMessage: null,
+    };
+    const result = toPresenceState(p);
+    expect(result.memberId).toBe('agent-1');
+    expect(result.status).toBe('OFFLINE');
+    expect(result.lastSeenAt).toBeUndefined();
+    expect(result.statusMessage).toBeUndefined();
+  });
+
+  it('passes through all status values', () => {
+    for (const status of ['ONLINE', 'AVAILABLE', 'BUSY', 'AWAY', 'OFFLINE']) {
+      const result = toPresenceState({ memberId: 'x', status, lastSeenAt: null, statusMessage: null });
+      expect(result.status).toBe(status);
+    }
   });
 });

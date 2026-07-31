@@ -66,6 +66,8 @@ public class MeshResource {
     io.casehub.qhorus.runtime.message.TopicService topicService;
     @Inject
     io.casehub.qhorus.runtime.channel.ChannelMembershipService membershipService;
+    @Inject
+    io.casehub.qhorus.api.channel.PresenceTracker presenceTracker;
 
 
     private static long maxFeedId(List<Map<String, Object>> feed) {
@@ -94,7 +96,8 @@ public class MeshResource {
                                 .resolve(SettingsScope.of(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, io.casehub.platform.api.path.Path.of("casehubio", "claudony")))
                                 .getOrDefault(ChannelCursorStaleness.KEY)
                                 .minutes();
-        return new MeshConfig(config.meshRefreshStrategy(), config.meshRefreshInterval(), staleness);
+        String actorId = securityIdentity.getPrincipal().getName();
+        return new MeshConfig(config.meshRefreshStrategy(), config.meshRefreshInterval(), staleness, actorId);
     }
 
     @GET
@@ -397,8 +400,24 @@ public class MeshResource {
         return Response.ok(membershipService.listMembers(channel.get().id())).build();
     }
 
+    record PresenceResponse(String memberId, String status, String lastSeenAt, String statusMessage) {}
 
-    record MeshConfig(String strategy, int interval, int cursorStalenessMinutes) {}
+    @GET
+    @Path("/channels/{name}/presence")
+    public Response presence(@PathParam("name") String name) {
+        var channel = channelService.findByName(name);
+        if (channel.isEmpty()) {return Response.status(404).build();}
+        var presenceList = presenceTracker.getChannelPresence(channel.get().id()).stream()
+                .map(p -> new PresenceResponse(
+                        p.memberId(),
+                        p.status().name(),
+                        p.lastSeenAt() != null ? p.lastSeenAt().toString() : null,
+                        p.statusMessage()))
+                .toList();
+        return Response.ok(presenceList).build();
+    }
+
+    record MeshConfig(String strategy, int interval, int cursorStalenessMinutes, String actorId) {}
 
     record PostMessageRequest(String content, String type,
                               Long inReplyTo, String correlationId,

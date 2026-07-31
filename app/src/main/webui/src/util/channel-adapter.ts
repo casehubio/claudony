@@ -1,4 +1,4 @@
-import type { QhorusMessage, QhorusChannel, QhorusTopic, ChannelMember, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
+import type { QhorusMessage, QhorusChannel, QhorusTopic, ChannelMember, PresenceState, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
 
 export interface TimelineEntry {
   id?: number;
@@ -121,4 +121,18 @@ export function formatEventContent(entry: Partial<TimelineEntry>): string | unde
   return parts.length > 0 ? parts.join(' · ') : '—';
 }
 
+export interface PresenceResponse {
+  memberId: string;
+  status: string;
+  lastSeenAt: string | null;
+  statusMessage: string | null;
+}
 
+export function toPresenceState(p: PresenceResponse): PresenceState {
+  return {
+    memberId: p.memberId,
+    status: p.status as PresenceState['status'],
+    lastSeenAt: p.lastSeenAt ?? undefined,
+    statusMessage: p.statusMessage ?? undefined,
+  };
+}
