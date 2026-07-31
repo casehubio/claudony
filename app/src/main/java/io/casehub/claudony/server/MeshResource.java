@@ -68,6 +68,8 @@ public class MeshResource {
     io.casehub.qhorus.runtime.channel.ChannelMembershipService membershipService;
     @Inject
     io.casehub.qhorus.api.channel.PresenceTracker presenceTracker;
+    @Inject
+    ChannelEventBus channelEventBus;
 
 
     private static long maxFeedId(List<Map<String, Object>> feed) {
@@ -331,6 +333,9 @@ public class MeshResource {
                                                     req != null ? req.target() : null,
                                                     deadline,
                                                     req != null ? req.topic() : null);
+            channelService.findByName(name).ifPresent(ch -> {
+                try { membershipService.join(ch.id(), sender); } catch (Exception e) { LOG.debugf("Auto-join failed for %s on %s: %s", sender, name, e.getMessage()); }
+            });
             return Response.ok(result).build();
         } catch (IllegalArgumentException e) {
             return Response.status(404).entity(e.getMessage()).build();
@@ -367,6 +372,7 @@ public class MeshResource {
         String actorId = securityIdentity.getPrincipal().getName();
         reactionService.react(messageId, req.emoji(), actorId,
                               io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
+        channelEventBus.emit(name);
         return Response.ok().build();
     }
 
@@ -381,6 +387,7 @@ public class MeshResource {
             return Response.status(400).entity("emoji query param is required").build();
         String actorId = securityIdentity.getPrincipal().getName();
         reactionService.unreact(messageId, emoji, actorId);
+        channelEventBus.emit(name);
         return Response.ok().build();
     }
 
@@ -398,6 +405,26 @@ public class MeshResource {
         var channel = channelService.findByName(name);
         if (channel.isEmpty()) {return Response.status(404).build();}
         return Response.ok(membershipService.listMembers(channel.get().id())).build();
+    }
+
+    @POST
+    @Path("/channels/{name}/members")
+    public Response joinChannel(@PathParam("name") String name) {
+        var channel = channelService.findByName(name);
+        if (channel.isEmpty()) {return Response.status(404).build();}
+        String actorId    = "human:" + securityIdentity.getPrincipal().getName();
+        var    membership = membershipService.join(channel.get().id(), actorId);
+        return Response.ok(membership).build();
+    }
+
+    @jakarta.ws.rs.DELETE
+    @Path("/channels/{name}/members")
+    public Response leaveChannel(@PathParam("name") String name) {
+        var channel = channelService.findByName(name);
+        if (channel.isEmpty()) {return Response.status(404).build();}
+        String actorId = "human:" + securityIdentity.getPrincipal().getName();
+        membershipService.leave(channel.get().id(), actorId);
+        return Response.noContent().build();
     }
 
     record PresenceResponse(String memberId, String status, String lastSeenAt, String statusMessage) {}

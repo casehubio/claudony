@@ -29,6 +29,9 @@ class MeshResourceTest {
     @Inject InMemoryChannelStore channelStore;
     @Inject InMemoryMessageStore messageStore;
     @Inject ObjectMapper objectMapper;
+    @Inject
+            io.casehub.qhorus.runtime.channel.ChannelMembershipService membershipService;
+
 
     @AfterEach
     void cleanup() {
@@ -546,6 +549,153 @@ class MeshResourceTest {
                .body("actorId", equalTo("test"));
     }
 
+    @Test
+    void createChannel_viaQhorusRestApi_returns201() {
+        given()
+                .contentType("application/json")
+                .body("""
+                      {"name": "team/engineering", "description": "Engineering chat"}
+                      """)
+                .when()
+                .post("/api/channels")
+                .then()
+                .statusCode(201)
+                .body("name", equalTo("team/engineering"))
+                .body("description", equalTo("Engineering chat"));
+    }
+
+    @Test
+    void createChannel_duplicateName_returnsIdempotent201() {
+        var body = """
+                   {"name": "team/dupe", "description": "First"}
+                   """;
+        given().contentType("application/json").body(body)
+               .when().post("/api/channels")
+               .then().statusCode(201);
+
+        given().contentType("application/json").body(body)
+               .when().post("/api/channels")
+               .then().statusCode(201)
+               .body("name", equalTo("team/dupe"));
+    }
+
+    @Test
+    void createChannel_missingName_returns400() {
+        given()
+                .contentType("application/json")
+                .body("""
+                      {"description": "No name"}
+                      """)
+                .when()
+                .post("/api/channels")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void createChannel_appearsInMeshChannelsList() {
+        given().contentType("application/json")
+               .body("""
+                     {"name": "team/visible", "description": "Should appear in mesh"}
+                     """)
+               .when().post("/api/channels")
+               .then().statusCode(201);
+
+        given().when().get("/api/mesh/channels")
+               .then()
+               .statusCode(200)
+               .body("name", hasItems("team/visible"));
+    }
+
+    @Test
+    void createChannel_withAllowedTypes_parsesCorrectly() {
+        given()
+                .contentType("application/json")
+                .body("""
+                      {"name": "team/typed", "allowedTypes": ["QUERY", "COMMAND"]}
+                      """)
+                .when()
+                .post("/api/channels")
+                .then()
+                .statusCode(201)
+                .body("name", equalTo("team/typed"));
+    }
+
+    @Test
+    void createChannel_defaultSemantic_isAppend() {
+        given()
+                .contentType("application/json")
+                .body("""
+                      {"name": "team/defaultsem"}
+                      """)
+                .when()
+                .post("/api/channels")
+                .then()
+                .statusCode(201)
+                .body("semantic", equalTo("APPEND"));
+    }
+
+    @Test
+    void joinChannel_returnsOkWithMembership() {
+        channelStore.put(Channel.builder("team-chat").build());
+
+        given()
+                .when().post("/api/mesh/channels/team-chat/members")
+                .then()
+                .statusCode(200)
+                .body("memberId", containsString("test"));
+    }
+
+    @Test
+    void joinChannel_unknownChannel_returns404() {
+        given()
+                .when().post("/api/mesh/channels/does-not-exist/members")
+                .then().statusCode(404);
+    }
+
+    @Test
+    void joinChannel_idempotent_sameResult() {
+        channelStore.put(Channel.builder("team-idem").build());
+
+        given().when().post("/api/mesh/channels/team-idem/members")
+               .then().statusCode(200);
+
+        given().when().post("/api/mesh/channels/team-idem/members")
+               .then().statusCode(200)
+               .body("memberId", containsString("test"));
+    }
+
+    @Test
+    void leaveChannel_returns204() {
+        var ch = channelStore.put(Channel.builder("team-leave").build());
+        membershipService.join(ch.id(), "human:test");
+
+        given()
+                .when().delete("/api/mesh/channels/team-leave/members")
+                .then().statusCode(204);
+    }
+
+    @Test
+    void leaveChannel_unknownChannel_returns404() {
+        given()
+                .when().delete("/api/mesh/channels/does-not-exist/members")
+                .then().statusCode(404);
+    }
+
+    @Test
+    void postMessage_autoJoinsMember() {
+        createTestChannel("team-autojoin");
+
+        given().contentType("application/json")
+               .body("{\"content\": \"hello\", \"type\": \"STATUS\"}")
+               .when().post("/api/mesh/channels/team-autojoin/messages")
+               .then().statusCode(200);
+
+        given().when().get("/api/mesh/channels/team-autojoin/members")
+               .then()
+               .statusCode(200)
+               .body("$.size()", greaterThan(0));
+    }
 }
 
 @QuarkusTest

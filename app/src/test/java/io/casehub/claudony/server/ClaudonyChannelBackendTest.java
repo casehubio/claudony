@@ -15,7 +15,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class ClaudonyChannelBackendTest {
 
@@ -92,11 +93,12 @@ class ClaudonyChannelBackendTest {
     }
 
     @Test
-    void onChannelInitialised_nonCaseChannel_noRegistration() {
+    void onChannelInitialised_nonCaseChannel_registersBackend() {
         UUID channelId = UUID.randomUUID();
 
-        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "other-channel/data", false));
+        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "team/engineering", false));
 
-        verifyNoInteractions(gateway);
+        verify(gateway).deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
+        verify(gateway).registerBackend(channelId, backend, "human_observer");
     }
 }

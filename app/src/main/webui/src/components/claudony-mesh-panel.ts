@@ -2,6 +2,9 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import type { SelectOption } from '@casehubio/pages-ui-components';
 import '@casehubio/pages-ui-components';
+import type { QhorusMessage, Reaction, ChannelMember, PresenceState } from '@casehubio/blocks-ui-channel-activity';
+import '@casehubio/blocks-ui-channel-activity';
+import { toQhorusMessage, toChannelMember, type TimelineEntry, type MembershipResponse } from '../util/channel-adapter.js';
 import { fetchWithAuth } from '../util/auth.js';
 
 interface ChannelData { name: string; messageCount: number; lastActivityAt?: string; allowedTypes?: string }
@@ -17,6 +20,13 @@ export class ClaudonyMeshPanel extends LitElement {
   @state() private _activeView: MeshView = 'overview';
   @state() private _collapsed = false;
   @state() private _selectedChannel = '';
+  @state() private _channelMessages: QhorusMessage[] = [];
+  @state() private _channelReactions: Reaction[] = [];
+  @state() private _channelPresence = 0;
+  @state() private _channelMembers: ChannelMember[] = [];
+  @state() private _channelMemberPresence: PresenceState[] = [];
+  @state() private _showCreateForm = false;
+  @state() private _createError = '';
 
   private _strategy: 'sse' | 'poll' = 'poll';
   private _pollInterval = 3000;
@@ -93,6 +103,20 @@ export class ClaudonyMeshPanel extends LitElement {
       border-radius: var(--pages-radius-sm, 4px) 0 0 var(--pages-radius-sm, 4px);
       cursor: pointer; z-index: 5;
     }
+    .create-form {
+      padding: 6px; margin-bottom: 8px; background: var(--pages-neutral-1);
+      border-radius: var(--pages-radius-sm, 4px); border: 1px solid var(--pages-neutral-4);
+    }
+    .create-form input {
+      width: 100%; padding: 4px 6px; font-size: 12px; margin-bottom: 4px;
+      background: var(--pages-neutral-2); color: var(--pages-neutral-11);
+      border: 1px solid var(--pages-neutral-4); border-radius: 3px;
+      font-family: inherit; box-sizing: border-box;
+    }
+    .create-form .create-actions { display: flex; gap: 4px; align-items: center; }
+    .create-form .create-error { font-size: 10px; color: var(--pages-danger-9); flex: 1; }
+    .section-header { display: flex; align-items: center; gap: 4px; }
+    .section-header .label { flex: 1; margin-bottom: 0; }
     .ch-select {
       flex: 1; background: var(--pages-neutral-2); color: var(--pages-neutral-11);
       border: 1px solid var(--pages-neutral-4); border-radius: 3px; font-size: 12px; padding: 4px 6px;
@@ -194,6 +218,96 @@ export class ClaudonyMeshPanel extends LitElement {
   private _selectChannel(name: string): void {
     this._selectedChannel = name;
     this._dockChannel = name;
+    this._fetchChannelTimeline(name).then(() => this._fetchChannelReactions(name));
+    this._autoJoinChannel(name);
+    this._fetchChannelMembers(name);
+    this._fetchChannelPresence(name);
+  }
+
+  private async _autoJoinChannel(name: string): Promise<void> {
+    try {
+      await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/members`, { method: 'POST' });
+    } catch { /* best-effort */ }
+  }
+
+  private async _fetchChannelMembers(name: string): Promise<void> {
+    try {
+      const resp = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/members`);
+      if (!resp.ok) { this._channelMembers = []; return; }
+      const data: MembershipResponse[] = await resp.json();
+      this._channelMembers = data.map(m => toChannelMember(m, name));
+    } catch { this._channelMembers = []; }
+  }
+
+  private async _fetchChannelTimeline(name: string): Promise<void> {
+    try {
+      const resp = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/timeline?limit=50`);
+      if (!resp.ok) { this._channelMessages = []; return; }
+      const data: TimelineEntry[] = await resp.json();
+      this._channelMessages = data.map(e => toQhorusMessage(e));
+    } catch { this._channelMessages = []; }
+  }
+
+  private async _fetchChannelReactions(name: string): Promise<void> {
+    if (this._channelMessages.length === 0) { this._channelReactions = []; return; }
+    const messageIds = this._channelMessages.map(m => Number(m.id)).filter(id => !isNaN(id));
+    if (messageIds.length === 0) { this._channelReactions = []; return; }
+    try {
+      const resp = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/reactions/batch`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageIds }),
+      });
+      if (!resp.ok) { this._channelReactions = []; return; }
+      const data: Record<string, Array<{ emoji: string; count: number; actorIds: string[] }>> = await resp.json();
+      const reactions: Reaction[] = [];
+      for (const [msgId, groups] of Object.entries(data)) {
+        for (const g of groups) {
+          for (const actorId of g.actorIds) {
+            reactions.push({ messageId: msgId, emoji: g.emoji, actorId, createdAt: '' });
+          }
+        }
+      }
+      this._channelReactions = reactions;
+    } catch { this._channelReactions = []; }
+  }
+
+  private async _fetchChannelPresence(name: string): Promise<void> {
+    try {
+      const resp = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/presence`);
+      if (!resp.ok) { this._channelPresence = 0; this._channelMemberPresence = []; return; }
+      const data = await resp.json();
+      this._channelPresence = data.subscribers ?? 0;
+      this._channelMemberPresence = this._channelMembers.map(m => ({
+        memberId: m.memberId,
+        status: (this._channelPresence > 0 ? 'ONLINE' : 'OFFLINE') as 'ONLINE' | 'OFFLINE',
+      }));
+    } catch { this._channelPresence = 0; this._channelMemberPresence = []; }
+  }
+
+  private async _createChannel(): Promise<void> {
+    const nameInput = this.renderRoot.querySelector('#create-name') as HTMLInputElement | null;
+    const descInput = this.renderRoot.querySelector('#create-desc') as HTMLInputElement | null;
+    const name = nameInput?.value?.trim();
+    if (!name) { this._createError = 'Name is required'; return; }
+    try {
+      const resp = await fetchWithAuth('/api/channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: descInput?.value?.trim() || null }),
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        this._createError = text || `Failed (${resp.status})`;
+        return;
+      }
+      this._showCreateForm = false;
+      this._createError = '';
+      if (nameInput) nameInput.value = '';
+      if (descInput) descInput.value = '';
+      this._poll();
+    } catch (e: any) {
+      this._createError = e.message || 'Create failed';
+    }
   }
 
   private async _sendMessage(): Promise<void> {
@@ -284,7 +398,24 @@ export class ClaudonyMeshPanel extends LitElement {
         </div>
       </div>
       <div class="section">
-        <div class="label">CHANNELS</div>
+        <div class="section-header">
+          <div class="label">CHANNELS</div>
+          <pages-button size="xs" variant="ghost" label="+" title="Create channel"
+            @click=${() => { this._showCreateForm = !this._showCreateForm; this._createError = ''; }}></pages-button>
+        </div>
+        ${this._showCreateForm ? html`
+          <div class="create-form">
+            <input id="create-name" type="text" placeholder="Channel name (e.g. team-engineering)" />
+            <input id="create-desc" type="text" placeholder="Description (optional)" />
+            <div class="create-actions">
+              <pages-button size="xs" variant="primary" label="Create"
+                @click=${() => this._createChannel()}></pages-button>
+              <pages-button size="xs" variant="ghost" label="Cancel"
+                @click=${() => { this._showCreateForm = false; this._createError = ''; }}></pages-button>
+              <span class="create-error">${this._createError}</span>
+            </div>
+          </div>
+        ` : nothing}
         ${channels.length
           ? channels.map(ch => html`
               <div class="channel-item" @click=${() => { this._selectChannel(ch.name); this._switchView('channel'); }}>
@@ -307,23 +438,36 @@ export class ClaudonyMeshPanel extends LitElement {
   }
 
   private _renderChannel() {
-    const { channels, feed } = this._data;
+    const { channels } = this._data;
     if (!channels.length) return html`<div class="empty">No active channels</div>`;
 
     const selected = (!this._selectedChannel || !channels.find(c => c.name === this._selectedChannel))
       ? channels[0]!.name : this._selectedChannel;
 
-    const filtered = (feed || []).filter(m => m.channel === selected);
+    if (selected !== this._selectedChannel) {
+      this._selectChannel(selected);
+    }
+
     return html`
-      <select class="ch-select" style="margin-bottom:8px"
-        @change=${(e: Event) => { this._selectedChannel = (e.target as HTMLSelectElement).value; this._dockChannel = this._selectedChannel; }}>
-        ${channels.map(ch => html`<option value=${ch.name} ?selected=${ch.name === selected}>#${ch.name}</option>`)}
-      </select>
-      <div>
-        ${filtered.length
-          ? filtered.map(m => html`<div class="msg"><span class="msg-sender">${m.sender || m.agent_id || '?'}</span><span class="msg-content">${(m.content || '').substring(0, 80)}</span></div>`)
-          : html`<span class="dim">No messages</span>`}
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+        <select class="ch-select" style="flex:1"
+          @change=${(e: Event) => this._selectChannel((e.target as HTMLSelectElement).value)}>
+          ${channels.map(ch => html`<option value=${ch.name} ?selected=${ch.name === selected}>#${ch.name}</option>`)}
+        </select>
+        ${this._channelPresence > 0 ? html`
+          <pages-badge label="${this._channelPresence} watching" variant="info" size="sm"></pages-badge>
+        ` : nothing}
       </div>
+      <channel-feed .messages=${this._channelMessages}
+        .channelId=${selected}
+        .reactions=${this._channelReactions}
+        .staleCursorMinutes=${0}></channel-feed>
+      ${this._channelMembers.length > 0 ? html`
+        <div style="border-top:1px solid var(--pages-neutral-4); margin-top:8px; padding-top:4px">
+          <blocks-channel-member-panel .members=${this._channelMembers}
+            .presence=${this._channelMemberPresence}></blocks-channel-member-panel>
+        </div>
+      ` : nothing}
     `;
   }
 

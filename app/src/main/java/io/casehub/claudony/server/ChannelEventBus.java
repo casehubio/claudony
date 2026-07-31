@@ -34,8 +34,7 @@ public class ChannelEventBus {
         list.forEach(em -> { if (!em.isCancelled()) em.emit(1); });
     }
 
-    /** Package-private for testing. */
-    int subscriberCount(String channelName) {
+    public int subscriberCount(String channelName) {
         List<MultiEmitter<Integer>> list = subscribers.get(channelName);
         return list == null ? 0 : list.size();
     }
