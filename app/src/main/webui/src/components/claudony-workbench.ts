@@ -74,6 +74,7 @@ export class ClaudonyWorkbench extends LitElement {
   @state() private _reactions: Reaction[] = [];
   @state() private _topics: QhorusTopic[] = [];
   @state() private _members: ChannelMember[] = [];
+  @state() private _memberPresence: import('@casehubio/blocks-ui-channel-activity').PresenceState[] = [];
   @state() private _viewMode: 'flat' | 'threaded' = 'flat';
 
   // ── Non-reactive state ───────────────────────────────────────────────────
@@ -556,13 +557,27 @@ export class ClaudonyWorkbench extends LitElement {
   }
 
   private _fetchMembers(): void {
-    if (!this._selectedChannelId) { this._members = []; return; }
+    if (!this._selectedChannelId) { this._members = []; this._memberPresence = []; return; }
     fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/members`)
       .then(r => r.ok ? r.json() : [])
       .then((data: MembershipResponse[]) => {
         this._members = data.map(m => toChannelMember(m, this._selectedChannelId));
+        this._fetchPresence();
       })
-      .catch(() => { this._members = []; });
+      .catch(() => { this._members = []; this._memberPresence = []; });
+  }
+
+  private _fetchPresence(): void {
+    if (!this._selectedChannelId) { this._memberPresence = []; return; }
+    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/presence`)
+      .then(r => r.ok ? r.json() : { subscribers: 0 })
+      .then((data: { subscribers: number }) => {
+        this._memberPresence = this._members.map(m => ({
+          memberId: m.memberId,
+          status: (data.subscribers > 0 ? 'ONLINE' : 'OFFLINE') as 'ONLINE' | 'OFFLINE',
+        }));
+      })
+      .catch(() => { this._memberPresence = []; });
   }
 
   private _groupThreads(): Array<{ root: QhorusMessage; replies: QhorusMessage[] }> {
@@ -780,7 +795,7 @@ export class ClaudonyWorkbench extends LitElement {
         return html`<channel-artifact-panel
           .selectedArtefactRef=${this._selectedArtefactRef}></channel-artifact-panel>`;
       case 'members':
-        return html`<blocks-channel-member-panel .members=${this._members}></blocks-channel-member-panel>`;
+        return html`<blocks-channel-member-panel .members=${this._members} .presence=${this._memberPresence}></blocks-channel-member-panel>`;
       default:
         return nothing;
     }

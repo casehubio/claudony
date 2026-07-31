@@ -23,16 +23,12 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
 
     private static final Logger log             = Logger.getLogger(ClaudonyCaseChannelProvider.class);
     private static final String QHORUS_NAME_KEY = "qhorus-name";
-
-    private record CacheKey(String tenancyId, UUID caseId) {}
-
     private final ChannelService                                channelService;
     private final MessageService                                messageService;
     private final CaseChannelLayout                                     layout;
     private final ConcurrentHashMap<CacheKey, Map<String, CaseChannel>> layoutCache = new ConcurrentHashMap<>();
     private final io.casehub.qhorus.runtime.gateway.ChannelGateway      gateway;
     private final io.casehub.claudony.server.TenantContext              tenantContext;
-
     @Inject
     public ClaudonyCaseChannelProvider(ChannelService channelService,
                                        MessageService messageService, CaseHubConfig config,
@@ -112,12 +108,12 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
                              .toList();
     }
 
-    // ── internals ────────────────────────────────────────────────────────────
-
     private String extractPurpose(String channelName, UUID caseId) {
         String prefix = CaseChannel.CASE_CHANNEL_PREFIX + caseId + "/";
         return channelName.startsWith(prefix) ? channelName.substring(prefix.length()) : channelName;
     }
+
+    // ── internals ────────────────────────────────────────────────────────────
 
     private Map<String, CaseChannel> initializeLayout(UUID caseId) {
         List<CaseChannelLayout.ChannelSpec> specs  = layout.channelsFor(caseId, null);
@@ -141,8 +137,6 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
                                                deniedTypes != null ? deniedTypes : Set.of(),
                                                null, null, null, null, null);
         var detail = channelService.create(request);
-        gateway.initChannel(detail.id(),
-                            new io.casehub.qhorus.api.gateway.ChannelRef(detail.id(), detail.name()));
         return new CaseChannel(
                 detail.id().toString(),
                 detail.name(),
@@ -150,4 +144,6 @@ public class ClaudonyCaseChannelProvider implements CaseChannelProvider {
                 "qhorus",
                 Map.of(QHORUS_NAME_KEY, detail.name()));
     }
+
+    private record CacheKey(String tenancyId, UUID caseId) {}
 }
