@@ -45,7 +45,8 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, workerId, "WorkerExecutionCompleted", 2, completedAt);
         // ledgerRepo.save() flushes internally via the save pipeline
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
+                ;
 
         assertThat(result).hasSize(1);
         WorkerSummary s = result.get(0);
@@ -60,7 +61,8 @@ class CaseLineageQueryIntegrationTest {
     @Test
     @TestTransaction
     void returnsEmptyForUnknownCase() {
-        assertThat(lineageQuery.findCompletedWorkers(UUID.randomUUID())).isEmpty();
+        assertThat(lineageQuery.findCompletedWorkers(UUID.randomUUID())
+                ).isEmpty();
     }
 
     @Test
@@ -76,7 +78,8 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-running", "WorkerExecutionStarted", 3, now.minus(2, ChronoUnit.MINUTES));
         // ledgerRepo.save() flushes internally via the save pipeline
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
+                ;
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).workerId()).isEqualTo("worker-done");
@@ -94,7 +97,8 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-second", "WorkerExecutionCompleted",  4, base);
         // ledgerRepo.save() flushes internally via the save pipeline
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
+                ;
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).workerId()).isEqualTo("worker-first");
@@ -111,7 +115,8 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-x", "WorkerExecutionCompleted", 1, completedAt);
         // ledgerRepo.save() flushes internally via the save pipeline
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
+                ;
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).startedAt()).isEqualTo(completedAt);

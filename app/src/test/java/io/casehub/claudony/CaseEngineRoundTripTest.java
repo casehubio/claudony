@@ -4,9 +4,9 @@ import io.casehub.api.model.WorkerSummary;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.claudony.casehub.JpaCaseLineageQuery;
 import io.casehub.claudony.server.SessionRegistry;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
-import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -156,8 +156,7 @@ public class CaseEngineRoundTripTest {
                             .hasSize(1);
                 });
 
-        WorkerSummary summary = lineageQuery.findCompletedWorkers(caseId)
-                .get(0);
+        WorkerSummary summary = lineageQuery.findCompletedWorkers(caseId).get(0);
         assertThat(summary.workerName()).as("workerName").isEqualTo("agent");
         assertThat(summary.workerId()).as("workerId").isEqualTo("agent");
         assertThat(summary.startedAt()).as("startedAt").isNotNull();

@@ -12,8 +12,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * Integration test that verifies system prompt is absent when
+ * claudony.casehub.mesh-participation=silent is set via a test profile.
+ */
 @QuarkusTest
 @TestProfile(SystemPromptSilentProfileTest.SilentProfile.class)
 @TestSecurity(user = "test", roles = "user")
@@ -33,6 +35,6 @@ class SystemPromptSilentProfileTest {
     void silentConfig_systemPromptAbsent() {
         UUID caseId = UUID.randomUUID();
         var  ctx    = provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of()));
-        assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
+        org.assertj.core.api.Assertions.assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
     }
 }

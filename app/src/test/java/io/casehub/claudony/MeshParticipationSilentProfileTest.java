@@ -1,14 +1,15 @@
 package io.casehub.claudony;
 
-import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
 import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkerContext;
+import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,7 +36,7 @@ class MeshParticipationSilentProfileTest {
     @Test
     void silentConfig_stampsParticipationSilent() {
         WorkerContext ctx = provider.buildContext("integration-worker", null,
-                WorkRequest.of("task", Map.of()));
+                                                  WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.properties())
                 .containsEntry("meshParticipation", "SILENT");
