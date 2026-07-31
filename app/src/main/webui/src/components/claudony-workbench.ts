@@ -69,6 +69,8 @@ export class ClaudonyWorkbench extends LitElement {
 
   // ── Dock panels ──────────────────────────────────────────────────────────
   @state() private _dockState: Record<string, boolean> = { tasks: false, correlation: false, artifacts: false, members: false };
+  @state() private _navDrawerOpen = false;
+  @state() private _activeTab: 'chat' | 'terminal' | 'context' = 'chat';
 
   // ── Phase 4: reactions, topics, members, threads ────────────────────────
   @state() private _reactions: Reaction[] = [];
@@ -259,6 +261,61 @@ export class ClaudonyWorkbench extends LitElement {
       font-size: 11px; font-weight: 600; text-transform: uppercase;
       color: var(--pages-neutral-8, #888);
       padding: 8px 12px; border-bottom: 1px solid var(--pages-neutral-4, #3e3e42);
+    }
+
+    .nav-icon {
+      display: none; width: 48px; height: 48px; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--pages-neutral-8, #888); font-size: 18px; border: none;
+      background: none; min-height: 44px;
+    }
+    .nav-icon:hover { color: var(--pages-neutral-11, #ccc); background: rgba(255,255,255,0.05); }
+    .nav-drawer-overlay {
+      display: none; position: absolute; left: 48px; top: 0; bottom: 0;
+      width: 220px; z-index: 10; flex-direction: column;
+      background: var(--pages-neutral-2, #252526);
+      border-right: 1px solid var(--pages-neutral-4, #3e3e42);
+      box-shadow: 4px 0 8px rgba(0,0,0,0.3);
+    }
+    .nav-drawer-overlay.open { display: flex; }
+    .nav-drawer-backdrop {
+      display: none; position: fixed; inset: 0; z-index: 9;
+    }
+    .nav-drawer-backdrop.open { display: block; }
+
+    .tab-content { display: contents; }
+    .tab-panel { display: contents; }
+    .tab-bar { display: none; }
+
+    @media (max-width: 1024px) {
+      .nav-panel { width: 48px; min-width: 48px; overflow: visible; position: relative; }
+      .nav-panel .worker-list { display: none; }
+      .nav-panel .section-title { display: none; }
+      .nav-icon { display: flex; }
+      .conversation-area { width: 320px; min-width: 320px; }
+      .context-panel { display: none; }
+    }
+    @media (max-width: 767px) {
+      :host { flex-direction: column; }
+      .nav-panel { display: none; }
+      .tab-content { display: flex; position: relative; flex: 1; overflow: hidden; }
+      .tab-panel { display: flex; position: absolute; inset: 0; visibility: hidden; flex-direction: column; }
+      .tab-panel.active { visibility: visible; z-index: 1; }
+      .main-panel { width: 100%; }
+      .conversation-area { width: 100%; min-width: unset; border-left: none; }
+      .context-panel { width: 100%; min-width: unset; border-left: none; }
+      .tab-bar {
+        display: flex; height: 48px;
+        border-top: 1px solid var(--pages-neutral-4, #3e3e42);
+        background: var(--pages-neutral-2, #252526);
+        padding-bottom: env(safe-area-inset-bottom);
+        flex-shrink: 0;
+      }
+      .tab-btn {
+        flex: 1; display: flex; align-items: center; justify-content: center;
+        background: none; border: none; color: var(--pages-neutral-8, #888);
+        font-size: 12px; cursor: pointer; min-height: 44px;
+      }
+      .tab-btn[aria-selected="true"] { color: var(--pages-accent-9, #6366f1); }
     }
   `;
 
@@ -686,6 +743,20 @@ export class ClaudonyWorkbench extends LitElement {
 
   // ── Dock ─────────────────────────────────────────────────────────────────
 
+  private _switchTab(tab: 'chat' | 'terminal' | 'context'): void {
+    this._activeTab = tab;
+    this.dispatchEvent(new CustomEvent('pages-event', {
+      bubbles: true, composed: true,
+      detail: { topic: 'active-tab-changed', payload: { tab } },
+    }));
+    if (tab === 'terminal') {
+      requestAnimationFrame(() => {
+        const term = this.renderRoot.querySelector('pages-component-terminal');
+        if (term && 'fit' in term) (term as { fit(): void }).fit();
+      });
+    }
+  }
+
   private _toggleDock(panelId: string): void {
     this._dockState = { ...this._dockState, [panelId]: !this._dockState[panelId] };
   }
@@ -706,11 +777,15 @@ export class ClaudonyWorkbench extends LitElement {
     return html`
       ${this._workers.length > 0 ? this._renderWorkerNav() : nothing}
 
-      <div class="main-panel">
-        <div class="terminal-area" id="terminal-container"></div>
-      </div>
+      <div class="tab-content">
+        <div class="tab-panel ${this._activeTab === 'terminal' ? 'active' : ''}">
+          <div class="main-panel">
+            <div class="terminal-area" id="terminal-container"></div>
+          </div>
+        </div>
 
-      <div class="conversation-area">
+        <div class="tab-panel ${this._activeTab === 'chat' ? 'active' : ''}">
+          <div class="conversation-area">
         ${this._caseId ? this._renderCaseHeader() : nothing}
         ${this._lineageExpanded ? this._renderLineage() : nothing}
 
@@ -754,13 +829,35 @@ export class ClaudonyWorkbench extends LitElement {
           <pages-button size="xs" variant=${this._dockState['members'] ? 'secondary' : 'ghost'} label="Members"
             @click=${() => this._toggleDock('members')}></pages-button>
         </div>
+          </div>
+        </div>
+
+        <div class="tab-panel ${this._activeTab === 'context' ? 'active' : ''}">
+          ${activeContextPanel ? html`
+            <div class="context-panel">
+              ${this._caseId ? this._renderCaseHeader() : nothing}
+              ${this._renderContextPanel(activeContextPanel)}
+            </div>
+          ` : html`
+            <div class="context-panel">
+              ${this._caseId ? this._renderCaseHeader() : nothing}
+              ${this._lineageExpanded ? this._renderLineage() : nothing}
+              <div class="section-title">Select a panel from dock</div>
+            </div>
+          `}
+        </div>
       </div>
 
-      ${activeContextPanel ? html`
-        <div class="context-panel">
-          ${this._renderContextPanel(activeContextPanel)}
-        </div>
-      ` : nothing}
+      <nav class="tab-bar" role="tablist" aria-label="Panel navigation">
+        <button class="tab-btn" role="tab" aria-selected=${this._activeTab === 'chat'}
+          @click=${() => this._switchTab('chat')}>Chat</button>
+        <button class="tab-btn" role="tab" aria-selected=${this._activeTab === 'terminal'}
+          @click=${() => this._switchTab('terminal')}>Terminal</button>
+        ${this._caseId ? html`
+          <button class="tab-btn" role="tab" aria-selected=${this._activeTab === 'context'}
+            @click=${() => this._switchTab('context')}>Context</button>
+        ` : nothing}
+      </nav>
     `;
   }
 
@@ -828,26 +925,38 @@ export class ClaudonyWorkbench extends LitElement {
   private _renderWorkerNav() {
     return html`
       <div class="nav-panel">
+        <button class="nav-icon" @click=${() => { this._navDrawerOpen = !this._navDrawerOpen; }}
+          title="Toggle workers">&#9776;</button>
         <div class="section-title">Workers</div>
         <div class="worker-list">
-          ${this._workers.map(w => {
-            const status = (w.status || 'idle').toLowerCase();
-            const isActive = w.id === this._sessionId;
-            const displayName = w.roleName || w.name.replace(/^claudony-worker-/, '').replace(/^claudony-/, '');
-            const diffMs = Date.now() - new Date(w.createdAt).getTime();
-            const m = Math.floor(diffMs / 60000);
-            const timeAgo = m < 1 ? 'now' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h`;
-            return html`
-              <div class="worker-row ${isActive ? 'active-worker' : ''}"
-                @click=${() => { if (!isActive) this._handleWorkerSwitch(w.id, displayName); }}>
-                <pages-status-dot variant=${status === 'active' ? 'success' : status === 'waiting' ? 'warning' : status === 'faulted' ? 'danger' : 'neutral'}></pages-status-dot>
-                <span class="worker-name">${displayName}</span>
-                <span class="worker-time">${timeAgo}</span>
-              </div>`;
-          })}
+          ${this._renderWorkerRows()}
+        </div>
+        <div class="nav-drawer-backdrop ${this._navDrawerOpen ? 'open' : ''}"
+          @click=${() => { this._navDrawerOpen = false; }}></div>
+        <div class="nav-drawer-overlay ${this._navDrawerOpen ? 'open' : ''}">
+          <div class="section-title">Workers</div>
+          <div class="worker-list">${this._renderWorkerRows()}</div>
         </div>
       </div>
     `;
+  }
+
+  private _renderWorkerRows() {
+    return this._workers.map(w => {
+      const status = (w.status || 'idle').toLowerCase();
+      const isActive = w.id === this._sessionId;
+      const displayName = w.roleName || w.name.replace(/^claudony-worker-/, '').replace(/^claudony-/, '');
+      const diffMs = Date.now() - new Date(w.createdAt).getTime();
+      const m = Math.floor(diffMs / 60000);
+      const timeAgo = m < 1 ? 'now' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h`;
+      return html`
+        <div class="worker-row ${isActive ? 'active-worker' : ''}"
+          @click=${() => { if (!isActive) { this._handleWorkerSwitch(w.id, displayName); this._navDrawerOpen = false; } }}>
+          <pages-status-dot variant=${status === 'active' ? 'success' : status === 'waiting' ? 'warning' : status === 'faulted' ? 'danger' : 'neutral'}></pages-status-dot>
+          <span class="worker-name">${displayName}</span>
+          <span class="worker-time">${timeAgo}</span>
+        </div>`;
+    });
   }
 }
 

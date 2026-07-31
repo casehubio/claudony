@@ -26,6 +26,17 @@ export class ClaudonyTerminalHeader extends LitElement {
       font-weight: 600; font-size: 14px; flex: 1;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+    @media (max-width: 1024px) {
+      .terminal-header { padding: 8px 12px; gap: 8px; }
+      .back-link { font-size: 0; }
+      .back-link::before { content: '\2190'; font-size: 16px; }
+      .session-name { font-size: 13px; }
+      pages-button { min-height: 44px; }
+    }
+    @media (max-width: 767px) {
+      .terminal-header { padding: 6px 10px; gap: 6px; }
+      .session-name { font-size: 12px; max-width: 40vw; }
+    }
   `;
 
   configure(opts: { sessionName?: string; sessionId?: string }): void {

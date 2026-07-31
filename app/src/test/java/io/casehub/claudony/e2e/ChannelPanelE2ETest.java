@@ -7,7 +7,7 @@ import io.casehub.qhorus.api.channel.ChannelSemantic;
 import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.api.channel.Channel;
 import io.casehub.qhorus.api.message.Message;
-import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
+import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
 import io.casehub.qhorus.persistence.memory.InMemoryChannelStore;
 import io.casehub.qhorus.persistence.memory.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @QuarkusTest
 class ChannelPanelE2ETest extends PlaywrightBase {
 
-    @Inject ReactiveQhorusMcpTools tools;
+    @Inject QhorusMcpTools tools;
     @Inject InMemoryChannelStore channelStore;
     @Inject InMemoryMessageStore messageStore;
 

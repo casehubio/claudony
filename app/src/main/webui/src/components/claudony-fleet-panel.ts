@@ -76,7 +76,7 @@ export class ClaudonyFleetPanel extends LitElement {
     .peer-actions { display: flex; gap: 4px; flex-wrap: wrap; }
     .form-field { margin-bottom: 12px; }
 
-    @media (max-width: 600px) { :host { display: none; } }
+    @media (max-width: 767px) { :host { display: none; } }
   `;
 
   connectedCallback(): void {

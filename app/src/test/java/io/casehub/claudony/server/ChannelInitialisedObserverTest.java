@@ -1,6 +1,7 @@
 package io.casehub.claudony.server;
 
 import io.casehub.qhorus.api.gateway.ChannelRef;
+import io.casehub.qhorus.api.gateway.BackendRegistration;
 import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import io.casehub.qhorus.persistence.memory.InMemoryChannelStore;
 import io.casehub.qhorus.persistence.memory.InMemoryMessageStore;
@@ -32,7 +33,7 @@ class ChannelInitialisedObserverTest {
         gateway.initChannel(channelId, new ChannelRef(channelId, "case-" + channelId + "/work"));
 
         assertThat(gateway.listBackends(channelId))
-                .extracting(ChannelGateway.BackendRegistration::backendId)
+                .extracting(BackendRegistration::backendId)
                 .contains(ClaudonyChannelBackend.BACKEND_ID);
     }
 
@@ -42,7 +43,7 @@ class ChannelInitialisedObserverTest {
         gateway.initChannel(channelId, new ChannelRef(channelId, "some-other-channel"));
 
         assertThat(gateway.listBackends(channelId))
-                .extracting(ChannelGateway.BackendRegistration::backendId)
+                .extracting(BackendRegistration::backendId)
                 .doesNotContain(ClaudonyChannelBackend.BACKEND_ID);
     }
 

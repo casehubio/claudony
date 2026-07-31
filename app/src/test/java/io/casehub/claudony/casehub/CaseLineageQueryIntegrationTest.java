@@ -1,16 +1,15 @@
 package io.casehub.claudony.casehub;
 
 import io.casehub.api.model.WorkerSummary;
-import io.casehub.ledger.model.CaseLedgerEntry;
-import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.model.CaseLedgerEntry;
+import io.casehub.platform.api.identity.ActorType;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -46,8 +45,7 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, workerId, "WorkerExecutionCompleted", 2, completedAt);
         // ledgerRepo.save() flushes internally via the save pipeline
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
-                .await().atMost(Duration.ofSeconds(5));
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
 
         assertThat(result).hasSize(1);
         WorkerSummary s = result.get(0);
@@ -62,8 +60,7 @@ class CaseLineageQueryIntegrationTest {
     @Test
     @TestTransaction
     void returnsEmptyForUnknownCase() {
-        assertThat(lineageQuery.findCompletedWorkers(UUID.randomUUID())
-                .await().atMost(Duration.ofSeconds(5))).isEmpty();
+        assertThat(lineageQuery.findCompletedWorkers(UUID.randomUUID())).isEmpty();
     }
 
     @Test
@@ -79,8 +76,7 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-running", "WorkerExecutionStarted", 3, now.minus(2, ChronoUnit.MINUTES));
         // ledgerRepo.save() flushes internally via the save pipeline
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
-                .await().atMost(Duration.ofSeconds(5));
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).workerId()).isEqualTo("worker-done");
@@ -98,8 +94,7 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-second", "WorkerExecutionCompleted",  4, base);
         // ledgerRepo.save() flushes internally via the save pipeline
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
-                .await().atMost(Duration.ofSeconds(5));
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).workerId()).isEqualTo("worker-first");
@@ -116,8 +111,7 @@ class CaseLineageQueryIntegrationTest {
         persist(caseId, "worker-x", "WorkerExecutionCompleted", 1, completedAt);
         // ledgerRepo.save() flushes internally via the save pipeline
 
-        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId)
-                .await().atMost(Duration.ofSeconds(5));
+        List<WorkerSummary> result = lineageQuery.findCompletedWorkers(caseId);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).startedAt()).isEqualTo(completedAt);

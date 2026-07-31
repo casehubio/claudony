@@ -4,9 +4,9 @@ import io.casehub.api.model.WorkerSummary;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.claudony.casehub.JpaCaseLineageQuery;
 import io.casehub.claudony.server.SessionRegistry;
-import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
+import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -119,9 +119,7 @@ public class CaseEngineRoundTripTest {
         // removing the session from the registry before we can inspect it.
         when(tmuxService.sessionExists(anyString())).thenReturn(true);
 
-        UUID caseId = agentCase.startCase()
-                .toCompletableFuture()
-                .get(10, TimeUnit.SECONDS);
+        UUID caseId = agentCase.startCase();
 
         // Wait for provision() → createWorkerSession() — and registry.register() which follows synchronously.
         Awaitility.await()
@@ -152,15 +150,13 @@ public class CaseEngineRoundTripTest {
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(200))
                 .untilAsserted(() -> {
-                    List<WorkerSummary> workers = lineageQuery.findCompletedWorkers(caseId)
-                            .await().atMost(Duration.ofSeconds(5));
+                    List<WorkerSummary> workers = lineageQuery.findCompletedWorkers(caseId);
                     assertThat(workers)
                             .as("lineage must contain the completed worker")
                             .hasSize(1);
                 });
 
         WorkerSummary summary = lineageQuery.findCompletedWorkers(caseId)
-                .await().atMost(Duration.ofSeconds(5))
                 .get(0);
         assertThat(summary.workerName()).as("workerName").isEqualTo("agent");
         assertThat(summary.workerId()).as("workerId").isEqualTo("agent");

@@ -5,7 +5,7 @@ import io.casehub.api.model.Binding;
 import io.casehub.worker.api.Capability;
 import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.ContextChangeTrigger;
-import io.casehub.api.model.evaluator.ExpressionEvaluator;
+import io.casehub.platform.api.expression.ExpressionEvaluator;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**

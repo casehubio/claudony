@@ -9,8 +9,9 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import java.time.Duration;
 import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test that verifies the CDI wiring for MeshParticipationStrategy
@@ -34,8 +35,7 @@ class MeshParticipationSilentProfileTest {
     @Test
     void silentConfig_stampsParticipationSilent() {
         WorkerContext ctx = provider.buildContext("integration-worker", null,
-                WorkRequest.of("task", Map.of()))
-                .await().atMost(Duration.ofSeconds(5));
+                WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.properties())
                 .containsEntry("meshParticipation", "SILENT");

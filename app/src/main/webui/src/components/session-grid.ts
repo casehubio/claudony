@@ -68,6 +68,14 @@ export class ClaudonySessionGrid extends LitElement {
     .auth-actions { display: flex; flex-direction: column; gap: 0.75rem; }
     .pr-link { color: var(--pages-accent-9); text-decoration: none; }
     .pr-link:hover { text-decoration: underline; }
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.6rem; }
+      :host { padding: 0.75rem; }
+    }
+    @media (max-width: 767px) {
+      .grid { grid-template-columns: 1fr; gap: 0.6rem; }
+      :host { padding: 0.6rem; }
+    }
   `;
 
   connectedCallback(): void {
