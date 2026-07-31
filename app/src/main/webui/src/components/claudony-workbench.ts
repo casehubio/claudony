@@ -1,11 +1,11 @@
 import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { QhorusMessage, QhorusChannel, QhorusTopic, ChannelMember, Reaction, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
+import type { QhorusMessage, QhorusChannel, QhorusTopic, ChannelMember, PresenceState, Reaction, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
 import { ChannelEventTopics } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/pages-ui-components';
 import { attachTerminal, type TerminalHandle } from '../util/terminal-controller.js';
-import { toQhorusMessage, toQhorusChannel, toChannelMember, toQhorusTopic, type TimelineEntry, type ChannelInfo, type MembershipResponse, type TopicSummaryResponse } from '../util/channel-adapter.js';
+import { toQhorusMessage, toQhorusChannel, toChannelMember, toQhorusTopic, toPresenceState, type TimelineEntry, type ChannelInfo, type MembershipResponse, type TopicSummaryResponse, type PresenceResponse } from '../util/channel-adapter.js';
 import { toCommitmentMap, type CommitmentRecord } from '@casehubio/blocks-ui-channel-activity';
 import { fetchWithAuth } from '../util/auth.js';
 
@@ -76,6 +76,8 @@ export class ClaudonyWorkbench extends LitElement {
   @state() private _reactions: Reaction[] = [];
   @state() private _topics: QhorusTopic[] = [];
   @state() private _members: ChannelMember[] = [];
+  @state() private _presence: PresenceState[] = [];
+  @state() private _currentActorId = '';
   @state() private _viewMode: 'flat' | 'threaded' = 'flat';
 
   // ── Non-reactive state ───────────────────────────────────────────────────
@@ -434,8 +436,9 @@ export class ClaudonyWorkbench extends LitElement {
 
   private _fetchMeshConfig(): void {
     fetch('/api/mesh/config').then(r => r.json())
-      .then((cfg: { cursorStalenessMinutes?: number }) => {
+      .then((cfg: { cursorStalenessMinutes?: number; actorId?: string }) => {
         if (cfg?.cursorStalenessMinutes != null) this._stalenessMs = cfg.cursorStalenessMinutes * 60 * 1000;
+        if (cfg?.actorId) this._currentActorId = cfg.actorId;
       }).catch(() => { /* ignore */ });
   }
 
@@ -484,6 +487,7 @@ export class ClaudonyWorkbench extends LitElement {
     this._fetchCommitments(name);
     this._fetchTopics();
     this._fetchMembers();
+    this._fetchPresence();
   }
 
   private _openEventSource(name: string): void {
@@ -620,6 +624,16 @@ export class ClaudonyWorkbench extends LitElement {
         this._members = data.map(m => toChannelMember(m, this._selectedChannelId));
       })
       .catch(() => { this._members = []; });
+  }
+
+  private _fetchPresence(): void {
+    if (!this._selectedChannelId) { this._presence = []; return; }
+    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/presence`)
+      .then(r => r.ok ? r.json() : [])
+      .then((data: PresenceResponse[]) => {
+        this._presence = data.map(toPresenceState);
+      })
+      .catch(() => { this._presence = []; });
   }
 
   private _groupThreads(): Array<{ root: QhorusMessage; replies: QhorusMessage[] }> {
@@ -809,9 +823,11 @@ export class ClaudonyWorkbench extends LitElement {
             ? this._groupThreads().map(t => html`
                 <blocks-channel-thread .rootMessage=${t.root} .replies=${t.replies}
                   .reactions=${this._reactions.filter(r => r.messageId === t.root.id || t.replies.some(rp => rp.id === r.messageId))}
-                  .selectedMessageId=${this._selectedMessageId}></blocks-channel-thread>`)
-            : html`<channel-feed .messages=${this._messages} .channelId=${this._selectedChannelId}
-                .reactions=${this._reactions} .staleCursorMinutes=${0}></channel-feed>`}
+                  .selectedMessageId=${this._selectedMessageId}
+                  .currentActorId=${this._currentActorId}></blocks-channel-thread>`)
+            : html`<blocks-channel-feed .messages=${this._messages} .channelId=${this._selectedChannelId}
+                .reactions=${this._reactions} .staleCursorMinutes=${0}
+                .currentActorId=${this._currentActorId}></blocks-channel-feed>`}
         </div>
 
         <channel-input .channelId=${this._selectedChannelId} .showTypeSelector=${true}
@@ -877,7 +893,7 @@ export class ClaudonyWorkbench extends LitElement {
         return html`<channel-artifact-panel
           .selectedArtefactRef=${this._selectedArtefactRef}></channel-artifact-panel>`;
       case 'members':
-        return html`<blocks-channel-member-panel .members=${this._members}></blocks-channel-member-panel>`;
+        return html`<blocks-channel-member-panel .members=${this._members} .presence=${this._presence}></blocks-channel-member-panel>`;
       default:
         return nothing;
     }

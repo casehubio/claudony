@@ -517,6 +517,35 @@ class MeshResourceTest {
                 .statusCode(200)
                 .body("$", org.hamcrest.Matchers.hasSize(0));
     }
+
+    @Test
+    void presence_unknownChannel_returns404() {
+        given()
+                .when()
+                .get("/api/mesh/channels/nonexistent/presence")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void presence_emptyChannel_returnsEmptyList() {
+        channelStore.put(io.casehub.qhorus.api.channel.Channel.builder("presence-ch").build());
+        given()
+                .when()
+                .get("/api/mesh/channels/presence-ch/presence")
+                .then()
+                .statusCode(200)
+                .body("$", org.hamcrest.Matchers.hasSize(0));
+    }
+
+    @Test
+    void meshConfig_returnsActorId() {
+        given().when().get("/api/mesh/config")
+               .then()
+               .statusCode(200)
+               .body("actorId", equalTo("test"));
+    }
+
 }
 
 @QuarkusTest
