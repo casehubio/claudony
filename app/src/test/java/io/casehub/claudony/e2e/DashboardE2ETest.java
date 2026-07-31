@@ -49,19 +49,19 @@ class DashboardE2ETest extends PlaywrightBase {
     @Test
     void sessionGrid_showsEmptyState_whenNoSessions() {
         page.navigate(BASE_URL + "/app/");
-        page.locator("claudony-session-grid .empty").waitFor(
+        page.locator("claudony-session-panel .empty").waitFor(
                 new Locator.WaitForOptions().setTimeout(10000));
-        assertThat(page.locator("claudony-session-grid .empty").textContent()).contains("No active sessions");
+        assertThat(page.locator("claudony-session-panel .empty").textContent()).contains("No active sessions");
     }
 
     @Test
     void newSessionDialog_opensAndCloses() {
         page.navigate(BASE_URL + "/app/");
-        page.locator("claudony-session-grid pages-button[label='+ New Session']").click();
-        var dialog = page.locator("claudony-session-grid pages-modal");
+        page.locator("claudony-session-panel pages-button[label='+ New Session']").click();
+        var dialog = page.locator("claudony-session-panel pages-modal");
         assertThat(dialog.isVisible()).isTrue();
-        assertThat(page.locator("claudony-session-grid pages-input").first().isVisible()).isTrue();
-        page.locator("claudony-session-grid pages-button[label='Cancel']").click();
+        assertThat(page.locator("claudony-session-panel pages-input").first().isVisible()).isTrue();
+        page.locator("claudony-session-panel pages-button[label='Cancel']").click();
         page.waitForTimeout(500);
     }
 
@@ -93,16 +93,16 @@ class DashboardE2ETest extends PlaywrightBase {
             throw new RuntimeException("Failed to parse session creation response", e);
         }
 
-        // Navigate and wait for card (session-grid polls every 5s — allow 10s)
+        // Navigate and wait for card (session-panel polls every 5s — allow 10s)
         page.navigate(BASE_URL + "/app/");
-        page.locator("claudony-session-grid .card").waitFor(
+        page.locator("claudony-session-panel .card").waitFor(
                 new Locator.WaitForOptions().setTimeout(10000));
 
         // Server prepends "claudony-" to the name; displayName() strips it back to "playwright-test"
-        assertThat(page.locator("claudony-session-grid .card-name").first().textContent())
+        assertThat(page.locator("claudony-session-panel .card-name").first().textContent())
                 .isEqualTo("playwright-test");
         // Status badge present — pages-badge with label attribute
-        assertThat(page.locator("claudony-session-grid pages-badge").first().getAttribute("label")).isNotBlank();
+        assertThat(page.locator("claudony-session-panel pages-badge").first().getAttribute("label")).isNotBlank();
     }
 
     @Test
@@ -111,7 +111,7 @@ class DashboardE2ETest extends PlaywrightBase {
              var unauthPage = unauthContext.newPage()) {
             unauthPage.navigate(BASE_URL + "/app/");
             var redirectedToLogin = unauthPage.url().contains("/auth/login");
-            var authOverlayShown = unauthPage.locator("claudony-session-grid pages-modal[variant='alertdialog']").count() > 0;
+            var authOverlayShown = unauthPage.locator("claudony-session-panel pages-modal[variant='alertdialog']").count() > 0;
             assertThat(redirectedToLogin || authOverlayShown)
                     .withFailMessage("Expected auth redirect or overlay, URL was: " + unauthPage.url())
                     .isTrue();

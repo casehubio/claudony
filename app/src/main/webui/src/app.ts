@@ -1,19 +1,19 @@
 import { loadSite, registerPanel } from "@casehubio/pages-runtime";
 import { hostPanel, columns } from "@casehubio/pages-ui";
 import { initTheme } from "./theme";
-import "./components/session-grid";
+import "./components/session-panel";
 import "./components/claudony-fleet-panel";
 import "./components/claudony-mesh-panel";
 
 initTheme();
 
-registerPanel("session-grid", "claudony-session-grid");
+registerPanel("session-panel", "claudony-session-panel");
 registerPanel("fleet-panel", "claudony-fleet-panel");
 registerPanel("mesh-panel", "claudony-mesh-panel");
 
 const app = columns(
   hostPanel("fleet-panel"),
-  hostPanel("session-grid"),
+  hostPanel("session-panel"),
   hostPanel("mesh-panel"),
 );
 
