@@ -1,13 +1,13 @@
 package io.casehub.claudony;
 
-import io.casehub.worker.api.Capability;
-import io.casehub.worker.api.Worker;
 import io.casehub.engine.common.internal.history.EventLog;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.scheduler.WorkerExecutionManager;
+import io.casehub.worker.api.Capability;
+import io.casehub.worker.api.Worker;
 import io.quarkus.arc.DefaultBean;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+
 import java.util.Map;
 
 /**
@@ -30,14 +30,12 @@ class NoOpWorkerExecutionManager implements WorkerExecutionManager {
     }
 
     @Override
-    public Uni<Void> submit(Long eventLogId, CaseInstance instance, Worker worker,
-            Capability capability, Map<String, Object> inputData) {
-        return Uni.createFrom().voidItem();
+    public void submit(Long eventLogId, CaseInstance instance, Worker worker,
+                       Capability capability, Map<String, Object> inputData) {
     }
 
     @Override
-    public Uni<Void> schedulePersistedEvent(EventLog scheduledEventLog) {
-        return Uni.createFrom().voidItem();
+    public void schedulePersistedEvent(EventLog scheduledEventLog) {
     }
 
     @Override

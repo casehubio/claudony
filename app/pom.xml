@@ -339,12 +339,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <!-- Skip test compilation pending engine SPI restoration (reactive SPI retirement #184).
-               Tests depend on removed SPIs: WorkerExecutionManager, WorkerExecutionRecoveryService.
-               See claudony#184 for restoration tracking. -->
-          <skipTests>true</skipTests>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

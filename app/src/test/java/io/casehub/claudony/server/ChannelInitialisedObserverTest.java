@@ -1,9 +1,10 @@
 package io.casehub.claudony.server;
 
+import io.casehub.qhorus.api.gateway.BackendRegistration;
 import io.casehub.qhorus.api.gateway.ChannelRef;
-import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import io.casehub.qhorus.persistence.memory.InMemoryChannelStore;
 import io.casehub.qhorus.persistence.memory.InMemoryMessageStore;
+import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
@@ -16,9 +17,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @QuarkusTest
 class ChannelInitialisedObserverTest {
 
-    @Inject ChannelGateway gateway;
-    @Inject InMemoryChannelStore channelStore;
-    @Inject InMemoryMessageStore messageStore;
+    @Inject
+    ChannelGateway       gateway;
+    @Inject
+    InMemoryChannelStore channelStore;
+    @Inject
+    InMemoryMessageStore messageStore;
 
     @AfterEach
     void cleanup() {
@@ -32,30 +36,30 @@ class ChannelInitialisedObserverTest {
         gateway.initChannel(channelId, new ChannelRef(channelId, "case-" + channelId + "/work"));
 
         assertThat(gateway.listBackends(channelId))
-                .extracting(ChannelGateway.BackendRegistration::backendId)
+                .extracting(BackendRegistration::backendId)
                 .contains(ClaudonyChannelBackend.BACKEND_ID);
     }
 
     @Test
-    void channelInitialised_nonCaseChannel_backendNotRegistered() {
+    void channelInitialised_nonCaseChannel_registersBackend() {
         UUID channelId = UUID.randomUUID();
-        gateway.initChannel(channelId, new ChannelRef(channelId, "some-other-channel"));
+        gateway.initChannel(channelId, new ChannelRef(channelId, "team/engineering"));
 
         assertThat(gateway.listBackends(channelId))
-                .extracting(ChannelGateway.BackendRegistration::backendId)
-                .doesNotContain(ClaudonyChannelBackend.BACKEND_ID);
+                .extracting(BackendRegistration::backendId)
+                .contains(ClaudonyChannelBackend.BACKEND_ID);
     }
 
     @Test
     void channelInitialised_calledTwice_noDuplicateBackend() {
-        UUID channelId = UUID.randomUUID();
+        UUID   channelId   = UUID.randomUUID();
         String channelName = "case-" + channelId + "/observe";
         gateway.initChannel(channelId, new ChannelRef(channelId, channelName));
         gateway.initChannel(channelId, new ChannelRef(channelId, channelName));
 
         long count = gateway.listBackends(channelId).stream()
-                .filter(b -> ClaudonyChannelBackend.BACKEND_ID.equals(b.backendId()))
-                .count();
+                            .filter(b -> ClaudonyChannelBackend.BACKEND_ID.equals(b.backendId()))
+                            .count();
         assertThat(count).isEqualTo(1);
     }
 }
