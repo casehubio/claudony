@@ -325,7 +325,7 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 ├── esbuild.config.mjs                 — two entry points (app.ts, terminal.ts), code splitting
 ├── vitest.config.ts                   — test config (excludes .casehub-packages from discovery)
 ├── src/
-│   ├── app.ts                         — fleet home entry point (loadSite + session-grid + fleet-panel + mesh-panel + initTheme)
+│   ├── app.ts                         — fleet home entry point (loadSite + session-panel + fleet-panel + mesh-panel + initTheme)
 │   ├── terminal.ts                    — terminal entry point (loadSite + compose overlay + lifecycle + initTheme)
 │   ├── theme.ts                       — pages-ui-tokens integration: initTheme() injects --pages-* design tokens,
 │   │                                       THEME_CSS bridges --pages-* to claudony's legacy var names
@@ -336,7 +336,7 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 │   ├── util/terminal-controller.ts    — shared terminal setup: attachTerminal(), TerminalHandle (WebSocket,
 │   │                                       resize, session switching). Used by both workbench and fleet mode.
 │   └── components/
-│       ├── session-grid.ts            — session card grid with git/PR/service status, dialogs, auth (LitElement)
+│       ├── session-panel.ts            — session panel with grid/table view toggle, git/PR/service status, dialogs, auth (LitElement)
 │       ├── terminal-header.ts         — back link, session name, status badge, toggle buttons (LitElement)
 │       ├── terminal-workspace.ts      — three-column flex coordinator for fleet mode (LitElement,
 │       │                                  delegates to terminal-controller.ts)

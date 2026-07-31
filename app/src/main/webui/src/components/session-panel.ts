@@ -2,8 +2,12 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import '@casehubio/pages-ui-components';
 import '@casehubio/pages-primitives/modal';
+import '@casehubio/blocks-ui-session-workbench';
 import { fetchWithAuth } from '../util/auth.js';
 import { THEME_CSS } from '../theme.js';
+
+type ViewMode = 'grid' | 'table';
+const VIEW_STORAGE_KEY = 'claudony.session-view';
 
 interface Session {
   id: string;
@@ -30,8 +34,9 @@ interface ServicePort { port: number; responseMs: number }
 
 const POLL_INTERVAL = 5000;
 
-@customElement('claudony-session-grid')
-export class ClaudonySessionGrid extends LitElement {
+@customElement('claudony-session-panel')
+export class ClaudonySessionPanel extends LitElement {
+  @state() private _viewMode: ViewMode = (localStorage.getItem(VIEW_STORAGE_KEY) as ViewMode) || 'grid';
   @state() private _sessions: Session[] = [];
   @state() private _showNewDialog = false;
   @state() private _showAuthDialog = false;
@@ -68,6 +73,11 @@ export class ClaudonySessionGrid extends LitElement {
     .auth-actions { display: flex; flex-direction: column; gap: 0.75rem; }
     .pr-link { color: var(--pages-accent-9); text-decoration: none; }
     .pr-link:hover { text-decoration: underline; }
+    .view-toggle { display: flex; gap: 2px; }
+    .view-toggle button { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; cursor: pointer; font-size: 14px; color: var(--text-muted); }
+    .view-toggle button:hover { background: rgba(255,255,255,0.05); }
+    .view-toggle button.active { color: var(--accent); border-color: var(--accent); }
+    blocks-session-workbench { height: calc(100% - 3rem); }
     @media (max-width: 1024px) {
       .grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.6rem; }
       :host { padding: 0.75rem; }
@@ -171,6 +181,11 @@ export class ClaudonySessionGrid extends LitElement {
     } catch { this._serviceStatus = { ...this._serviceStatus, [id]: 'check failed' }; }
   }
 
+  private _setView(mode: ViewMode): void {
+    this._viewMode = mode;
+    localStorage.setItem(VIEW_STORAGE_KEY, mode);
+  }
+
   private _validateName(): void {
     const exists = this._sessions.some(s => this._displayName(s.name) === this._newName.trim());
     this._nameError = exists ? 'A session named "' + this._newName.trim() + '" already exists' : '';
@@ -198,9 +213,23 @@ export class ClaudonySessionGrid extends LitElement {
     return html`
       <div class="header">
         <h2>Sessions</h2>
-        <pages-button variant="primary" size="sm" label="+ New Session"
-          @click=${() => { this._showNewDialog = true; }}></pages-button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="view-toggle">
+            <button class=${this._viewMode === 'grid' ? 'active' : ''} @click=${() => this._setView('grid')} title="Grid view">&#9638;</button>
+            <button class=${this._viewMode === 'table' ? 'active' : ''} @click=${() => this._setView('table')} title="Table view">&#9776;</button>
+          </div>
+          ${this._viewMode === 'grid' ? html`<pages-button variant="primary" size="sm" label="+ New Session"
+            @click=${() => { this._showNewDialog = true; }}></pages-button>` : nothing}
+        </div>
       </div>
+      ${this._viewMode === 'grid' ? this._renderGrid() : this._renderTable()}
+      ${this._renderNewSessionDialog()}
+      ${this._renderAuthDialog()}
+    `;
+  }
+
+  private _renderGrid() {
+    return html`
       <div class="grid">
         ${this._sessions.length === 0
           ? html`<div class="empty"><p>No active sessions</p>
@@ -208,9 +237,11 @@ export class ClaudonySessionGrid extends LitElement {
                 @click=${() => { this._showNewDialog = true; }}></pages-button></div>`
           : this._sessions.map(s => this._renderCard(s))}
       </div>
-      ${this._renderNewSessionDialog()}
-      ${this._renderAuthDialog()}
     `;
+  }
+
+  private _renderTable() {
+    return html`<blocks-session-workbench endpoint="/api/sessions"></blocks-session-workbench>`;
   }
 
   private _renderCard(s: Session) {
@@ -281,6 +312,6 @@ export class ClaudonySessionGrid extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'claudony-session-grid': ClaudonySessionGrid;
+    'claudony-session-panel': ClaudonySessionPanel;
   }
 }
