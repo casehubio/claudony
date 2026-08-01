@@ -209,6 +209,9 @@ docker compose up
 - Register passkey: `http://localhost:7777/auth/register` (first run, or with invite token)
 - Login: `http://localhost:7777/auth/login`
 - Dev quick login: `http://localhost:7777/auth/dev-login` (POST — dev mode only, sets auth cookie)
+- Channel CRUD (Qhorus): `http://localhost:7777/api/channels` (POST create, GET list, DELETE)
+- Channel members: `http://localhost:7777/api/mesh/channels/{name}/members` (GET list, POST join, DELETE leave)
+- Channel presence: `http://localhost:7777/api/mesh/channels/{name}/presence` (GET subscriber count)
 
 ---
 
@@ -394,6 +397,16 @@ claudony.casehub.mesh-participation=active     # active | reactive | silent
 
 **MCP transport: HTTP/SSE.** The Agent exposes `POST /mcp` as a JSON-RPC endpoint. Claude Code connects to it as an MCP server. The Agent proxies session commands to the Server via REST. GraalVM-native compatible — no stdio process needed.
 
+**Channel architecture (#177).** Channels are a universal communication primitive — not case-specific. Any context (cases, teams, issues, collaborations) can create and use channels. Key design points:
+
+- **Qhorus owns channel CRUD.** `POST /api/channels` is served by Qhorus's `ChannelResource` (auto-mounted via JAX-RS classpath scanning — no proxy code in Claudony). Claudony adds case-specific augmentation via `ClaudonyCaseChannelProvider` (engine SPI).
+- **`ClaudonyChannelBackend` registers for ALL channels** (no `case-` prefix filter). All channels participate in `ChannelEventBus` for SSE delivery.
+- **Auto-join on post.** `MeshResource.postMessage()` auto-joins the sender as a channel member after sending. Idempotent via `ChannelMembershipService.join()`.
+- **Reaction SSE push.** `addReaction()` and `removeReaction()` tick `ChannelEventBus` so SSE subscribers get real-time reaction updates.
+- **Presence.** `GET /api/mesh/channels/{name}/presence` returns active SSE subscriber count via `ChannelEventBus.subscriberCount()`.
+- **Namespace conventions.** See `docs/CHANNELS.md` — prefix ownership: `case-{uuid}/` (engine), `life/` (household), `team/` (general rooms), `issue/` (issue-scoped), `collab/` (collaboration).
+- **Redundant `gateway.initChannel()` removed** from `ClaudonyCaseChannelProvider.createQhorusChannel()` — `ChannelService.create()` fires it internally via `ChannelCreateHelper` (qhorus#254).
+
 ---
 
 ## Known Issues and Quirks
@@ -451,7 +464,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-07-26, after claudony#184 reactive→blocking migration):** 16 in `claudony-core` + 175 in `claudony-casehub` + 405 in `claudony-app` = **596 total, 596 passing** (casehub -1: dropped reactive-specific event loop test). App module gained 6 tests (MeshResource validation, commitment endpoint, timeline enrichment). Previous baseline: 591 (2026-07-07, after #168 broadcaster migration). Frontend: 25 vitest (was 19; +6 adapter tests for toChannelMember/toQhorusTopic in #185). E2E: 4 new workbench tests (WorkbenchE2ETest). No known failing tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-08-01, after Epic B conversation maturity #177/#178/#190/#191/#192):** 16 in `claudony-core` + 175 in `claudony-casehub` + ~420 in `claudony-app` = **~611 total**. App module gained 8 tests: member join (ok, 404, idempotent), leave (ok, 404), auto-join on post, presence (ok, 404), channel creation (6 tests from #177). `ClaudonyCaseChannelProviderTest` updated for 4-channel `NormativeChannelLayout` (coordination channel added). `ChannelInitialisedObserverTest` updated: non-case channels now register the backend. Previous baseline: 596 (2026-07-26, after #184). Frontend: 25 vitest. E2E: 4 workbench tests. 1 known worktree-specific failure (`GitStatusTest` — git remote URL differs in worktrees). Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
