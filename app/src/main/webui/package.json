@@ -14,7 +14,9 @@
     "@casehubio/pages-runtime": "*",
     "@casehubio/pages-ui": "*",
     "@casehubio/pages-ui-tokens": "*",
-    "lit": "^3.3.3"
+    "jsonata": "^2.2.1",
+    "lit": "^3.3.3",
+    "zod": "^3.23.0"
   },
   "resolutions": {
     "@casehubio/pages-component": "portal:./.casehub-packages/packages/pages-component",
@@ -28,7 +30,8 @@
     "@casehubio/pages-ui-tokens": "portal:./.casehub-packages/packages/pages-ui-tokens",
     "@casehubio/pages-viz": "portal:./.casehub-packages/packages/pages-viz",
     "@casehubio/blocks-ui-channel-activity": "portal:./.casehub-packages/packages/channel-activity",
-    "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core"
+    "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core",
+    "@casehubio/blocks-ui-session-workbench": "portal:./.casehub-packages/packages/session-workbench"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
