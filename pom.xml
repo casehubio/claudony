@@ -24,6 +24,7 @@
     <quarkus-mcp-server.version>1.11.1</quarkus-mcp-server.version>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
     <casehub.version>0.2-SNAPSHOT</casehub.version>
+    <casehub-packages.phase>initialize</casehub-packages.phase>
   </properties>
 
   <dependencyManagement>

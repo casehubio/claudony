@@ -488,6 +488,14 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
   -f /Users/mdproctor/claude/casehub/engine/pom.xml
 ```
 
+**npm bridge JARs (local dev):** `casehub-pages-npm` and `casehub-blocks-ui-npm` are Maven JARs that bundle npm packages for the `maven-dependency-plugin` unpack into `.casehub-packages/`. CI builds these from source (self-contained). For local dev, install from source when stale:
+```bash
+# Pages (must be first — blocks-ui depends on it)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/pages/npm-packages/pom.xml
+# Blocks-ui
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks-ui/npm-packages/pom.xml
+```
+
 `claudony-casehub` tests:
 - `ClaudonyProviderConfigTest` — fromMap, fromConfigMapping, EMPTY sentinel, fromMap empty map
 - `WorkerCommandBuilderTest` — base command only, model flag, all flags, shell quoting, empty config
