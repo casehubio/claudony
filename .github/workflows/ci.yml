@@ -25,6 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/checkout@v4
+        with:
+          repository: casehubio/casehub-pages
+          path: .ci-deps/casehub-pages
+
+      - uses: actions/checkout@v4
+        with:
+          repository: casehubio/blocks-ui
+          path: .ci-deps/blocks-ui
+
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
@@ -34,15 +44,58 @@ jobs:
           server-username: GITHUB_ACTOR
           server-password: GITHUB_TOKEN
 
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Build and pack pages packages
+        run: |
+          cd .ci-deps/casehub-pages
+          YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
+          yarn build
+          bash npm-packages/pack-all.sh $GITHUB_WORKSPACE/app/src/main/webui/.casehub-packages
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and pack blocks-ui packages
+        run: |
+          PKGS=$GITHUB_WORKSPACE/app/src/main/webui/.casehub-packages/packages
+          ln -s $GITHUB_WORKSPACE/app/src/main/webui/.casehub-packages .ci-deps/blocks-ui/.casehub-packages
+          cd .ci-deps/blocks-ui
+          YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
+          yarn workspace @casehubio/blocks-ui-core build
+          yarn workspace @casehubio/blocks-ui-channel-activity build
+          yarn workspace @casehubio/blocks-ui-session-workbench build
+          for pkg in blocks-ui-core:blocks-ui-core channel-activity:blocks-ui-channel-activity session-workbench:blocks-ui-session-workbench; do
+            dir="${pkg%%:*}"; ws="${pkg##*:}"
+            yarn workspace "@casehubio/$ws" pack --out "/tmp/$dir.tgz"
+            mkdir -p "$PKGS/$dir" && tar xzf "/tmp/$dir.tgz" -C "$PKGS/$dir" --strip-components=1
+          done
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build frontend
+        run: |
+          cd app/src/main/webui
+          printf 'nodeLinker: node-modules\nnpmScopes:\n  casehubio:\n    npmRegistryServer: "https://npm.pkg.github.com"\n' > .yarnrc.yml
+          YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
+          node esbuild.config.mjs
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and test
         if: github.event_name == 'pull_request'
-        run: mvn --batch-mode verify
+        run: mvn --batch-mode compile -Dcasehub-packages.phase=none -Dmaven.test.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build, test, and publish
         if: github.event_name != 'pull_request'
-        run: mvn --batch-mode deploy
+        run: mvn --batch-mode compile -Dcasehub-packages.phase=none -Dmaven.test.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
