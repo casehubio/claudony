@@ -11,6 +11,7 @@
   "dependencies": {
     "@casehubio/blocks-ui-channel-activity": "*",
     "@casehubio/blocks-ui-core": "*",
+    "@casehubio/blocks-ui-session-workbench": "*",
     "@casehubio/pages-component-terminal": "*",
     "@casehubio/pages-runtime": "*",
     "@casehubio/pages-ui": "*",
