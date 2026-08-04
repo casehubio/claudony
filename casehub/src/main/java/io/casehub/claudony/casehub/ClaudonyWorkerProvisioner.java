@@ -98,7 +98,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         signalStarted(capabilities, context);
         startWatcher(capabilities, context);
 
-        return new ProvisionResult(causedBy.orElse(null));
+        return new ProvisionResult(causedBy.orElse(null), null);
     }
 
     private void startWatcher(Set<String> capabilities, ProvisionContext context) {
