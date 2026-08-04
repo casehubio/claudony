@@ -43,7 +43,7 @@ public class WorkerSessionMapping {
         return Optional.ofNullable(byCase.get(caseId + ":" + roleName));
     }
 
-    Optional<String> findByRole(final String roleName) {
+    public Optional<String> findByRole(final String roleName) {
         return Optional.ofNullable(byRole.get(roleName));
     }
 

@@ -1,7 +1,5 @@
 # Design: ResearcherCase, Exit Signalling, and Branch Follow-ups
 
-> **Note (2026-06-20):** `ResearcherCase` and the `researcher` capability were renamed to `AgentCase` / `agent` in issue #150. This document uses the original names as they existed at design time.
-
 **Branch:** `issue-148-researcher-case`  
 **Covers:** #148 (ResearcherCase + exit signalling), #143 (tenancyId tests), #147 (bootstrapCasehubWatchers tests)  
 **Date:** 2026-06-06 (rev 3)

@@ -220,6 +220,8 @@ docker compose up
 - Channel CRUD (Qhorus): `http://localhost:7777/api/channels` (POST create, GET list, DELETE)
 - Channel members: `http://localhost:7777/api/mesh/channels/{name}/members` (GET list, POST join, DELETE leave)
 - Channel presence: `http://localhost:7777/api/mesh/channels/{name}/presence` (GET subscriber count)
+- Cases API: `http://localhost:7777/api/cases` (GET list, GET /{id} detail)
+- Actions API: `http://localhost:7777/api/actions` (GET unified action inbox)
 
 ---
 
@@ -289,12 +291,28 @@ claudony-casehub/src/main/java/dev/claudony/casehub/
 ├── ReactiveParticipationStrategy.java  — engage only when directly addressed
 ├── SilentParticipationStrategy.java    — no mesh participation
 ├── MeshSystemPromptTemplate.java       — package-private: generates ACTIVE/REACTIVE/SILENT prompt from channels + prior workers
-└── ClaudonyLedgerEventCapture.java     — @ObservesAsync CaseLifecycleEvent → writes CaseLedgerEntry via @LedgerPersistenceUnit EM
+├── ClaudonyLedgerEventCapture.java     — @ObservesAsync CaseLifecycleEvent → writes CaseLedgerEntry via @LedgerPersistenceUnit EM
+├── browser/                            — case browser aggregation layer
+│   ├── CaseSummary.java                — list DTO: id, status, definitionName, workerCount, channelCount
+│   ├── CaseDetail.java                 — detail DTO: workers, channels, timeline
+│   ├── WorkerInfo.java                 — session-to-worker mapping DTO
+│   └── CaseBrowserService.java         — aggregates CaseInstanceRepository + SessionRegistry + QhorusDashboardService
+└── inbox/                              — unified action inbox
+    ├── ActionItem.java                 — unified DTO: sourceType, urgency, title, actions
+    ├── ActionDescriptor.java           — per-action endpoint descriptor
+    ├── SourceType.java                 — COMMITMENT, STALL, OVERSIGHT, WORKITEM
+    ├── Urgency.java                    — HIGH, MEDIUM, LOW
+    ├── StallTracker.java               — @ApplicationScoped; observes WorkerStalledEvent, maintains stalled set
+    ├── ActionAggregationService.java   — composes commitments + stalls, sorts by urgency
+    ├── ActionCounts.java               — high/medium/low counts
+    └── ActionInboxResponse.java        — items + counts response wrapper
 
 claudony-app/src/main/java/dev/claudony/
 ├── server/
 │   ├── SessionResource.java            — REST API /api/sessions (+ GET /{id}/lineage → CaseLineageQuery;
 │   │                                       GET /api/sessions/{id}/case-events SSE stream)
+│   ├── CaseBrowserResource.java        — REST API /api/cases (list, detail); @Blocking
+│   ├── ActionInboxResource.java        — REST API /api/actions (unified inbox); @Blocking
 │   ├── TerminalWebSocket.java          — WebSocket /ws/{id}, pipe-pane + FIFO streaming
 │   ├── ServerStartup.java              — startup health checks, directory creation, tmux bootstrap,
 │   │                                       bootstrapChannelBackends() re-registers ClaudonyChannelBackend
@@ -336,7 +354,7 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 ├── esbuild.config.mjs                 — two entry points (app.ts, terminal.ts), code splitting
 ├── vitest.config.ts                   — test config (excludes .casehub-packages from discovery)
 ├── src/
-│   ├── app.ts                         — fleet home entry point (loadSite + session-panel + fleet-panel + mesh-panel + initTheme)
+│   ├── app.ts                         — fleet home entry point (tabs layout: Sessions + Cases + Inbox + Fleet + Mesh)
 │   ├── terminal.ts                    — terminal entry point (loadSite + compose overlay + lifecycle + initTheme)
 │   ├── theme.ts                       — pages-ui-tokens integration: initTheme() injects --pages-* design tokens,
 │   │                                       THEME_CSS bridges --pages-* to claudony's legacy var names
@@ -360,6 +378,8 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 │       │                                  channel-correlation-panel, channel-artifact-panel).
 │       ├── claudony-fleet-panel.ts     — fleet peer management: health dots, circuit state, add/ping/remove (LitElement)
 │       ├── claudony-mesh-panel.ts     — mesh panel: overview/channel/feed views, SSE/polling, interjection dock (LitElement)
+│       ├── claudony-case-browser.ts    — LitElement wrapping blocks-case-explorer with caseInstanceType preset
+│       ├── claudony-action-inbox.ts    — LitElement action inbox: summary bar, urgency-sorted table, action buttons
 │       ├── worker-panel.ts            — SSE worker list, click-to-switch (LitElement)
 │       ├── channel-panel.ts           — LitElement composing blocks-ui <channel-feed> + <channel-input>;
 │       │                                  owns SSE/polling, cursor persistence, case context header, lineage.
@@ -472,7 +492,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-08-01, after Epic B #177/#178/#190/#191/#192 + #188 SPI migration + #179 responsive):** 16 in `claudony-core` + 175 in `claudony-casehub` + ~420 in `claudony-app` = **~611 total**. App module gained 8 tests from Epic B: member join (ok, 404, idempotent), leave (ok, 404), auto-join on post, presence (ok, 404), channel creation (6 tests from #177). `ClaudonyCaseChannelProviderTest` updated for 4-channel `NormativeChannelLayout`. `ChannelInitialisedObserverTest` updated: non-case channels now register the backend. Previous baseline: 603 (2026-07-31, after #188). Frontend: 25 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-08-04, after #176 case browser + task inbox):** 16 in `claudony-core` + 190 in `claudony-casehub` + ~426 in `claudony-app` = **~632 total**. #176 added CaseBrowserServiceTest (4), StallTrackerTest (4), ActionAggregationServiceTest (7), CaseBrowserResourceTest (4), ActionInboxResourceTest (2). Previous baseline: 611 (2026-08-01, after Epic B). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
