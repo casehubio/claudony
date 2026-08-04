@@ -48,9 +48,42 @@ export class ClaudonyTerminalWorkspace extends LitElement {
       .tab-btn {
         flex: 1; display: flex; align-items: center; justify-content: center;
         background: none; border: none; color: var(--pages-neutral-8, #888);
-        font-size: 12px; cursor: pointer; min-height: 44px;
+        font-size: var(--pages-font-size-base); cursor: pointer; min-height: 44px;
       }
       .tab-btn[aria-selected="true"] { color: var(--pages-accent-9, #6366f1); }
+    }
+    .landscape-nav { display: none; }
+    @media (orientation: landscape) and (max-height: 500px) {
+      .tab-bar { display: none !important; }
+      .landscape-nav {
+        display: flex;
+        position: fixed;
+        top: env(safe-area-inset-top, 0);
+        left: env(safe-area-inset-left, 0);
+        z-index: 100;
+        gap: 4px;
+        padding: 4px;
+        pointer-events: none;
+      }
+      .landscape-nav button {
+        pointer-events: auto;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(30, 30, 30, 0.7);
+        color: var(--pages-neutral-11, #ccc);
+        font-size: var(--pages-font-size-xl);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+      }
+      .landscape-nav button:hover {
+        background: rgba(30, 30, 30, 0.9);
+      }
     }
   `;
 
@@ -112,6 +145,14 @@ export class ClaudonyTerminalWorkspace extends LitElement {
     (this.renderRoot.querySelector('claudony-channel-panel') as ClaudonyChannelPanel | null)?.toggle();
   }
 
+  private _navigateBack(): void {
+    window.location.href = '/app/';
+  }
+
+  private _toggleLandscapeTab(): void {
+    this._switchTab(this._activeTab === 'terminal' ? 'chat' : 'terminal');
+  }
+
   private _switchTab(tab: 'terminal' | 'chat'): void {
     this._activeTab = tab;
     this.dispatchEvent(new CustomEvent('pages-event', {
@@ -128,6 +169,10 @@ export class ClaudonyTerminalWorkspace extends LitElement {
 
   override render() {
     return html`
+      <div class="landscape-nav">
+        <button @click=${this._navigateBack} aria-label="Back to sessions">←</button>
+        <button @click=${this._toggleLandscapeTab} aria-label="Toggle chat">💬</button>
+      </div>
       <claudony-worker-panel></claudony-worker-panel>
       <div class="tab-content">
         <div class="tab-panel ${this._activeTab === 'terminal' ? 'active' : ''}">

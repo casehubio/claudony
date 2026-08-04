@@ -46,32 +46,32 @@ export class ClaudonyFleetPanel extends LitElement {
       position: sticky; top: 0; background: var(--pages-neutral-2); z-index: 1;
     }
     .title {
-      font-size: 12px; font-weight: 600; text-transform: uppercase;
+      font-size: var(--pages-font-size-base); font-weight: 600; text-transform: uppercase;
       letter-spacing: .5px; color: var(--pages-neutral-8);
     }
     .peer-empty {
-      padding: 16px 14px; font-size: 12px; color: var(--pages-neutral-8); font-style: italic;
+      padding: 16px 14px; font-size: var(--pages-font-size-base); color: var(--pages-neutral-8); font-style: italic;
     }
     .peer-card {
-      padding: 10px 14px; border-bottom: 1px solid var(--pages-neutral-4); font-size: 12px;
+      padding: 10px 14px; border-bottom: 1px solid var(--pages-neutral-4); font-size: var(--pages-font-size-base);
     }
     .peer-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
     .peer-name {
-      font-weight: 600; font-size: 12px; flex: 1;
+      font-weight: 600; font-size: var(--pages-font-size-base); flex: 1;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .peer-source {
-      font-size: 10px; color: var(--pages-neutral-8); background: rgba(255,255,255,.05);
+      font-size: var(--pages-font-size-xs); color: var(--pages-neutral-8); background: rgba(255,255,255,.05);
       border-radius: 4px; padding: 1px 5px; flex-shrink: 0;
     }
     .peer-url {
       color: var(--pages-neutral-8); font-family: Menlo, Monaco, monospace;
-      font-size: 10px; overflow: hidden; text-overflow: ellipsis;
+      font-size: var(--pages-font-size-xs); overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; margin-bottom: 4px;
     }
     .peer-meta {
       display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
-      color: var(--pages-neutral-8); font-size: 11px;
+      color: var(--pages-neutral-8); font-size: var(--pages-font-size-sm);
     }
     .peer-actions { display: flex; gap: 4px; flex-wrap: wrap; }
     .form-field { margin-bottom: 12px; }

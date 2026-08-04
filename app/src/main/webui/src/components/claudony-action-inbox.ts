@@ -40,10 +40,10 @@ export class ClaudonyActionInbox extends LitElement {
 
   static override styles = css`
     :host { display: block; height: 100%; overflow-y: auto; padding: 12px; }
-    .summary { display: flex; gap: 16px; padding: 8px 0; font-size: 0.875rem;
+    .summary { display: flex; gap: 16px; padding: 8px 0; font-size: var(--pages-font-size-base);
                border-bottom: 1px solid var(--pages-neutral-5, #333); margin-bottom: 8px; }
     .summary .count { font-weight: 600; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+    table { width: 100%; border-collapse: collapse; font-size: var(--pages-font-size-base); }
     th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--pages-neutral-5, #333);
          color: var(--pages-neutral-9, #999); font-weight: 500; }
     td { padding: 8px; border-bottom: 1px solid var(--pages-neutral-4, #222); }
@@ -52,7 +52,7 @@ export class ClaudonyActionInbox extends LitElement {
     .actions { display: flex; gap: 4px; }
     .actions button { padding: 2px 8px; border: 1px solid var(--pages-neutral-5, #555);
                       background: var(--pages-neutral-3, #222); color: inherit;
-                      border-radius: 3px; cursor: pointer; font-size: 0.75rem; }
+                      border-radius: 3px; cursor: pointer; font-size: var(--pages-font-size-sm); }
     .actions button:hover { background: var(--pages-accent-9, #0066cc); border-color: var(--pages-accent-9); }
     .empty { padding: 32px; text-align: center; color: var(--pages-neutral-9, #666); }
     .error { padding: 12px; color: var(--pages-danger-9, #cc3333); }

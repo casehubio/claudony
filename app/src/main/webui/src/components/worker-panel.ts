@@ -31,23 +31,23 @@ export class ClaudonyWorkerPanel extends LitElement {
       padding: 8px 12px; border-bottom: 1px solid var(--pages-neutral-4); flex-shrink: 0;
     }
     .panel-title {
-      font-size: 12px; font-weight: 600; text-transform: uppercase;
+      font-size: var(--pages-font-size-base); font-weight: 600; text-transform: uppercase;
       color: var(--pages-neutral-8);
     }
     .worker-list { flex: 1; overflow-y: auto; padding: 8px 0; }
     .worker-row {
       display: flex; align-items: center; gap: 8px;
-      padding: 6px 12px; cursor: pointer; font-size: 13px;
+      padding: 6px 12px; cursor: pointer; font-size: var(--pages-font-size-base);
     }
     .worker-row:hover { background: rgba(255,255,255,0.04); }
     .worker-row.active-worker {
       background: var(--pages-accent-3); border-left: 2px solid var(--pages-accent-9);
     }
     .worker-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .worker-time { font-size: 11px; color: var(--pages-neutral-8); }
+    .worker-time { font-size: var(--pages-font-size-sm); color: var(--pages-neutral-8); }
     .placeholder {
       padding: 16px; color: var(--pages-neutral-8);
-      font-size: 13px; text-align: center;
+      font-size: var(--pages-font-size-base); text-align: center;
     }
     @media (max-width: 1024px) {
       :host { width: 48px; min-width: 48px; }

@@ -52,7 +52,7 @@ export class ClaudonySessionPanel extends LitElement {
     ${THEME_CSS}
     :host { display: block; height: 100%; overflow-y: auto; padding: 1rem; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .header h2 { margin: 0; font-size: 1.1rem; }
+    .header h2 { margin: 0; font-size: var(--pages-font-size-lg); }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
     .card {
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -60,21 +60,21 @@ export class ClaudonySessionPanel extends LitElement {
     }
     .card:hover { border-color: var(--accent); }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; gap: 6px; }
-    .card-name { font-weight: 600; font-size: 0.95rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .card-dir { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem; font-family: monospace; }
-    .card-time { font-size: 0.75rem; color: var(--text-muted); }
+    .card-name { font-weight: 600; font-size: var(--pages-font-size-base); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-dir { font-size: var(--pages-font-size-base); color: var(--text-muted); margin-bottom: 0.3rem; font-family: monospace; }
+    .card-time { font-size: var(--pages-font-size-sm); color: var(--text-muted); }
     .card-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap; }
-    .card-git, .card-services { font-size: 12px; margin-bottom: 6px; min-height: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .card-git, .card-services { font-size: var(--pages-font-size-base); margin-bottom: 6px; min-height: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .stale { opacity: 0.6; }
     .empty { text-align: center; color: var(--text-muted); padding: 3rem 1rem; }
     .form-field { margin-bottom: 16px; }
     .auth-body { text-align: center; }
-    .auth-body p { color: var(--pages-neutral-8); margin: 0 0 1.5rem; font-size: 0.9rem; }
+    .auth-body p { color: var(--pages-neutral-8); margin: 0 0 1.5rem; font-size: var(--pages-font-size-base); }
     .auth-actions { display: flex; flex-direction: column; gap: 0.75rem; }
     .pr-link { color: var(--pages-accent-9); text-decoration: none; }
     .pr-link:hover { text-decoration: underline; }
     .view-toggle { display: flex; gap: 2px; }
-    .view-toggle button { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; cursor: pointer; font-size: 14px; color: var(--text-muted); }
+    .view-toggle button { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; cursor: pointer; font-size: var(--pages-font-size-lg); color: var(--text-muted); }
     .view-toggle button:hover { background: rgba(255,255,255,0.05); }
     .view-toggle button.active { color: var(--accent); border-color: var(--accent); }
     blocks-session-workbench { height: calc(100% - 3rem); }
