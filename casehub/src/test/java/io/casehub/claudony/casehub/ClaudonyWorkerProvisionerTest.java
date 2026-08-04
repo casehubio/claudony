@@ -207,7 +207,7 @@ class ClaudonyWorkerProvisionerTest {
         var prov = new ClaudonyWorkerProvisioner(
             true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver);
         UUID caseId = UUID.randomUUID();
-        var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, "ch-123", "corr-456");
+        var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, "ch-123", "corr-456", null);
 
         ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx);
 
@@ -222,7 +222,7 @@ class ClaudonyWorkerProvisionerTest {
         var prov = new ClaudonyWorkerProvisioner(
             true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver);
         UUID caseId = UUID.randomUUID();
-        var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null);
+        var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null, null);
 
         ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx);
 
@@ -340,7 +340,7 @@ class ClaudonyWorkerProvisionerTest {
     }
 
     private ProvisionContext provisionContext(UUID caseId) {
-        return new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null);
+        return new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null, null);
     }
 
     private ProvisionContext provisionContextWithWorkerContext(UUID caseId, Map<String, Object> properties) {
@@ -348,7 +348,7 @@ class ClaudonyWorkerProvisionerTest {
                 PropagationContext.createRoot(), properties);
         return new ProvisionContext(caseId,
                 io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID,
-                "code-reviewer", wc, null, null, null);
+                "code-reviewer", wc, null, null, null, null);
     }
 
     @Test

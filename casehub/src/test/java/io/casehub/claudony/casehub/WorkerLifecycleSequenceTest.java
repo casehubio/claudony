@@ -130,7 +130,7 @@ class WorkerLifecycleSequenceTest {
         final ProvisionContext ctx2 = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "reviewer",
                 new io.casehub.api.model.WorkerContext("review", caseId, null, List.of(),
                         io.casehub.api.context.PropagationContext.createRoot(), Map.of()),
-                io.casehub.api.context.PropagationContext.createRoot(), null, null);
+                io.casehub.api.context.PropagationContext.createRoot(), null, null, null);
         provisioner.provision(Set.of("default"), ctx2);
 
         final String role1 = ctx1.taskType();   // "default"
@@ -174,6 +174,6 @@ class WorkerLifecycleSequenceTest {
     private ProvisionContext provisionContext(final UUID caseId) {
         final var wc = new WorkerContext(
                 "task", caseId, null, List.of(), PropagationContext.createRoot(), Map.of());
-        return new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "default", wc, PropagationContext.createRoot(), null, null);
+        return new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "default", wc, PropagationContext.createRoot(), null, null, null);
     }
 }
