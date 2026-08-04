@@ -57,33 +57,33 @@ export class ClaudonyMeshPanel extends LitElement {
       padding: 10px 12px; border-bottom: 1px solid var(--pages-neutral-4); flex-shrink: 0;
     }
     .title {
-      font-size: 11px; font-weight: 600; color: var(--pages-success-9);
+      font-size: var(--pages-font-size-sm); font-weight: 600; color: var(--pages-success-9);
       flex: 1; letter-spacing: 0.05em;
     }
     .view-switcher { display: flex; gap: 2px; }
     .body { flex: 1; overflow-y: auto; padding: 12px; }
-    .empty { color: var(--pages-neutral-8); font-size: 13px; text-align: center; padding: 24px 0; }
+    .empty { color: var(--pages-neutral-8); font-size: var(--pages-font-size-base); text-align: center; padding: 24px 0; }
     .section { margin-bottom: 12px; }
-    .label { font-size: 10px; font-weight: 600; color: var(--pages-neutral-8); letter-spacing: 0.05em; margin-bottom: 4px; }
+    .label { font-size: var(--pages-font-size-xs); font-weight: 600; color: var(--pages-neutral-8); letter-spacing: 0.05em; margin-bottom: 4px; }
     .presence { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
     .channel-item {
       display: flex; justify-content: space-between; align-items: center;
       padding: 5px 6px; border-radius: var(--pages-radius-sm, 4px); cursor: pointer; margin-bottom: 2px;
     }
     .channel-item:hover { background: var(--pages-neutral-1); }
-    .channel-name { font-size: 12px; color: var(--pages-success-9); }
+    .channel-name { font-size: var(--pages-font-size-base); color: var(--pages-success-9); }
     .channel-count {
-      font-size: 10px; background: var(--pages-neutral-1); border-radius: 8px;
+      font-size: var(--pages-font-size-xs); background: var(--pages-neutral-1); border-radius: 8px;
       padding: 0 5px; color: var(--pages-neutral-8);
     }
-    .msg { font-size: 11px; margin-bottom: 3px; line-height: 1.4; }
+    .msg { font-size: var(--pages-font-size-sm); margin-bottom: 3px; line-height: 1.4; }
     .msg-sender { color: var(--pages-success-9); font-weight: 600; margin-right: 4px; }
     .msg-content { color: var(--pages-neutral-8); }
-    .dim { color: var(--pages-neutral-8); font-size: 12px; }
+    .dim { color: var(--pages-neutral-8); font-size: var(--pages-font-size-base); }
     .feed-item {
-      font-size: 11px; margin-bottom: 4px; display: flex; gap: 5px; align-items: baseline; line-height: 1.4;
+      font-size: var(--pages-font-size-sm); margin-bottom: 4px; display: flex; gap: 5px; align-items: baseline; line-height: 1.4;
     }
-    .feed-tag { color: var(--pages-success-9); font-size: 10px; flex-shrink: 0; cursor: pointer; }
+    .feed-tag { color: var(--pages-success-9); font-size: var(--pages-font-size-xs); flex-shrink: 0; cursor: pointer; }
     .presence-footer {
       margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--pages-neutral-4);
       display: flex; flex-wrap: wrap; gap: 6px;
@@ -94,12 +94,12 @@ export class ClaudonyMeshPanel extends LitElement {
     }
     .dock-controls { display: flex; gap: 4px; }
     .dock-footer { display: flex; align-items: center; gap: 6px; }
-    .dock-error { font-size: 0.7rem; color: var(--pages-danger-9); flex: 1; }
+    .dock-error { font-size: var(--pages-font-size-sm); color: var(--pages-danger-9); flex: 1; }
     .expand-btn {
       position: fixed; right: 0; top: 50%; transform: translateY(-50%);
       background: var(--pages-neutral-2); border: 1px solid var(--pages-neutral-4); border-right: none;
       color: var(--pages-success-9); padding: 10px 5px; writing-mode: vertical-rl;
-      font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+      font-size: var(--pages-font-size-xs); font-weight: 600; letter-spacing: 0.05em;
       border-radius: var(--pages-radius-sm, 4px) 0 0 var(--pages-radius-sm, 4px);
       cursor: pointer; z-index: 5;
     }
@@ -108,18 +108,18 @@ export class ClaudonyMeshPanel extends LitElement {
       border-radius: var(--pages-radius-sm, 4px); border: 1px solid var(--pages-neutral-4);
     }
     .create-form input {
-      width: 100%; padding: 4px 6px; font-size: 12px; margin-bottom: 4px;
+      width: 100%; padding: 4px 6px; font-size: var(--pages-font-size-base); margin-bottom: 4px;
       background: var(--pages-neutral-2); color: var(--pages-neutral-11);
       border: 1px solid var(--pages-neutral-4); border-radius: 3px;
       font-family: inherit; box-sizing: border-box;
     }
     .create-form .create-actions { display: flex; gap: 4px; align-items: center; }
-    .create-form .create-error { font-size: 10px; color: var(--pages-danger-9); flex: 1; }
+    .create-form .create-error { font-size: var(--pages-font-size-xs); color: var(--pages-danger-9); flex: 1; }
     .section-header { display: flex; align-items: center; gap: 4px; }
     .section-header .label { flex: 1; margin-bottom: 0; }
     .ch-select {
       flex: 1; background: var(--pages-neutral-2); color: var(--pages-neutral-11);
-      border: 1px solid var(--pages-neutral-4); border-radius: 3px; font-size: 12px; padding: 4px 6px;
+      border: 1px solid var(--pages-neutral-4); border-radius: 3px; font-size: var(--pages-font-size-base); padding: 4px 6px;
     }
   `;
 
@@ -368,7 +368,7 @@ export class ClaudonyMeshPanel extends LitElement {
             @change=${(e: Event) => { this._dockType = (e.target as any).value; }}></pages-select>
         </div>
         <textarea id="dock-textarea" rows="2" placeholder="Type a message… (Enter to send)"
-          style="width:100%;resize:none;background:var(--pages-neutral-1);color:var(--pages-neutral-11);border:1px solid var(--pages-neutral-4);border-radius:3px;padding:4px 6px;font-size:0.8rem;font-family:inherit;box-sizing:border-box"
+          style="width:100%;resize:none;background:var(--pages-neutral-1);color:var(--pages-neutral-11);border:1px solid var(--pages-neutral-4);border-radius:3px;padding:4px 6px;font-size:var(--pages-font-size-base);font-family:inherit;box-sizing:border-box"
           @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this._sendMessage(); } }}></textarea>
         <div class="dock-footer">
           <pages-button size="xs" variant="primary" label="Send" ?disabled=${!hasChannels}

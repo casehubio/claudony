@@ -82,13 +82,13 @@ export class ClaudonyChannelPanel extends LitElement {
       color: var(--pages-neutral-11, #ccc);
       border: 1px solid var(--pages-neutral-4, #3e3e42);
       border-radius: var(--pages-radius-sm, 4px);
-      padding: 4px 6px; font-size: 12px;
+      padding: 4px 6px; font-size: var(--pages-font-size-base);
     }
     .ch-select:focus { outline: none; border-color: var(--pages-accent-9, #007acc); }
     .close-btn {
       background: transparent; border: none;
       color: var(--pages-neutral-8, #888);
-      padding: 3px 6px; font-size: 13px; cursor: pointer;
+      padding: 3px 6px; font-size: var(--pages-font-size-base); cursor: pointer;
     }
     .close-btn:hover { color: var(--pages-neutral-11, #ccc); }
 
@@ -100,7 +100,7 @@ export class ClaudonyChannelPanel extends LitElement {
     }
     .case-info { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
     .case-role {
-      font-size: 12px; font-weight: 600; color: var(--pages-neutral-11, #ccc);
+      font-size: var(--pages-font-size-base); font-weight: 600; color: var(--pages-neutral-11, #ccc);
       flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -108,15 +108,15 @@ export class ClaudonyChannelPanel extends LitElement {
     .status-dot.idle { background: var(--pages-neutral-8, #888); }
     .status-dot.waiting { background: var(--pages-warning-9, #dcdcaa); }
     .status-dot.faulted { background: var(--pages-danger-9, #f44747); }
-    .case-elapsed { font-size: 11px; color: var(--pages-neutral-8, #888); flex-shrink: 0; }
+    .case-elapsed { font-size: var(--pages-font-size-sm); color: var(--pages-neutral-8, #888); flex-shrink: 0; }
 
     .lineage-toggle {
       display: flex; align-items: center; gap: 5px;
-      cursor: pointer; padding: 2px 0; font-size: 11px;
+      cursor: pointer; padding: 2px 0; font-size: var(--pages-font-size-sm);
       color: var(--pages-neutral-8, #888); user-select: none;
     }
     .lineage-toggle:hover { color: var(--pages-neutral-11, #ccc); }
-    .chevron { font-size: 9px; transition: transform 0.15s ease; display: inline-block; }
+    .chevron { font-size: var(--pages-font-size-xs); transition: transform 0.15s ease; display: inline-block; }
     .chevron.expanded { transform: rotate(90deg); }
 
     .lineage {
@@ -125,7 +125,7 @@ export class ClaudonyChannelPanel extends LitElement {
     }
     .lineage-row {
       display: flex; align-items: center; gap: 6px;
-      padding: 3px 0; font-size: 11px;
+      padding: 3px 0; font-size: var(--pages-font-size-sm);
       border-bottom: 1px solid var(--pages-neutral-4, #3e3e42);
     }
     .lineage-row:last-child { border-bottom: none; }
@@ -137,25 +137,25 @@ export class ClaudonyChannelPanel extends LitElement {
       color: var(--pages-neutral-8, #888); flex-shrink: 0;
       font-family: Menlo, Monaco, 'Courier New', monospace;
     }
-    .lineage-empty { font-size: 11px; color: var(--pages-neutral-8, #888); font-style: italic; padding: 2px 0; }
+    .lineage-empty { font-size: var(--pages-font-size-sm); color: var(--pages-neutral-8, #888); font-style: italic; padding: 2px 0; }
 
     .stale-prompt {
       display: flex; flex-direction: column; gap: 6px;
       padding: 10px 8px;
       background: var(--pages-warning-3, rgba(240,194,127,.07));
       border-bottom: 1px solid var(--pages-warning-11, rgba(240,194,127,.2));
-      font-size: 12px;
+      font-size: var(--pages-font-size-base);
     }
     .stale-msg { color: var(--pages-neutral-8, #888); font-style: italic; }
     .stale-btn {
       background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
-      color: var(--pages-neutral-11, #ccc); padding: 4px 8px; font-size: 11px;
+      color: var(--pages-neutral-11, #ccc); padding: 4px 8px; font-size: var(--pages-font-size-sm);
       border-radius: 3px; cursor: pointer; text-align: left;
     }
     .stale-btn:hover { background: rgba(255,255,255,.14); }
     .stale-btn.secondary { opacity: 0.7; }
 
-    .error { font-size: 11px; color: var(--pages-danger-9, #f44747); padding: 4px 8px; }
+    .error { font-size: var(--pages-font-size-sm); color: var(--pages-danger-9, #f44747); padding: 4px 8px; }
     @media (max-width: 1024px) {
       :host { display: none; width: 0; min-width: 0; }
       :host(:not(.collapsed)) {
