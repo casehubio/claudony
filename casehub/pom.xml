@@ -66,6 +66,12 @@
             <artifactId>casehub-ledger-api</artifactId>
         </dependency>
 
+        <!-- WorkItem API types (WorkItemStatus, WorkItemPriority) for inbox integration -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-work-api</artifactId>
+        </dependency>
+
         <!-- @WithSession — open a Hibernate Reactive session when buildContext() is called
              from the engine event bus handler (which has Vert.x context but no session). -->
         <dependency>

@@ -17,8 +17,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ActionAggregationServiceTest {
 
@@ -26,6 +28,7 @@ class ActionAggregationServiceTest {
     SessionRegistry sessionRegistry;
     StallTracker stallTracker = new StallTracker();
     WorkerSessionMapping sessionMapping = mock(WorkerSessionMapping.class);
+    WorkItemActionSource workItemSource = mock(WorkItemActionSource.class);
     TenantContext tenantContext = mock(TenantContext.class);
     ActionAggregationService service;
 
@@ -34,7 +37,9 @@ class ActionAggregationServiceTest {
         when(tenantContext.currentTenantId()).thenReturn("default");
         sessionRegistry = new SessionRegistry(tenantContext);
         when(commitmentStore.findAllOpen()).thenReturn(List.of());
-        service = new ActionAggregationService(commitmentStore, sessionRegistry, stallTracker, sessionMapping);
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of());
+        service = new ActionAggregationService(commitmentStore, sessionRegistry,
+                stallTracker, sessionMapping, workItemSource, tenantContext);
     }
 
     @Test
@@ -150,4 +155,110 @@ class ActionAggregationServiceTest {
         var result = service.listActions();
         assertTrue(result.items().stream().noneMatch(a -> a.sourceType() == SourceType.STALL));
     }
+
+    @Test
+    void overdueWorkItemIsHighUrgency() {
+        var view = new WorkItemView(UUID.randomUUID(), "Review PR",
+                                    "IN_PROGRESS", "MEDIUM",
+                                    Instant.now().minusSeconds(3600), null,
+                                    Instant.now().minusSeconds(7200), "alice",
+                                    "/workitems/" + UUID.randomUUID());
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of(view));
+
+        var result = service.listActions();
+        var items = result.items().stream()
+                          .filter(a -> a.sourceType() == SourceType.WORKITEM).toList();
+        assertEquals(1, items.size());
+        assertEquals(Urgency.HIGH, items.get(0).urgency());
+        assertEquals("Review PR", items.get(0).title());
+        assertTrue(items.get(0).actionable());
+    }
+
+    @Test
+    void urgentPriorityWorkItemIsHighUrgency() {
+        var view = new WorkItemView(UUID.randomUUID(), "Escalation",
+                                    "ASSIGNED", "URGENT",
+                                    null, null, Instant.now(), "bob",
+                                    "/workitems/" + UUID.randomUUID());
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of(view));
+
+        var result = service.listActions();
+        assertEquals(Urgency.HIGH, result.items().get(0).urgency());
+    }
+
+    @Test
+    void highPriorityWorkItemIsMediumUrgency() {
+        var view = new WorkItemView(UUID.randomUUID(), "Code review",
+                                    "ASSIGNED", "HIGH",
+                                    null, null, Instant.now(), "charlie",
+                                    "/workitems/" + UUID.randomUUID());
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of(view));
+
+        var result = service.listActions();
+        assertEquals(Urgency.MEDIUM, result.items().get(0).urgency());
+    }
+
+    @Test
+    void expiredClaimDeadlineIsHighUrgency() {
+        var view = new WorkItemView(UUID.randomUUID(), "Unclaimed task",
+                                    "PENDING", "LOW",
+                                    null, Instant.now().minusSeconds(600), Instant.now().minusSeconds(3600),
+                                    null, "/workitems/" + UUID.randomUUID());
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of(view));
+
+        var result = service.listActions();
+        assertEquals(Urgency.HIGH, result.items().get(0).urgency());
+    }
+
+    @Test
+    void approachingDeadlineIsMediumUrgency() {
+        var view = new WorkItemView(UUID.randomUUID(), "Almost due",
+                                    "IN_PROGRESS", "MEDIUM",
+                                    Instant.now().plusSeconds(1800), null, Instant.now(), "dave",
+                                    "/workitems/" + UUID.randomUUID());
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of(view));
+
+        var result = service.listActions();
+        assertEquals(Urgency.MEDIUM, result.items().get(0).urgency());
+    }
+
+    @Test
+    void normalWorkItemIsLowUrgency() {
+        var view = new WorkItemView(UUID.randomUUID(), "Routine task",
+                                    "ASSIGNED", "MEDIUM",
+                                    null, null, Instant.now(), "eve",
+                                    "/workitems/" + UUID.randomUUID());
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of(view));
+
+        var result = service.listActions();
+        assertEquals(Urgency.LOW, result.items().get(0).urgency());
+    }
+
+    @Test
+    void workItemActionsIncludeClaimAndComplete() {
+        var id = UUID.randomUUID();
+        var view = new WorkItemView(id, "Task",
+                                    "PENDING", "MEDIUM",
+                                    null, null, Instant.now(), null,
+                                    "/workitems/" + id);
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of(view));
+
+        var result  = service.listActions();
+        var actions = result.items().get(0).actions();
+        assertEquals(3, actions.size());
+        assertEquals("claim", actions.get(0).name());
+        assertEquals("PUT", actions.get(0).method());
+        assertTrue(actions.get(0).endpoint().endsWith("/claim"));
+        assertEquals("complete", actions.get(1).name());
+        assertEquals("delegate", actions.get(2).name());
+    }
+
+    @Test
+    void emptyWorkItemSourceDoesNotAffectExistingBehavior() {
+        when(workItemSource.findActionableItems("default")).thenReturn(List.of());
+        var result = service.listActions();
+        assertTrue(result.items().isEmpty());
+        assertEquals(0, result.counts().high());
+    }
+
 }
