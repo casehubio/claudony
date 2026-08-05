@@ -2,6 +2,7 @@ package io.casehub.claudony.casehub.inbox;
 
 import io.casehub.claudony.casehub.WorkerSessionMapping;
 import io.casehub.claudony.server.SessionRegistry;
+import io.casehub.claudony.server.TenantContext;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.qhorus.api.message.Commitment;
 import io.casehub.qhorus.api.store.CommitmentStore;
@@ -22,28 +23,35 @@ public class ActionAggregationService {
     private final SessionRegistry sessionRegistry;
     private final StallTracker stallTracker;
     private final WorkerSessionMapping sessionMapping;
+    private final WorkItemActionSource workItemSource;
+    private final TenantContext tenantContext;
 
     @Inject
     public ActionAggregationService(CommitmentStore commitmentStore,
                                      SessionRegistry sessionRegistry,
                                      StallTracker stallTracker,
-                                     WorkerSessionMapping sessionMapping) {
+                                     WorkerSessionMapping sessionMapping,
+                                     WorkItemActionSource workItemSource,
+                                     TenantContext tenantContext) {
         this.commitmentStore = commitmentStore;
         this.sessionRegistry = sessionRegistry;
         this.stallTracker = stallTracker;
         this.sessionMapping = sessionMapping;
+        this.workItemSource = workItemSource;
+        this.tenantContext = tenantContext;
     }
 
     public ActionInboxResponse listActions() {
         List<ActionItem> items = new ArrayList<>();
         items.addAll(commitmentItems());
         items.addAll(stallItems());
+        items.addAll(workItemActions());
         items.sort(Comparator.comparing(ActionItem::urgency)
-                .thenComparing(ActionItem::createdAt, Comparator.reverseOrder()));
+                             .thenComparing(ActionItem::createdAt, Comparator.reverseOrder()));
 
-        long high = items.stream().filter(a -> a.urgency() == Urgency.HIGH).count();
+        long high   = items.stream().filter(a -> a.urgency() == Urgency.HIGH).count();
         long medium = items.stream().filter(a -> a.urgency() == Urgency.MEDIUM).count();
-        long low = items.stream().filter(a -> a.urgency() == Urgency.LOW).count();
+        long low    = items.stream().filter(a -> a.urgency() == Urgency.LOW).count();
         return new ActionInboxResponse(items, new ActionCounts((int) high, (int) medium, (int) low));
     }
 
@@ -112,4 +120,45 @@ public class ActionAggregationService {
                 )
         );
     }
+
+    private List<ActionItem> workItemActions() {
+        return workItemSource.findActionableItems(tenantContext.currentTenantId())
+                             .stream()
+                             .map(this::toWorkItemAction)
+                             .toList();
+    }
+
+    private ActionItem toWorkItemAction(WorkItemView view) {
+        return new ActionItem(
+                "workitem:" + view.id(),
+                SourceType.WORKITEM,
+                workItemUrgency(view),
+                view.title(),
+                view.status(),
+                true,
+                null,
+                null,
+                view.createdAt(),
+                List.of(
+                        new ActionDescriptor("claim", "Claim", "PUT",
+                                             view.actionBaseUrl() + "/claim"),
+                        new ActionDescriptor("complete", "Complete", "PUT",
+                                             view.actionBaseUrl() + "/complete"),
+                        new ActionDescriptor("delegate", "Delegate", "PUT",
+                                             view.actionBaseUrl() + "/delegate")
+                       )
+        );
+    }
+
+    private Urgency workItemUrgency(WorkItemView view) {
+        if (view.expiresAt() != null && view.expiresAt().isBefore(Instant.now())) {return Urgency.HIGH;}
+        if ("URGENT".equals(view.priority())) {return Urgency.HIGH;}
+        if (view.claimDeadline() != null && view.claimDeadline().isBefore(Instant.now())) {return Urgency.HIGH;}
+        if ("HIGH".equals(view.priority())) {return Urgency.MEDIUM;}
+        if (view.expiresAt() != null && Duration.between(Instant.now(), view.expiresAt()).toMinutes() < 60) {
+            return Urgency.MEDIUM;
+        }
+        return Urgency.LOW;
+    }
+
 }

@@ -469,6 +469,7 @@ claudony.mdns-discovery=false           # enable mDNS auto-discovery on LAN (sca
 claudony.name=Claudony                  # instance name shown in fleet UI
 claudony.case-worker-update=hybrid      # events-only | hybrid | registry-hooks
 claudony.case-worker-heartbeat-ms=30000 # heartbeat interval for hybrid strategy
+claudony.work-service.url=                  # REST URL for external casehub-work service (Tier 1 inbox integration; omit for no-op)
 # Production — optional; auto-generated and persisted to ~/.claudony/encryption-key on first run.
 # Set only if managing the key externally (secrets manager, etc.):
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
@@ -492,7 +493,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-08-04, after #176 case browser + task inbox):** 16 in `claudony-core` + 190 in `claudony-casehub` + ~426 in `claudony-app` = **~632 total**. #176 added CaseBrowserServiceTest (4), StallTrackerTest (4), ActionAggregationServiceTest (7), CaseBrowserResourceTest (4), ActionInboxResourceTest (2). Previous baseline: 611 (2026-08-01, after Epic B). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-08-05, after #200 WorkItem inbox integration):** 16 in `claudony-core` + 200 in `claudony-casehub` + ~434 in `claudony-app` = **~650 total**. #200 added EmptyWorkItemActionSourceTest (1), ActionAggregationServiceTest +8 (now 15), RestWorkItemActionSourceTest (4), ActionInboxResourceTest +1 (now 3). Previous baseline: 632 (2026-08-04, after #176). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -525,6 +526,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks
 - `ClaudonyCaseChannelProviderTest` — Qhorus channel creation (ChannelService), list filtering, postToChannel (including correlationId extraction for COMMAND/QUERY via #122), cache-hit no-op, concurrent init race (CountDownLatch barrier, #120), failed init eviction retry (#120), fires CaseChannelCreatedEvent on open (#102), createQhorusChannel calls initChannel (#102)
 - `ClaudonyWorkerContextProviderTest` — lineage, channel, clean-start, missing caseId
 - `EmptyCaseLineageQueryTest` — returns empty list
+- `EmptyWorkItemActionSourceTest` — returns empty list
 - `ClaudonyWorkerStatusListenerTest` — ACTIVE/IDLE/FAULTED lifecycle, stall event
 - `NormativeChannelLayoutTest`, `SimpleLayoutTest` — channel specs, semantics, and allowedTypes for each layout
 - `MeshParticipationStrategyTest` — ACTIVE/REACTIVE/SILENT strategy, robustness, correctness

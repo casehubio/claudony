@@ -134,6 +134,21 @@
         <artifactId>casehub-ledger</artifactId>
         <version>${casehub.version}</version>
       </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-work-api</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-work</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-work-persistence-memory</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
       <!-- Test dependencies -->
       <dependency>
         <groupId>org.assertj</groupId>
