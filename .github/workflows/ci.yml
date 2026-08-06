@@ -63,18 +63,11 @@ jobs:
 
       - name: Build and pack blocks-ui packages
         run: |
-          PKGS=$GITHUB_WORKSPACE/app/src/main/webui/.casehub-packages/packages
           ln -s $GITHUB_WORKSPACE/app/src/main/webui/.casehub-packages .ci-deps/blocks-ui/.casehub-packages
           cd .ci-deps/blocks-ui
           YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
-          yarn workspace @casehubio/blocks-ui-core build
-          yarn workspace @casehubio/blocks-ui-channel-activity build
-          yarn workspace @casehubio/blocks-ui-session-workbench build
-          for pkg in blocks-ui-core:blocks-ui-core channel-activity:blocks-ui-channel-activity session-workbench:blocks-ui-session-workbench; do
-            dir="${pkg%%:*}"; ws="${pkg##*:}"
-            yarn workspace "@casehubio/$ws" pack --out "/tmp/$dir.tgz"
-            mkdir -p "$PKGS/$dir" && tar xzf "/tmp/$dir.tgz" -C "$PKGS/$dir" --strip-components=1
-          done
+          yarn build
+          bash npm-packages/pack-all.sh $GITHUB_WORKSPACE/app/src/main/webui/.casehub-packages
         env:
           GH_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
