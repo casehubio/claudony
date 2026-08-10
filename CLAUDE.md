@@ -57,7 +57,7 @@ Before starting any branch: `git fetch origin && git rebase origin/main` to sync
 |------------|-------------|-------|
 | adr        | project     | lands in `docs/adr/` — promoted at epic close |
 | specs      | project     | lands in `docs/specs/` — promoted at epic close |
-| blog       | personal fork       | staged here; published via publish-blog (destination in ~/.claude/blog-routing.yaml) |
+| blog       | project                 | staged here; published via publish-blog (destination in ~/.claude/blog-routing.yaml) |
 | plans      | workspace   | stay in workspace permanently |
 | design     | project     | journal file lives in workspace design/; DESIGN.md merge target is project docs/DESIGN.md |
 | snapshots  | workspace   | stay in workspace permanently |
@@ -588,7 +588,7 @@ The canonical ecosystem design document lives here in this repo. It is the maste
 
 Load it when working on: CaseHub SPI implementations, Qhorus embedding, the unified MCP endpoint, the three-panel dashboard, or any cross-project architectural decisions:
 
-@/Users/mdproctor/claude/casehub/claudony/docs/superpowers/specs/2026-04-13-quarkus-ai-ecosystem-design.md
+@/Users/mdproctor/claude/casehub/claudony/docs/specs/2026-04-13-quarkus-ai-ecosystem-design.md
 
 ---
 
