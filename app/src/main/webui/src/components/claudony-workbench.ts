@@ -1,12 +1,20 @@
-import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { QhorusMessage, QhorusChannel, QhorusTopic, ChannelMember, Reaction, MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
-import { ChannelEventTopics } from '@casehubio/blocks-ui-channel-activity';
+import {
+  ChannelEventTopics,
+  PushController, ALL_TOPICS,
+  ChannelStateController,
+  MessagingController,
+  MembershipController,
+  ReactionController,
+  CommitmentController,
+} from '@casehubio/blocks-ui-channel-activity';
+import type { SendMessagePayload, ArtefactRef, MessageType } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/pages-ui-components';
+import { createEventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
+import type { EventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
 import { attachTerminal, type TerminalHandle } from '../util/terminal-controller.js';
-import { toQhorusMessage, toQhorusChannel, toChannelMember, toQhorusTopic, type TimelineEntry, type ChannelInfo, type MembershipResponse, type TopicSummaryResponse } from '../util/channel-adapter.js';
-import { toCommitmentMap, type CommitmentRecord } from '@casehubio/blocks-ui-channel-activity';
 import { fetchWithAuth } from '../util/auth.js';
 
 interface WorkbenchConfig {
@@ -35,20 +43,21 @@ interface WorkerInfo {
   createdAt: string;
 }
 
-const POLL_MS = 3000;
-const CURSOR_STORE_KEY = 'claudony.channel.cursors';
-
 @customElement('claudony-workbench')
 export class ClaudonyWorkbench extends LitElement {
-  // ── Channel + message state ──────────────────────────────────────────────
-  @state() private _channels: QhorusChannel[] = [];
-  @state() private _messages: QhorusMessage[] = [];
-  @state() private _commitments: Map<string, CommitmentRecord> = new Map();
-  @state() private _selectedChannelId = '';
-  @state() private _selectedMessageId?: string;
-  @state() private _replyTo?: { messageId: string; senderName: string };
-  @state() private _selectedArtefactRef?: ArtefactRef;
-  @state() private _error = '';
+  // ── Controllers ─────────────────────────────────────────────────────────
+  private _push = new PushController(this);
+  private _channels = new ChannelStateController(this, this._push);
+  private _messaging = new MessagingController(this, this._channels, {
+    restBase: '/api',
+    fetch: fetchWithAuth,
+  });
+  private _members = new MembershipController(this, this._push, this._channels);
+  private _reactions = new ReactionController(this, this._push, this._channels, {
+    restBase: '/api',
+    fetch: fetchWithAuth,
+  });
+  private _commitments = new CommitmentController(this, this._push, this._channels);
 
   // ── Case context ─────────────────────────────────────────────────────────
   @state() private _caseId: string | null = null;
@@ -60,35 +69,22 @@ export class ClaudonyWorkbench extends LitElement {
   @state() private _lineageExpanded = false;
   @state() private _lineageLoaded = false;
 
-  // ── Stale cursor ─────────────────────────────────────────────────────────
-  @state() private _showStalePrompt = false;
-  @state() private _staleCursorId = 0;
-
   // ── Workers ──────────────────────────────────────────────────────────────
   @state() private _workers: WorkerInfo[] = [];
 
-  // ── Dock panels ──────────────────────────────────────────────────────────
+  // ── App-specific state ──────────────────────────────────────────────────
+  @state() private _selectedArtefactRef?: ArtefactRef;
+  @state() private _error = '';
   @state() private _dockState: Record<string, boolean> = { tasks: false, correlation: false, artifacts: false, members: false };
-
-  // ── Phase 4: reactions, topics, members, threads ────────────────────────
-  @state() private _reactions: Reaction[] = [];
-  @state() private _topics: QhorusTopic[] = [];
-  @state() private _members: ChannelMember[] = [];
-  @state() private _memberPresence: import('@casehubio/blocks-ui-channel-activity').PresenceState[] = [];
-  @state() private _viewMode: 'flat' | 'threaded' = 'flat';
 
   // ── Non-reactive state ───────────────────────────────────────────────────
   private _sessionId = '';
   private _sessionName = '';
   private _proxyPeer?: string;
   private _preselect: string | null = null;
-  private _stalenessMs = 30 * 60 * 1000;
-  private _cursors: Record<string, { id: number; ts: number }> = {};
-  private _channelAllowedTypes: Record<string, string | null> = {};
 
   private _handle: TerminalHandle | null = null;
-  private _eventSource: EventSource | null = null;
-  private _pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private _eventConn?: EventConnection;
   private _lineagePollTimer: ReturnType<typeof setTimeout> | null = null;
   private _elapsedTicker: ReturnType<typeof setInterval> | null = null;
   private _workerEventSource: EventSource | null = null;
@@ -150,17 +146,6 @@ export class ClaudonyWorkbench extends LitElement {
       background: var(--pages-neutral-2, #252526);
       flex-shrink: 0;
     }
-    .dock-btn {
-      background: none;
-      border: 1px solid transparent;
-      color: var(--pages-neutral-8, #888);
-      padding: 3px 8px;
-      font-size: var(--pages-font-size-sm);
-      cursor: pointer;
-      border-radius: var(--pages-radius-sm, 4px);
-    }
-    .dock-btn:hover { color: var(--pages-neutral-11, #ccc); background: rgba(255,255,255,0.05); }
-    .dock-btn.active { color: var(--pages-accent-9, #6366f1); border-color: var(--pages-accent-9, #6366f1); }
 
     .context-panel {
       width: 280px;
@@ -182,11 +167,6 @@ export class ClaudonyWorkbench extends LitElement {
       font-size: var(--pages-font-size-base); font-weight: 600; color: var(--pages-neutral-11, #ccc);
       flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .status-dot.active { background: var(--pages-success-9, #4ec9b0); }
-    .status-dot.idle { background: var(--pages-neutral-8, #888); }
-    .status-dot.waiting { background: var(--pages-warning-9, #dcdcaa); }
-    .status-dot.faulted { background: var(--pages-danger-9, #f44747); }
     .case-elapsed { font-size: var(--pages-font-size-sm); color: var(--pages-neutral-8, #888); flex-shrink: 0; }
 
     .lineage-toggle {
@@ -218,41 +198,15 @@ export class ClaudonyWorkbench extends LitElement {
     }
     .lineage-empty { font-size: var(--pages-font-size-sm); color: var(--pages-neutral-8, #888); font-style: italic; padding: 2px 0; }
 
-    .stale-prompt {
-      display: flex; flex-direction: column; gap: 6px;
-      padding: 10px 8px;
-      background: var(--pages-warning-3, rgba(240,194,127,.07));
-      border-bottom: 1px solid var(--pages-warning-11, rgba(240,194,127,.2));
-      font-size: var(--pages-font-size-base);
-    }
-    .stale-msg { color: var(--pages-neutral-8, #888); font-style: italic; }
-    .stale-btn {
-      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
-      color: var(--pages-neutral-11, #ccc); padding: 4px 8px; font-size: var(--pages-font-size-sm);
-      border-radius: 3px; cursor: pointer; text-align: left;
-    }
-    .stale-btn:hover { background: rgba(255,255,255,.14); }
-    .stale-btn.secondary { opacity: 0.7; }
-
     .error { font-size: var(--pages-font-size-sm); color: var(--pages-danger-9, #f44747); padding: 4px 8px; }
 
-    .worker-list {
-      overflow-y: auto;
-      padding: 4px 0;
-    }
+    .worker-list { overflow-y: auto; padding: 4px 0; }
     .worker-row {
       display: flex; align-items: center; gap: 8px;
       padding: 6px 12px; cursor: pointer; font-size: var(--pages-font-size-base);
     }
     .worker-row:hover { background: rgba(255,255,255,0.04); }
     .worker-row.active-worker { background: rgba(0,122,204,0.12); border-left: 2px solid var(--pages-accent-9, #007acc); }
-    .worker-status-dot {
-      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-    }
-    .worker-status-dot.active { background: var(--pages-success-9, #4ec9b0); }
-    .worker-status-dot.idle { background: var(--pages-neutral-8, #888); }
-    .worker-status-dot.waiting { background: var(--pages-warning-9, #dcdcaa); }
-    .worker-status-dot.faulted { background: var(--pages-danger-9, #f44747); }
     .worker-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .worker-time { font-size: var(--pages-font-size-sm); color: var(--pages-neutral-8, #888); }
 
@@ -265,10 +219,9 @@ export class ClaudonyWorkbench extends LitElement {
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
-    this._loadCursors();
-    this._fetchMeshConfig();
+    this.addEventListener('pages-event', this._onPagesEvent as EventListener);
   }
 
   override firstUpdated(): void {
@@ -279,11 +232,12 @@ export class ClaudonyWorkbench extends LitElement {
         (window as unknown as Record<string, unknown>)._xtermTerminal = this._handle.getTerminal()!.terminal;
       }
     }
-    this.addEventListener('pages-event', ((e: CustomEvent) => this._onPagesEvent(e)) as EventListener);
+    this._connectPush();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.removeEventListener('pages-event', this._onPagesEvent as EventListener);
     this._destroy();
   }
 
@@ -297,7 +251,6 @@ export class ClaudonyWorkbench extends LitElement {
     this._preselect = opts.channel || null;
     this._sessionStatus = opts.status || null;
 
-    this._loadChannels();
     if (this._caseId) {
       this._loadLineage();
       this._startElapsedTicker();
@@ -305,10 +258,41 @@ export class ClaudonyWorkbench extends LitElement {
     }
   }
 
+  private _connectPush(): void {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${proto}//${location.host}/ws/push`;
+    const eventTarget = new EventTarget();
+
+    this._eventConn = createEventConnection(url, {
+      config: { eventTarget },
+      onStatusChange: (status) => { this._push.setConnectionStatus(status as any); },
+    });
+
+    this._eventConn.listen(ALL_TOPICS);
+
+    eventTarget.addEventListener('pages-event', (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.payload) {
+        this._push.applyOp(detail.payload as any);
+      }
+    });
+
+    if (this._preselect) {
+      const check = () => {
+        if (this._channels.channels.length > 0) {
+          const target = this._channels.channels.find(ch => ch.name === this._preselect || ch.id === this._preselect);
+          if (target) this._channels.selectedChannelId = target.id;
+        } else {
+          setTimeout(check, 200);
+        }
+      };
+      setTimeout(check, 200);
+    }
+  }
+
   private _destroy(): void {
     this._handle?.dispose();
-    this._closeEventSource();
-    if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
+    this._eventConn?.close();
     if (this._lineagePollTimer) { clearTimeout(this._lineagePollTimer); this._lineagePollTimer = null; }
     if (this._elapsedTicker) { clearInterval(this._elapsedTicker); this._elapsedTicker = null; }
     if (this._workerEventSource) { this._workerEventSource.close(); this._workerEventSource = null; }
@@ -316,323 +300,65 @@ export class ClaudonyWorkbench extends LitElement {
 
   // ── Event routing ────────────────────────────────────────────────────────
 
-  private _onPagesEvent(e: CustomEvent): void {
+  private _onPagesEvent = (e: CustomEvent): void => {
     const { topic, payload } = e.detail ?? {};
-    switch (topic) {
-      case ChannelEventTopics.SEND_MESSAGE:
-        this._sendMessage(payload.content, payload.speechAct, payload.inReplyTo);
-        break;
-      case ChannelEventTopics.SELECT_CHANNEL:
-        this._selectChannel(payload.channelId);
-        break;
-      case ChannelEventTopics.MESSAGE_SELECTED: {
-        const msg = payload.message as QhorusMessage;
-        this._selectedMessageId = msg.id;
-        this._replyTo = { messageId: msg.inReplyTo ?? msg.id, senderName: msg.sender };
-        break;
-      }
-      case 'channel:send-message':
-        this._sendMessage(payload.content, payload.speechAct, payload.inReplyTo);
-        break;
-      case 'channel:artefact-selected':
-        this._selectedArtefactRef = payload.artefactRef;
-        if (!this._dockState['artifacts']) {
-          this._dockState = { ...this._dockState, artifacts: true };
-        }
-        break;
-      case 'terminal-resize':
-        this._handle?.resize(payload.cols, payload.rows);
-        break;
-      case 'key-pressed':
-        this._handle?.sendInput(payload.code);
-        break;
-      case 'worker-selected':
-        this._handleWorkerSwitch(payload.sessionId, payload.name);
-        break;
-      case ChannelEventTopics.REACT:
-        this._addReaction(payload.messageId, payload.emoji);
-        break;
-      case ChannelEventTopics.UNREACT:
-        this._removeReaction(payload.messageId, payload.emoji);
-        break;
-      case ChannelEventTopics.SELECT_TOPIC:
-        this._viewMode = 'flat';
-        break;
-      case ChannelEventTopics.VIEW_MODE:
-        this._viewMode = payload.mode === 'threaded' ? 'threaded' : 'flat';
-        break;
-    }
-  }
 
-  // ── Channel data flow ────────────────────────────────────────────────────
-
-  private _loadCursors(): void {
-    try { const s = sessionStorage.getItem(CURSOR_STORE_KEY); if (s) this._cursors = JSON.parse(s); }
-    catch { /* ignore */ }
-  }
-
-  private _persistCursors(): void {
-    try { sessionStorage.setItem(CURSOR_STORE_KEY, JSON.stringify(this._cursors)); }
-    catch { /* ignore */ }
-  }
-
-  private _fetchMeshConfig(): void {
-    fetch('/api/mesh/config').then(r => r.json())
-      .then((cfg: { cursorStalenessMinutes?: number }) => {
-        if (cfg?.cursorStalenessMinutes != null) this._stalenessMs = cfg.cursorStalenessMinutes * 60 * 1000;
-      }).catch(() => { /* ignore */ });
-  }
-
-  private _loadChannels(): void {
-    fetch('/api/mesh/channels').then(r => r.json())
-      .then((channels: ChannelInfo[]) => {
-        channels.sort((a, b) => a.name.localeCompare(b.name));
-        this._channelAllowedTypes = {};
-        channels.forEach(ch => { this._channelAllowedTypes[ch.name] = ch.allowedTypes || null; });
-        this._channels = channels.map(toQhorusChannel);
-        const preselect = this._preselect || new URLSearchParams(window.location.search).get('channel');
-        if (preselect) { this._selectChannel(preselect); return; }
-        if (this._caseId) this._selectCaseChannel(this._caseId);
-      }).catch(() => { /* ignore */ });
-  }
-
-  private _selectCaseChannel(caseId: string): void {
-    const prefix = `case-${caseId}/`;
-    const target = this._channels.find(ch => ch.name === `${prefix}work`)
-      || this._channels.find(ch => ch.name.startsWith(prefix));
-    if (target) this._selectChannel(target.id);
-  }
-
-  private _selectChannel(name: string | null): void {
-    this._closeEventSource();
-    if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
-    this._showStalePrompt = false;
-    this._error = '';
-    this._selectedMessageId = undefined;
-    this._replyTo = undefined;
-    this._selectedArtefactRef = undefined;
-    this._loadCursors();
-    this._selectedChannelId = name || '';
-    if (!name) { this._messages = []; this._commitments = new Map(); return; }
-
-    const cursor = this._cursors[name];
-    if (cursor && Date.now() - cursor.ts >= this._stalenessMs) {
-      this._messages = [];
-      this._staleCursorId = cursor.id;
-      this._showStalePrompt = true;
+    if (topic === ChannelEventTopics.SEND_MESSAGE) {
+      this._sendMessage(payload as SendMessagePayload);
     } else {
-      this._messages = [];
-      this._openEventSource(name);
-      this._fullLoad(name);
+      this._channels.handleEvent(topic, payload);
+      this._messaging.handleEvent(topic, payload);
+      this._reactions.handleEvent(topic, payload);
+      this._commitments.handleEvent(topic, payload);
     }
-    this._fetchCommitments(name);
-    this._fetchTopics();
-    this._fetchMembers();
-  }
 
-  private _openEventSource(name: string): void {
-    this._closeEventSource();
-    const afterId = this._cursors[name]?.id ?? 0;
-    this._eventSource = new EventSource(`/api/mesh/channels/${encodeURIComponent(name)}/events?after=${afterId}`);
-    this._eventSource.onmessage = (e: MessageEvent) => {
-      try {
-        const entries = JSON.parse(e.data) as TimelineEntry[];
-        if (Array.isArray(entries) && entries.length) {
-          this._appendMessages(name, entries);
-          this._fetchCommitments(name);
-          this._fetchReactions();
-        }
-      } catch { /* ignore */ }
-    };
-    this._eventSource.onerror = () => {
-      this._closeEventSource();
-      if (this._selectedChannelId) this._pollTimer = setTimeout(() => this._pollChannel(), POLL_MS);
-    };
-  }
-
-  private _closeEventSource(): void {
-    if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
-  }
-
-  private _pollChannel(): void {
-    if (!this._selectedChannelId) return;
-    const lastId = this._cursors[this._selectedChannelId]?.id ?? 0;
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/timeline?limit=50${lastId ? `&after=${lastId}` : ''}`)
-      .then(r => r.ok ? r.json() : undefined)
-      .then((e: TimelineEntry[] | undefined) => {
-        if (e?.length) {
-          this._appendMessages(this._selectedChannelId, e);
-          this._fetchCommitments(this._selectedChannelId);
-        }
-      })
-      .catch(() => { /* ignore */ });
-    this._pollTimer = setTimeout(() => this._pollChannel(), POLL_MS);
-  }
-
-  private _fullLoad(name: string): void {
-    fetch(`/api/mesh/channels/${encodeURIComponent(name)}/timeline?limit=100`)
-      .then(r => r.ok ? r.json() : undefined)
-      .then((e: TimelineEntry[] | undefined) => { if (e?.length) { this._appendMessages(name, e); this._fetchReactions(); } })
-      .catch(() => { this._error = 'Failed to load messages.'; });
-  }
-
-  private _catchUp(name: string, fromId: number): void {
-    fetch(`/api/mesh/channels/${encodeURIComponent(name)}/timeline?limit=50&after=${fromId}`)
-      .then(r => r.ok ? r.json() : undefined)
-      .then((e: TimelineEntry[] | undefined) => { if (e?.length) this._appendMessages(name, e); })
-      .catch(() => { this._error = 'Catch-up failed — some messages may be missing.'; });
-  }
-
-  private _appendMessages(channelName: string, entries: TimelineEntry[]): void {
-    const existingIds = new Set(this._messages.map(m => m.id));
-    const newMsgs: QhorusMessage[] = [];
-    let cursorAdvanced = false;
-    for (const entry of entries) {
-      if (existingIds.has(String(entry.id ?? 0))) continue;
-      newMsgs.push(toQhorusMessage(entry));
-      if (entry.id && channelName) {
-        const c = this._cursors[channelName];
-        if (!c || entry.id > c.id) { this._cursors[channelName] = { id: entry.id, ts: Date.now() }; cursorAdvanced = true; }
+    if (topic === 'channel:artefact-selected') {
+      this._selectedArtefactRef = (payload as { artefactRef: ArtefactRef }).artefactRef;
+      if (!this._dockState['artifacts']) {
+        this._dockState = { ...this._dockState, artifacts: true };
       }
     }
-    if (newMsgs.length > 0) this._messages = [...this._messages, ...newMsgs];
-    if (cursorAdvanced) this._persistCursors();
-  }
-
-  private _fetchCommitments(channelName: string): void {
-    fetch(`/api/mesh/channels/${encodeURIComponent(channelName)}/commitments`)
-      .then(r => r.ok ? r.json() : [])
-      .then((data: Array<{ id: string; correlationId: string; state: string; createdAt?: string; expiresAt?: string | null; acknowledgedAt?: string | null; resolvedAt?: string | null }>) => {
-        this._commitments = toCommitmentMap(data);
-      })
-      .catch(() => { /* ignore */ });
-  }
-
-  private _fetchReactions(): void {
-    if (!this._selectedChannelId || this._messages.length === 0) { this._reactions = []; return; }
-    const messageIds = this._messages.map(m => Number(m.id)).filter(id => !isNaN(id));
-    if (messageIds.length === 0) { this._reactions = []; return; }
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/reactions/batch`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messageIds }),
-    })
-      .then(r => r.ok ? r.json() : {})
-      .then((data: Record<string, Array<{ emoji: string; count: number; actorIds: string[] }>>) => {
-        const reactions: Reaction[] = [];
-        for (const [msgId, groups] of Object.entries(data)) {
-          for (const g of groups) {
-            for (const actorId of g.actorIds) {
-              reactions.push({ messageId: msgId, emoji: g.emoji, actorId, createdAt: '' });
-            }
-          }
-        }
-        this._reactions = reactions;
-      })
-      .catch(() => { this._reactions = []; });
-  }
-
-  private _addReaction(messageId: string, emoji: string): void {
-    if (!this._selectedChannelId) return;
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/messages/${messageId}/reactions`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emoji }),
-    }).then(() => this._fetchReactions()).catch(() => { /* ignore */ });
-  }
-
-  private _removeReaction(messageId: string, emoji: string): void {
-    if (!this._selectedChannelId) return;
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/messages/${messageId}/reactions?emoji=${encodeURIComponent(emoji)}`, {
-      method: 'DELETE',
-    }).then(() => this._fetchReactions()).catch(() => { /* ignore */ });
-  }
-
-  private _fetchTopics(): void {
-    if (!this._selectedChannelId) { this._topics = []; return; }
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/topics`)
-      .then(r => r.ok ? r.json() : [])
-      .then((data: TopicSummaryResponse[]) => {
-        this._topics = data.map(s => toQhorusTopic(s, this._selectedChannelId));
-      })
-      .catch(() => { this._topics = []; });
-  }
-
-  private _fetchMembers(): void {
-    if (!this._selectedChannelId) { this._members = []; this._memberPresence = []; return; }
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/members`)
-      .then(r => r.ok ? r.json() : [])
-      .then((data: MembershipResponse[]) => {
-        this._members = data.map(m => toChannelMember(m, this._selectedChannelId));
-        this._fetchPresence();
-      })
-      .catch(() => { this._members = []; this._memberPresence = []; });
-  }
-
-  private _fetchPresence(): void {
-    if (!this._selectedChannelId) { this._memberPresence = []; return; }
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/presence`)
-      .then(r => r.ok ? r.json() : { subscribers: 0 })
-      .then((data: { subscribers: number }) => {
-        this._memberPresence = this._members.map(m => ({
-          memberId: m.memberId,
-          status: (data.subscribers > 0 ? 'ONLINE' : 'OFFLINE') as 'ONLINE' | 'OFFLINE',
-        }));
-      })
-      .catch(() => { this._memberPresence = []; });
-  }
-
-  private _groupThreads(): Array<{ root: QhorusMessage; replies: QhorusMessage[] }> {
-    const roots: QhorusMessage[] = [];
-    const replyMap = new Map<string, QhorusMessage[]>();
-    for (const msg of this._messages) {
-      if (msg.inReplyTo) {
-        const replies = replyMap.get(msg.inReplyTo) ?? [];
-        replies.push(msg);
-        replyMap.set(msg.inReplyTo, replies);
-      } else {
-        roots.push(msg);
-      }
+    if (topic === 'terminal-resize') {
+      this._handle?.resize(payload.cols, payload.rows);
     }
-    return roots.map(root => ({ root, replies: replyMap.get(root.id) ?? [] }));
-  }
+    if (topic === 'key-pressed') {
+      this._handle?.sendInput(payload.code);
+    }
+    if (topic === 'worker-selected') {
+      this._handleWorkerSwitch(payload.sessionId, payload.name);
+    }
+  };
 
-  private _sendMessage(content: string, speechAct?: string, inReplyTo?: string): void {
-    if (!content?.trim() || !this._selectedChannelId) return;
+  private async _sendMessage(payload: SendMessagePayload): Promise<void> {
     this._error = '';
-    const body: Record<string, unknown> = { content: content.trim(), type: speechAct || 'command' };
-    if (inReplyTo) {
-      body.inReplyTo = Number(inReplyTo);
-      const replyMsg = this._messages.find(m => m.id === inReplyTo);
+    const channelName = this._channels.selectedChannelId;
+    if (!payload.content?.trim() || !channelName) return;
+
+    const body: Record<string, unknown> = {
+      content: payload.content.trim(),
+      type: payload.speechAct || 'command',
+    };
+    if (payload.inReplyTo) {
+      body.inReplyTo = Number(payload.inReplyTo);
+      const replyMsg = this._channels.filteredMessages().find(m => m.id === payload.inReplyTo);
       if (replyMsg?.correlationId) body.correlationId = replyMsg.correlationId;
     }
-    if (this._replyTo && !inReplyTo) {
-      body.inReplyTo = Number(this._replyTo.messageId);
-    }
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/messages`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-      .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || String(r.status)); }); })
-      .then(() => { this._replyTo = undefined; })
-      .catch((err: Error) => { this._error = err.message || 'Send failed.'; });
-  }
+    if (payload.topic) body.topic = payload.topic;
 
-  // ── Stale cursor ─────────────────────────────────────────────────────────
-
-  private _onCatchUp(): void {
-    this._showStalePrompt = false;
-    if (this._selectedChannelId) {
-      this._openEventSource(this._selectedChannelId);
-      this._catchUp(this._selectedChannelId, this._staleCursorId);
-    }
-  }
-
-  private _onReload(): void {
-    this._showStalePrompt = false;
-    if (this._selectedChannelId) {
-      delete this._cursors[this._selectedChannelId];
-      this._persistCursors();
-      this._openEventSource(this._selectedChannelId);
-      this._fullLoad(this._selectedChannelId);
+    try {
+      const res = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(channelName)}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || String(res.status));
+      }
+      this._messaging.replyTo = undefined;
+      this.requestUpdate();
+    } catch (err) {
+      this._error = (err as Error).message || 'Send failed.';
     }
   }
 
@@ -678,16 +404,10 @@ export class ClaudonyWorkbench extends LitElement {
     history.replaceState(null, '', '?id=' + newSessionId + '&name=' + encodeURIComponent(newName));
 
     this._handle?.switchSession(newSessionId, { proxyPeer: this._proxyPeer });
-
     this._connectWorkerSSE();
 
-    this._selectedChannelId = '';
-    this._messages = [];
-    this._commitments = new Map();
-    this._selectedMessageId = undefined;
-    this._replyTo = undefined;
+    this._channels.selectedChannelId = '';
     this._selectedArtefactRef = undefined;
-    this._loadChannels();
 
     this.dispatchEvent(new CustomEvent('pages-event', {
       bubbles: true, composed: true,
@@ -705,17 +425,14 @@ export class ClaudonyWorkbench extends LitElement {
     this._dockState = { ...this._dockState, [panelId]: !this._dockState[panelId] };
   }
 
-  private _computeAllowedTypes(channelName: string): MessageType[] | undefined {
-    const raw = this._channelAllowedTypes[channelName];
-    return raw ? raw.split(',').map(t => t.trim().toUpperCase() as MessageType) : undefined;
-  }
-
   // ── Render ───────────────────────────────────────────────────────────────
 
   override render() {
-    const allowedTypes = this._selectedChannelId
-      ? this._computeAllowedTypes(this._selectedChannelId) : undefined;
-
+    const messages = this._channels.filteredMessages();
+    const topics = this._channels.channelTopics();
+    const members = this._members.filteredMembers();
+    const reactions = this._reactions.filteredReactions();
+    const commitments = this._commitments.commitments;
     const activeContextPanel = Object.entries(this._dockState).find(([, v]) => v)?.[0];
 
     return html`
@@ -729,33 +446,24 @@ export class ClaudonyWorkbench extends LitElement {
         ${this._caseId ? this._renderCaseHeader() : nothing}
         ${this._lineageExpanded ? this._renderLineage() : nothing}
 
-        ${this._showStalePrompt ? html`
-          <div class="stale-prompt">
-            <span class="stale-msg">You were away for a while.</span>
-            <pages-button variant="ghost" size="sm" label="Catch up from where you left off" @click=${() => this._onCatchUp()}></pages-button>
-            <pages-button variant="ghost" size="sm" label="Reload full history" @click=${() => this._onReload()}></pages-button>
-          </div>
-        ` : nothing}
+        <channel-nav .channels=${this._channels.channels}
+          .selectedChannelId=${this._channels.selectedChannelId}></channel-nav>
 
-        <channel-nav .channels=${this._channels} .selectedChannelId=${this._selectedChannelId}></channel-nav>
-
-        ${this._topics.length > 0 ? html`
-          <blocks-channel-topic-bar .topics=${this._topics}
-            .viewMode=${this._viewMode}></blocks-channel-topic-bar>
+        ${topics.length > 0 ? html`
+          <blocks-channel-topic-bar .topics=${topics}
+            .viewMode=${this._channels.viewMode}></blocks-channel-topic-bar>
         ` : nothing}
 
         <div class="feed-container">
-          ${this._viewMode === 'threaded'
-            ? this._groupThreads().map(t => html`
-                <blocks-channel-thread .rootMessage=${t.root} .replies=${t.replies}
-                  .reactions=${this._reactions.filter(r => r.messageId === t.root.id || t.replies.some(rp => rp.id === r.messageId))}
-                  .selectedMessageId=${this._selectedMessageId}></blocks-channel-thread>`)
-            : html`<channel-feed .messages=${this._messages} .channelId=${this._selectedChannelId}
-                .reactions=${this._reactions} .staleCursorMinutes=${0}></channel-feed>`}
+          <channel-feed .messages=${messages}
+            .channelId=${this._channels.selectedChannelId}
+            .reactions=${reactions}
+            .staleCursorMinutes=${0}></channel-feed>
         </div>
 
-        <channel-input .channelId=${this._selectedChannelId} .showTypeSelector=${true}
-          .allowedTypes=${allowedTypes} .replyTo=${this._replyTo}></channel-input>
+        <channel-input .channelId=${this._channels.selectedChannelId}
+          .showTypeSelector=${true}
+          .replyTo=${this._messaging.replyTo}></channel-input>
 
         ${this._error ? html`<div class="error">${this._error}</div>` : nothing}
 
@@ -773,29 +481,31 @@ export class ClaudonyWorkbench extends LitElement {
 
       ${activeContextPanel ? html`
         <div class="context-panel">
-          ${this._renderContextPanel(activeContextPanel)}
+          ${this._renderContextPanel(activeContextPanel, messages, commitments)}
         </div>
       ` : nothing}
     `;
   }
 
-  private _renderContextPanel(panelId: string) {
+  private _renderContextPanel(panelId: string, messages: any[], commitments: any) {
     switch (panelId) {
       case 'tasks':
         return html`<channel-task-panel
-          .messages=${this._messages}
-          .commitments=${this._commitments}
-          .selectedMessageId=${this._selectedMessageId}></channel-task-panel>`;
+          .messages=${messages}
+          .commitments=${commitments}
+          .selectedMessageId=${this._commitments.selectedMessageId}></channel-task-panel>`;
       case 'correlation':
         return html`<channel-correlation-panel
-          .messages=${this._messages}
-          .commitments=${this._commitments}
-          .selectedMessageId=${this._selectedMessageId}></channel-correlation-panel>`;
+          .messages=${messages}
+          .commitments=${commitments}
+          .selectedMessageId=${this._commitments.selectedMessageId}></channel-correlation-panel>`;
       case 'artifacts':
         return html`<channel-artifact-panel
           .selectedArtefactRef=${this._selectedArtefactRef}></channel-artifact-panel>`;
       case 'members':
-        return html`<blocks-channel-member-panel .members=${this._members} .presence=${this._memberPresence}></blocks-channel-member-panel>`;
+        return html`<blocks-channel-member-panel
+          .members=${this._members.filteredMembers()}
+          .presence=${this._members.presence}></blocks-channel-member-panel>`;
       default:
         return nothing;
     }
