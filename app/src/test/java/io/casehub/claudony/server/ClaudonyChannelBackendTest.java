@@ -1,34 +1,38 @@
 package io.casehub.claudony.server;
 
 import io.casehub.platform.api.identity.ActorType;
+import io.casehub.qhorus.api.gateway.BackendRegistry;
 import io.casehub.qhorus.api.gateway.ChannelInitialisedEvent;
 import io.casehub.qhorus.api.gateway.ChannelRef;
 import io.casehub.qhorus.api.gateway.OutboundMessage;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.runtime.gateway.ChannelGateway;
+import io.casehub.qhorus.push.QhorusWebSocketBroadcaster;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class ClaudonyChannelBackendTest {
 
-    private ChannelEventBus bus;
-    private ChannelGateway gateway;
+    private QhorusWebSocketBroadcaster broadcaster;
+    private BackendRegistry registry;
     private ClaudonyChannelBackend backend;
 
     @BeforeEach
-    void setUp() {
-        bus = new ChannelEventBus();
-        gateway = mock(ChannelGateway.class);
-        backend = new ClaudonyChannelBackend(bus, gateway);
+    void setUp() throws Exception {
+        broadcaster = mock(QhorusWebSocketBroadcaster.class);
+        registry = mock(BackendRegistry.class);
+        backend = new ClaudonyChannelBackend();
+        setField(backend, "broadcaster", broadcaster);
+        setField(backend, "registry", registry);
     }
 
     @Test
@@ -55,50 +59,41 @@ class ClaudonyChannelBackendTest {
     }
 
     @Test
-    void post_ticksChannelEventBus_byChannelName() {
-        String channelName = "case-abc/work";
-        var received = new CopyOnWriteArrayList<Integer>();
-        bus.subscribe(channelName).subscribe().with(received::add);
-
-        ChannelRef ref = new ChannelRef(UUID.randomUUID(), channelName);
+    void post_broadcastsViaWebSocket() {
+        ChannelRef ref = new ChannelRef(UUID.randomUUID(), "case-abc/work");
         OutboundMessage msg = new OutboundMessage(
                 UUID.randomUUID(), "agent:claude", MessageType.STATUS,
                 "hello", null, null, ActorType.AGENT, null, null);
 
         backend.post(ref, msg);
 
-        assertThat(received).hasSize(1);
+        verify(broadcaster).pushMessage(ref, msg);
     }
 
     @Test
-    void post_doesNotTickOtherChannels() {
-        var otherReceived = new CopyOnWriteArrayList<Integer>();
-        bus.subscribe("case-other/work").subscribe().with(otherReceived::add);
-
+    void post_doesNotBroadcastToOtherChannels() {
         ChannelRef ref = new ChannelRef(UUID.randomUUID(), "case-abc/work");
-        backend.post(ref, new OutboundMessage(UUID.randomUUID(), "agent", MessageType.STATUS,
-                "msg", null, null, ActorType.AGENT, null, null));
+        OutboundMessage msg = new OutboundMessage(
+                UUID.randomUUID(), "agent", MessageType.STATUS,
+                "msg", null, null, ActorType.AGENT, null, null);
 
-        assertThat(otherReceived).isEmpty();
+        backend.post(ref, msg);
+
+        verify(broadcaster).pushMessage(ref, msg);
     }
 
     @Test
-    void onChannelInitialised_caseChannel_registersBackend() {
+    void onChannelInitialised_registersBackend() {
         UUID channelId = UUID.randomUUID();
 
         backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "case-abc/work", false));
 
-        verify(gateway).deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
-        verify(gateway).registerBackend(channelId, backend, "human_observer");
+        verify(registry).registerBackend(channelId, backend, "human_observer");
     }
 
-    @Test
-    void onChannelInitialised_nonCaseChannel_registersBackend() {
-        UUID channelId = UUID.randomUUID();
-
-        backend.onChannelInitialised(new ChannelInitialisedEvent(channelId, "team/engineering", false));
-
-        verify(gateway).deregisterBackend(channelId, ClaudonyChannelBackend.BACKEND_ID);
-        verify(gateway).registerBackend(channelId, backend, "human_observer");
+    private static void setField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }
