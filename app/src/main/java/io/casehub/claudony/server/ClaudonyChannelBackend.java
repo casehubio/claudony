@@ -44,7 +44,9 @@ public class ClaudonyChannelBackend implements HumanObserverChannelBackend {
     }
 
     void onChannelInitialised(@Observes ChannelInitialisedEvent event) {
-        registry.registerBackend(event.channelId(), this, "human_observer");
+        if (event.channelName() != null && event.channelName().startsWith("case-")) {
+            registry.registerBackend(event.channelId(), this, "human_observer");
+        }
     }
 
     void onCommitmentChanged(@Observes(during = TransactionPhase.AFTER_SUCCESS)
