@@ -9,10 +9,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@casehubio/blocks-ui-case-explorer": "portal:./.casehub-packages/packages/case-explorer",
     "@casehubio/blocks-ui-channel-activity": "portal:./.casehub-packages/packages/channel-activity",
     "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core",
     "@casehubio/blocks-ui-session-workbench": "portal:./.casehub-packages/packages/session-workbench",
-    "@casehubio/blocks-ui-case-explorer": "portal:./.casehub-packages/packages/case-explorer",
     "@casehubio/pages-component": "portal:./.casehub-packages/packages/pages-component",
     "@casehubio/pages-component-terminal": "portal:./.casehub-packages/packages/pages-component-terminal",
     "@casehubio/pages-data": "portal:./.casehub-packages/packages/pages-data",

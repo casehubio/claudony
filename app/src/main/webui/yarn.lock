@@ -5,6 +5,21 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
+"@casehubio/blocks-ui-case-explorer@portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@casehubio/blocks-ui-case-explorer@portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."
+  dependencies:
+    "@casehubio/blocks-ui-core": "npm:0.2.2"
+    "@casehubio/blocks-ui-list-pane": "npm:0.2.2"
+    "@casehubio/blocks-ui-split-workbench": "npm:0.2.2"
+    "@casehubio/pages-component": "npm:*"
+    "@casehubio/pages-data": "npm:*"
+    "@casehubio/pages-primitives": "npm:*"
+    "@casehubio/pages-table": "npm:*"
+    lit: "npm:^3.2.1"
+  languageName: node
+  linkType: soft
+
 "@casehubio/blocks-ui-channel-activity@portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
   resolution: "@casehubio/blocks-ui-channel-activity@portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."
@@ -27,6 +42,17 @@ __metadata:
     "@casehubio/pages-primitives": "npm:*"
     "@casehubio/pages-ui-tokens": "npm:*"
     lit: "npm:^3.3.3"
+  languageName: node
+  linkType: soft
+
+"@casehubio/blocks-ui-list-pane@portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@casehubio/blocks-ui-list-pane@portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A."
+  dependencies:
+    "@casehubio/blocks-ui-core": "npm:0.2.2"
+    "@casehubio/pages-primitives": "npm:*"
+    "@casehubio/pages-table": "npm:*"
+    lit: "npm:^3.0.0"
   languageName: node
   linkType: soft
 
@@ -678,6 +704,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "claudony-webui@workspace:."
   dependencies:
+    "@casehubio/blocks-ui-case-explorer": "portal:./.casehub-packages/packages/case-explorer"
     "@casehubio/blocks-ui-channel-activity": "portal:./.casehub-packages/packages/channel-activity"
     "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core"
     "@casehubio/blocks-ui-session-workbench": "portal:./.casehub-packages/packages/session-workbench"
@@ -1072,7 +1099,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lit@npm:^3.0.0, lit@npm:^3.1.0, lit@npm:^3.3.3":
+"lit@npm:^3.0.0, lit@npm:^3.1.0, lit@npm:^3.2.1, lit@npm:^3.3.3":
   version: 3.3.3
   resolution: "lit@npm:3.3.3"
   dependencies:
