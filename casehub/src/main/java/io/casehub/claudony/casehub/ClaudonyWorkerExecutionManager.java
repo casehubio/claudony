@@ -1,6 +1,7 @@
 package io.casehub.claudony.casehub;
 
 import io.casehub.claudony.server.SessionRegistry;
+import io.quarkus.logging.Log;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
@@ -138,6 +139,7 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
 
     @Override
     public void schedulePersistedEvent(io.casehub.engine.common.internal.history.EventLog eventLog) {
+        Log.tracev("schedulePersistedEvent ignored — no persistent scheduler in claudony (eventLog={0})", eventLog);
     }
 
     @Override

@@ -43,6 +43,7 @@ public class ClaudonyChannelBackend implements HumanObserverChannelBackend {
         broadcaster.pushMessage(channel, message);
     }
 
+    // Only register for case channels — naming convention: "case-{caseId}/{semantic}"
     void onChannelInitialised(@Observes ChannelInitialisedEvent event) {
         if (event.channelName() != null && event.channelName().startsWith("case-")) {
             registry.registerBackend(event.channelId(), this, "human_observer");
