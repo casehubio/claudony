@@ -1,10 +1,17 @@
 import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { QhorusMessage, QhorusChannel, MessageType, SelectOption } from '@casehubio/blocks-ui-channel-activity';
+import {
+  ChannelEventTopics,
+  PushController, ALL_TOPICS,
+  ChannelStateController,
+  MessagingController,
+} from '@casehubio/blocks-ui-channel-activity';
+import type { SendMessagePayload, MessageType } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/pages-ui-components';
-import { toQhorusMessage, toQhorusChannel } from '../util/channel-adapter';
-import type { TimelineEntry, ChannelInfo } from '../util/channel-adapter';
+import { createEventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
+import type { EventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
+import { fetchWithAuth } from '../util/auth.js';
 
 interface ChannelPanelConfig {
   sessionId: string;
@@ -22,14 +29,16 @@ interface WorkerSummary {
   completedAt?: string;
 }
 
-const POLL_MS = 3000;
-const CURSOR_STORE_KEY = 'claudony.channel.cursors';
-
 @customElement('claudony-channel-panel')
 export class ClaudonyChannelPanel extends LitElement {
-  @state() private _channels: QhorusChannel[] = [];
-  @state() private _selectedChannelId = '';
-  @state() private _messages: QhorusMessage[] = [];
+  // ── Controllers ─────────────────────────────────────────────────────────
+  private _push = new PushController(this);
+  private _channels = new ChannelStateController(this, this._push);
+  private _messaging = new MessagingController(this, this._channels, {
+    restBase: '/api',
+    fetch: fetchWithAuth,
+  });
+
   @state() private _collapsed = true;
   @state() private _error = '';
 
@@ -42,17 +51,9 @@ export class ClaudonyChannelPanel extends LitElement {
   @state() private _lineageExpanded = false;
   @state() private _lineageLoaded = false;
 
-  @state() private _showStalePrompt = false;
-  @state() private _staleCursorId = 0;
-
   private _sessionId = '';
   private _preselect: string | null = null;
-  private _stalenessMs = 30 * 60 * 1000;
-  private _cursors: Record<string, { id: number; ts: number }> = {};
-  private _channelAllowedTypes: Record<string, string | null> = {};
-
-  private _eventSource: EventSource | null = null;
-  private _pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private _eventConn?: EventConnection;
   private _lineagePollTimer: ReturnType<typeof setTimeout> | null = null;
   private _elapsedTicker: ReturnType<typeof setInterval> | null = null;
 
@@ -76,21 +77,6 @@ export class ClaudonyChannelPanel extends LitElement {
       border-bottom: 1px solid var(--pages-neutral-4, #3e3e42);
       flex-shrink: 0;
     }
-    .ch-select {
-      flex: 1;
-      background: var(--pages-neutral-1, #1e1e1e);
-      color: var(--pages-neutral-11, #ccc);
-      border: 1px solid var(--pages-neutral-4, #3e3e42);
-      border-radius: var(--pages-radius-sm, 4px);
-      padding: 4px 6px; font-size: var(--pages-font-size-base);
-    }
-    .ch-select:focus { outline: none; border-color: var(--pages-accent-9, #007acc); }
-    .close-btn {
-      background: transparent; border: none;
-      color: var(--pages-neutral-8, #888);
-      padding: 3px 6px; font-size: var(--pages-font-size-base); cursor: pointer;
-    }
-    .close-btn:hover { color: var(--pages-neutral-11, #ccc); }
 
     .feed-container { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 
@@ -103,11 +89,6 @@ export class ClaudonyChannelPanel extends LitElement {
       font-size: var(--pages-font-size-base); font-weight: 600; color: var(--pages-neutral-11, #ccc);
       flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .status-dot.active { background: var(--pages-success-9, #4ec9b0); }
-    .status-dot.idle { background: var(--pages-neutral-8, #888); }
-    .status-dot.waiting { background: var(--pages-warning-9, #dcdcaa); }
-    .status-dot.faulted { background: var(--pages-danger-9, #f44747); }
     .case-elapsed { font-size: var(--pages-font-size-sm); color: var(--pages-neutral-8, #888); flex-shrink: 0; }
 
     .lineage-toggle {
@@ -139,22 +120,6 @@ export class ClaudonyChannelPanel extends LitElement {
     }
     .lineage-empty { font-size: var(--pages-font-size-sm); color: var(--pages-neutral-8, #888); font-style: italic; padding: 2px 0; }
 
-    .stale-prompt {
-      display: flex; flex-direction: column; gap: 6px;
-      padding: 10px 8px;
-      background: var(--pages-warning-3, rgba(240,194,127,.07));
-      border-bottom: 1px solid var(--pages-warning-11, rgba(240,194,127,.2));
-      font-size: var(--pages-font-size-base);
-    }
-    .stale-msg { color: var(--pages-neutral-8, #888); font-style: italic; }
-    .stale-btn {
-      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
-      color: var(--pages-neutral-11, #ccc); padding: 4px 8px; font-size: var(--pages-font-size-sm);
-      border-radius: 3px; cursor: pointer; text-align: left;
-    }
-    .stale-btn:hover { background: rgba(255,255,255,.14); }
-    .stale-btn.secondary { opacity: 0.7; }
-
     .error { font-size: var(--pages-font-size-sm); color: var(--pages-danger-9, #f44747); padding: 4px 8px; }
     @media (max-width: 1024px) {
       :host { display: none; width: 0; min-width: 0; }
@@ -175,12 +140,6 @@ export class ClaudonyChannelPanel extends LitElement {
     }
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    this._loadCursors();
-    this._fetchMeshConfig();
-  }
-
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.destroy();
@@ -196,8 +155,7 @@ export class ClaudonyChannelPanel extends LitElement {
   }
 
   destroy(): void {
-    this._closeEventSource();
-    if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
+    this._eventConn?.close();
     if (this._lineagePollTimer) { clearTimeout(this._lineagePollTimer); this._lineagePollTimer = null; }
     if (this._elapsedTicker) { clearInterval(this._elapsedTicker); this._elapsedTicker = null; }
   }
@@ -208,61 +166,76 @@ export class ClaudonyChannelPanel extends LitElement {
       this._loadLineage();
       this._startElapsedTicker();
     }
-    this._loadChannels();
+    if (!this._eventConn) this._connectPush();
   }
 
   close(): void {
     this._collapsed = true;
-    this._showStalePrompt = false;
-    this._closeEventSource();
-    if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
-    if (this._lineagePollTimer) { clearTimeout(this._lineagePollTimer); this._lineagePollTimer = null; }
-    if (this._elapsedTicker) { clearInterval(this._elapsedTicker); this._elapsedTicker = null; }
   }
 
   toggle(): void {
     if (this._collapsed) this.open(); else this.close();
   }
 
+  private _connectPush(): void {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${proto}//${location.host}/ws/push`;
+    const eventTarget = new EventTarget();
+
+    this._eventConn = createEventConnection(url, {
+      config: { eventTarget },
+      onStatusChange: (status) => { this._push.setConnectionStatus(status as any); },
+    });
+
+    this._eventConn.listen(ALL_TOPICS);
+
+    eventTarget.addEventListener('pages-event', (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.payload) this._push.applyOp(detail.payload as any);
+    });
+
+    if (this._preselect) {
+      const check = () => {
+        if (this._channels.channels.length > 0) {
+          const target = this._channels.channels.find(ch => ch.name === this._preselect || ch.id === this._preselect);
+          if (target) this._channels.selectedChannelId = target.id;
+        } else {
+          setTimeout(check, 200);
+        }
+      };
+      setTimeout(check, 200);
+    }
+  }
+
   override render() {
-    const allowedTypes = this._selectedChannelId
-      ? this._computeAllowedTypes(this._selectedChannelId) : undefined;
+    const messages = this._channels.filteredMessages();
 
     return html`
       <div class="header">
-        <pages-select style="flex:1" .options=${[
-          { value: '', label: '— select channel —' },
-          ...this._channels.map(ch => ({ value: ch.id, label: ch.name }))
-        ]} .value=${this._selectedChannelId}
-          @change=${(e: Event) => this._onChannelSelect(e)}></pages-select>
-        <pages-button variant="ghost" size="xs" label="×" title="Close" @click=${() => this.close()}></pages-button>
+        <channel-nav style="flex:1" .channels=${this._channels.channels}
+          .selectedChannelId=${this._channels.selectedChannelId}></channel-nav>
+        <pages-button variant="ghost" size="xs" label="\u{00D7}" title="Close" @click=${() => this.close()}></pages-button>
       </div>
 
       ${this._caseId ? this._renderCaseHeader() : nothing}
       ${this._lineageExpanded ? this._renderLineage() : nothing}
 
-      ${this._showStalePrompt ? html`
-        <div class="stale-prompt">
-          <span class="stale-msg">You were away for a while.</span>
-          <pages-button variant="ghost" size="sm" label="Catch up from where you left off" @click=${() => this._onCatchUp()}></pages-button>
-          <pages-button variant="ghost" size="sm" label="Reload full history" @click=${() => this._onReload()}></pages-button>
-        </div>
-      ` : nothing}
-
       <div class="feed-container">
-        <channel-feed .messages=${this._messages} .channelId=${this._selectedChannelId}
+        <channel-feed .messages=${messages}
+          .channelId=${this._channels.selectedChannelId}
           .staleCursorMinutes=${0}></channel-feed>
       </div>
 
-      <channel-input .channelId=${this._selectedChannelId} .showTypeSelector=${true}
-        .allowedTypes=${allowedTypes} @pages-event=${(e: CustomEvent) => this._onPagesEvent(e)}></channel-input>
+      <channel-input .channelId=${this._channels.selectedChannelId}
+        .showTypeSelector=${true}
+        @pages-event=${(e: CustomEvent) => this._onPagesEvent(e)}></channel-input>
 
       ${this._error ? html`<div class="error">${this._error}</div>` : nothing}
     `;
   }
 
   private _renderCaseHeader() {
-    const role = this._roleName?.replace(/^claudony-worker-/, '') || '—';
+    const role = this._roleName?.replace(/^claudony-worker-/, '') || '\u{2014}';
     const status = (this._sessionStatus || 'idle').toLowerCase();
     return html`
       <div class="case-header">
@@ -271,11 +244,11 @@ export class ClaudonyChannelPanel extends LitElement {
           <pages-status-dot variant=${status === 'active' ? 'success' : status === 'waiting' ? 'warning' : status === 'faulted' ? 'danger' : 'neutral'}></pages-status-dot>
           <span class="case-elapsed">${this._elapsed}</span>
         </div>
-        <div class="lineage-toggle" @click=${() => this._toggleLineage()}>
-          <span class="chevron ${this._lineageExpanded ? 'expanded' : ''}">▶</span>
+        <div class="lineage-toggle" @click=${() => { this._lineageExpanded = !this._lineageExpanded; }}>
+          <span class="chevron ${this._lineageExpanded ? 'expanded' : ''}">\u{25B6}</span>
           <span>${this._lineageLoaded
             ? `${this._lineageWorkers.length} prior worker${this._lineageWorkers.length === 1 ? '' : 's'}`
-            : 'Loading…'}</span>
+            : 'Loading\u{2026}'}</span>
         </div>
       </div>
     `;
@@ -294,168 +267,40 @@ export class ClaudonyChannelPanel extends LitElement {
         const dur = durMs > 0 ? `${Math.ceil(durMs / 60000)}m` : '?';
         return html`<div class="lineage-row">
           <span class="lineage-name">${name}</span>
-          <span class="lineage-time">${start}→${end} (${dur})</span>
+          <span class="lineage-time">${start}\u{2192}${end} (${dur})</span>
         </div>`;
       })}
     </div>`;
   }
 
-  private _onChannelSelect(e: Event) {
-    this._selectChannel((e.target as HTMLSelectElement).value || null);
-  }
-
   private _onPagesEvent(e: CustomEvent) {
     const { topic, payload } = e.detail ?? {};
-    if (topic === 'channel:send-message') this._sendMessage(payload.content, payload.speechAct);
-  }
-
-  private _onCatchUp() {
-    this._showStalePrompt = false;
-    if (this._selectedChannelId) {
-      this._openEventSource(this._selectedChannelId);
-      this._catchUp(this._selectedChannelId, this._staleCursorId);
-    }
-  }
-
-  private _onReload() {
-    this._showStalePrompt = false;
-    if (this._selectedChannelId) {
-      delete this._cursors[this._selectedChannelId];
-      this._persistCursors();
-      this._openEventSource(this._selectedChannelId);
-      this._fullLoad(this._selectedChannelId);
-    }
-  }
-
-  private _toggleLineage() { this._lineageExpanded = !this._lineageExpanded; }
-
-  private _loadCursors() {
-    try { const s = sessionStorage.getItem(CURSOR_STORE_KEY); if (s) this._cursors = JSON.parse(s); }
-    catch { /* ignore */ }
-  }
-
-  private _persistCursors() {
-    try { sessionStorage.setItem(CURSOR_STORE_KEY, JSON.stringify(this._cursors)); }
-    catch { /* ignore */ }
-  }
-
-  private _fetchMeshConfig() {
-    fetch('/api/mesh/config').then(r => r.json())
-      .then((cfg: { cursorStalenessMinutes?: number }) => {
-        if (cfg?.cursorStalenessMinutes != null) this._stalenessMs = cfg.cursorStalenessMinutes * 60 * 1000;
-      }).catch(() => { /* ignore */ });
-  }
-
-  private _loadChannels() {
-    fetch('/api/mesh/channels').then(r => r.json())
-      .then((channels: ChannelInfo[]) => {
-        channels.sort((a, b) => a.name.localeCompare(b.name));
-        this._channelAllowedTypes = {};
-        channels.forEach(ch => { this._channelAllowedTypes[ch.name] = ch.allowedTypes || null; });
-        this._channels = channels.map(toQhorusChannel);
-        const preselect = this._preselect || new URLSearchParams(window.location.search).get('channel');
-        if (preselect) { this._selectChannel(preselect); if (this._collapsed) this.open(); return; }
-        if (this._caseId) this._selectCaseChannel(this._caseId);
-      }).catch(() => { /* ignore */ });
-  }
-
-  private _selectCaseChannel(caseId: string) {
-    const prefix = `case-${caseId}/`;
-    const target = this._channels.find(ch => ch.name === `${prefix}work`)
-      || this._channels.find(ch => ch.name.startsWith(prefix));
-    if (target) this._selectChannel(target.id);
-  }
-
-  private _selectChannel(name: string | null) {
-    this._closeEventSource();
-    if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
-    this._showStalePrompt = false;
-    this._error = '';
-    this._loadCursors();
-    this._selectedChannelId = name || '';
-    if (!name) { this._messages = []; return; }
-
-    const cursor = this._cursors[name];
-    if (cursor && Date.now() - cursor.ts >= this._stalenessMs) {
-      this._messages = [];
-      this._staleCursorId = cursor.id;
-      this._showStalePrompt = true;
+    if (topic === ChannelEventTopics.SEND_MESSAGE || topic === 'channel:send-message') {
+      this._sendMessage(payload as SendMessagePayload);
     } else {
-      this._messages = [];
-      this._openEventSource(name);
-      this._fullLoad(name);
+      this._channels.handleEvent(topic, payload);
+      this._messaging.handleEvent(topic, payload);
     }
   }
 
-  private _openEventSource(name: string) {
-    this._closeEventSource();
-    const afterId = this._cursors[name]?.id ?? 0;
-    this._eventSource = new EventSource(`/api/mesh/channels/${encodeURIComponent(name)}/events?after=${afterId}`);
-    this._eventSource.onmessage = (e: MessageEvent) => {
-      try {
-        const entries = JSON.parse(e.data) as TimelineEntry[];
-        if (Array.isArray(entries) && entries.length) this._appendMessages(name, entries);
-      } catch { /* ignore */ }
-    };
-    this._eventSource.onerror = () => {
-      this._closeEventSource();
-      if (this._selectedChannelId) this._pollTimer = setTimeout(() => this._pollChannel(), POLL_MS);
-    };
-  }
-
-  private _closeEventSource() {
-    if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
-  }
-
-  private _pollChannel() {
-    if (!this._selectedChannelId) return;
-    const lastId = this._cursors[this._selectedChannelId]?.id ?? 0;
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/timeline?limit=50${lastId ? `&after=${lastId}` : ''}`)
-      .then(r => r.ok ? r.json() : undefined)
-      .then((e: TimelineEntry[] | undefined) => { if (e?.length) this._appendMessages(this._selectedChannelId, e); })
-      .catch(() => { /* ignore */ });
-    this._pollTimer = setTimeout(() => this._pollChannel(), POLL_MS);
-  }
-
-  private _catchUp(name: string, fromId: number) {
-    fetch(`/api/mesh/channels/${encodeURIComponent(name)}/timeline?limit=50&after=${fromId}`)
-      .then(r => r.ok ? r.json() : undefined)
-      .then((e: TimelineEntry[] | undefined) => { if (e?.length) this._appendMessages(name, e); })
-      .catch(() => { this._error = 'Catch-up failed — some messages may be missing.'; });
-  }
-
-  private _fullLoad(name: string) {
-    fetch(`/api/mesh/channels/${encodeURIComponent(name)}/timeline?limit=100`)
-      .then(r => r.ok ? r.json() : undefined)
-      .then((e: TimelineEntry[] | undefined) => { if (e?.length) this._appendMessages(name, e); })
-      .catch(() => { this._error = 'Failed to load messages.'; });
-  }
-
-  private _appendMessages(channelName: string, entries: TimelineEntry[]) {
-    const existingIds = new Set(this._messages.map(m => m.id));
-    const newMsgs: QhorusMessage[] = [];
-    let cursorAdvanced = false;
-    for (const entry of entries) {
-      if (existingIds.has(String(entry.id ?? 0))) continue;
-      newMsgs.push(toQhorusMessage(entry));
-      if (entry.id && channelName) {
-        const c = this._cursors[channelName];
-        if (!c || entry.id > c.id) { this._cursors[channelName] = { id: entry.id, ts: Date.now() }; cursorAdvanced = true; }
-      }
-    }
-    if (newMsgs.length > 0) this._messages = [...this._messages, ...newMsgs];
-    if (cursorAdvanced) this._persistCursors();
-  }
-
-  private _sendMessage(content: string, speechAct?: string) {
-    if (!content?.trim() || !this._selectedChannelId) return;
+  private async _sendMessage(payload: SendMessagePayload): Promise<void> {
+    const channelName = this._channels.selectedChannelId;
+    if (!payload.content?.trim() || !channelName) return;
     this._error = '';
-    fetch(`/api/mesh/channels/${encodeURIComponent(this._selectedChannelId)}/messages`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content.trim(), type: speechAct || 'command' }),
-    })
-      .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || String(r.status)); }); })
-      .catch((err: Error) => { this._error = err.message || 'Send failed.'; });
+
+    try {
+      const res = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(channelName)}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: payload.content.trim(), type: payload.speechAct || 'command' }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || String(res.status));
+      }
+    } catch (err) {
+      this._error = (err as Error).message || 'Send failed.';
+    }
   }
 
   private _loadLineage() {
@@ -474,16 +319,11 @@ export class ClaudonyChannelPanel extends LitElement {
   }
 
   private _updateElapsed() {
-    if (!this._sessionCreatedAt) { this._elapsed = '—'; return; }
+    if (!this._sessionCreatedAt) { this._elapsed = '\u{2014}'; return; }
     const diffM = Math.floor((Date.now() - this._sessionCreatedAt.getTime()) / 60000);
     if (diffM < 1) this._elapsed = '<1m';
     else if (diffM < 60) this._elapsed = `${diffM}m`;
     else this._elapsed = `${Math.floor(diffM / 60)}h ${diffM % 60}m`;
-  }
-
-  private _computeAllowedTypes(channelName: string): MessageType[] | undefined {
-    const raw = this._channelAllowedTypes[channelName];
-    return raw ? raw.split(',').map(t => t.trim().toUpperCase() as MessageType) : undefined;
   }
 }
 

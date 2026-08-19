@@ -1,58 +1,57 @@
 package io.casehub.claudony.server;
 
 import io.casehub.platform.api.identity.ActorType;
+import io.casehub.qhorus.api.gateway.BackendRegistry;
 import io.casehub.qhorus.api.gateway.ChannelInitialisedEvent;
 import io.casehub.qhorus.api.gateway.ChannelRef;
+import io.casehub.qhorus.api.gateway.CommitmentStateChangedEvent;
 import io.casehub.qhorus.api.gateway.HumanObserverChannelBackend;
 import io.casehub.qhorus.api.gateway.OutboundMessage;
-import io.casehub.qhorus.runtime.gateway.ChannelGateway;
+import io.casehub.qhorus.push.QhorusWebSocketBroadcaster;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.TransactionPhase;
 import jakarta.inject.Inject;
 
 import java.util.Map;
 
-/**
- * Qhorus HumanObserverChannelBackend for the Claudony dashboard panel.
- *
- * <p>Self-registers for all channels via {@link ChannelInitialisedEvent}, which fires
- * on every {@code gateway.initChannel()} call — at startup (all persisted channels) and when new
- * channels are created. The deregister-then-register pattern is idempotent and safe for concurrent
- * restarts. {@code post()} ticks {@link ChannelEventBus} to drive SSE delivery.
- */
 @ApplicationScoped
 public class ClaudonyChannelBackend implements HumanObserverChannelBackend {
 
     public static final String BACKEND_ID = "claudony-observer";
 
-    private final ChannelEventBus channelEventBus;
-    private final ChannelGateway  gateway;
+    @Inject
+    QhorusWebSocketBroadcaster broadcaster;
 
     @Inject
-    public ClaudonyChannelBackend(ChannelEventBus channelEventBus, ChannelGateway gateway) {
-        this.channelEventBus = channelEventBus;
-        this.gateway         = gateway;
-    }
+    BackendRegistry registry;
 
     @Override
-    public String backendId()                                          {return BACKEND_ID;}
+    public String backendId() { return BACKEND_ID; }
 
     @Override
-    public ActorType actorType()                                       {return ActorType.HUMAN;}
+    public ActorType actorType() { return ActorType.HUMAN; }
 
     @Override
     public void open(ChannelRef channel, Map<String, String> metadata) {}
 
     @Override
-    public void close(ChannelRef channel)                              {}
+    public void close(ChannelRef channel) {}
 
     @Override
     public void post(ChannelRef channel, OutboundMessage message) {
-        channelEventBus.emit(channel.name());
+        broadcaster.pushMessage(channel, message);
     }
 
+    // Only register for case channels — naming convention: "case-{caseId}/{semantic}"
     void onChannelInitialised(@Observes ChannelInitialisedEvent event) {
-        gateway.deregisterBackend(event.channelId(), BACKEND_ID);
-        gateway.registerBackend(event.channelId(), this, "human_observer");
+        if (event.channelName() != null && event.channelName().startsWith("case-")) {
+            registry.registerBackend(event.channelId(), this, "human_observer");
+        }
+    }
+
+    void onCommitmentChanged(@Observes(during = TransactionPhase.AFTER_SUCCESS)
+                             CommitmentStateChangedEvent event) {
+        broadcaster.broadcastCommitment(event.commitment());
     }
 }

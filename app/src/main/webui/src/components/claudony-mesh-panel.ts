@@ -4,8 +4,74 @@ import type { SelectOption } from '@casehubio/pages-ui-components';
 import '@casehubio/pages-ui-components';
 import type { QhorusMessage, Reaction, ChannelMember, PresenceState } from '@casehubio/blocks-ui-channel-activity';
 import '@casehubio/blocks-ui-channel-activity';
-import { toQhorusMessage, toChannelMember, type TimelineEntry, type MembershipResponse } from '../util/channel-adapter.js';
 import { fetchWithAuth } from '../util/auth.js';
+import type { MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
+
+interface TimelineEntry {
+  id?: number;
+  type?: string;
+  message_type?: string;
+  sender?: string;
+  content?: string | null;
+  created_at?: string;
+  agent_id?: string;
+  in_reply_to?: number | null;
+  correlation_id?: string;
+  artefact_refs?: ArtefactRef[] | null;
+  target?: string | null;
+  reply_count?: number;
+  deadline?: string | null;
+  topic?: string | null;
+}
+
+interface MembershipResponse {
+  id: number;
+  channelId: string;
+  memberId: string;
+  role: string;
+  tenancyId: string;
+  joinedAt: string;
+  lastReadMessageId: number | null;
+  lastDeliveredMessageId: number | null;
+}
+
+function resolveActorType(sender: string): 'HUMAN' | 'AGENT' | 'SYSTEM' {
+  if (sender === 'human' || sender.startsWith('human:')) return 'HUMAN';
+  if (sender === 'system') return 'SYSTEM';
+  return 'AGENT';
+}
+
+function toQhorusMessage(entry: Partial<TimelineEntry>): QhorusMessage {
+  const isEvent = entry.type === 'EVENT';
+  const sender = isEvent ? (entry.agent_id || 'system') : (entry.sender || 'unknown');
+  const rawType = isEvent ? 'EVENT' : (entry.message_type || 'status');
+  return {
+    id: String(entry.id ?? 0),
+    channelId: '',
+    sender,
+    messageType: rawType.toUpperCase() as MessageType,
+    actorType: resolveActorType(sender),
+    content: entry.content ?? '',
+    topic: entry.topic ?? '',
+    correlationId: entry.correlation_id,
+    inReplyTo: entry.in_reply_to ? String(entry.in_reply_to) : undefined,
+    artefactRefs: entry.artefact_refs ?? [],
+    target: entry.target ?? undefined,
+    replyCount: entry.reply_count ?? 0,
+    deadline: entry.deadline ?? undefined,
+    createdAt: entry.created_at || new Date().toISOString(),
+  };
+}
+
+function toChannelMember(m: MembershipResponse, channelName: string): ChannelMember {
+  return {
+    channelId: channelName,
+    memberId: m.memberId,
+    displayName: m.memberId,
+    role: m.role as 'PARTICIPANT' | 'OBSERVER' | 'MODERATOR',
+    actorType: resolveActorType(m.memberId),
+  };
+}
 
 interface ChannelData { name: string; messageCount: number; lastActivityAt?: string; allowedTypes?: string }
 interface InstanceData { instanceId: string }
@@ -28,11 +94,8 @@ export class ClaudonyMeshPanel extends LitElement {
   @state() private _showCreateForm = false;
   @state() private _createError = '';
 
-  private _strategy: 'sse' | 'poll' = 'poll';
   private _pollInterval = 3000;
   private _pollTimer: ReturnType<typeof setInterval> | null = null;
-  private _eventSource: EventSource | null = null;
-  private _lastEventId = -1;
 
   private _dockChannel = '';
   private _dockType = 'status';
@@ -140,51 +203,22 @@ export class ClaudonyMeshPanel extends LitElement {
   private async _initStrategy(): Promise<void> {
     try {
       const cfg = await fetchWithAuth('/api/mesh/config').then(r => r.json());
-      this._strategy = cfg.strategy === 'sse' ? 'sse' : 'poll';
       this._pollInterval = cfg.interval || 3000;
-      this._startStrategy();
     } catch { /* ignore */ }
+    this._poll();
+    this._pollTimer = setInterval(() => this._poll(), this._pollInterval);
   }
-
-  private _startStrategy(): void {
-    if (this._strategy === 'sse') {
-      this._connectSSE();
-    } else {
-      this._poll();
-      this._pollTimer = setInterval(() => this._poll(), this._pollInterval);
-    }
-  }
-
-  private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   private _stopStrategy(): void {
     if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
-    if (this._reconnectTimer) { clearTimeout(this._reconnectTimer); this._reconnectTimer = null; }
-    if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
-  }
-
-  private _connectSSE(): void {
-    const url = this._lastEventId >= 0 ? '/api/mesh/events?after=' + this._lastEventId : '/api/mesh/events';
-    this._eventSource = new EventSource(url);
-    this._eventSource.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (typeof data._eventId === 'number') this._lastEventId = data._eventId;
-        this._update(data);
-      } catch { /* ignore */ }
-    };
-    this._eventSource.onerror = () => {
-      if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
-      this._reconnectTimer = setTimeout(() => { this._reconnectTimer = null; if (!this._eventSource) this._connectSSE(); }, 2000);
-    };
   }
 
   private async _poll(): Promise<void> {
     try {
       const [channels, instances, feed] = await Promise.all([
-        fetchWithAuth('/api/mesh/channels').then(r => r.json()),
+        fetchWithAuth('/api/channels').then(r => r.json()),
         fetchWithAuth('/api/mesh/instances').then(r => r.json()),
-        fetchWithAuth('/api/mesh/feed?limit=100').then(r => r.json()),
+        fetchWithAuth('/api/channels/feed?limit=100').then(r => r.json()),
       ]);
       this._update({ channels, instances, feed });
     } catch { /* ignore */ }
@@ -226,13 +260,13 @@ export class ClaudonyMeshPanel extends LitElement {
 
   private async _autoJoinChannel(name: string): Promise<void> {
     try {
-      await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/members`, { method: 'POST' });
+      await fetchWithAuth(`/api/channels/${encodeURIComponent(name)}/members`, { method: 'POST' });
     } catch { /* best-effort */ }
   }
 
   private async _fetchChannelMembers(name: string): Promise<void> {
     try {
-      const resp = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/members`);
+      const resp = await fetchWithAuth(`/api/channels/${encodeURIComponent(name)}/members`);
       if (!resp.ok) { this._channelMembers = []; return; }
       const data: MembershipResponse[] = await resp.json();
       this._channelMembers = data.map(m => toChannelMember(m, name));
@@ -241,7 +275,7 @@ export class ClaudonyMeshPanel extends LitElement {
 
   private async _fetchChannelTimeline(name: string): Promise<void> {
     try {
-      const resp = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/timeline?limit=50`);
+      const resp = await fetchWithAuth(`/api/channels/${encodeURIComponent(name)}/timeline?limit=50`);
       if (!resp.ok) { this._channelMessages = []; return; }
       const data: TimelineEntry[] = await resp.json();
       this._channelMessages = data.map(e => toQhorusMessage(e));
@@ -253,7 +287,7 @@ export class ClaudonyMeshPanel extends LitElement {
     const messageIds = this._channelMessages.map(m => Number(m.id)).filter(id => !isNaN(id));
     if (messageIds.length === 0) { this._channelReactions = []; return; }
     try {
-      const resp = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/reactions/batch`, {
+      const resp = await fetchWithAuth(`/api/channels/${encodeURIComponent(name)}/reactions/batch`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messageIds }),
       });
@@ -273,7 +307,7 @@ export class ClaudonyMeshPanel extends LitElement {
 
   private async _fetchChannelPresence(name: string): Promise<void> {
     try {
-      const resp = await fetchWithAuth(`/api/mesh/channels/${encodeURIComponent(name)}/presence`);
+      const resp = await fetchWithAuth(`/api/channels/${encodeURIComponent(name)}/presence`);
       if (!resp.ok) { this._channelPresence = 0; this._channelMemberPresence = []; return; }
       const data = await resp.json();
       this._channelPresence = data.subscribers ?? 0;
@@ -321,7 +355,7 @@ export class ClaudonyMeshPanel extends LitElement {
       );
       if (!resp.ok) { const text = await resp.text(); this._showDockError(text || 'Send failed (' + resp.status + ')'); return; }
       if (textarea) textarea.value = '';
-      if (this._strategy === 'poll') { this._stopStrategy(); this._poll(); this._pollTimer = setInterval(() => this._poll(), this._pollInterval); }
+      this._stopStrategy(); this._poll(); this._pollTimer = setInterval(() => this._poll(), this._pollInterval);
     } catch (e: any) { this._showDockError(e.message || 'Send failed'); }
   }
 

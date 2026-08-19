@@ -19,7 +19,6 @@ import static org.hamcrest.Matchers.*;
 @TestSecurity(user = "test", roles = "user")
 class MeshResourceInterjectionTest {
 
-    // sendMessage() uses blockingChannelService which reads from ChannelStore (blocking/synchronous)
     @Inject InMemoryChannelStore channelStore;
     @Inject InMemoryMessageStore messageStore;
 
@@ -50,16 +49,15 @@ class MeshResourceInterjectionTest {
             .post("/api/mesh/channels/{name}/messages", channelName)
         .then()
             .statusCode(200)
-            // sender encodes the authenticated principal: "human:<username>"
             .body("sender", equalTo("human:test"))
             .body("channelName", equalTo(channelName))
             .body("messageType", equalTo("STATUS"))
             .body("messageId", notNullValue());
 
-        // Verify the message was actually persisted (round-trip check)
+        // Verify round-trip via qhorus ChannelResource timeline
         given()
         .when()
-            .get("/api/mesh/channels/{name}/timeline", channelName)
+            .get("/api/channels/{name}/timeline", channelName)
         .then()
             .statusCode(200)
             .body("[0].sender", equalTo("human:test"))
@@ -126,7 +124,6 @@ class MeshResourceInterjectionTest {
 
     @Test
     void postMessage_eventType_isValid() {
-        // EVENT is a signal — content is optional. Verify it is accepted without content.
         given()
             .contentType(JSON)
             .body("{\"type\":\"event\"}")
@@ -138,51 +135,16 @@ class MeshResourceInterjectionTest {
     }
 
     @Test
-    void timeline_afterCursor_returnsOnlyNewerMessages() {
-        // Post two messages, capture the first message's id, then fetch timeline with ?after
-        var firstId = given()
-            .contentType(JSON)
-            .body("{\"content\":\"first message\",\"type\":\"status\"}")
-        .when()
-            .post("/api/mesh/channels/{name}/messages", channelName)
-        .then()
-            .statusCode(200)
-            .extract().path("messageId");
+    void postMessage_autoJoinsMember() {
+        given().contentType(JSON)
+               .body("{\"content\": \"hello\", \"type\": \"STATUS\"}")
+               .when().post("/api/mesh/channels/{name}/messages", channelName)
+               .then().statusCode(200);
 
-        given()
-            .contentType(JSON)
-            .body("{\"content\":\"second message\",\"type\":\"status\"}")
-        .when()
-            .post("/api/mesh/channels/{name}/messages", channelName)
-        .then()
-            .statusCode(200);
-
-        // ?after=firstId should return only the second message
-        given()
-        .when()
-            .get("/api/mesh/channels/{name}/timeline?after={id}", channelName, firstId)
-        .then()
-            .statusCode(200)
-            .body("$.size()", equalTo(1))
-            .body("[0].content", equalTo("second message"));
-    }
-
-    @Test
-    void timeline_afterCursorAtEnd_returnsEmpty() {
-        var lastId = given()
-            .contentType(JSON)
-            .body("{\"content\":\"only message\",\"type\":\"status\"}")
-        .when()
-            .post("/api/mesh/channels/{name}/messages", channelName)
-        .then()
-            .statusCode(200)
-            .extract().path("messageId");
-
-        given()
-        .when()
-            .get("/api/mesh/channels/{name}/timeline?after={id}", channelName, lastId)
-        .then()
-            .statusCode(200)
-            .body("$.size()", equalTo(0));
+        // Verify auto-join via qhorus ChannelResource members endpoint
+        given().when().get("/api/channels/{name}/members", channelName)
+               .then()
+               .statusCode(200)
+               .body("$.size()", greaterThan(0));
     }
 }
