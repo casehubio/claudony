@@ -14,3 +14,4 @@ wksp
 package-lock.json
 .mvn/maven.config
 .mvn/slot-settings.xml
+.claude/
