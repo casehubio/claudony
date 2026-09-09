@@ -100,6 +100,8 @@ class CompositeProviderConfigSourceTest {
         return new CaseHubConfig.Workers() {
             @Override public String defaultCommand() { return "claude"; }
             @Override public String defaultWorkingDir() { return "/tmp"; }
+            @Override public int maxSessions() { return 0; }
+            @Override public int minSessions() { return 0; }
             @Override public Map<String, CaseHubConfig.AgentProviderConfig> providerConfig() { return providerConfig; }
         };
     }
