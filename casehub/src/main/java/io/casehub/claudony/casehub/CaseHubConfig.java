@@ -40,6 +40,15 @@ public interface CaseHubConfig {
         @WithDefault("${user.home}/claudony-workspace")
         String defaultWorkingDir();
 
+        @WithName("max-sessions")
+        @WithDefault("0")
+        int maxSessions();
+
+        @WithName("min-sessions")
+        @WithDefault("0")
+        int minSessions();
+
+
         @WithName("provider-config")
         Map<String, AgentProviderConfig> providerConfig();
     }
