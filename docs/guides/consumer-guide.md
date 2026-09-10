@@ -149,6 +149,7 @@ Enabled via `claudony.casehub.enabled=true`. Implements all casehub-engine worke
 | `ClaudonyWorkerStatusListener` | `WorkerStatusListener` | Maps tmux lifecycle events to CaseHub worker states |
 | `ClaudonyInstanceActorIdProvider` | `InstanceActorIdProvider` | Maps `claudony-worker-{uuid}` to `claude:{roleName}@v1` actor IDs for the audit ledger |
 | `ClaudonyLedgerEventCapture` | (replaces excluded casehub-ledger bean) | Writes `CaseLedgerEntry` rows directly; drains `pendingExitSignals` on `WorkerExecutionCompleted` to fire case completion signal |
+| `ClaudonyDispatchBudget` | `DispatchBudget` | Session-level concurrency throttle. Counts active worker sessions (`SESSION_PREFIX` filter on `SessionRegistry`), returns `maxSessions - active`. Config: `claudony.casehub.workers.max-sessions` (0=unlimited), `claudony.casehub.workers.min-sessions` (floor guarantee) |
 
 ### Agent Mesh Framework
 
