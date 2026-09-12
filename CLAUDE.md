@@ -1,12 +1,12 @@
 # claudony Workspace
 
 **Name:** casehub-claudony
-**Project repo:** /Users/mdproctor/claude/casehub/claudony
+**Project repo:** /Users/mdproctor/claude/casehub/slots/181/claudony
 **Workspace type:** public
 
 ## Session Start
 
-Run `add-dir /Users/mdproctor/claude/casehub/claudony` before any other work.
+Run `add-dir /Users/mdproctor/claude/casehub/slots/181/claudony` before any other work.
 
 ## Artifact Locations
 
@@ -588,7 +588,7 @@ The canonical ecosystem design document lives here in this repo. It is the maste
 
 Load it when working on: CaseHub SPI implementations, Qhorus embedding, the unified MCP endpoint, the three-panel dashboard, or any cross-project architectural decisions:
 
-@/Users/mdproctor/claude/casehub/claudony/docs/specs/2026-04-13-quarkus-ai-ecosystem-design.md
+@/Users/mdproctor/claude/casehub/slots/181/claudony/docs/specs/2026-04-13-quarkus-ai-ecosystem-design.md
 
 ---
 
