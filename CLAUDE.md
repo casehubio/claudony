@@ -1,12 +1,12 @@
 # claudony Workspace
 
 **Name:** casehub-claudony
-**Project repo:** /Users/mdproctor/claude/casehub/claudony
+**Project repo:** /Users/mdproctor/claude/casehub/slots/194/claudony
 **Workspace type:** public
 
 ## Session Start
 
-Run `add-dir /Users/mdproctor/claude/casehub/claudony` before any other work.
+Run `add-dir /Users/mdproctor/claude/casehub/slots/194/claudony` before any other work.
 
 ## Artifact Locations
 
@@ -506,7 +506,7 @@ Quarkus resolves `${quarkus.http.port}` to the actual assigned random port. With
 **casehub-ledger local build:** `casehub-ledger:0.2-SNAPSHOT` is not published to GitHub Packages — build and install it from source when the local repo is stale:
 ```bash
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub-ledger -am \
-  -f /Users/mdproctor/claude/casehub/engine/pom.xml
+  -f /Users/mdproctor/claude/casehub/slots/194/engine/pom.xml
 ```
 
 **npm bridge JARs (local dev):** `casehub-pages-npm` and `casehub-blocks-ui-npm` are Maven JARs that bundle npm packages for the `maven-dependency-plugin` unpack into `.casehub-packages/`. CI builds these from source (self-contained). For local dev, install from source when stale:
@@ -588,7 +588,7 @@ The canonical ecosystem design document lives here in this repo. It is the maste
 
 Load it when working on: CaseHub SPI implementations, Qhorus embedding, the unified MCP endpoint, the three-panel dashboard, or any cross-project architectural decisions:
 
-@/Users/mdproctor/claude/casehub/claudony/docs/specs/2026-04-13-quarkus-ai-ecosystem-design.md
+@/Users/mdproctor/claude/casehub/slots/194/claudony/docs/specs/2026-04-13-quarkus-ai-ecosystem-design.md
 
 ---
 
