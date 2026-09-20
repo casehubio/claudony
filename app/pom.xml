@@ -283,6 +283,23 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>io.casehub</groupId>
+              <artifactId>casehub-platform-graphql-generator</artifactId>
+              <version>${casehub.version}</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-AdomainFilter=claudony/sessions,claudony/mesh,claudony/cases,claudony/actions,claudony/peers</arg>
+            <arg>-AgenerateGraphQL=false</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
       <!-- Fail fast if esbuild output is missing — turns a silent 404 test failure into
            a clear build error with instructions. -->
       <plugin>
