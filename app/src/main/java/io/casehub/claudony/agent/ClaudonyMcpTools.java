@@ -4,7 +4,6 @@ import io.casehub.claudony.agent.terminal.TerminalAdapterFactory;
 import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.claudony.server.model.CreateSessionRequest;
 import io.casehub.claudony.server.model.SendInputRequest;
-import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -44,7 +43,7 @@ public class ClaudonyMcpTools {
 
     // ── Tools ────────────────────────────────────────────────────────────────
 
-    @Tool(name = "list_sessions", description = "List all active Claude Code sessions")
+    // @Tool(name = "list_sessions", description = "List all active Claude Code sessions")
     public String listSessions() {
         try {
             final var sessions = server.listSessions();
@@ -59,7 +58,7 @@ public class ClaudonyMcpTools {
           catch (Exception e)               { return connectError(e); }
     }
 
-    @Tool(name = "create_session", description = "Create a new Claude Code session")
+    // @Tool(name = "create_session", description = "Create a new Claude Code session")
     public String createSession(
             @ToolArg(name = "name", description = "Session name") String name,
             @ToolArg(name = "workingDir", description = "Working directory") String workingDir,
@@ -76,7 +75,7 @@ public class ClaudonyMcpTools {
           catch (Exception e)               { return connectError(e); }
     }
 
-    @Tool(name = "delete_session", description = "Delete a session by id")
+    // @Tool(name = "delete_session", description = "Delete a session by id")
     public String deleteSession(
             @ToolArg(name = "id", description = "Session id") String id) {
         try {
@@ -86,7 +85,7 @@ public class ClaudonyMcpTools {
           catch (Exception e)               { return connectError(e); }
     }
 
-    @Tool(name = "rename_session", description = "Rename a session")
+    // @Tool(name = "rename_session", description = "Rename a session")
     public String renameSession(
             @ToolArg(name = "id", description = "Session id") String id,
             @ToolArg(name = "name", description = "New session name") String name) {
@@ -97,7 +96,7 @@ public class ClaudonyMcpTools {
           catch (Exception e)               { return connectError(e); }
     }
 
-    @Tool(name = "send_input", description = "Send text input to a session")
+    // @Tool(name = "send_input", description = "Send text input to a session")
     public String sendInput(
             @ToolArg(name = "id", description = "Session id") String id,
             @ToolArg(name = "text", description = "Text to send") String text) {
@@ -108,7 +107,7 @@ public class ClaudonyMcpTools {
           catch (Exception e)               { return connectError(e); }
     }
 
-    @Tool(name = "get_output", description = "Get recent terminal output from a session")
+    // @Tool(name = "get_output", description = "Get recent terminal output from a session")
     public String getOutput(
             @ToolArg(name = "id", description = "Session id") String id,
             @ToolArg(name = "lines", description = "Number of lines to return (default 50)", required = false) Integer lines) {
@@ -118,7 +117,7 @@ public class ClaudonyMcpTools {
           catch (Exception e)               { return connectError(e); }
     }
 
-    @Tool(name = "open_in_terminal", description = "Open a session in a local terminal window")
+    // @Tool(name = "open_in_terminal", description = "Open a session in a local terminal window")
     public String openInTerminal(
             @ToolArg(name = "id", description = "Session id") String id) {
         try {
@@ -143,7 +142,7 @@ public class ClaudonyMcpTools {
           catch (Exception e)               { return connectError(e); }
     }
 
-    @Tool(name = "get_server_info", description = "Get server connection info and status")
+    // @Tool(name = "get_server_info", description = "Get server connection info and status")
     public String getServerInfo() {
         try {
             final var adapter = terminalFactory.resolve();
