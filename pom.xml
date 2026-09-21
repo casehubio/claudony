@@ -59,6 +59,26 @@
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-agent-api</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-agent-router</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-agent-gate</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-agent-langchain4j</artifactId>
+        <version>${casehub.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-config</artifactId>
         <version>${casehub.version}</version>
       </dependency>

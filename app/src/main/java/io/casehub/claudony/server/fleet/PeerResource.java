@@ -1,10 +1,21 @@
 package io.casehub.claudony.server.fleet;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
+
 import io.casehub.claudony.server.auth.FleetKeyService;
 import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
@@ -15,6 +26,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@HandWrittenEndpoint("Fleet peer lifecycle — health probes, circuit breaker, proxy WebSocket")
 @Path("/api/peers")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -24,9 +36,12 @@ public class PeerResource {
 
     private static final Logger LOG = Logger.getLogger(PeerResource.class);
 
-    @Inject PeerRegistry registry;
-    @Inject ManualRegistrationDiscovery manual;
-    @Inject FleetKeyService fleetKeyService;
+    @Inject
+    PeerRegistry                registry;
+    @Inject
+    ManualRegistrationDiscovery manual;
+    @Inject
+    FleetKeyService             fleetKeyService;
 
     @GET
     public List<PeerRecord> list() {
@@ -46,16 +61,16 @@ public class PeerResource {
     @Path("/{id}")
     public Response delete(@PathParam("id") String id) {
         return registry.findById(id)
-                .map(peer -> {
-                    if (peer.source() == DiscoverySource.CONFIG) {
-                        return Response.status(405)
-                                .entity("{\"error\":\"Cannot remove a peer registered via static config\"}")
-                                .build();
-                    }
-                    registry.removePeer(id);
-                    return Response.noContent().build();
-                })
-                .orElse(Response.status(404).build());
+                       .map(peer -> {
+                           if (peer.source() == DiscoverySource.CONFIG) {
+                               return Response.status(405)
+                                              .entity("{\"error\":\"Cannot remove a peer registered via static config\"}")
+                                              .build();
+                           }
+                           registry.removePeer(id);
+                           return Response.noContent().build();
+                       })
+                       .orElse(Response.status(404).build());
     }
 
     @PATCH
@@ -66,16 +81,16 @@ public class PeerResource {
         }
         registry.updatePeer(id, req.name(), req.terminalMode());
         return registry.findById(id)
-                .map(updated -> Response.ok(updated).build())
-                .orElse(Response.status(404).build());
+                       .map(updated -> Response.ok(updated).build())
+                       .orElse(Response.status(404).build());
     }
 
     @GET
     @Path("/{id}/sessions")
     public Response peerSessions(@PathParam("id") String id) {
         return registry.findById(id)
-                .map(peer -> Response.ok(registry.getCachedSessions(id)).build())
-                .orElse(Response.status(404).build());
+                       .map(peer -> Response.ok(registry.getCachedSessions(id)).build())
+                       .orElse(Response.status(404).build());
     }
 
     @POST
@@ -92,11 +107,11 @@ public class PeerResource {
                     .ifPresent(entry -> {
                         try {
                             var client = RestClientBuilder.newBuilder()
-                                    .baseUri(URI.create(entry.url))
-                                    .connectTimeout(5, TimeUnit.SECONDS)
-                                    .readTimeout(5, TimeUnit.SECONDS)
-                                    .register(FleetKeyClientFilter.class)
-                                    .build(PeerClient.class);
+                                                          .baseUri(URI.create(entry.url))
+                                                          .connectTimeout(5, TimeUnit.SECONDS)
+                                                          .readTimeout(5, TimeUnit.SECONDS)
+                                                          .register(FleetKeyClientFilter.class)
+                                                          .build(PeerClient.class);
                             var sessions = client.getSessions(true);
                             registry.recordSuccess(id);
                             registry.updateCachedSessions(id, sessions);
@@ -124,11 +139,11 @@ public class PeerResource {
         }
 
         var client = RestClientBuilder.newBuilder()
-                .baseUri(URI.create(peer.get().url()))
-                .connectTimeout(3, TimeUnit.SECONDS)
-                .readTimeout(2, TimeUnit.SECONDS)
-                .register(FleetKeyClientFilter.class)
-                .build(PeerClient.class);
+                                      .baseUri(URI.create(peer.get().url()))
+                                      .connectTimeout(3, TimeUnit.SECONDS)
+                                      .readTimeout(2, TimeUnit.SECONDS)
+                                      .register(FleetKeyClientFilter.class)
+                                      .build(PeerClient.class);
 
         try {
             var peerResponse = client.resize(sessionId, cols, rows);
@@ -151,8 +166,8 @@ public class PeerResource {
         } catch (IOException e) {
             LOG.errorf("Failed to generate fleet key: %s", e.getMessage());
             return Response.serverError()
-                    .entity("{\"error\":\"Could not write fleet key: " + e.getMessage() + "\"}")
-                    .build();
+                           .entity("{\"error\":\"Could not write fleet key: " + e.getMessage() + "\"}")
+                           .build();
         }
     }
 }

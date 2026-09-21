@@ -1,5 +1,7 @@
 package io.casehub.claudony.server;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
+
 import io.casehub.claudony.casehub.AgentCase;
 import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.quarkus.security.Authenticated;
@@ -14,6 +16,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.Map;
 import java.util.UUID;
 
+@HandWrittenEndpoint("CaseHub lifecycle orchestration — startCase with YAML body, not domain CRUD")
 @Path("/api/casehub")
 @Produces(MediaType.APPLICATION_JSON)
 @Authenticated

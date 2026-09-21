@@ -1,5 +1,7 @@
 package io.casehub.claudony.server;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
+
 import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.casehub.platform.api.preferences.PreferenceProvider;
@@ -23,6 +25,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.Set;
 
+@HandWrittenEndpoint("SSE streaming, multi-channel aggregation, interjection — not single-domain CRUD")
 @Path("/api/mesh")
 @Produces(MediaType.APPLICATION_JSON)
 @Authenticated
@@ -34,11 +37,16 @@ public class MeshResource {
             MessageType.STATUS, MessageType.DECLINE, MessageType.HANDOFF,
             MessageType.DONE, MessageType.EVENT);
 
-    @Inject ClaudonyConfig         config;
-    @Inject QhorusDashboardService dashboard;
-    @Inject SecurityIdentity       securityIdentity;
-    @Inject PreferenceProvider     preferenceProvider;
-    @Inject ChannelService         channelService;
+    @Inject
+    ClaudonyConfig         config;
+    @Inject
+    QhorusDashboardService dashboard;
+    @Inject
+    SecurityIdentity       securityIdentity;
+    @Inject
+    PreferenceProvider     preferenceProvider;
+    @Inject
+    ChannelService         channelService;
     @Inject
     io.casehub.qhorus.runtime.channel.ChannelMembershipService membershipService;
 
@@ -46,11 +54,11 @@ public class MeshResource {
     @Path("/config")
     public MeshConfig config() {
         int staleness = preferenceProvider
-                .resolve(SettingsScope.of(
-                        io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID,
-                        io.casehub.platform.api.path.Path.of("casehubio", "claudony")))
-                .getOrDefault(ChannelCursorStaleness.KEY)
-                .minutes();
+                                .resolve(SettingsScope.of(
+                                        io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID,
+                                        io.casehub.platform.api.path.Path.of("casehubio", "claudony")))
+                                .getOrDefault(ChannelCursorStaleness.KEY)
+                                .minutes();
         String actorId = securityIdentity.getPrincipal().getName();
         return new MeshConfig(config.meshRefreshStrategy(), config.meshRefreshInterval(), staleness, actorId);
     }
@@ -130,8 +138,7 @@ public class MeshResource {
                                                     deadline,
                                                     req != null ? req.topic() : null);
             channelService.findByName(name).ifPresent(ch -> {
-                try { membershipService.join(ch.id(), sender); }
-                catch (Exception e) { /* auto-join best effort */ }
+                try {membershipService.join(ch.id(), sender);} catch (Exception e) { /* auto-join best effort */ }
             });
             return Response.ok(result).build();
         } catch (IllegalArgumentException e) {
