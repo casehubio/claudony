@@ -11,23 +11,44 @@ import io.smallrye.mutiny.Multi;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.time.Duration;
-
 @ApplicationScoped
 public class ClaudonyAgentBackend implements AgentBackend {
 
-    private final TmuxService tmux;
-    private final SessionRegistry registry;
-    private final AgentPool pool;
+    private final TmuxService         tmux;
+    private final SessionRegistry     registry;
+    private final AgentSessionManager sessionManager;
 
     @Inject
     public ClaudonyAgentBackend(TmuxService tmux, SessionRegistry registry) {
-        this.tmux = tmux;
-        this.registry = registry;
-        this.pool = new AgentPool(
-                new AgentPoolConfig(0, 10, Duration.ofMinutes(15), Duration.ofSeconds(10)),
-                () -> { throw new UnsupportedOperationException("Session factory not yet wired"); },
-                sessionId -> {}
+        this.tmux           = tmux;
+        this.registry       = registry;
+        this.sessionManager = new AgentSessionManager(
+                new AgentSessionManagerConfig(0, 10),
+                new SessionOperations() {
+                    @Override
+                    public String create(String identity, String workingDir) {
+                        throw new UnsupportedOperationException("Session factory not yet wired");
+                    }
+
+                    @Override
+                    public String conversationId(String sessionId) {
+                        return null;
+                    }
+
+                    @Override
+                    public void suspend(String sessionId) {}
+
+                    @Override
+                    public void resume(String sessionId, String conversationId, String workingDir) {}
+
+                    @Override
+                    public void destroy(String sessionId) {}
+
+                    @Override
+                    public long memoryBytes(String sessionId) {
+                        return 0;
+                    }
+                }
         );
     }
 
@@ -52,6 +73,10 @@ public class ClaudonyAgentBackend implements AgentBackend {
     }
 
     public AgentPoolStatus poolStatus() {
-        return pool.status();
+        return sessionManager.status();
+    }
+
+    public AgentSessionManager sessionManager() {
+        return sessionManager;
     }
 }
