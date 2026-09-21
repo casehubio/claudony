@@ -72,6 +72,12 @@
             <artifactId>casehub-work-api</artifactId>
         </dependency>
 
+        <!-- Platform agent SPI — AgentBackend, AgentSession, AgentEvent -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform-agent-api</artifactId>
+        </dependency>
+
         <!-- @WithSession — open a Hibernate Reactive session when buildContext() is called
              from the engine event bus handler (which has Vert.x context but no session). -->
         <dependency>
