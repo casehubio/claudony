@@ -14,42 +14,21 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class ClaudonyAgentBackend implements AgentBackend {
 
-    private final TmuxService         tmux;
-    private final SessionRegistry     registry;
+    static final String SESSION_PREFIX = "claudony-pool-";
+
     private final AgentSessionManager sessionManager;
 
     @Inject
     public ClaudonyAgentBackend(TmuxService tmux, SessionRegistry registry) {
-        this.tmux           = tmux;
-        this.registry       = registry;
+        var ops = new TmuxSessionOperations(tmux, SESSION_PREFIX, "claude");
         this.sessionManager = new AgentSessionManager(
                 new AgentSessionManagerConfig(0, 10),
-                new SessionOperations() {
-                    @Override
-                    public String create(String identity, String workingDir) {
-                        throw new UnsupportedOperationException("Session factory not yet wired");
-                    }
-
-                    @Override
-                    public String conversationId(String sessionId) {
-                        return null;
-                    }
-
-                    @Override
-                    public void suspend(String sessionId) {}
-
-                    @Override
-                    public void resume(String sessionId, String conversationId, String workingDir) {}
-
-                    @Override
-                    public void destroy(String sessionId) {}
-
-                    @Override
-                    public long memoryBytes(String sessionId) {
-                        return 0;
-                    }
-                }
+                ops
         );
+    }
+
+    ClaudonyAgentBackend(AgentSessionManager sessionManager) {
+        this.sessionManager = sessionManager;
     }
 
     @Override
