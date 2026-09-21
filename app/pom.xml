@@ -29,6 +29,19 @@
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform</artifactId>
     </dependency>
+    <!-- Platform agent routing stack — displaces NoOpAgentProvider -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-agent-router</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-agent-gate</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-agent-langchain4j</artifactId>
+    </dependency>
     <dependency>
       <!-- In-memory engine persistence for tutorial/single-node deployments.
            Provides InMemoryCaseInstanceRepository, InMemoryEventLogRepository,
