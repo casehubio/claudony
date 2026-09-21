@@ -5,6 +5,11 @@ import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.model.WorkerContext;
 import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
+import io.casehub.claudony.casehub.fleet.AgentSessionManager;
+import io.casehub.claudony.casehub.fleet.AgentSessionManagerConfig;
+import io.casehub.claudony.casehub.fleet.ClaudonyAgentBackend;
+import io.casehub.claudony.casehub.fleet.SessionOperations;
+import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
@@ -18,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -39,6 +45,10 @@ class ClaudonyWorkerProvisionerTest {
     private SessionRegistry           registry;
     private ProviderConfigSource      configSource;
     private WorkerSessionMapping      sessionMapping;
+    private ClaudonyAgentBackend      agentBackend;
+    private SessionOperations         ops;
+    private AtomicReference<String>   lastCreatedCommand;
+    private AtomicReference<String>   lastCreatedWorkingDir;
     private ClaudonyWorkerProvisioner provisioner;
 
     @BeforeEach
@@ -46,6 +56,39 @@ class ClaudonyWorkerProvisionerTest {
         tmux = mock(TmuxService.class);
         registry = mock(SessionRegistry.class);
         sessionMapping = new WorkerSessionMapping();
+        lastCreatedCommand = new AtomicReference<>();
+        lastCreatedWorkingDir = new AtomicReference<>();
+
+        ops = new SessionOperations() {
+            private int counter = 0;
+            @Override
+            public String create(String identity, String workingDir) {
+                return create(identity, workingDir, "claude");
+            }
+            @Override
+            public String create(String identity, String workingDir, String command) {
+                lastCreatedCommand.set(command);
+                lastCreatedWorkingDir.set(workingDir);
+                return "claudony-pool-" + (++counter);
+            }
+            @Override
+            public String conversationId(String sessionId) { return null; }
+            @Override
+            public void suspend(String sessionId) {}
+            @Override
+            public void resume(String sessionId, String conversationId, String workingDir) {}
+            @Override
+            public void destroy(String sessionId) {}
+            @Override
+            public long memoryBytes(String sessionId) { return 0; }
+        };
+
+        var config = mock(ClaudonyConfig.class);
+        when(config.defaultWorkingDir()).thenReturn("/tmp/workers");
+        agentBackend = new ClaudonyAgentBackend(
+                new AgentSessionManager(new AgentSessionManagerConfig(0, 10), ops),
+                ops, tmux, config);
+
         configSource = new ProviderConfigSource() {
             @Override
             public ClaudonyProviderConfig forAgent(String agentId) {
@@ -64,7 +107,7 @@ class ClaudonyWorkerProvisionerTest {
                 return Set.of("code-reviewer");
             }
         };
-        provisioner = new ClaudonyWorkerProvisioner(true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
+        provisioner = new ClaudonyWorkerProvisioner(true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend);
     }
 
     @Test
@@ -74,8 +117,8 @@ class ClaudonyWorkerProvisionerTest {
         ProvisionResult result = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
 
         assertThat(result).isNotNull();
-        verify(tmux).createWorkerSession(
-                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX), eq("/tmp/workers"), eq("claude"));
+        assertThat(lastCreatedCommand.get()).isEqualTo("claude");
+        assertThat(lastCreatedWorkingDir.get()).isEqualTo("/tmp/workers");
         verify(registry).register(any(Session.class));
     }
 
@@ -85,13 +128,12 @@ class ClaudonyWorkerProvisionerTest {
 
         provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
 
-        // caseId and roleName must be persisted to tmux options for recovery after restart
         verify(tmux).setSessionOption(
-                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX),
+                anyString(),
                 eq("@casehub_case_id"),
                 eq(caseId.toString()));
         verify(tmux).setSessionOption(
-                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX),
+                anyString(),
                 eq("@casehub_role"),
                 eq("code-reviewer"));
     }
@@ -109,7 +151,7 @@ class ClaudonyWorkerProvisionerTest {
     @Test
     void provision_disabled_failsWithProvisioningException() {
         var disabledProvisioner = new ClaudonyWorkerProvisioner(
-                false, tmux, registry, configSource, sessionMapping, "claude", "/tmp", null, null, null);
+                false, tmux, registry, configSource, sessionMapping, "claude", "/tmp", null, null, null, agentBackend);
 
         assertThatThrownBy(() -> disabledProvisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
                 .isInstanceOf(ProvisioningException.class)
@@ -117,11 +159,32 @@ class ClaudonyWorkerProvisionerTest {
     }
 
     @Test
-    void provision_tmuxFails_failsWithProvisioningException() throws Exception {
-        doThrow(new java.io.IOException("tmux not found")).when(tmux)
-                .createWorkerSession(anyString(), anyString(), anyString());
+    void provision_sessionManagerFails_failsWithProvisioningException() {
+        var failingOps = new SessionOperations() {
+            @Override
+            public String create(String identity, String workingDir) { throw new RuntimeException("tmux not found"); }
+            @Override
+            public String create(String identity, String workingDir, String command) { throw new RuntimeException("tmux not found"); }
+            @Override
+            public String conversationId(String sessionId) { return null; }
+            @Override
+            public void suspend(String sessionId) {}
+            @Override
+            public void resume(String sessionId, String conversationId, String workingDir) {}
+            @Override
+            public void destroy(String sessionId) {}
+            @Override
+            public long memoryBytes(String sessionId) { return 0; }
+        };
+        var failConfig = mock(ClaudonyConfig.class);
+        when(failConfig.defaultWorkingDir()).thenReturn("/tmp");
+        var failBackend = new ClaudonyAgentBackend(
+                new AgentSessionManager(new AgentSessionManagerConfig(0, 10), failingOps),
+                failingOps, tmux, failConfig);
+        var prov = new ClaudonyWorkerProvisioner(
+                true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null, failBackend);
 
-        assertThatThrownBy(() -> provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
+        assertThatThrownBy(() -> prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
                 .isInstanceOf(ProvisioningException.class)
                 .hasMessageContaining("Failed to create tmux session");
     }
@@ -140,15 +203,31 @@ class ClaudonyWorkerProvisionerTest {
     }
 
     @Test
-    void terminate_removesFromRegistryFirst_thenKillsSession() throws Exception {
-        // Order matters: registry.remove() is the watcher cancellation signal.
-        // It must happen BEFORE tmux.killSession() so the watcher sees the session
-        // absent in the registry and stops without publishing a false completion.
+    void terminate_removesFromRegistry() throws Exception {
         provisioner.terminate("worker-abc", null);
 
-        InOrder inOrder = inOrder(registry, tmux);
-        inOrder.verify(registry).remove("worker-abc");
-        inOrder.verify(tmux).killSession(ClaudonyWorkerProvisioner.SESSION_PREFIX + "worker-abc");
+        verify(registry).remove("worker-abc");
+    }
+
+    @Test
+    void terminate_provisionedWorker_destroysViaSessionManager() throws Exception {
+        var caseId = UUID.randomUUID();
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
+        var captor = ArgumentCaptor.forClass(Session.class);
+        verify(registry).register(captor.capture());
+        String workerId = captor.getValue().id();
+
+        provisioner.terminate(workerId, null);
+
+        assertThat(agentBackend.sessionManager().activeCount()).isZero();
+    }
+
+    @Test
+    void terminate_unknownWorker_fallsBackToTmuxKill() throws Exception {
+        provisioner.terminate("ghost-worker", null);
+
+        verify(registry).remove("ghost-worker");
+        verify(tmux).killSession(ClaudonyWorkerProvisioner.SESSION_PREFIX + "ghost-worker");
     }
 
     @Test
@@ -205,7 +284,7 @@ class ClaudonyWorkerProvisionerTest {
         when(mockResolver.resolve("ch-123", "corr-456"))
             .thenReturn(Optional.of(entryId));
         var prov = new ClaudonyWorkerProvisioner(
-            true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver);
+            true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver, agentBackend);
         UUID caseId = UUID.randomUUID();
         var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, "ch-123", "corr-456", null);
 
@@ -220,7 +299,7 @@ class ClaudonyWorkerProvisionerTest {
     void provision_withNullTriggerFields_guardShortCircuits() throws Exception {
         QhorusCausalLinkResolver mockResolver = mock(QhorusCausalLinkResolver.class);
         var prov = new ClaudonyWorkerProvisioner(
-            true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver);
+            true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver, agentBackend);
         UUID caseId = UUID.randomUUID();
         var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null, null);
 
@@ -250,13 +329,11 @@ class ClaudonyWorkerProvisionerTest {
             }
         };
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
+                true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend);
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
-        assertThat(captor.getValue()).contains("--model 'opus'");
+        assertThat(lastCreatedCommand.get()).contains("--model 'opus'");
     }
 
     @Test
@@ -277,13 +354,11 @@ class ClaudonyWorkerProvisionerTest {
             }
         };
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, dirSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
+                true, tmux, registry, dirSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend);
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(tmux).createWorkerSession(anyString(), captor.capture(), anyString());
-        assertThat(captor.getValue()).isEqualTo("/custom/workspace");
+        assertThat(lastCreatedWorkingDir.get()).isEqualTo("/custom/workspace");
     }
 
     @Test
@@ -300,14 +375,11 @@ class ClaudonyWorkerProvisionerTest {
             }
         };
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, emptySource, sessionMapping, "claude", "/tmp/workers", null, null, null);
+                true, tmux, registry, emptySource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend);
 
-        prov.provision(Set.of("unknown-agent"), provisionContext(UUID.randomUUID()))
-                ;
+        prov.provision(Set.of("unknown-agent"), provisionContext(UUID.randomUUID()));
 
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
-        assertThat(captor.getValue()).isEqualTo("claude");
+        assertThat(lastCreatedCommand.get()).isEqualTo("claude");
     }
 
     @Test
@@ -328,7 +400,7 @@ class ClaudonyWorkerProvisionerTest {
             }
         };
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
+                true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend);
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
@@ -359,20 +431,15 @@ class ClaudonyWorkerProvisionerTest {
 
         provisioner.provision(Set.of("code-reviewer"), ctx);
 
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
-        assertThat(captor.getValue()).contains("--append-system-prompt");
-        assertThat(captor.getValue()).contains("You are on case " + caseId);
+        assertThat(lastCreatedCommand.get()).contains("--append-system-prompt");
+        assertThat(lastCreatedCommand.get()).contains("You are on case " + caseId);
     }
 
     @Test
     void provision_withNullWorkerContext_noAppendFlag() throws Exception {
-        provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
-                ;
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
-        assertThat(captor.getValue()).doesNotContain("--append-system-prompt");
+        assertThat(lastCreatedCommand.get()).doesNotContain("--append-system-prompt");
     }
 
     @Test
@@ -383,9 +450,7 @@ class ClaudonyWorkerProvisionerTest {
 
         provisioner.provision(Set.of("code-reviewer"), ctx);
 
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
-        assertThat(captor.getValue()).doesNotContain("--append-system-prompt");
+        assertThat(lastCreatedCommand.get()).doesNotContain("--append-system-prompt");
     }
 
     @Test
@@ -396,8 +461,6 @@ class ClaudonyWorkerProvisionerTest {
 
         provisioner.provision(Set.of("code-reviewer"), ctx);
 
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
-        assertThat(captor.getValue()).doesNotContain("--append-system-prompt");
+        assertThat(lastCreatedCommand.get()).doesNotContain("--append-system-prompt");
     }
 }

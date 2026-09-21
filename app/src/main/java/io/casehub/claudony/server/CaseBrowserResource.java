@@ -1,6 +1,7 @@
 package io.casehub.claudony.server;
 
 import io.casehub.claudony.casehub.browser.CaseBrowserService;
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.casehub.claudony.casehub.browser.CaseSummary;
 import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@HandWrittenEndpoint("Aggregation layer over CaseInstanceRepository + SessionRegistry — not single-domain CRUD")
 @Path("/api/cases")
 @Produces(MediaType.APPLICATION_JSON)
 @HandWrittenEndpoint("Blocking JPA — pending @McpDomain migration")
@@ -36,7 +38,7 @@ public class CaseBrowserResource {
     @Blocking
     public Response getCaseDetail(@PathParam("id") UUID id) {
         return caseBrowserService.getCaseDetail(id)
-                .map(detail -> Response.ok(detail).build())
-                .orElse(Response.status(404).build());
+                                 .map(detail -> Response.ok(detail).build())
+                                 .orElse(Response.status(404).build());
     }
 }

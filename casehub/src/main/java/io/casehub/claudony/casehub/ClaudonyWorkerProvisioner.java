@@ -5,6 +5,8 @@ import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
 import io.casehub.api.spi.WorkerProvisioner;
+import io.casehub.claudony.casehub.fleet.ClaudonyAgentBackend;
+import io.casehub.claudony.casehub.fleet.TmuxAgentSession;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
@@ -32,6 +34,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
     private record CausalKey(String tenancyId, UUID caseId) {}
 
     private final ConcurrentHashMap<CausalKey, UUID> causalContext = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, TmuxAgentSession> workerSessions = new ConcurrentHashMap<>();
 
     private final boolean                  enabled;
     private final TmuxService              tmux;
@@ -41,6 +44,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
     private final String                   defaultCommand;
     private final String                   defaultWorkingDir;
     private final Instance<CaseHubRuntime> caseHubRuntime;
+    private final ClaudonyAgentBackend     agentBackend;
 
     private final ClaudonyWorkerExecutionManager execManager;
     private final QhorusCausalLinkResolver       causalLinkResolver;
@@ -54,10 +58,11 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
             WorkerSessionMapping sessionMapping,
             Instance<CaseHubRuntime> caseHubRuntime,
             @WorkerBackend ClaudonyWorkerExecutionManager execManager,
-            QhorusCausalLinkResolver causalLinkResolver) {
+            QhorusCausalLinkResolver causalLinkResolver,
+            ClaudonyAgentBackend agentBackend) {
         this(config.enabled(), tmux, registry, providerConfigSource, sessionMapping,
              config.workers().defaultCommand(), config.workers().defaultWorkingDir(),
-             caseHubRuntime, execManager, causalLinkResolver);
+             caseHubRuntime, execManager, causalLinkResolver, agentBackend);
     }
 
     ClaudonyWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
@@ -67,7 +72,8 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                               String defaultWorkingDir,
                               Instance<CaseHubRuntime> caseHubRuntime,
                               ClaudonyWorkerExecutionManager execManager,
-                              QhorusCausalLinkResolver causalLinkResolver) {
+                              QhorusCausalLinkResolver causalLinkResolver,
+                              ClaudonyAgentBackend agentBackend) {
         this.enabled              = enabled;
         this.tmux                 = tmux;
         this.registry             = registry;
@@ -78,6 +84,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         this.caseHubRuntime       = caseHubRuntime;
         this.execManager          = execManager;
         this.causalLinkResolver   = causalLinkResolver;
+        this.agentBackend         = agentBackend;
     }
 
     @Override
@@ -122,10 +129,15 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
     @Override
     public void terminate(String workerId, String tenancyId) {
         registry.remove(workerId);
-        try {
-            tmux.killSession(SESSION_PREFIX + workerId);
-        } catch (IOException | InterruptedException e) {
-            // Session may already be gone — no-op
+        var agentSession = workerSessions.remove(workerId);
+        if (agentSession != null) {
+            agentBackend.sessionManager().destroySession(agentSession.managedSession().instanceId());
+        } else {
+            try {
+                tmux.killSession(SESSION_PREFIX + workerId);
+            } catch (IOException | InterruptedException e) {
+                // Session may already be gone — no-op
+            }
         }
     }
 
@@ -162,17 +174,25 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
 
         String enrichedCommand     = WorkerCommandBuilder.build(baseCommand, config, meshPrompt);
         String effectiveWorkingDir = config.workingDir().orElse(defaultWorkingDir);
-        String sessionName         = SESSION_PREFIX + sessionId;
+
+        TmuxAgentSession agentSession;
+        try {
+            agentSession = agentBackend.openWorkerSession(roleName, effectiveWorkingDir, enrichedCommand);
+        } catch (Exception e) {
+            throw new ProvisioningException("Failed to create tmux session for worker " + sessionId, e);
+        }
+
+        String sessionName = agentSession.managedSession().instanceId();
+        workerSessions.put(sessionId, agentSession);
 
         try {
-            tmux.createWorkerSession(sessionName, effectiveWorkingDir, enrichedCommand);
             if (context.caseId() != null) {
                 tmux.setSessionOption(sessionName, "@casehub_case_id", context.caseId().toString());
                 tmux.setSessionOption(sessionName, "@casehub_role", roleName);
                 tmux.setSessionOption(sessionName, "@casehub_tenant_id", context.tenancyId());
             }
         } catch (IOException | InterruptedException e) {
-            throw new ProvisioningException("Failed to create tmux session for worker " + sessionId, e);
+            throw new ProvisioningException("Failed to set session options for worker " + sessionId, e);
         }
 
         var session = new Session(sessionId, sessionName, effectiveWorkingDir, enrichedCommand,

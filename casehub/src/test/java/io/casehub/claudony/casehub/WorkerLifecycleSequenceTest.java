@@ -6,6 +6,11 @@ import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkResult;
 import io.casehub.api.model.WorkerContext;
 import io.casehub.api.spi.CaseChannelProvider;
+import io.casehub.claudony.casehub.fleet.AgentSessionManager;
+import io.casehub.claudony.casehub.fleet.AgentSessionManagerConfig;
+import io.casehub.claudony.casehub.fleet.ClaudonyAgentBackend;
+import io.casehub.claudony.casehub.fleet.SessionOperations;
+import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.SessionStatus;
@@ -66,8 +71,23 @@ class WorkerLifecycleSequenceTest {
             }
         };
 
+        SessionOperations stubOps = new SessionOperations() {
+            private int counter = 0;
+            @Override public String create(String identity, String workingDir) { return create(identity, workingDir, "claude"); }
+            @Override public String create(String identity, String workingDir, String command) { return "claudony-pool-" + (++counter); }
+            @Override public String conversationId(String sessionId) { return null; }
+            @Override public void suspend(String sessionId) {}
+            @Override public void resume(String sessionId, String conversationId, String workingDir) {}
+            @Override public void destroy(String sessionId) {}
+            @Override public long memoryBytes(String sessionId) { return 0; }
+        };
+        var agentConfig = mock(ClaudonyConfig.class);
+        when(agentConfig.defaultWorkingDir()).thenReturn("/workspace");
+        var agentBackend = new ClaudonyAgentBackend(
+                new AgentSessionManager(new AgentSessionManagerConfig(0, 10), stubOps),
+                stubOps, tmux, agentConfig);
         provisioner = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, configSource, sessionMapping, "claude", "/workspace", null, null, null);
+                true, tmux, registry, configSource, sessionMapping, "claude", "/workspace", null, null, null, agentBackend);
         listener = new ClaudonyWorkerStatusListener(registry, tmux, events, sessionMapping);
     }
 
@@ -83,8 +103,6 @@ class WorkerLifecycleSequenceTest {
         // After provision: session registered by UUID, starts IDLE
         assertThat(registry.find(sessionId)).isPresent();
         assertThat(registry.find(sessionId).get().status()).isEqualTo(SessionStatus.IDLE);
-        verify(tmux).createWorkerSession(
-                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX), anyString(), anyString());
 
         // CaseEngine signals work started → ACTIVE (passes caseId in sessionMeta)
         listener.onWorkerStarted(roleName, Map.of("caseId", caseId.toString()));

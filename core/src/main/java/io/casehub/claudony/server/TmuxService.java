@@ -87,6 +87,15 @@ public class TmuxService {
         p.waitFor();
     }
 
+    public void sendRawKeys(String sessionName, String... keys)
+            throws IOException, InterruptedException {
+        var args = new java.util.ArrayList<>(List.of("tmux", "send-keys", "-t", sessionName));
+        args.addAll(List.of(keys));
+        var p = new ProcessBuilder(args).redirectErrorStream(true).start();
+        p.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p.waitFor();
+    }
+
     public String capturePane(String sessionName, int lines)
             throws IOException, InterruptedException {
         var pb = new ProcessBuilder(

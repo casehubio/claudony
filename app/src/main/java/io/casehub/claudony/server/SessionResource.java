@@ -1,6 +1,9 @@
 package io.casehub.claudony.server;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.claudony.agent.terminal.TerminalAdapterFactory;
 import io.casehub.claudony.casehub.CaseLineageQuery;
 import io.casehub.claudony.config.ClaudonyConfig;
@@ -21,28 +24,40 @@ import io.quarkus.security.Authenticated;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
-import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
-import java.io.OutputStream;
+
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.URI;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@HandWrittenEndpoint("SSE streaming, tmux session lifecycle, terminal WebSocket proxy")
 @Path("/api/sessions")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -51,19 +66,28 @@ import java.util.stream.Collectors;
 public class SessionResource {
 
     private static final Logger LOG = Logger.getLogger(SessionResource.class);
-
-    @Inject ClaudonyConfig         config;
+    private static final List<Integer> DEFAULT_PORTS =
+            List.of(3000, 3001, 4000, 4200, 5000, 5173, 8000, 8080, 8081, 8888);
     @Inject
-            SessionRegistry        registry;
+    ClaudonyConfig config;
     @Inject
-            TmuxService            tmux;
-    @Inject TerminalAdapterFactory terminalFactory;
-    @Inject PeerRegistry peerRegistry;
-    @Inject ExpiryPolicyRegistry policyRegistry;
-    @Inject CaseLineageQuery lineageQuery;
-    @Inject CaseEventBroadcaster caseEventBroadcaster;
-    @Inject ObjectMapper MAPPER;
-    @Inject TenantContext tenantContext;
+    SessionRegistry registry;
+    @Inject
+    TmuxService     tmux;
+    @Inject
+    TerminalAdapterFactory terminalFactory;
+    @Inject
+    PeerRegistry           peerRegistry;
+    @Inject
+    ExpiryPolicyRegistry   policyRegistry;
+    @Inject
+    CaseLineageQuery       lineageQuery;
+    @Inject
+    CaseEventBroadcaster   caseEventBroadcaster;
+    @Inject
+    ObjectMapper           MAPPER;
+    @Inject
+    TenantContext          tenantContext;
 
     @GET
     public List<SessionResponse> list(
@@ -71,26 +95,26 @@ public class SessionResource {
             @QueryParam("caseId") String caseId) {
         if (caseId != null) {
             return registry.findByCaseId(caseId).stream()
-                    .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
-                    .toList();
+                           .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
+                           .toList();
         }
 
         // Local sessions — always returned
         var result = new ArrayList<>(registry.all().stream()
-                .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
-                .toList());
+                                             .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
+                                             .toList());
 
-        if (localOnly) return result;
+        if (localOnly) {return result;}
 
         var allPeers = peerRegistry.getAllPeers();
-        if (allPeers.isEmpty()) return result;
+        if (allPeers.isEmpty()) {return result;}
 
         // Healthy peers (CLOSED/HALF_OPEN): attempt live fetch, fall back to stale cache on failure
         var healthyPeers = peerRegistry.getHealthyPeers();
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var futures = healthyPeers.stream()
-                    .map(peer -> executor.submit(() -> fetchPeerSessions(peer.url())))
-                    .toList();
+                                      .map(peer -> executor.submit(() -> fetchPeerSessions(peer.url())))
+                                      .toList();
 
             for (int i = 0; i < futures.size(); i++) {
                 var peer = healthyPeers.get(i);
@@ -104,8 +128,8 @@ public class SessionResource {
                 } catch (Exception e) {
                     peerRegistry.recordFailure(peer.id());
                     peerRegistry.getCachedSessions(peer.id()).stream()
-                            .map(s -> s.withInstance(peer.url(), peer.name(), true))
-                            .forEach(result::add);
+                                .map(s -> s.withInstance(peer.url(), peer.name(), true))
+                                .forEach(result::add);
                 }
             }
         }
@@ -115,19 +139,19 @@ public class SessionResource {
         allPeers.stream()
                 .filter(p -> !healthyIds.contains(p.id()))
                 .forEach(peer -> peerRegistry.getCachedSessions(peer.id()).stream()
-                        .map(s -> s.withInstance(peer.url(), peer.name(), true))
-                        .forEach(result::add));
+                                             .map(s -> s.withInstance(peer.url(), peer.name(), true))
+                                             .forEach(result::add));
 
         return result;
     }
 
     private List<SessionResponse> fetchPeerSessions(String peerUrl) {
         var client = RestClientBuilder.newBuilder()
-                .baseUri(URI.create(peerUrl))
-                .connectTimeout(3, TimeUnit.SECONDS)
-                .readTimeout(2, TimeUnit.SECONDS)
-                .register(FleetKeyClientFilter.class)
-                .build(PeerClient.class);
+                                      .baseUri(URI.create(peerUrl))
+                                      .connectTimeout(3, TimeUnit.SECONDS)
+                                      .readTimeout(2, TimeUnit.SECONDS)
+                                      .register(FleetKeyClientFilter.class)
+                                      .build(PeerClient.class);
         return client.getSessions(true); // local=true prevents recursive federation
     }
 
@@ -135,8 +159,8 @@ public class SessionResource {
     @Path("/{id}")
     public Response get(@PathParam("id") String id) {
         return registry.find(id)
-                .map(s -> Response.ok(SessionResponse.from(s, config.port(), resolvedPolicy(s))).build())
-                .orElse(Response.status(404).build());
+                       .map(s -> Response.ok(SessionResponse.from(s, config.port(), resolvedPolicy(s))).build())
+                       .orElse(Response.status(404).build());
     }
 
     @GET
@@ -144,21 +168,21 @@ public class SessionResource {
     @Blocking
     public Response getLineage(@PathParam("id") String id) {
         return registry.find(id)
-                .map(session -> {
-                    if (session.caseId().isEmpty()) {
-                        return Response.ok(List.of()).build();
-                    }
-                    UUID caseUuid;
-                    try {
-                        caseUuid = UUID.fromString(session.caseId().get());
-                    } catch (IllegalArgumentException e) {
-                        LOG.warnf("Session '%s' has non-UUID caseId '%s' — returning empty lineage",
-                                id, session.caseId().get());
-                        return Response.ok(List.of()).build();
-                    }
-                    return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)).build();
-                })
-                .orElse(Response.status(404).build());
+                       .map(session -> {
+                           if (session.caseId().isEmpty()) {
+                               return Response.ok(List.of()).build();
+                           }
+                           UUID caseUuid;
+                           try {
+                               caseUuid = UUID.fromString(session.caseId().get());
+                           } catch (IllegalArgumentException e) {
+                               LOG.warnf("Session '%s' has non-UUID caseId '%s' — returning empty lineage",
+                                         id, session.caseId().get());
+                               return Response.ok(List.of()).build();
+                           }
+                           return Response.ok(lineageQuery.findCompletedWorkers(caseUuid)).build();
+                       })
+                       .orElse(Response.status(404).build());
     }
 
     @GET
@@ -166,17 +190,17 @@ public class SessionResource {
     @Produces("text/event-stream")
     public Multi<String> caseEvents(@PathParam("id") String id) {
         var session = registry.find(id)
-                .orElseThrow(() -> new NotFoundException("Session not found: " + id));
+                              .orElseThrow(() -> new NotFoundException("Session not found: " + id));
         String caseId = session.caseId()
-                .orElseThrow(() -> new NotFoundException("Session " + id + " has no caseId"));
+                               .orElseThrow(() -> new NotFoundException("Session " + id + " has no caseId"));
         return caseEventBroadcaster.subscribe(caseId, () -> buildCaseSnapshot(caseId));
     }
 
     private String buildCaseSnapshot(String caseId) {
         try {
             var workers = registry.findByCaseId(caseId).stream()
-                    .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
-                    .toList();
+                                  .map(s -> SessionResponse.from(s, config.port(), resolvedPolicy(s)))
+                                  .toList();
             return MAPPER.writeValueAsString(workers);
         } catch (JsonProcessingException e) {
             LOG.warnf("buildCaseSnapshot serialization error for caseId=%s: %s", caseId, e.getMessage());
@@ -187,24 +211,24 @@ public class SessionResource {
     @POST
     public Response create(CreateSessionRequest req,
                            @QueryParam("overwrite") @DefaultValue("false") boolean overwrite) {
-        var id = UUID.randomUUID().toString();
-        var name = config.tmuxPrefix() + req.name();
+        var id      = UUID.randomUUID().toString();
+        var name    = config.tmuxPrefix() + req.name();
         var command = req.effectiveCommand(config.claudeCommand());
         var workingDir = (req.workingDir() == null || req.workingDir().isBlank())
-                ? config.defaultWorkingDir() + "/" + req.name() : req.workingDir();
+                         ? config.defaultWorkingDir() + "/" + req.name() : req.workingDir();
 
         // Duplicate name check
         var existingByName = registry.existsByName(name);
         if (existingByName) {
             if (!overwrite) {
                 return Response.status(409)
-                        .entity("{\"error\":\"Session '" + name + "' already exists\"}")
-                        .build();
+                               .entity("{\"error\":\"Session '" + name + "' already exists\"}")
+                               .build();
             }
             // Overwrite: remove existing session first
             var existingSession = registry.allUnscoped().stream()
-                    .filter(s -> s.name().equals(name))
-                    .findFirst().orElse(null);
+                                          .filter(s -> s.name().equals(name))
+                                          .findFirst().orElse(null);
             if (existingSession != null) {
                 try {
                     tmux.killSession(name);
@@ -217,8 +241,7 @@ public class SessionResource {
         }
 
         // Ensure the working directory exists
-        try { java.nio.file.Files.createDirectories(java.nio.file.Path.of(workingDir)); }
-        catch (IOException e) {
+        try {java.nio.file.Files.createDirectories(java.nio.file.Path.of(workingDir));} catch (IOException e) {
             LOG.debugf("Could not create working directory '%s': %s", workingDir, e.getMessage());
         }
         var now = Instant.now();
@@ -230,13 +253,13 @@ public class SessionResource {
             registry.register(session);
             LOG.infof("Created session '%s' (id=%s)", name, id);
             return Response.status(201)
-                    .entity(SessionResponse.from(session, config.port(), resolvedPolicy(session)))
-                    .build();
+                           .entity(SessionResponse.from(session, config.port(), resolvedPolicy(session)))
+                           .build();
         } catch (IOException | InterruptedException e) {
             LOG.errorf("Failed to create session '%s': %s", name, e.getMessage());
             return Response.serverError()
-                    .entity("{\"error\":\"" + e.getMessage() + "\"}")
-                    .build();
+                           .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                           .build();
         }
     }
 
@@ -261,15 +284,15 @@ public class SessionResource {
     public Response rename(@PathParam("id") String id, @QueryParam("name") String newName) {
         return registry.find(id).map(session -> {
             try {
-                var newTmuxName = config.tmuxPrefix() + newName;
-                boolean duplicate = registry.existsByName(newTmuxName);
+                var     newTmuxName = config.tmuxPrefix() + newName;
+                boolean duplicate   = registry.existsByName(newTmuxName);
                 if (duplicate) {
                     return Response.status(409)
-                            .entity("{\"error\":\"Session '" + newTmuxName + "' already exists\"}")
-                            .build();
+                                   .entity("{\"error\":\"Session '" + newTmuxName + "' already exists\"}")
+                                   .build();
                 }
                 var p = new ProcessBuilder("tmux", "rename-session", "-t", session.name(), newTmuxName)
-                        .redirectErrorStream(true).start();
+                                .redirectErrorStream(true).start();
                 p.getInputStream().transferTo(OutputStream.nullOutputStream());
                 int exitCode = p.waitFor();
                 if (exitCode != 0) {
@@ -277,8 +300,8 @@ public class SessionResource {
                     return Response.serverError().build();
                 }
                 var renamed = new Session(id, newTmuxName, session.workingDir(),
-                        session.command(), session.status(), session.createdAt(), Instant.now(),
-                        session.expiryPolicy(), session.caseId(), session.roleName(), session.tenancyId());
+                                          session.command(), session.status(), session.createdAt(), Instant.now(),
+                                          session.expiryPolicy(), session.caseId(), session.roleName(), session.tenancyId());
                 registry.register(renamed);
                 return Response.ok(SessionResponse.from(renamed, config.port(), resolvedPolicy(renamed))).build();
             } catch (IOException | InterruptedException e) {
@@ -328,8 +351,8 @@ public class SessionResource {
         return registry.find(id).map(session -> {
             try {
                 var p = new ProcessBuilder("tmux", "resize-pane", "-t", session.name(),
-                        "-x", String.valueOf(cols), "-y", String.valueOf(rows))
-                        .redirectErrorStream(true).start();
+                                           "-x", String.valueOf(cols), "-y", String.valueOf(rows))
+                                .redirectErrorStream(true).start();
                 try (var in = p.getInputStream()) {
                     in.transferTo(java.io.OutputStream.nullOutputStream());
                 }
@@ -349,8 +372,8 @@ public class SessionResource {
             var adapter = terminalFactory.resolve();
             if (adapter.isEmpty()) {
                 return Response.status(503)
-                        .entity("{\"error\":\"No terminal adapter available on this machine\"}")
-                        .build();
+                               .entity("{\"error\":\"No terminal adapter available on this machine\"}")
+                               .build();
             }
             try {
                 adapter.get().openSession(session.name());
@@ -379,7 +402,7 @@ public class SessionResource {
                 var branch = run("git", "-C", dir, "branch", "--show-current").stdout().trim();
 
                 // Step 3: get GitHub remote
-                var remoteUrl = run("git", "-C", dir, "remote", "get-url", "origin").stdout().trim();
+                var remoteUrl  = run("git", "-C", dir, "remote", "get-url", "origin").stdout().trim();
                 var githubRepo = parseGitHubRepo(remoteUrl);
                 if (githubRepo == null) {
                     return Response.ok(GitStatusResponse.noGitHub(branch)).build();
@@ -387,12 +410,12 @@ public class SessionResource {
 
                 // Step 4: get PR info via gh
                 var ghResult = run("gh", "pr", "view",
-                        "--repo", githubRepo,
-                        "--json", "number,title,url,state,statusCheckRollup");
+                                   "--repo", githubRepo,
+                                   "--json", "number,title,url,state,statusCheckRollup");
                 if (!ghResult.success()) {
                     // no PR for this branch, or gh not available
                     if (ghResult.stdout().contains("no pull requests found") ||
-                            ghResult.stderr().contains("no pull requests found")) {
+                        ghResult.stderr().contains("no pull requests found")) {
                         return Response.ok(GitStatusResponse.noPr(githubRepo, branch)).build();
                     }
                     var errMsg = ghResult.stderr().isBlank() ? "gh not available or not authenticated" : ghResult.stderr().trim();
@@ -409,21 +432,18 @@ public class SessionResource {
         }).orElse(Response.status(404).build());
     }
 
-    private static final List<Integer> DEFAULT_PORTS =
-            List.of(3000, 3001, 4000, 4200, 5000, 5173, 8000, 8080, 8081, 8888);
-
     @GET
     @Path("/{id}/service-health")
     public Response serviceHealth(@PathParam("id") String id) {
-        if (registry.find(id).isEmpty()) return Response.status(404).build();
+        if (registry.find(id).isEmpty()) {return Response.status(404).build();}
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var tasks = DEFAULT_PORTS.stream()
-                    .<Callable<PortStatus>>map(port -> () -> checkPort(port))
-                    .toList();
+                                     .<Callable<PortStatus>>map(port -> () -> checkPort(port))
+                                     .toList();
             var results = new ArrayList<PortStatus>();
             for (var future : executor.invokeAll(tasks)) {
                 var status = future.get();
-                if (status.up()) results.add(status);
+                if (status.up()) {results.add(status);}
             }
             results.sort((a, b) -> Integer.compare(a.port(), b.port()));
             return Response.ok(results).build();
@@ -447,23 +467,19 @@ public class SessionResource {
         return policyRegistry.resolve(session.expiryPolicy().orElse(null)).name();
     }
 
-    private record RunResult(int exitCode, String stdout, String stderr) {
-        boolean success() { return exitCode == 0; }
-    }
-
     private RunResult run(String... cmd) throws IOException, InterruptedException {
         var p = new ProcessBuilder(cmd).start();
         var stdout = new BufferedReader(new InputStreamReader(p.getInputStream()))
-                .lines().collect(Collectors.joining("\n"));
+                             .lines().collect(Collectors.joining("\n"));
         var stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()))
-                .lines().collect(Collectors.joining("\n"));
+                             .lines().collect(Collectors.joining("\n"));
         int exit = p.waitFor();
         return new RunResult(exit, stdout, stderr);
     }
 
     private String parseGitHubRepo(String remoteUrl) {
         // https://github.com/owner/repo.git  or  git@github.com:owner/repo.git
-        if (remoteUrl == null || remoteUrl.isBlank()) return null;
+        if (remoteUrl == null || remoteUrl.isBlank()) {return null;}
         var url = remoteUrl.trim();
         if (url.startsWith("https://github.com/")) {
             var path = url.substring("https://github.com/".length());
@@ -477,23 +493,29 @@ public class SessionResource {
     }
 
     private GitStatusResponse.PrInfo parsePrInfo(String json) throws IOException {
-        var node = MAPPER.readTree(json);
+        var node   = MAPPER.readTree(json);
         int number = node.path("number").asInt();
-        var title = node.path("title").asText();
-        var url = node.path("url").asText();
-        var state = node.path("state").asText();
+        var title  = node.path("title").asText();
+        var url    = node.path("url").asText();
+        var state  = node.path("state").asText();
         var checks = node.path("statusCheckRollup");
-        int total = 0, passed = 0, failed = 0, pending = 0;
+        int total  = 0, passed = 0, failed = 0, pending = 0;
         if (checks.isArray()) {
             for (var check : checks) {
                 total++;
                 var conclusion = check.path("conclusion").asText("");
-                var status = check.path("status").asText("");
-                if ("SUCCESS".equalsIgnoreCase(conclusion)) passed++;
-                else if ("FAILURE".equalsIgnoreCase(conclusion) || "ERROR".equalsIgnoreCase(conclusion)) failed++;
-                else pending++;
+                var status     = check.path("status").asText("");
+                if ("SUCCESS".equalsIgnoreCase(conclusion)) {
+                    passed++;
+                } else if ("FAILURE".equalsIgnoreCase(conclusion) || "ERROR".equalsIgnoreCase(conclusion)) {
+                    failed++;
+                } else {pending++;}
             }
         }
         return new GitStatusResponse.PrInfo(number, title, url, state, total, passed, failed, pending);
+    }
+
+    private record RunResult(int exitCode, String stdout, String stderr) {
+        boolean success() {return exitCode == 0;}
     }
 }
