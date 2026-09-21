@@ -24,9 +24,14 @@ public class TmuxSessionOperations implements SessionOperations {
 
     @Override
     public String create(String identity, String workingDir) {
+        return create(identity, workingDir, defaultCommand);
+    }
+
+    @Override
+    public String create(String identity, String workingDir, String command) {
         String sessionId = sessionPrefix + UUID.randomUUID().toString().substring(0, 8);
         try {
-            tmux.createWorkerSession(sessionId, workingDir, defaultCommand);
+            tmux.createWorkerSession(sessionId, workingDir, command);
             tmux.setSessionOption(sessionId, "@claudony_identity", identity);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException("Failed to create session for identity " + identity, e);

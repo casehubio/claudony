@@ -19,6 +19,10 @@ public class AgentSessionManager {
     }
 
     public ManagedSession acquireSession(String identity, String workingDir) {
+        return acquireSession(identity, workingDir, null);
+    }
+
+    public ManagedSession acquireSession(String identity, String workingDir, String command) {
         lock.lock();
         try {
             var suspended = sessions.values().stream()
@@ -35,7 +39,7 @@ public class AgentSessionManager {
                 evictOne();
             }
 
-            return doCreate(identity, workingDir);
+            return command != null ? doCreate(identity, workingDir, command) : doCreate(identity, workingDir);
         } finally {
             lock.unlock();
         }
@@ -125,6 +129,14 @@ public class AgentSessionManager {
 
     private ManagedSession doCreate(String identity, String workingDir) {
         String sessionId = ops.create(identity, workingDir);
+        String conversationId = ops.conversationId(sessionId);
+        var session = new ManagedSession(sessionId, identity, workingDir, conversationId);
+        sessions.put(sessionId, session);
+        return session;
+    }
+
+    private ManagedSession doCreate(String identity, String workingDir, String command) {
+        String sessionId = ops.create(identity, workingDir, command);
         String conversationId = ops.conversationId(sessionId);
         var session = new ManagedSession(sessionId, identity, workingDir, conversationId);
         sessions.put(sessionId, session);

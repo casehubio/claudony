@@ -78,6 +78,13 @@ class TmuxSessionOperationsTest {
     }
 
     @Test
+    void create_withCustomCommand_usesProvidedCommand() throws Exception {
+        String sessionId = ops.create("reviewer", "/workspace/pr-42", "claude --model opus");
+        assertThat(sessionId).startsWith("claudony-pool-");
+        verify(tmux).createWorkerSession(eq(sessionId), eq("/workspace/pr-42"), eq("claude --model opus"));
+    }
+
+    @Test
     void conversationId_returnsNullForNewSession() {
         assertThat(ops.conversationId("claudony-pool-new")).isNull();
     }

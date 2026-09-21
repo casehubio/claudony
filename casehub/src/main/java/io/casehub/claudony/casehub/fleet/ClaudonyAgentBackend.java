@@ -32,8 +32,8 @@ public class ClaudonyAgentBackend implements AgentBackend {
         );
     }
 
-    ClaudonyAgentBackend(AgentSessionManager sessionManager, SessionOperations ops,
-                         TmuxService tmux, ClaudonyConfig config) {
+    public ClaudonyAgentBackend(AgentSessionManager sessionManager, SessionOperations ops,
+                                TmuxService tmux, ClaudonyConfig config) {
         this.sessionManager = sessionManager;
         this.ops = ops;
         this.tmux = tmux;
@@ -60,6 +60,11 @@ public class ClaudonyAgentBackend implements AgentBackend {
         String identity = init.correlationId() != null ? init.correlationId() : "default";
         String workingDir = config.defaultWorkingDir();
         ManagedSession managed = sessionManager.acquireSession(identity, workingDir);
+        return new TmuxAgentSession(managed, sessionManager, ops, tmux);
+    }
+
+    public TmuxAgentSession openWorkerSession(String identity, String workingDir, String command) {
+        ManagedSession managed = sessionManager.acquireSession(identity, workingDir, command);
         return new TmuxAgentSession(managed, sessionManager, ops, tmux);
     }
 
