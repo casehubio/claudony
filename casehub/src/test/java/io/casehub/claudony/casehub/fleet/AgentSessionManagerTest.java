@@ -6,7 +6,9 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AgentSessionManagerTest {
 
@@ -92,6 +94,19 @@ class AgentSessionManagerTest {
         assertThat(resumed.state()).isEqualTo(SessionState.ACTIVE);
         assertThat(resumeCount.get()).isEqualTo(1);
     }
+
+    @Test
+    void acquireSession_preservesConversationIdAcrossSuspendResume() {
+        manager = createManager(0, 5);
+        var    session        = manager.acquireSession("reviewer", "/workspace/pr-42");
+        String originalConvId = session.conversationId();
+        assertThat(originalConvId).isNotNull();
+
+        manager.suspendSession(session.instanceId());
+        var resumed = manager.acquireSession("reviewer", "/workspace/pr-42");
+        assertThat(resumed.conversationId()).isEqualTo(originalConvId);
+    }
+
 
     @Test
     void acquireSession_doesNotResumeMismatchedIdentity() {

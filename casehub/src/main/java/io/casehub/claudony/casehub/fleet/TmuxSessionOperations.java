@@ -29,10 +29,13 @@ public class TmuxSessionOperations implements SessionOperations {
 
     @Override
     public String create(String identity, String workingDir, String command) {
-        String sessionId = sessionPrefix + UUID.randomUUID().toString().substring(0, 8);
+        String sessionId        = sessionPrefix + UUID.randomUUID().toString().substring(0, 8);
+        String conversationUuid = UUID.randomUUID().toString();
+        String fullCommand      = command + " --session-id " + conversationUuid;
         try {
-            tmux.createWorkerSession(sessionId, workingDir, command);
+            tmux.createWorkerSession(sessionId, workingDir, fullCommand);
             tmux.setSessionOption(sessionId, "@claudony_identity", identity);
+            conversationIds.put(sessionId, conversationUuid);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException("Failed to create session for identity " + identity, e);
         }
@@ -60,8 +63,8 @@ public class TmuxSessionOperations implements SessionOperations {
     @Override
     public void resume(String sessionId, String conversationId, String workingDir) {
         String command = conversationId != null
-                ? defaultCommand + " -c " + conversationId
-                : defaultCommand;
+                         ? defaultCommand + " -r " + conversationId
+                         : defaultCommand;
         try {
             tmux.createWorkerSession(sessionId, workingDir, command);
         } catch (IOException | InterruptedException e) {

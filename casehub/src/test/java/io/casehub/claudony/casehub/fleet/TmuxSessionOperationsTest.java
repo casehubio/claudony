@@ -5,10 +5,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TmuxSessionOperationsTest {
 
@@ -25,7 +32,8 @@ class TmuxSessionOperationsTest {
     void create_callsCreateWorkerSession() throws Exception {
         String sessionId = ops.create("reviewer", "/workspace/pr-42");
         assertThat(sessionId).startsWith("claudony-pool-");
-        verify(tmux).createWorkerSession(eq(sessionId), eq("/workspace/pr-42"), eq("claude"));
+        verify(tmux).createWorkerSession(eq(sessionId), eq("/workspace/pr-42"),
+                                         argThat(cmd -> cmd.startsWith("claude --session-id ") && cmd.length() > "claude --session-id ".length()));
     }
 
     @Test
@@ -49,7 +57,7 @@ class TmuxSessionOperationsTest {
     @Test
     void resume_createsSessionWithContinueFlag() throws Exception {
         ops.resume("claudony-pool-abc123", "conv_xyz", "/workspace/pr-42");
-        verify(tmux).createWorkerSession("claudony-pool-abc123", "/workspace/pr-42", "claude -c conv_xyz");
+        verify(tmux).createWorkerSession("claudony-pool-abc123", "/workspace/pr-42", "claude -r conv_xyz");
     }
 
     @Test
@@ -81,11 +89,48 @@ class TmuxSessionOperationsTest {
     void create_withCustomCommand_usesProvidedCommand() throws Exception {
         String sessionId = ops.create("reviewer", "/workspace/pr-42", "claude --model opus");
         assertThat(sessionId).startsWith("claudony-pool-");
-        verify(tmux).createWorkerSession(eq(sessionId), eq("/workspace/pr-42"), eq("claude --model opus"));
+        verify(tmux).createWorkerSession(eq(sessionId), eq("/workspace/pr-42"),
+                                         argThat(cmd -> cmd.startsWith("claude --model opus --session-id ")));
     }
 
     @Test
-    void conversationId_returnsNullForNewSession() {
-        assertThat(ops.conversationId("claudony-pool-new")).isNull();
+    void conversationId_returnsNullForNewSession() {assertThat(ops.conversationId("claudony-pool-unknown")).isNull();}
+
+    @Test
+    void create_storesConversationId() throws Exception {
+        String sessionId = ops.create("reviewer", "/workspace/pr-42");
+        String convId    = ops.conversationId(sessionId);
+        assertThat(convId).isNotNull();
+        assertThatCode(() -> UUID.fromString(convId)).doesNotThrowAnyException();
     }
+
+    @Test
+    void create_conversationIdIsUnique() throws Exception {
+        String s1 = ops.create("reviewer", "/workspace/pr-42");
+        String s2 = ops.create("coder", "/workspace/task-1");
+        assertThat(ops.conversationId(s1)).isNotEqualTo(ops.conversationId(s2));
+    }
+
+    @Test
+    void create_sessionIdAppearsTwiceInCommand() throws Exception {
+        String sessionId = ops.create("reviewer", "/workspace/pr-42");
+        String convId    = ops.conversationId(sessionId);
+        verify(tmux).createWorkerSession(eq(sessionId), eq("/workspace/pr-42"),
+                                         argThat(cmd -> cmd.contains("--session-id " + convId)));
+    }
+
+    @Test
+    void resume_withNullConversationId_usesDefaultCommand() throws Exception {
+        ops.resume("claudony-pool-abc123", null, "/workspace/pr-42");
+        verify(tmux).createWorkerSession("claudony-pool-abc123", "/workspace/pr-42", "claude");
+    }
+
+    @Test
+    void destroy_clearsConversationId() throws Exception {
+        String sessionId = ops.create("reviewer", "/workspace/pr-42");
+        assertThat(ops.conversationId(sessionId)).isNotNull();
+        ops.destroy(sessionId);
+        assertThat(ops.conversationId(sessionId)).isNull();
+    }
+
 }
