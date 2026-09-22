@@ -16,6 +16,7 @@ import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionResponse;
 import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.platform.api.identity.TenancyConstants;
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.quarkus.security.Authenticated;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Authenticated
+@HandWrittenEndpoint("SSE streaming, WebSocket proxy, terminal I/O — HTTP-specific transport")
 public class SessionResource {
 
     private static final Logger LOG = Logger.getLogger(SessionResource.class);
