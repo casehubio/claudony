@@ -495,7 +495,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-08-05, after #200 WorkItem inbox integration):** 16 in `claudony-core` + 200 in `claudony-casehub` + ~434 in `claudony-app` = **~650 total**. #200 added EmptyWorkItemActionSourceTest (1), ActionAggregationServiceTest +8 (now 15), RestWorkItemActionSourceTest (4), ActionInboxResourceTest +1 (now 3). Previous baseline: 632 (2026-08-04, after #176). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-09-22, after #205 LLM fleet manager + #227 audit fixes):** 16 in `claudony-core` + 269 in `claudony-casehub` + ~436 in `claudony-app` = **~721 total**. #205 added AgentSessionManagerTest (21), ClaudonyAgentBackendTest (13), TmuxAgentSessionTest (11), TmuxSessionOperationsTest (12), AgentPoolResourceTest (2), plus provisioner test expansions. Previous baseline: ~650 (2026-08-05, after #200). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
