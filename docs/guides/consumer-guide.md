@@ -110,6 +110,7 @@ A separate Qhorus MCP endpoint at `POST /qhorus` exposes 40+ agent mesh tools (c
 | `POST` | `/api/peers/{id}/ping` | Ping a peer |
 | `GET` | `/api/peers/{id}/sessions` | Get sessions from a specific peer |
 | `POST` | `/api/peers/generate-fleet-key` | Generate a fleet key |
+| `GET` | `/api/agent-pools` | Agent pool status (capacity, health) |
 
 #### WebSocket
 
@@ -190,6 +191,64 @@ claudony.casehub.mesh-participation=active
 
 ---
 
+## Agent Pool Management
+
+Claudony manages agent sessions through a capacity-bounded pool. Sessions are stateful -- they carry conversation history, working directory, and file state. The pool uses suspend/resume semantics (not create/destroy) so conversation context survives across work assignments.
+
+### Lifecycle
+
+```
+acquire() ──► ACTIVE ──► close() ──► SUSPENDED ──► resume() ──► ACTIVE
+                                         │
+                                    destroy() ──► removed from pool
+```
+
+- **ACTIVE** -- session has a live tmux process, consumes pool capacity
+- **SUSPENDED** -- tmux process killed, conversation state on disk, resumes in 1-3s via `claude -c <conversation-id>`
+
+### Key Classes
+
+| Class | Module | Purpose |
+|---|---|---|
+| `AgentSessionManager` | `claudony-casehub` | Pool lifecycle: acquire/suspend/resume/destroy. CDI-injectable via `@Inject` |
+| `ClaudonyAgentBackend` | `claudony-casehub` | Platform `AgentBackend` implementation. Produces `AgentSessionManager` for CDI |
+| `AgentPoolConfig` | `claudony-casehub` | `@ConfigMapping` for pool capacity: `min-active`, `max-active` |
+| `AgentPoolStatus` | `claudony-casehub` | Snapshot record: min, max, active, idle, total, health |
+| `ManagedSession` | `claudony-casehub` | Session identity, working directory, conversation ID, eviction metadata |
+| `SessionOperations` | `claudony-casehub` | SPI for tmux operations (create, suspend, resume, destroy, memoryBytes) |
+| `WorkingDirPolicy` | `claudony-casehub` | Concurrency policy: `EXCLUSIVE` (default), `SHARED_READ`, `BRANCH_ISOLATED` (not yet implemented) |
+
+### Eviction
+
+When pool capacity is reached (`activeCount >= maxActive`), the session with the highest eviction score is suspended. Score: `(idleSeconds + 1) * (1 + memoryMB / 100)` -- memory amplifies idle time. Sessions within the `minActive` floor are eviction-immune.
+
+### REST Endpoint
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/agent-pools` | Pool status snapshot (`@Authenticated`) |
+
+### CDI Injection
+
+Downstream projects can inject the session manager directly:
+
+```java
+@Inject AgentSessionManager sessionManager;
+
+ManagedSession session = sessionManager.acquireSession("reviewer", "/workspace/pr-42");
+// ... use session ...
+sessionManager.suspendSession(session.instanceId());
+```
+
+### Configuration
+
+```properties
+claudony.agent-pool.min-active=0        # pre-warm floor (eviction-immune)
+claudony.agent-pool.max-active=10       # capacity ceiling
+```
+
+---
+
 ## Session Expiry
 
 Idle sessions are cleaned up by `SessionIdleScheduler` (`@Scheduled every 5m`). Three pluggable expiry policies:
@@ -240,6 +299,8 @@ claudony.server.url=http://localhost:7777
 claudony.claude-command=claude
 claudony.default-working-dir=~/claudony-workspace
 claudony.peers=                      # comma-separated peer URLs for fleet
+claudony.agent-pool.min-active=0     # pre-warm floor (eviction-immune)
+claudony.agent-pool.max-active=10    # capacity ceiling
 ```
 
 ### Persistence

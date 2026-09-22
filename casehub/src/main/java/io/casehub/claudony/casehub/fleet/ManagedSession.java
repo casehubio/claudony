@@ -2,6 +2,7 @@ package io.casehub.claudony.casehub.fleet;
 
 import java.time.Instant;
 
+/** A pooled agent session with identity, working directory, conversation continuity, and eviction metadata. */
 public final class ManagedSession {
 
     private final String instanceId;

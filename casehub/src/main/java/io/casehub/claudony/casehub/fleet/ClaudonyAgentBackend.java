@@ -9,8 +9,10 @@ import io.casehub.platform.agent.AgentSessionConfig;
 import io.casehub.platform.agent.AgentSessionInit;
 import io.smallrye.mutiny.Multi;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 
+/** Platform AgentBackend backed by tmux sessions. Provides pool management via {@link AgentSessionManager}. */
 @ApplicationScoped
 public class ClaudonyAgentBackend implements AgentBackend {
 
@@ -73,6 +75,9 @@ public class ClaudonyAgentBackend implements AgentBackend {
         return sessionManager.status();
     }
 
+    /** Exposes the session manager for CDI injection by downstream projects. */
+    @Produces
+    @ApplicationScoped
     public AgentSessionManager sessionManager() {
         return sessionManager;
     }
