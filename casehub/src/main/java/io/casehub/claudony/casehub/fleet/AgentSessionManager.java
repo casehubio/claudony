@@ -19,20 +19,35 @@ public class AgentSessionManager {
     }
 
     public ManagedSession acquireSession(String identity, String workingDir) {
-        return acquireSession(identity, workingDir, null);
+        return acquireSession(identity, workingDir, null, WorkingDirPolicy.EXCLUSIVE);
     }
 
     public ManagedSession acquireSession(String identity, String workingDir, String command) {
+        return acquireSession(identity, workingDir, command, WorkingDirPolicy.EXCLUSIVE);
+    }
+
+    public ManagedSession acquireSession(String identity, String workingDir,
+                                         String command, WorkingDirPolicy policy) {
         lock.lock();
         try {
             var suspended = sessions.values().stream()
-                    .filter(s -> s.state() == SessionState.SUSPENDED
-                            && s.identity().equals(identity)
-                            && s.workingDir().equals(workingDir))
-                    .findFirst();
+                                    .filter(s -> s.state() == SessionState.SUSPENDED
+                                                 && s.identity().equals(identity)
+                                                 && s.workingDir().equals(workingDir))
+                                    .findFirst();
 
             if (suspended.isPresent()) {
                 return doResume(suspended.get());
+            }
+
+            if (policy == WorkingDirPolicy.EXCLUSIVE) {
+                var conflict = sessions.values().stream()
+                                       .filter(s -> s.state() == SessionState.ACTIVE
+                                                    && s.workingDir().equals(workingDir))
+                                       .findFirst();
+                if (conflict.isPresent()) {
+                    throw new WorkingDirConflictException(workingDir, conflict.get().identity());
+                }
             }
 
             if (activeCount() >= config.maxActive()) {
@@ -44,6 +59,14 @@ public class AgentSessionManager {
             lock.unlock();
         }
     }
+
+    public java.util.List<ManagedSession> activeSessionsForWorkingDir(String workingDir) {
+        return sessions.values().stream()
+                       .filter(s -> s.state() == SessionState.ACTIVE
+                                    && s.workingDir().equals(workingDir))
+                       .toList();
+    }
+
 
     public void suspendSession(String instanceId) {
         lock.lock();

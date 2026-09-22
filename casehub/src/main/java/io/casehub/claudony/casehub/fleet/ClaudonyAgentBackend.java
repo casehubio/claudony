@@ -64,7 +64,8 @@ public class ClaudonyAgentBackend implements AgentBackend {
     }
 
     public TmuxAgentSession openWorkerSession(String identity, String workingDir, String command) {
-        ManagedSession managed = sessionManager.acquireSession(identity, workingDir, command);
+        ManagedSession managed = sessionManager.acquireSession(identity, workingDir,
+                                                               command, WorkingDirPolicy.SHARED_READ);
         return new TmuxAgentSession(managed, sessionManager, ops, tmux);
     }
 
