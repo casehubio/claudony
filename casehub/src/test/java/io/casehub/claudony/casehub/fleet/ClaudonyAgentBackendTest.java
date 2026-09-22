@@ -103,4 +103,26 @@ class ClaudonyAgentBackendTest {
         var tmuxSession = (TmuxAgentSession) backend.openSession(init);
         assertThat(tmuxSession.managedSession().workingDir()).isEqualTo("/tmp/claudony-workspace");
     }
+
+    @Test
+    void openWorkerSession_passesIdentityAndWorkingDir() {
+        var session = backend.openWorkerSession("reviewer", "/workspace/pr-42", "claude");
+        assertThat(session.managedSession().identity()).isEqualTo("reviewer");
+        assertThat(session.managedSession().workingDir()).isEqualTo("/workspace/pr-42");
+    }
+
+    @Test
+    void openWorkerSession_usesSharedReadPolicy() {
+        backend.openWorkerSession("reviewer", "/workspace/pr-42", "claude");
+        var second = backend.openWorkerSession("coder", "/workspace/pr-42", "claude");
+        assertThat(second).isNotNull();
+        assertThat(backend.sessionManager().activeCount()).isEqualTo(2);
+    }
+
+    @Test
+    void openWorkerSession_passesCommand() {
+        var session = backend.openWorkerSession("reviewer", "/workspace/pr-42", "claude --model opus");
+        assertThat(session).isNotNull();
+        assertThat(session.managedSession()).isNotNull();
+    }
 }

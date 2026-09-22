@@ -75,6 +75,7 @@ public class TmuxAgentSession implements AgentSession {
             LOG.debugf("Failed to record interaction on close for %s: %s",
                     managedSession.instanceId(), e.getMessage());
         }
+        sessionManager.suspendSession(managedSession.instanceId());
     }
 
     public ManagedSession managedSession() {
