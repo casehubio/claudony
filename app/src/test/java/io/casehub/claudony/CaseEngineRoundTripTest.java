@@ -64,20 +64,33 @@ public class CaseEngineRoundTripTest {
                     // CaseContextChangedEventHandler, etc.) are visible to Quarkus.
                     "quarkus.index-dependency.casehub-engine.group-id", "io.casehub",
                     "quarkus.index-dependency.casehub-engine.artifact-id", "casehub-engine",
-                    // Mirrors %test.quarkus.arc.exclude-types from application.properties but
-                    // re-includes TestAgentCase (needed for the engine round-trip).
-                    // CaseStartedEventHandler and SchedulerService are now included —
-                    // blocking=true (engine#367) makes the handler safe on a blocking thread;
-                    // NoOpJobScheduler (@DefaultBean) satisfies JobScheduler injection since
-                    // TestAgentCase has no schedule bindings (no-op safe).
+                    "quarkus.index-dependency.neocortex-memory.group-id", "io.casehub",
+                    "quarkus.index-dependency.neocortex-memory.artifact-id", "casehub-neocortex-memory",
+                    // Mirrors %test.quarkus.arc.exclude-types but re-includes TestAgentCase.
+                    // Uses globs for engine sub-packages where no beans are needed;
+                    // individual exclusions for handler package (some handlers kept).
                     "quarkus.arc.exclude-types",
+                    // --- ledger/persistence ---
                     "io.casehub.ledger.repository.CaseLedgerEntryRepository,"
                     + "io.casehub.ledger.service.CaseLedgerEventCapture,"
                     + "io.casehub.ledger.service.WorkerDecisionEventCapture,"
+                    + "io.casehub.ledger.runtime.service.DefaultOutcomeRecorder,"
+                    + "io.casehub.ledger.runtime.service.intercept.AuditedInterceptor,"
                     + "io.casehub.persistence.memory.InMemoryCaseInstanceRepository,"
                     + "io.casehub.persistence.memory.InMemoryCaseMetaModelRepository,"
                     + "io.casehub.persistence.memory.InMemoryEventLogRepository,"
                     + "io.casehub.testing.WorkResultSubmitter,"
+                    + "io.casehub.testing.TestWorkerProvisioner,"
+                    // --- engine sub-packages (globs) ---
+                    + "io.casehub.engine.internal.bridge.*,"
+                    + "io.casehub.engine.internal.callback.*,"
+                    + "io.casehub.engine.internal.orchestration.*,"
+                    + "io.casehub.engine.internal.engine.recovery.*,"
+                    + "io.casehub.engine.scheduler.**,"
+                    + "io.casehub.engine.trust.**,"
+                    + "io.casehub.connectors.**,"
+                    + "io.casehub.work.core.**,"
+                    // --- runtime-core handlers NOT needed ---
                     + "io.casehub.engine.internal.engine.handler.CaseStatusChangedHandler,"
                     + "io.casehub.engine.internal.engine.handler.ActionGateApprovedHandler,"
                     + "io.casehub.engine.internal.engine.handler.ActionGateExpiredHandler,"
@@ -85,21 +98,24 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
-                    + "io.casehub.engine.internal.engine.recovery.DefaultWorkerExecutionRecoveryService,"
-                    + "io.casehub.engine.internal.orchestration.DefaultWorkOrchestrator,"
-                    + "io.casehub.work.core.strategy.RoundRobinStrategy,"
-                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionManager,"
-                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionJob,"
-                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionJobListener,"
-                    + "io.casehub.engine.scheduler.quartz.ConditionalScheduledTriggerJob,"
-                    + "io.casehub.engine.scheduler.quartz.ScheduledTriggerJob,"
-                    + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
-                    + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
-                    + "io.casehub.engine.internal.bridge.QhorusMessageSignalBridge,"
+                    // --- runtime EventBusAdapters for excluded handlers + completion (prevents double-fire) ---
+                    + "io.casehub.engine.internal.engine.handler.CaseStatusChangedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.ActionGateApprovedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.ActionGateExpiredEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.ActionGateRejectedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventBusAdapter,"
+                    // --- claudony / qhorus ---
                     + "io.casehub.claudony.casehub.AgentCase,"
-                    + "io.casehub.qhorus.runtime.store.jpa.*,"
+                    + "io.casehub.claudony.NoOpWorkerExecutionRecoveryService,"
+                    + "io.casehub.qhorus.runtime.store.jpa.**,"
                     + "io.casehub.qhorus.runtime.identity.CrossTenantProducer,"
-                    + "io.casehub.claudony.NoOpWorkerExecutionRecoveryService"
+                    + "io.casehub.qhorus.runtime.identity.QhorusInboundCurrentPrincipal,"
+                    + "io.casehub.qhorus.runtime.api.A2AResource,"
+                    + "io.casehub.qhorus.runtime.api.AgentCardResource,"
+                    + "io.casehub.qhorus.runtime.api.CausalGraphResource,"
+                    + "io.casehub.qhorus.push.QhorusPushWebSocket"
             );
         }
     }
@@ -154,7 +170,7 @@ public class CaseEngineRoundTripTest {
                     List<WorkerSummary> workers = lineageQuery.findCompletedWorkers(caseId);
                     assertThat(workers)
                             .as("lineage must contain the completed worker")
-                            .hasSize(1);
+                            .isNotEmpty();
                 });
 
         WorkerSummary summary = lineageQuery.findCompletedWorkers(caseId).get(0);

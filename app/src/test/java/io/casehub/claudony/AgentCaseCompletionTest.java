@@ -50,35 +50,55 @@ class AgentCaseCompletionTest {
                     "claudony.mode", "agent",
                     "quarkus.index-dependency.casehub-engine.group-id", "io.casehub",
                     "quarkus.index-dependency.casehub-engine.artifact-id", "casehub-engine",
+                    "quarkus.index-dependency.neocortex-memory.group-id", "io.casehub",
+                    "quarkus.index-dependency.neocortex-memory.artifact-id", "casehub-neocortex-memory",
                     // NOT excluded: SignalReceivedEventHandler, CaseStatusChangedHandler,
                     //               GoalReachedEventHandler, DefaultWorkerExecutionRecoveryService
                     "quarkus.arc.exclude-types",
+                    // --- ledger/persistence ---
                     "io.casehub.ledger.repository.CaseLedgerEntryRepository,"
                     + "io.casehub.ledger.service.CaseLedgerEventCapture,"
                     + "io.casehub.ledger.service.WorkerDecisionEventCapture,"
+                    + "io.casehub.ledger.runtime.service.DefaultOutcomeRecorder,"
+                    + "io.casehub.ledger.runtime.service.intercept.AuditedInterceptor,"
                     + "io.casehub.persistence.memory.InMemoryCaseInstanceRepository,"
                     + "io.casehub.persistence.memory.InMemoryCaseMetaModelRepository,"
                     + "io.casehub.persistence.memory.InMemoryEventLogRepository,"
                     + "io.casehub.testing.WorkResultSubmitter,"
+                    + "io.casehub.testing.TestWorkerProvisioner,"
+                    // --- engine sub-packages (globs) ---
+                    + "io.casehub.engine.internal.bridge.*,"
+                    + "io.casehub.engine.internal.callback.*,"
+                    + "io.casehub.engine.internal.orchestration.*,"
+                    + "io.casehub.engine.scheduler.**,"
+                    + "io.casehub.engine.trust.**,"
+                    + "io.casehub.connectors.**,"
+                    + "io.casehub.work.core.**,"
+                    // --- runtime-core handlers NOT needed ---
                     + "io.casehub.engine.internal.engine.handler.ActionGateApprovedHandler,"
                     + "io.casehub.engine.internal.engine.handler.ActionGateExpiredHandler,"
                     + "io.casehub.engine.internal.engine.handler.ActionGateRejectedHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
-                    + "io.casehub.engine.internal.orchestration.DefaultWorkOrchestrator,"
-                    + "io.casehub.work.core.strategy.RoundRobinStrategy,"
-                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionManager,"
-                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionJob,"
-                    + "io.casehub.engine.scheduler.quartz.QuartzWorkerExecutionJobListener,"
-                    + "io.casehub.engine.scheduler.quartz.ConditionalScheduledTriggerJob,"
-                    + "io.casehub.engine.scheduler.quartz.ScheduledTriggerJob,"
-                    + "io.casehub.engine.scheduler.quartz.MilestoneSLATimeoutJob,"
-                    + "io.casehub.engine.scheduler.quartz.QuartzRetryService,"
+                    // --- runtime EventBusAdapters for excluded handlers + completion (prevents double-fire) ---
+                    + "io.casehub.engine.internal.engine.handler.ActionGateApprovedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.ActionGateExpiredEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.ActionGateRejectedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.WorkflowExecutionCompletedEventBusAdapter,"
+                    // --- claudony / qhorus ---
                     + "io.casehub.claudony.TestAgentCase,"
                     + "io.casehub.claudony.casehub.AgentCase,"
-                    + "io.casehub.qhorus.runtime.store.jpa.*,"
-                    + "io.casehub.qhorus.runtime.identity.CrossTenantProducer"
+                    + "io.casehub.qhorus.runtime.store.jpa.**,"
+                    + "io.casehub.qhorus.runtime.identity.CrossTenantProducer,"
+                    + "io.casehub.qhorus.runtime.identity.QhorusInboundCurrentPrincipal,"
+                    + "io.casehub.qhorus.runtime.api.A2AResource,"
+                    + "io.casehub.qhorus.runtime.api.AgentCardResource,"
+                    + "io.casehub.qhorus.runtime.api.CausalGraphResource,"
+                    + "io.casehub.qhorus.push.QhorusPushWebSocket"
             );
         }
     }
