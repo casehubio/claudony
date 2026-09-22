@@ -131,6 +131,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         registry.remove(workerId);
         var agentSession = workerSessions.remove(workerId);
         if (agentSession != null) {
+            agentSession.close();
             agentBackend.sessionManager().destroySession(agentSession.managedSession().instanceId());
         } else {
             try {
