@@ -1,7 +1,5 @@
 package io.casehub.claudony.server;
 
-import io.casehub.platform.api.mcp.HandWrittenEndpoint;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.claudony.agent.terminal.TerminalAdapterFactory;
@@ -57,12 +55,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-@HandWrittenEndpoint("SSE streaming, tmux session lifecycle, terminal WebSocket proxy")
+@HandWrittenEndpoint("SSE streaming, WebSocket proxy, terminal I/O — HTTP-specific transport")
 @Path("/api/sessions")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Authenticated
-@HandWrittenEndpoint("SSE streaming, WebSocket proxy, terminal I/O — HTTP-specific transport")
 public class SessionResource {
 
     private static final Logger LOG = Logger.getLogger(SessionResource.class);

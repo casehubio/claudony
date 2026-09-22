@@ -1,7 +1,5 @@
 package io.casehub.claudony.server.auth;
 
-import io.casehub.platform.api.mcp.HandWrittenEndpoint;
-
 import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.quarkus.runtime.LaunchMode;
@@ -22,9 +20,8 @@ import org.jboss.logging.Logger;
 import java.io.IOException;
 import java.util.Map;
 
-@HandWrittenEndpoint("WebAuthn authentication flows — passkey registration, login, invite tokens")
-@Path("/auth")
 @HandWrittenEndpoint("WebAuthn auth flows, cookies, dev-login — HTTP-specific auth")
+@Path("/auth")
 public class AuthResource {
 
     private static final Logger LOG = Logger.getLogger(AuthResource.class);
