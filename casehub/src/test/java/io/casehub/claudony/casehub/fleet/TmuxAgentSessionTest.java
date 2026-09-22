@@ -50,14 +50,25 @@ class TmuxAgentSessionTest {
     }
 
     @Test
-    void close_leavesSessionInManager() {
+    void close_suspendsSessionInPool() {
         when(ops.memoryBytes(any())).thenReturn(0L);
 
         session.close();
 
         assertThat(sessionManager.getSession("pool-session-1")).isNotNull();
         assertThat(sessionManager.getSession("pool-session-1").state())
-                .isEqualTo(SessionState.ACTIVE);
+                .isEqualTo(SessionState.SUSPENDED);
+        verify(ops).suspend("pool-session-1");
+    }
+
+    @Test
+    void close_releasesActiveCapacity() {
+        when(ops.memoryBytes(any())).thenReturn(0L);
+        assertThat(sessionManager.activeCount()).isEqualTo(1);
+
+        session.close();
+
+        assertThat(sessionManager.activeCount()).isEqualTo(0);
     }
 
     @Test

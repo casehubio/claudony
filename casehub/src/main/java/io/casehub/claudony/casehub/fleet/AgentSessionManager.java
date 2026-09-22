@@ -40,6 +40,10 @@ public class AgentSessionManager {
                 return doResume(suspended.get());
             }
 
+            if (policy == WorkingDirPolicy.BRANCH_ISOLATED) {
+                throw new UnsupportedOperationException("BRANCH_ISOLATED not yet implemented");
+            }
+
             if (policy == WorkingDirPolicy.EXCLUSIVE) {
                 var conflict = sessions.values().stream()
                                        .filter(s -> s.state() == SessionState.ACTIVE

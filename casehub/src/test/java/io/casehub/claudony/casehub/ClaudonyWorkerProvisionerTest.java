@@ -49,6 +49,7 @@ class ClaudonyWorkerProvisionerTest {
     private SessionOperations         ops;
     private AtomicReference<String>   lastCreatedCommand;
     private AtomicReference<String>   lastCreatedWorkingDir;
+    private java.util.concurrent.atomic.AtomicInteger memoryBytesCallCount;
     private ClaudonyWorkerProvisioner provisioner;
 
     @BeforeEach
@@ -58,6 +59,7 @@ class ClaudonyWorkerProvisionerTest {
         sessionMapping = new WorkerSessionMapping();
         lastCreatedCommand = new AtomicReference<>();
         lastCreatedWorkingDir = new AtomicReference<>();
+        memoryBytesCallCount = new java.util.concurrent.atomic.AtomicInteger();
 
         ops = new SessionOperations() {
             private int counter = 0;
@@ -80,7 +82,7 @@ class ClaudonyWorkerProvisionerTest {
             @Override
             public void destroy(String sessionId) {}
             @Override
-            public long memoryBytes(String sessionId) { return 0; }
+            public long memoryBytes(String sessionId) { memoryBytesCallCount.incrementAndGet(); return 0; }
         };
 
         var config = mock(ClaudonyConfig.class);
@@ -174,7 +176,7 @@ class ClaudonyWorkerProvisionerTest {
             @Override
             public void destroy(String sessionId) {}
             @Override
-            public long memoryBytes(String sessionId) { return 0; }
+            public long memoryBytes(String sessionId) { memoryBytesCallCount.incrementAndGet(); return 0; }
         };
         var failConfig = mock(ClaudonyConfig.class);
         when(failConfig.defaultWorkingDir()).thenReturn("/tmp");
@@ -220,6 +222,20 @@ class ClaudonyWorkerProvisionerTest {
         provisioner.terminate(workerId, null);
 
         assertThat(agentBackend.sessionManager().activeCount()).isZero();
+    }
+
+    @Test
+    void terminate_provisionedWorker_runsCloseLifecycle() throws Exception {
+        var caseId = UUID.randomUUID();
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
+        var captor = ArgumentCaptor.forClass(Session.class);
+        verify(registry).register(captor.capture());
+        String workerId = captor.getValue().id();
+        memoryBytesCallCount.set(0);
+
+        provisioner.terminate(workerId, null);
+
+        assertThat(memoryBytesCallCount.get()).as("close() should record metrics before destroy").isGreaterThan(0);
     }
 
     @Test

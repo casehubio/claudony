@@ -163,6 +163,15 @@ class AgentSessionManagerTest {
     }
 
     @Test
+    void acquireSession_branchIsolated_throwsUnsupported() {
+        manager = createManager(0, 5);
+        assertThatThrownBy(() -> manager.acquireSession("reviewer", "/workspace/pr-42",
+                                                        null, WorkingDirPolicy.BRANCH_ISOLATED))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("BRANCH_ISOLATED");
+    }
+
+    @Test
     void activeSessionsForWorkingDir_returnsMatching() {
         manager = createManager(0, 5);
         manager.acquireSession("reviewer", "/workspace/pr-42");
