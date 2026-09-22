@@ -1,32 +1,36 @@
 package io.casehub.claudony.casehub.fleet;
 
+import io.casehub.claudony.config.ClaudonyConfig;
+import io.casehub.claudony.server.TmuxService;
 import io.casehub.platform.agent.AgentBackend;
-import io.casehub.platform.agent.AgentEvent;
 import io.casehub.platform.agent.AgentSession;
 import io.casehub.platform.agent.AgentSessionConfig;
 import io.casehub.platform.agent.AgentSessionInit;
-import io.casehub.claudony.config.ClaudonyConfig;
-import io.casehub.claudony.server.TmuxService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ClaudonyAgentBackendTest {
 
     private TmuxService tmux;
     private ClaudonyConfig config;
+    private AgentPoolConfig poolConfig;
+
     private ClaudonyAgentBackend backend;
 
     @BeforeEach
     void setUp() {
-        tmux = mock(TmuxService.class);
-        config = mock(ClaudonyConfig.class);
+        tmux       = mock(TmuxService.class);
+        config     = mock(ClaudonyConfig.class);
+        poolConfig = mock(AgentPoolConfig.class);
         when(config.defaultWorkingDir()).thenReturn("/tmp/claudony-workspace");
-        backend = new ClaudonyAgentBackend(tmux, config);
+        when(poolConfig.minActive()).thenReturn(0);
+        when(poolConfig.maxActive()).thenReturn(10);
+        backend = new ClaudonyAgentBackend(tmux, config, poolConfig);
     }
 
     @Test
@@ -50,6 +54,18 @@ class ClaudonyAgentBackendTest {
         assertThat(status).isNotNull();
         assertThat(status.health()).isEqualTo(AgentPoolHealth.HEALTHY);
     }
+
+    @Test
+    void poolStatus_reflectsConfiguredMinMax() {
+        var customPoolConfig = mock(AgentPoolConfig.class);
+        when(customPoolConfig.minActive()).thenReturn(2);
+        when(customPoolConfig.maxActive()).thenReturn(20);
+        var customBackend = new ClaudonyAgentBackend(tmux, config, customPoolConfig);
+        var status        = customBackend.poolStatus();
+        assertThat(status.min()).isEqualTo(2);
+        assertThat(status.max()).isEqualTo(20);
+    }
+
 
     @Test
     void invoke_throwsUnsupported() {
