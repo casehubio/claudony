@@ -107,6 +107,72 @@ class AgentSessionManagerTest {
         assertThat(resumed.conversationId()).isEqualTo(originalConvId);
     }
 
+    @Test
+    void acquireSession_exclusivePolicy_throwsOnConflict() {
+        manager = createManager(0, 5);
+        manager.acquireSession("reviewer", "/workspace/pr-42");
+
+        assertThatThrownBy(() -> manager.acquireSession("coder", "/workspace/pr-42",
+                                                        null, WorkingDirPolicy.EXCLUSIVE))
+                .isInstanceOf(WorkingDirConflictException.class)
+                .hasMessageContaining("/workspace/pr-42")
+                .hasMessageContaining("reviewer");
+    }
+
+    @Test
+    void acquireSession_exclusivePolicy_allowsDifferentWorkingDirs() {
+        manager = createManager(0, 5);
+        manager.acquireSession("reviewer", "/workspace/pr-42");
+
+        assertThatCode(() -> manager.acquireSession("coder", "/workspace/task-1",
+                                                    null, WorkingDirPolicy.EXCLUSIVE))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void acquireSession_sharedReadPolicy_allowsSameWorkingDir() {
+        manager = createManager(0, 5);
+        manager.acquireSession("reviewer", "/workspace/pr-42",
+                               null, WorkingDirPolicy.SHARED_READ);
+
+        assertThatCode(() -> manager.acquireSession("coder", "/workspace/pr-42",
+                                                    null, WorkingDirPolicy.SHARED_READ))
+                .doesNotThrowAnyException();
+        assertThat(manager.activeCount()).isEqualTo(2);
+    }
+
+    @Test
+    void acquireSession_exclusivePolicy_allowsResumeOfOwnSuspended() {
+        manager = createManager(0, 5);
+        var session = manager.acquireSession("reviewer", "/workspace/pr-42",
+                                             null, WorkingDirPolicy.EXCLUSIVE);
+        manager.suspendSession(session.instanceId());
+
+        var resumed = manager.acquireSession("reviewer", "/workspace/pr-42",
+                                             null, WorkingDirPolicy.EXCLUSIVE);
+        assertThat(resumed.instanceId()).isEqualTo(session.instanceId());
+    }
+
+    @Test
+    void acquireSession_defaultPolicy_isExclusive() {
+        manager = createManager(0, 5);
+        manager.acquireSession("reviewer", "/workspace/pr-42");
+
+        assertThatThrownBy(() -> manager.acquireSession("coder", "/workspace/pr-42"))
+                .isInstanceOf(WorkingDirConflictException.class);
+    }
+
+    @Test
+    void activeSessionsForWorkingDir_returnsMatching() {
+        manager = createManager(0, 5);
+        manager.acquireSession("reviewer", "/workspace/pr-42");
+        manager.acquireSession("coder", "/workspace/task-1");
+
+        assertThat(manager.activeSessionsForWorkingDir("/workspace/pr-42")).hasSize(1);
+        assertThat(manager.activeSessionsForWorkingDir("/workspace/task-1")).hasSize(1);
+        assertThat(manager.activeSessionsForWorkingDir("/workspace/other")).isEmpty();
+    }
+
 
     @Test
     void acquireSession_doesNotResumeMismatchedIdentity() {
