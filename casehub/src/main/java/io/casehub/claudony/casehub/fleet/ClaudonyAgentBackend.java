@@ -22,12 +22,12 @@ public class ClaudonyAgentBackend implements AgentBackend {
     private final ClaudonyConfig config;
 
     @Inject
-    public ClaudonyAgentBackend(TmuxService tmux, ClaudonyConfig config) {
-        this.tmux = tmux;
-        this.config = config;
-        this.ops = new TmuxSessionOperations(tmux, SESSION_PREFIX, "claude");
+    public ClaudonyAgentBackend(TmuxService tmux, ClaudonyConfig config, AgentPoolConfig poolConfig) {
+        this.tmux           = tmux;
+        this.config         = config;
+        this.ops            = new TmuxSessionOperations(tmux, SESSION_PREFIX, "claude");
         this.sessionManager = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 10),
+                new AgentSessionManagerConfig(poolConfig.minActive(), poolConfig.maxActive()),
                 ops
         );
     }
