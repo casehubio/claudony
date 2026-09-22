@@ -1,6 +1,7 @@
 package io.casehub.claudony.server;
 
 import io.casehub.claudony.config.ClaudonyConfig;
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.casehub.platform.api.preferences.PreferenceProvider;
 import io.casehub.platform.api.preferences.SettingsScope;
 import io.casehub.qhorus.api.instance.InstanceInfo;
@@ -25,6 +26,7 @@ import java.util.Set;
 @Path("/api/mesh")
 @Produces(MediaType.APPLICATION_JSON)
 @Authenticated
+@HandWrittenEndpoint("SSE streaming, channel event subscription — HTTP-specific transport")
 public class MeshResource {
 
     private static final Set<MessageType> VALID_HUMAN_TYPES = Set.of(

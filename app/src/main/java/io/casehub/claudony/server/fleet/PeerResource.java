@@ -1,6 +1,7 @@
 package io.casehub.claudony.server.fleet;
 
 import io.casehub.claudony.server.auth.FleetKeyService;
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Authenticated
+@HandWrittenEndpoint("Fleet key generation, proxy resize, REST client builder — HTTP-specific fleet ops")
 public class PeerResource {
 
     private static final Logger LOG = Logger.getLogger(PeerResource.class);

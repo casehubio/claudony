@@ -4,6 +4,7 @@ import io.casehub.claudony.casehub.browser.CaseBrowserService;
 import io.casehub.claudony.casehub.browser.CaseSummary;
 import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @Path("/api/cases")
 @Produces(MediaType.APPLICATION_JSON)
+@HandWrittenEndpoint("Blocking JPA — pending @McpDomain migration")
 public class CaseBrowserResource {
 
     @Inject
