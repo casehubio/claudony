@@ -17,6 +17,7 @@ class AgentPoolDefinitionTest {
                 .pool()
                     .minActive(2)
                     .maxActive(10)
+                    .eviction(EvictionStrategy.MEMORY_WEIGHTED)
                 .build();
 
         assertThat(def.agent().name()).isEqualTo("code-reviewer");
@@ -25,6 +26,7 @@ class AgentPoolDefinitionTest {
         assertThat(def.agent().command()).isEqualTo("claude --model opus");
         assertThat(def.pool().minActive()).isEqualTo(2);
         assertThat(def.pool().maxActive()).isEqualTo(10);
+        assertThat(def.pool().eviction()).isEqualTo(EvictionStrategy.MEMORY_WEIGHTED);
     }
 
     @Test
@@ -39,6 +41,18 @@ class AgentPoolDefinitionTest {
         assertThat(def.agent().command()).isNull();
         assertThat(def.pool().minActive()).isZero();
         assertThat(def.pool().maxActive()).isEqualTo(10);
+        assertThat(def.pool().eviction()).isEqualTo(EvictionStrategy.MEMORY_WEIGHTED);
+    }
+
+    @Test
+    void evictionStrategyOverride() {
+        var def = AgentPoolDefinition.builder()
+                .agent("worker")
+                .pool()
+                    .eviction(EvictionStrategy.LRU)
+                .build();
+
+        assertThat(def.pool().eviction()).isEqualTo(EvictionStrategy.LRU);
     }
 
     @Test

@@ -47,14 +47,15 @@ public final class AgentPoolDefinition {
         }
     }
 
-    public record PoolConfig(int minActive, int maxActive) {
+    public record PoolConfig(int minActive, int maxActive, EvictionStrategy eviction) {
         public PoolConfig {
             if (minActive < 0) throw new IllegalArgumentException("minActive must be >= 0");
             if (maxActive < 1) throw new IllegalArgumentException("maxActive must be >= 1");
             if (maxActive < minActive) throw new IllegalArgumentException("maxActive must be >= minActive");
+            if (eviction == null) eviction = EvictionStrategy.MEMORY_WEIGHTED;
         }
 
-        static final PoolConfig DEFAULT = new PoolConfig(0, 10);
+        static final PoolConfig DEFAULT = new PoolConfig(0, 10, EvictionStrategy.MEMORY_WEIGHTED);
     }
 
     public static final class Builder {
@@ -65,6 +66,7 @@ public final class AgentPoolDefinition {
         private String command;
         private int minActive = 0;
         private int maxActive = 10;
+        private EvictionStrategy eviction;
 
         private Builder() {}
 
@@ -75,7 +77,7 @@ public final class AgentPoolDefinition {
 
         public AgentPoolDefinition build() {
             var agentConfig = new AgentConfig(agentName, workingDir, policy, command);
-            var poolConfig = new PoolConfig(minActive, maxActive);
+            var poolConfig = new PoolConfig(minActive, maxActive, eviction);
             return new AgentPoolDefinition(agentConfig, poolConfig);
         }
     }
@@ -135,6 +137,11 @@ public final class AgentPoolDefinition {
 
         public PoolBuilder maxActive(int maxActive) {
             parent.maxActive = maxActive;
+            return this;
+        }
+
+        public PoolBuilder eviction(EvictionStrategy eviction) {
+            parent.eviction = eviction;
             return this;
         }
 
