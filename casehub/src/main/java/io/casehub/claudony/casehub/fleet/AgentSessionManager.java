@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+/** Capacity-bounded session pool. Manages acquire/suspend/resume/destroy lifecycle with policy-based eviction. */
 public class AgentSessionManager {
 
     private final AgentSessionManagerConfig config;

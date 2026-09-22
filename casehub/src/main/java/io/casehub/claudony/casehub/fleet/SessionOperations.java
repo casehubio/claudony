@@ -1,5 +1,6 @@
 package io.casehub.claudony.casehub.fleet;
 
+/** SPI for session lifecycle operations. {@link TmuxSessionOperations} is the default (tmux-backed) implementation. */
 public interface SessionOperations {
     String create(String identity, String workingDir);
     default String create(String identity, String workingDir, String command) {

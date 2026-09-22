@@ -4,6 +4,7 @@ import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 
+/** Pool capacity configuration. Injected from {@code claudony.agent-pool.*} properties. */
 @ConfigMapping(prefix = "claudony.agent-pool")
 public interface AgentPoolConfig {
 
