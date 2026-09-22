@@ -81,13 +81,14 @@ class AgentCaseCompletionTest {
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
-                    // --- runtime EventBusAdapters for excluded handlers ---
+                    // --- runtime EventBusAdapters for excluded handlers + completion (prevents double-fire) ---
                     + "io.casehub.engine.internal.engine.handler.ActionGateApprovedEventBusAdapter,"
                     + "io.casehub.engine.internal.engine.handler.ActionGateExpiredEventBusAdapter,"
                     + "io.casehub.engine.internal.engine.handler.ActionGateRejectedEventBusAdapter,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventBusAdapter,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventBusAdapter,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventBusAdapter,"
+                    + "io.casehub.engine.internal.engine.handler.WorkflowExecutionCompletedEventBusAdapter,"
                     // --- claudony / qhorus ---
                     + "io.casehub.claudony.TestAgentCase,"
                     + "io.casehub.claudony.casehub.AgentCase,"

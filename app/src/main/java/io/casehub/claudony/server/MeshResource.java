@@ -1,7 +1,5 @@
 package io.casehub.claudony.server;
 
-import io.casehub.platform.api.mcp.HandWrittenEndpoint;
-
 import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.casehub.platform.api.preferences.PreferenceProvider;
@@ -25,11 +23,10 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.Set;
 
-@HandWrittenEndpoint("SSE streaming, multi-channel aggregation, interjection — not single-domain CRUD")
+@HandWrittenEndpoint("SSE streaming, channel event subscription — HTTP-specific transport")
 @Path("/api/mesh")
 @Produces(MediaType.APPLICATION_JSON)
 @Authenticated
-@HandWrittenEndpoint("SSE streaming, channel event subscription — HTTP-specific transport")
 public class MeshResource {
 
     private static final Set<MessageType> VALID_HUMAN_TYPES = Set.of(

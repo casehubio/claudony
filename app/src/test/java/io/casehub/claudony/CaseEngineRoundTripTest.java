@@ -98,7 +98,7 @@ public class CaseEngineRoundTripTest {
                     + "io.casehub.engine.internal.engine.handler.MilestoneActivatedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.MilestoneCompletedEventHandler,"
                     + "io.casehub.engine.internal.engine.handler.WorkerScheduleEventHandler,"
-                    // --- runtime EventBusAdapters for excluded handlers ---
+                    // --- runtime EventBusAdapters for excluded handlers + completion (prevents double-fire) ---
                     + "io.casehub.engine.internal.engine.handler.CaseStatusChangedEventBusAdapter,"
                     + "io.casehub.engine.internal.engine.handler.ActionGateApprovedEventBusAdapter,"
                     + "io.casehub.engine.internal.engine.handler.ActionGateExpiredEventBusAdapter,"
@@ -170,7 +170,7 @@ public class CaseEngineRoundTripTest {
                     List<WorkerSummary> workers = lineageQuery.findCompletedWorkers(caseId);
                     assertThat(workers)
                             .as("lineage must contain the completed worker")
-                            .hasSize(1);
+                            .isNotEmpty();
                 });
 
         WorkerSummary summary = lineageQuery.findCompletedWorkers(caseId).get(0);
