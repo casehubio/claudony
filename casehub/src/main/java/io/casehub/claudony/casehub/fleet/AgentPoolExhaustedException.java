@@ -1,5 +1,6 @@
 package io.casehub.claudony.casehub.fleet;
 
+/** Thrown when all active slots are consumed and minActive prevents eviction. Carries the current {@link AgentPoolStatus}. */
 public class AgentPoolExhaustedException extends RuntimeException {
 
     private final AgentPoolStatus poolStatus;
