@@ -1,39 +1,61 @@
 package io.casehub.claudony.server.api;
 
-import io.casehub.claudony.server.CaseBrowserResource;
-import io.casehub.claudony.server.CasehubResource;
+import io.casehub.claudony.casehub.AgentCase;
+import io.casehub.claudony.casehub.browser.CaseBrowserService;
+import io.casehub.claudony.casehub.browser.CaseDetail;
+import io.casehub.claudony.casehub.browser.CaseSummary;
+import io.casehub.claudony.casehub.inbox.ActionAggregationService;
+import io.casehub.claudony.casehub.inbox.ActionInboxResponse;
 import io.casehub.platform.api.mcp.McpDomain;
 import io.casehub.platform.api.mcp.PathParam;
 import io.casehub.platform.api.mcp.PlatformMutation;
 import io.casehub.platform.api.mcp.PlatformQuery;
 import io.casehub.platform.api.mcp.RestPath;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
+import java.util.List;
 import java.util.UUID;
 
 @McpDomain(value = "claudony/cases", basePath = "/api/claudony/cases")
 @ApplicationScoped
 public class ClaudonyCaseApi {
 
-    @Inject CaseBrowserResource caseBrowser;
-    @Inject CasehubResource casehubResource;
+    @Inject CaseBrowserService caseBrowserService;
+    @Inject Instance<AgentCase> agentCase;
+    @Inject ActionAggregationService aggregationService;
 
     @PlatformQuery("List CaseHub cases")
     @RestPath("/")
-    public Object listCases() {
-        return caseBrowser.listCases();
+    public CaseListResult listCases() {
+        var cases = caseBrowserService.listCases();
+        return new CaseListResult(cases, cases.size());
     }
 
     @PlatformQuery("Get case details")
     @RestPath("/{id}")
-    public Object getCaseDetail(@PathParam UUID id) {
-        return caseBrowser.getCaseDetail(id).getEntity();
+    public CaseDetail getCaseDetail(@PathParam UUID id) {
+        return caseBrowserService.getCaseDetail(id).orElse(null);
     }
 
     @PlatformMutation("Start a CaseHub agent")
     @RestPath("/agent")
-    public Object startAgent() {
-        return casehubResource.startAgent().getEntity();
+    public CaseStartResult startAgent() {
+        if (agentCase.isUnsatisfied()) {
+            throw new IllegalStateException("CaseHub engine not available");
+        }
+        return new CaseStartResult(agentCase.get().startCase());
     }
+
+    @PlatformQuery("List pending actions in the inbox")
+    @RestPath("/actions")
+    public ActionInboxResponse listActions() {
+        return aggregationService.listActions();
+    }
+
+
+    public record CaseListResult(List<CaseSummary> entities, int totalCount) {}
+
+    public record CaseStartResult(UUID caseId) {}
 }
