@@ -17,7 +17,7 @@ import jakarta.inject.Inject;
 
 import java.util.List;
 
-@McpDomain(value = "claudony/mesh", basePath = "/api/claudony/mesh")
+@McpDomain(value = "claudony/mesh", app = "claudony", basePath = "/api/claudony/mesh")
 @ApplicationScoped
 public class ClaudonyMeshApi {
 

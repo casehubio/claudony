@@ -19,7 +19,7 @@ import jakarta.ws.rs.QueryParam;
 
 import java.util.List;
 
-@McpDomain(value = "claudony/sessions", basePath = "/api/claudony/sessions")
+@McpDomain(value = "claudony/sessions", app = "claudony", basePath = "/api/claudony/sessions")
 @ApplicationScoped
 public class ClaudonySessionApi {
 
