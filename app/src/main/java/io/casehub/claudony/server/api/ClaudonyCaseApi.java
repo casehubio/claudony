@@ -18,7 +18,7 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.UUID;
 
-@McpDomain(value = "claudony/cases", basePath = "/api/claudony/cases")
+@McpDomain(value = "claudony/cases", app = "claudony", basePath = "/api/claudony/cases")
 @ApplicationScoped
 public class ClaudonyCaseApi {
 
