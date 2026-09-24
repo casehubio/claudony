@@ -19,7 +19,7 @@ import jakarta.ws.rs.QueryParam;
 
 import java.util.List;
 
-@McpDomain(value = "claudony/sessions", app = "claudony", basePath = "/api/claudony/sessions")
+@McpDomain(value = "claudony/sessions", app = "claudony", basePath = "/api/claudony/sessions", summary = "Agent session lifecycle — create, list, send input, delete")
 @ApplicationScoped
 public class ClaudonySessionApi {
 
