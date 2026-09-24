@@ -29,7 +29,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@McpDomain(value = "claudony/peers", app = "claudony", basePath = "/api/claudony/peers")
+@McpDomain(value = "claudony/peers", app = "claudony", basePath = "/api/claudony/peers", summary = "Agent peer discovery and mesh topology")
 @ApplicationScoped
 public class ClaudonyPeerApi {
 
