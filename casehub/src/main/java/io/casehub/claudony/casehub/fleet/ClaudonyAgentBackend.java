@@ -42,6 +42,14 @@ public class ClaudonyAgentBackend implements AgentBackend {
         this.config = config;
     }
 
+    public static ClaudonyAgentBackend fromDefinition(AgentPoolDefinition definition,
+                                                       TmuxService tmux, ClaudonyConfig config) {
+        String command = definition.agent().command() != null ? definition.agent().command() : "claude";
+        var ops = new TmuxSessionOperations(tmux, SESSION_PREFIX, command);
+        var sessionManager = new AgentSessionManager(definition.toSessionManagerConfig(), ops);
+        return new ClaudonyAgentBackend(sessionManager, ops, tmux, config);
+    }
+
     @Override
     public String key() {
         return "claudony";
