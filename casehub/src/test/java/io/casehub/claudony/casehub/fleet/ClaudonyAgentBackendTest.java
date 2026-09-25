@@ -125,4 +125,35 @@ class ClaudonyAgentBackendTest {
         assertThat(session).isNotNull();
         assertThat(session.managedSession()).isNotNull();
     }
+
+    @Test
+    void fromDefinition_usesPoolConfig() {
+        var def = AgentPoolDefinition.builder()
+                .agent("code-reviewer")
+                    .workingDir("/workspace/reviews")
+                    .command("claude --model opus")
+                .pool()
+                    .minActive(2)
+                    .maxActive(5)
+                .build();
+
+        var definedBackend = ClaudonyAgentBackend.fromDefinition(def, tmux, config);
+
+        assertThat(definedBackend.key()).isEqualTo("claudony");
+        var status = definedBackend.poolStatus();
+        assertThat(status.min()).isEqualTo(2);
+        assertThat(status.max()).isEqualTo(5);
+    }
+
+    @Test
+    void fromDefinition_defaultsCommandToClaude() {
+        var def = AgentPoolDefinition.builder()
+                .agent("worker")
+                .build();
+
+        var definedBackend = ClaudonyAgentBackend.fromDefinition(def, tmux, config);
+        assertThat(definedBackend).isNotNull();
+        assertThat(definedBackend.poolStatus().min()).isZero();
+        assertThat(definedBackend.poolStatus().max()).isEqualTo(10);
+    }
 }
