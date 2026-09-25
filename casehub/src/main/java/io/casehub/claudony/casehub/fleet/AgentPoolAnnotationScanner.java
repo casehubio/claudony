@@ -27,10 +27,7 @@ public class AgentPoolAnnotationScanner {
     }
 
     AgentPoolDefinition toDefinition(PooledAgent agent, AgentPool pool) {
-        var builder = AgentPoolDefinition.builder()
-                .agent(agent.name());
-
-        var agentBuilder = addAgentConfig(builder.agent(agent.name()), agent);
+        var agentBuilder = addAgentConfig(AgentPoolDefinition.builder().agent(agent.name()), agent);
 
         if (pool != null) {
             return agentBuilder.pool()

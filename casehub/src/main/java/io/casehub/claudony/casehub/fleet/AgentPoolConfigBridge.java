@@ -66,7 +66,9 @@ public final class AgentPoolConfigBridge {
     private static Integer intValue(Map<String, Object> map, String key) {
         var value = map.get(key);
         if (value instanceof Number n) return n.intValue();
-        if (value instanceof String s) return Integer.parseInt(s);
+        if (value instanceof String s) {
+            try { return Integer.parseInt(s); } catch (NumberFormatException e) { return null; }
+        }
         return null;
     }
 }

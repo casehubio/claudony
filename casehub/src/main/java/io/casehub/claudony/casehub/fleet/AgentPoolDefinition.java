@@ -54,8 +54,6 @@ public final class AgentPoolDefinition {
             if (maxActive < minActive) throw new IllegalArgumentException("maxActive must be >= minActive");
             if (eviction == null) eviction = EvictionStrategy.MEMORY_WEIGHTED;
         }
-
-        static final PoolConfig DEFAULT = new PoolConfig(0, 10, EvictionStrategy.MEMORY_WEIGHTED);
     }
 
     public static final class Builder {
