@@ -245,7 +245,7 @@ Virtual threads (`Thread.ofVirtual()`) work fine on Java 26 with release=21.
 
 ## Project Structure
 
-3-module Maven project: `claudony-core` (shared services), `claudony-casehub` (CaseHub SPI implementations), `claudony-app` (Quarkus application).
+4-module Maven project: `claudony-core` (shared services), `claudony-casehub` (CaseHub SPI implementations), `claudony-testing` (in-memory test utilities for downstream projects), `claudony-app` (Quarkus application).
 
 ```
 claudony-core/src/main/java/dev/claudony/
@@ -495,7 +495,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-09-28, after #238 fleet integration test):** 16 in `claudony-core` + 331 in `claudony-casehub` + ~436 in `claudony-app` = **~783 total**. #238 added FleetPoolIntegrationTest (7 tests: full chain YAML→registry→tmux, pool capacity eviction, pool status lifecycle, input/output round-trip, suspend/resume with real tmux, process memory observation, concurrent acquire thread safety). #235 replaced AgentPoolAnnotationScannerTest (10 tests) with AgentPoolSchemaTest (6), AgentPoolYamlParserTest validation tests (3), PoolDefinitionProcessorTest (2), PoolDefinitionSourceTest (3). #231–#234 added pool canonical layer tests. Previous baseline: ~721 (2026-09-22, after #205). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-09-29, after #230 testing module):** 16 in `claudony-core` + 331 in `claudony-casehub` + 29 in `claudony-testing` + ~436 in `claudony-app` = **~812 total**. #238 added FleetPoolIntegrationTest (7 tests: full chain YAML→registry→tmux, pool capacity eviction, pool status lifecycle, input/output round-trip, suspend/resume with real tmux, process memory observation, concurrent acquire thread safety). #235 replaced AgentPoolAnnotationScannerTest (10 tests) with AgentPoolSchemaTest (6), AgentPoolYamlParserTest validation tests (3), PoolDefinitionProcessorTest (2), PoolDefinitionSourceTest (3). #231–#234 added pool canonical layer tests. Previous baseline: ~721 (2026-09-22, after #205). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -538,6 +538,11 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks
 - `JpaCaseLineageQueryTest` — JPA lineage query against qhorus PU
 - `ClaudonyWorkerExecutionManagerTest` — 2 drain signal tests: `workerExit_storesPendingExitSignal`, `drainExitSignal_unknownCaseId_returnsNull`
 - `FleetPoolIntegrationTest` — 7 integration tests (real tmux): fullChain (YAML→registry→tmux→capturePane→destroy), poolCapacity (eviction on maxActive), poolStatus (active count lifecycle), inputOutput (send-keys→ECHO round-trip), resumeSession (suspend→tmux gone→resume→tmux back→MOCK_AGENT_READY), memoryBytes (reads real PID/RSS > 0), concurrentAcquire (2 threads race, both succeed, no leak)
+
+`claudony-testing` tests (in `testing/`):
+- `InMemorySessionOperationsTest` — 14 tests: SPI conformance, create/suspend/resume/destroy lifecycle, suspend-survives semantics, conversation ID management, configurable memoryBytes, reset, concurrent creates (20 threads)
+- `TestPoolBuilderTest` — 5 tests: default config, custom min/max, manager↔ops wiring, full lifecycle with eviction
+- `AgentSessionManagerWithTestPoolTest` — 10 tests: validation of testing utilities with AgentSessionManager — acquire, suspend/resume, conversation ID preservation, eviction, working dir policies, shutdown, status
 
 `claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint

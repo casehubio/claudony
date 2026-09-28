@@ -12,6 +12,7 @@
   <modules>
     <module>core</module>
     <module>casehub</module>
+    <module>testing</module>
     <module>app</module>
   </modules>
 
