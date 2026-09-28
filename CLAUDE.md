@@ -495,7 +495,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-09-28, after #235 pool YAML platform alignment):** 16 in `claudony-core` + 324 in `claudony-casehub` + ~436 in `claudony-app` = **~776 total**. #235 replaced AgentPoolAnnotationScannerTest (10 tests) with AgentPoolSchemaTest (6), AgentPoolYamlParserTest validation tests (3), PoolDefinitionProcessorTest (2), PoolDefinitionSourceTest (3). #231–#234 added pool canonical layer tests. Previous baseline: ~721 (2026-09-22, after #205). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-09-28, after #238 fleet integration test):** 16 in `claudony-core` + 331 in `claudony-casehub` + ~436 in `claudony-app` = **~783 total**. #238 added FleetPoolIntegrationTest (7 tests: full chain YAML→registry→tmux, pool capacity eviction, pool status lifecycle, input/output round-trip, suspend/resume with real tmux, process memory observation, concurrent acquire thread safety). #235 replaced AgentPoolAnnotationScannerTest (10 tests) with AgentPoolSchemaTest (6), AgentPoolYamlParserTest validation tests (3), PoolDefinitionProcessorTest (2), PoolDefinitionSourceTest (3). #231–#234 added pool canonical layer tests. Previous baseline: ~721 (2026-09-22, after #205). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -537,6 +537,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks
 - `MeshSystemPromptTemplateTest` — 18 unit tests: ACTIVE/REACTIVE full templates, SILENT omitted, channel names, prior workers, correctness
 - `JpaCaseLineageQueryTest` — JPA lineage query against qhorus PU
 - `ClaudonyWorkerExecutionManagerTest` — 2 drain signal tests: `workerExit_storesPendingExitSignal`, `drainExitSignal_unknownCaseId_returnsNull`
+- `FleetPoolIntegrationTest` — 7 integration tests (real tmux): fullChain (YAML→registry→tmux→capturePane→destroy), poolCapacity (eviction on maxActive), poolStatus (active count lifecycle), inputOutput (send-keys→ECHO round-trip), resumeSession (suspend→tmux gone→resume→tmux back→MOCK_AGENT_READY), memoryBytes (reads real PID/RSS > 0), concurrentAcquire (2 threads race, both succeed, no leak)
 
 `claudony-app` tests (in `claudony-app/`):
 - `SmokeTest` — basic health endpoint
