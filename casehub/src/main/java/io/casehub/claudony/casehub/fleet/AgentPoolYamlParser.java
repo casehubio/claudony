@@ -3,6 +3,7 @@ package io.casehub.claudony.casehub.fleet;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.casehub.yaml.core.step.StepValidator;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -11,28 +12,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Parses YAML agent pool definitions into {@link AgentPoolDefinition} objects via the fluent builder DSL.
- * Third frontend over the same model: DSL, annotations, YAML.
- *
- * <pre>{@code
- * agent-pools:
- *   code-reviewer:
- *     working-dir: /workspace/reviews
- *     policy: SHARED_READ
- *     command: claude --model opus
- *     pool:
- *       min-active: 2
- *       max-active: 10
- *       eviction: memory-weighted
- * }</pre>
- */
 public class AgentPoolYamlParser {
 
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 
     public List<AgentPoolDefinition> parse(String yaml) {
-        if (yaml == null || yaml.isBlank()) return Collections.emptyList();
+        if (yaml == null || yaml.isBlank()) {return Collections.emptyList();}
 
         Map<String, Object> root;
         try {
@@ -41,11 +26,11 @@ public class AgentPoolYamlParser {
             throw new UncheckedIOException("Failed to parse agent pool YAML", e);
         }
 
-        if (root == null || !root.containsKey("agent-pools")) return Collections.emptyList();
+        if (root == null || !root.containsKey("agent-pools")) {return Collections.emptyList();}
 
         @SuppressWarnings("unchecked")
         var pools = (Map<String, Map<String, Object>>) root.get("agent-pools");
-        if (pools == null) return Collections.emptyList();
+        if (pools == null) {return Collections.emptyList();}
 
         var results = new ArrayList<AgentPoolDefinition>();
         for (var entry : pools.entrySet()) {
@@ -61,55 +46,52 @@ public class AgentPoolYamlParser {
     }
 
     private AgentPoolDefinition toDefinition(String name, Map<String, Object> config) {
-        if (config == null) config = Map.of();
+        if (config == null) {config = Map.of();}
+
+        var flat = AgentPoolSchema.flatten(config);
+        normalizeEnumValues(flat);
+        var errors = StepValidator.validateStep(name, flat, AgentPoolSchema.DEFINITION);
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Invalid agent pool definition '" + name + "': " + String.join("; ", errors));
+        }
 
         var agentBuilder = AgentPoolDefinition.builder().agent(name);
 
-        var workingDir = stringValue(config, "working-dir");
-        if (workingDir != null) agentBuilder.workingDir(workingDir);
+        var workingDir = (String) flat.get("working-dir");
+        if (workingDir != null) {agentBuilder.workingDir(workingDir);}
 
-        var policy = stringValue(config, "policy");
-        if (policy != null) agentBuilder.policy(parsePolicy(policy));
-
-        var command = stringValue(config, "command");
-        if (command != null) agentBuilder.command(command);
-
-        @SuppressWarnings("unchecked")
-        var poolConfig = (Map<String, Object>) config.get("pool");
-        if (poolConfig != null) {
-            var poolBuilder = agentBuilder.pool();
-
-            var minActive = intValue(poolConfig, "min-active");
-            if (minActive != null) poolBuilder.minActive(minActive);
-
-            var maxActive = intValue(poolConfig, "max-active");
-            if (maxActive != null) poolBuilder.maxActive(maxActive);
-
-            var eviction = stringValue(poolConfig, "eviction");
-            if (eviction != null) poolBuilder.eviction(parseEviction(eviction));
-
-            return poolBuilder.build();
+        var policy = (String) flat.get("policy");
+        if (policy != null) {
+            agentBuilder.policy(WorkingDirPolicy.valueOf(policy));
         }
 
-        return agentBuilder.build();
+        var command = (String) flat.get("command");
+        if (command != null) {agentBuilder.command(command);}
+
+        var poolBuilder = agentBuilder.pool();
+
+        var minActive = flat.get("pool.min-active");
+        if (minActive instanceof Number n) {poolBuilder.minActive(n.intValue());}
+
+        var maxActive = flat.get("pool.max-active");
+        if (maxActive instanceof Number n) {poolBuilder.maxActive(n.intValue());}
+
+        var eviction = (String) flat.get("pool.eviction");
+        if (eviction != null) {
+            poolBuilder.eviction(EvictionStrategy.valueOf(eviction));
+        }
+
+        return poolBuilder.build();
     }
 
-    private static String stringValue(Map<String, Object> map, String key) {
-        var value = map.get(key);
-        return value != null ? value.toString() : null;
+    private static void normalizeEnumValues(Map<String, Object> flat) {
+        for (var key : List.of("policy", "pool.eviction")) {
+            var value = flat.get(key);
+            if (value instanceof String s) {
+                flat.put(key, s.toUpperCase().replace('-', '_'));
+            }
+        }
     }
 
-    private static Integer intValue(Map<String, Object> map, String key) {
-        var value = map.get(key);
-        if (value instanceof Number n) return n.intValue();
-        return null;
-    }
-
-    private static WorkingDirPolicy parsePolicy(String value) {
-        return WorkingDirPolicy.valueOf(value.toUpperCase().replace('-', '_'));
-    }
-
-    private static EvictionStrategy parseEviction(String value) {
-        return EvictionStrategy.valueOf(value.toUpperCase().replace('-', '_'));
-    }
 }

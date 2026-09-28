@@ -200,4 +200,47 @@ class AgentPoolYamlParserTest {
         var def = parser.parse(yaml).getFirst();
         assertThat(def.pool().eviction()).isEqualTo(EvictionStrategy.MEMORY_WEIGHTED);
     }
+
+    @Test
+    void invalidPolicyThrowsWithMessage() {
+        var yaml = """
+                   agent-pools:
+                     worker:
+                       policy: INVALID_POLICY
+                   """;
+
+        assertThatThrownBy(() -> parser.parse(yaml))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("policy")
+                .hasMessageContaining("INVALID_POLICY");
+    }
+
+    @Test
+    void invalidEvictionThrowsWithMessage() {
+        var yaml = """
+                   agent-pools:
+                     worker:
+                       pool:
+                         eviction: INVALID_EVICTION
+                   """;
+
+        assertThatThrownBy(() -> parser.parse(yaml))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("eviction")
+                .hasMessageContaining("INVALID_EVICTION");
+    }
+
+    @Test
+    void wrongTypeForMinActiveThrowsWithMessage() {
+        var yaml = """
+                   agent-pools:
+                     worker:
+                       pool:
+                         min-active: not-a-number
+                   """;
+
+        assertThatThrownBy(() -> parser.parse(yaml))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("min-active");
+    }
 }
