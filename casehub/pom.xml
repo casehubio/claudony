@@ -78,6 +78,18 @@
             <artifactId>casehub-platform-agent-api</artifactId>
         </dependency>
 
+        <!-- Platform YAML core — StepDefinition, StepValidator, StepParameterType -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform-yaml-core</artifactId>
+        </dependency>
+
+        <!-- Platform YAML plugin API — @Required, @Optional annotations -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform-yaml-plugin-api</artifactId>
+        </dependency>
+
         <!-- @WithSession — open a Hibernate Reactive session when buildContext() is called
              from the engine event bus handler (which has Vert.x context but no session). -->
         <dependency>
