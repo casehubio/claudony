@@ -243,4 +243,100 @@ class AgentPoolYamlParserTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("min-active");
     }
+
+    @Test
+    void targetTrackingScaling() {
+        var yaml = """
+                agent-pools:
+                  reviewer:
+                    pool:
+                      max-active: 10
+                      scaling:
+                        type: target-tracking
+                        target: 0.7
+                        cooldown: 60s
+                        scale-in-cooldown: 300s
+                """;
+
+        var def = parser.parse(yaml).getFirst();
+        var scaling = def.pool().scaling();
+        assertThat(scaling).isInstanceOf(ScalingConfig.TargetTrackingConfig.class);
+        var tt = (ScalingConfig.TargetTrackingConfig) scaling;
+        assertThat(tt.targetFillRatio()).isEqualTo(0.7);
+        assertThat(tt.cooldown()).isEqualTo(java.time.Duration.ofSeconds(60));
+        assertThat(tt.scaleInCooldown()).isEqualTo(java.time.Duration.ofSeconds(300));
+    }
+
+    @Test
+    void stepScaling() {
+        var yaml = """
+                agent-pools:
+                  reviewer:
+                    pool:
+                      scaling:
+                        type: step
+                        cooldown: 30s
+                        steps:
+                          - threshold: 0.8
+                            adjustment: 2
+                          - threshold: 0.3
+                            adjustment: -1
+                """;
+
+        var def = parser.parse(yaml).getFirst();
+        var scaling = def.pool().scaling();
+        assertThat(scaling).isInstanceOf(ScalingConfig.StepConfig.class);
+        var step = (ScalingConfig.StepConfig) scaling;
+        assertThat(step.steps()).hasSize(2);
+        assertThat(step.cooldown()).isEqualTo(java.time.Duration.ofSeconds(30));
+    }
+
+    @Test
+    void noScalingSectionDefaultsToNoOp() {
+        var yaml = """
+                agent-pools:
+                  reviewer:
+                    pool:
+                      max-active: 5
+                """;
+
+        var def = parser.parse(yaml).getFirst();
+        assertThat(def.pool().scaling()).isInstanceOf(ScalingConfig.NoScalingConfig.class);
+    }
+
+    @Test
+    void customScalingType() {
+        var yaml = """
+                agent-pools:
+                  reviewer:
+                    pool:
+                      scaling:
+                        type: demand-pressure
+                        cooldown: 45s
+                """;
+
+        var def = parser.parse(yaml).getFirst();
+        var scaling = def.pool().scaling();
+        assertThat(scaling).isInstanceOf(ScalingConfig.CustomScalingConfig.class);
+        var custom = (ScalingConfig.CustomScalingConfig) scaling;
+        assertThat(custom.beanName()).isEqualTo("demand-pressure");
+        assertThat(custom.cooldown()).isEqualTo(java.time.Duration.ofSeconds(45));
+    }
+
+    @Test
+    void scalingCooldownDefaultsTo60s() {
+        var yaml = """
+                agent-pools:
+                  reviewer:
+                    pool:
+                      scaling:
+                        type: target-tracking
+                        target: 0.7
+                """;
+
+        var def = parser.parse(yaml).getFirst();
+        var scaling = (ScalingConfig.TargetTrackingConfig) def.pool().scaling();
+        assertThat(scaling.cooldown()).isEqualTo(java.time.Duration.ofSeconds(60));
+        assertThat(scaling.scaleInCooldown()).isEqualTo(java.time.Duration.ofSeconds(60));
+    }
 }

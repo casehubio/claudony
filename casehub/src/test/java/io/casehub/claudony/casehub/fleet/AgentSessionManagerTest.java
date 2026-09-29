@@ -320,4 +320,82 @@ class AgentSessionManagerTest {
         assertThat(status.total()).isEqualTo(3);
         assertThat(status.health()).isEqualTo(AgentPoolHealth.HEALTHY);
     }
+
+    @Test
+    void adjustMaxActive_clampsToHardCeiling() {
+        manager = createManager(0, 10);
+        int actual = manager.adjustMaxActive(15);
+        assertThat(actual).isEqualTo(10);
+    }
+
+    @Test
+    void adjustMaxActive_clampsToMinActive() {
+        manager = createManager(3, 10);
+        int actual = manager.adjustMaxActive(1);
+        assertThat(actual).isEqualTo(3);
+    }
+
+    @Test
+    void adjustMaxActive_setsEffectiveMax() {
+        manager = createManager(0, 10);
+        manager.adjustMaxActive(7);
+        var status = manager.status();
+        assertThat(status.max()).isEqualTo(7);
+    }
+
+    @Test
+    void adjustMaxActive_clampsToActiveCount() {
+        manager = createManager(0, 10);
+        manager.acquireSession("a", "/ws/1");
+        manager.acquireSession("b", "/ws/2");
+        manager.acquireSession("c", "/ws/3");
+        manager.acquireSession("d", "/ws/4");
+        int actual = manager.adjustMaxActive(2);
+        assertThat(actual).isEqualTo(4);
+    }
+
+    @Test
+    void adjustMaxActive_affectsAcquireCapacity() {
+        manager = createManager(0, 10);
+        manager.adjustMaxActive(2);
+        manager.acquireSession("a", "/ws/1");
+        manager.acquireSession("b", "/ws/2");
+        var s3 = manager.acquireSession("c", "/ws/3");
+        assertThat(s3).isNotNull();
+        assertThat(suspendCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    void snapshotAndResetDemandMetrics_returnsCountsAndResets() {
+        manager = createManager(0, 2);
+        manager.acquireSession("a", "/ws/1");
+        manager.acquireSession("b", "/ws/2");
+        manager.acquireSession("c", "/ws/3");
+
+        var metrics = manager.snapshotAndResetDemandMetrics();
+        assertThat(metrics.acquires()).isEqualTo(3);
+        assertThat(metrics.evictions()).isEqualTo(1);
+        assertThat(metrics.exhaustions()).isZero();
+
+        var metricsAfterReset = manager.snapshotAndResetDemandMetrics();
+        assertThat(metricsAfterReset.acquires()).isZero();
+        assertThat(metricsAfterReset.evictions()).isZero();
+    }
+
+    @Test
+    void snapshotDemandMetrics_countsExhaustions() {
+        manager = createManager(2, 2);
+        manager.acquireSession("a", "/ws/1");
+        manager.acquireSession("b", "/ws/2");
+
+        try {
+            manager.acquireSession("c", "/ws/3");
+        } catch (AgentPoolExhaustedException e) {
+            // expected
+        }
+
+        var metrics = manager.snapshotAndResetDemandMetrics();
+        assertThat(metrics.acquires()).isEqualTo(3);
+        assertThat(metrics.exhaustions()).isEqualTo(1);
+    }
 }

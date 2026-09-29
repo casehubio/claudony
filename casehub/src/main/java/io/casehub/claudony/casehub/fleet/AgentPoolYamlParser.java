@@ -7,6 +7,7 @@ import io.casehub.yaml.core.step.StepValidator;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -82,6 +83,11 @@ public class AgentPoolYamlParser {
             poolBuilder.eviction(EvictionStrategy.valueOf(eviction));
         }
 
+        @SuppressWarnings("unchecked")
+        var scalingMap = (Map<String, Object>) (config.containsKey("pool") && config.get("pool") instanceof Map<?, ?> poolMap
+            ? ((Map<String, Object>) poolMap).get("scaling") : null);
+        poolBuilder.scaling(parseScaling(scalingMap));
+
         return poolBuilder.build();
     }
 
@@ -92,6 +98,61 @@ public class AgentPoolYamlParser {
                 flat.put(key, s.toUpperCase().replace('-', '_'));
             }
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private ScalingConfig parseScaling(Map<String, Object> scalingMap) {
+        if (scalingMap == null || scalingMap.isEmpty()) {
+            return ScalingConfig.NoScalingConfig.INSTANCE;
+        }
+
+        var type = (String) scalingMap.get("type");
+        if (type == null) {
+            throw new IllegalArgumentException("scaling config requires a 'type' field");
+        }
+
+        Duration cooldown = parseDuration((String) scalingMap.get("cooldown"));
+        Duration scaleInCooldown = parseDuration((String) scalingMap.get("scale-in-cooldown"));
+
+        return switch (type) {
+            case "target-tracking" -> {
+                var target = scalingMap.get("target");
+                if (target == null) {
+                    throw new IllegalArgumentException("target-tracking scaling requires a 'target' field");
+                }
+                double targetValue = target instanceof Number n ? n.doubleValue() : Double.parseDouble(target.toString());
+                yield new ScalingConfig.TargetTrackingConfig(targetValue, cooldown, scaleInCooldown);
+            }
+            case "step" -> {
+                var stepsList = (List<Map<String, Object>>) scalingMap.get("steps");
+                if (stepsList == null || stepsList.isEmpty()) {
+                    throw new IllegalArgumentException("step scaling requires a non-empty 'steps' list");
+                }
+                var steps = stepsList.stream().map(s -> {
+                    var threshold = s.get("threshold");
+                    var adjustment = s.get("adjustment");
+                    return new ScalingStep(
+                        threshold instanceof Number n ? n.doubleValue() : Double.parseDouble(threshold.toString()),
+                        adjustment instanceof Number n ? n.intValue() : Integer.parseInt(adjustment.toString())
+                    );
+                }).toList();
+                yield new ScalingConfig.StepConfig(steps, cooldown, scaleInCooldown);
+            }
+            case "none" -> ScalingConfig.NoScalingConfig.INSTANCE;
+            default -> new ScalingConfig.CustomScalingConfig(type, cooldown, scaleInCooldown);
+        };
+    }
+
+    private static Duration parseDuration(String value) {
+        if (value == null) return null;
+        value = value.trim();
+        if (value.endsWith("s")) {
+            return Duration.ofSeconds(Long.parseLong(value.substring(0, value.length() - 1)));
+        }
+        if (value.endsWith("m")) {
+            return Duration.ofMinutes(Long.parseLong(value.substring(0, value.length() - 1)));
+        }
+        return Duration.ofSeconds(Long.parseLong(value));
     }
 
 }

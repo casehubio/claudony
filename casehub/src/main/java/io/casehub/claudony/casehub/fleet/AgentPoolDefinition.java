@@ -47,12 +47,13 @@ public final class AgentPoolDefinition {
         }
     }
 
-    public record PoolConfig(int minActive, int maxActive, EvictionStrategy eviction) {
+    public record PoolConfig(int minActive, int maxActive, EvictionStrategy eviction, ScalingConfig scaling) {
         public PoolConfig {
-            if (minActive < 0) throw new IllegalArgumentException("minActive must be >= 0");
-            if (maxActive < 1) throw new IllegalArgumentException("maxActive must be >= 1");
-            if (maxActive < minActive) throw new IllegalArgumentException("maxActive must be >= minActive");
-            if (eviction == null) eviction = EvictionStrategy.MEMORY_WEIGHTED;
+            if (minActive < 0) {throw new IllegalArgumentException("minActive must be >= 0");}
+            if (maxActive < 1) {throw new IllegalArgumentException("maxActive must be >= 1");}
+            if (maxActive < minActive) {throw new IllegalArgumentException("maxActive must be >= minActive");}
+            if (eviction == null) {eviction = EvictionStrategy.MEMORY_WEIGHTED;}
+            if (scaling == null) {scaling = ScalingConfig.NoScalingConfig.INSTANCE;}
         }
     }
 
@@ -65,6 +66,8 @@ public final class AgentPoolDefinition {
         private int minActive = 0;
         private int maxActive = 10;
         private EvictionStrategy eviction;
+        private ScalingConfig    scaling;
+
 
         private Builder() {}
 
@@ -75,7 +78,7 @@ public final class AgentPoolDefinition {
 
         public AgentPoolDefinition build() {
             var agentConfig = new AgentConfig(agentName, workingDir, policy, command);
-            var poolConfig = new PoolConfig(minActive, maxActive, eviction);
+            var poolConfig = new PoolConfig(minActive, maxActive, eviction, scaling);
             return new AgentPoolDefinition(agentConfig, poolConfig);
         }
     }
@@ -140,6 +143,11 @@ public final class AgentPoolDefinition {
 
         public PoolBuilder eviction(EvictionStrategy eviction) {
             parent.eviction = eviction;
+            return this;
+        }
+
+        public PoolBuilder scaling(ScalingConfig scaling) {
+            parent.scaling = scaling;
             return this;
         }
 
