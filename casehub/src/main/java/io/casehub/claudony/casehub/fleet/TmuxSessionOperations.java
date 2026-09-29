@@ -35,6 +35,9 @@ public class TmuxSessionOperations implements SessionOperations {
         try {
             tmux.createWorkerSession(sessionId, workingDir, fullCommand);
             tmux.setSessionOption(sessionId, "@claudony_identity", identity);
+            tmux.setSessionOption(sessionId, "@claudony_conversation_id", conversationUuid);
+            tmux.setSessionOption(sessionId, "@claudony_working_dir", workingDir);
+            tmux.setSessionOption(sessionId, "@claudony_state", "active");
             conversationIds.put(sessionId, conversationUuid);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException("Failed to create session for identity " + identity, e);
@@ -54,9 +57,15 @@ public class TmuxSessionOperations implements SessionOperations {
     @Override
     public void suspend(String sessionId) {
         try {
-            tmux.killSession(sessionId);
+            // Set remain-on-exit BEFORE killing the process so the pane survives
+            tmux.setSessionOption(sessionId, "remain-on-exit", "on");
+            long pid = tmux.panePid(sessionId);
+            if (pid > 0) {
+                new ProcessBuilder("kill", String.valueOf(pid)).start().waitFor();
+            }
+            tmux.setSessionOption(sessionId, "@claudony_state", "suspended");
         } catch (IOException | InterruptedException e) {
-            LOG.debugf("Session %s already gone on suspend: %s", sessionId, e.getMessage());
+            LOG.debugf("Error suspending session %s: %s", sessionId, e.getMessage());
         }
     }
 
@@ -66,7 +75,9 @@ public class TmuxSessionOperations implements SessionOperations {
                          ? defaultCommand + " -r " + conversationId
                          : defaultCommand;
         try {
-            tmux.createWorkerSession(sessionId, workingDir, command);
+            tmux.respawnPane(sessionId, command);
+            tmux.setSessionOption(sessionId, "remain-on-exit", "off");
+            tmux.setSessionOption(sessionId, "@claudony_state", "active");
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException("Failed to resume session " + sessionId, e);
         }
@@ -98,4 +109,33 @@ public class TmuxSessionOperations implements SessionOperations {
             return 0;
         }
     }
+
+    public void bootstrapFromTmux(AgentSessionManager manager) {
+        try {
+            for (String name : tmux.listSessionNames()) {
+                if (!name.startsWith(sessionPrefix)) {continue;}
+                var stateOpt = tmux.getSessionOption(name, "@claudony_state");
+                if (stateOpt.isEmpty()) {continue;}
+
+                var identityOpt     = tmux.getSessionOption(name, "@claudony_identity");
+                var conversationOpt = tmux.getSessionOption(name, "@claudony_conversation_id");
+                var workingDirOpt   = tmux.getSessionOption(name, "@claudony_working_dir");
+
+                String identity   = identityOpt.orElse("unknown");
+                String convId     = conversationOpt.orElse(null);
+                String workingDir = workingDirOpt.orElse("");
+                SessionState state = "suspended".equals(stateOpt.get())
+                                     ? SessionState.SUSPENDED : SessionState.ACTIVE;
+
+                if (convId != null) {
+                    conversationIds.put(name, convId);
+                }
+                manager.registerBootstrapped(name, identity, workingDir, convId, state);
+                LOG.infof("Bootstrapped pool session %s (identity=%s, state=%s)", name, identity, state);
+            }
+        } catch (IOException | InterruptedException e) {
+            LOG.warnf("Could not bootstrap pool from tmux: %s", e.getMessage());
+        }
+    }
+
 }

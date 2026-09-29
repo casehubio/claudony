@@ -131,6 +131,19 @@ public class AgentSessionManager {
         }
     }
 
+    void registerBootstrapped(String instanceId, String identity, String workingDir,
+                              String conversationId, SessionState state) {
+        lock.lock();
+        try {
+            var session = new ManagedSession(instanceId, identity, workingDir, conversationId);
+            session.setState(state);
+            sessions.put(instanceId, session);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
     public ManagedSession getSession(String instanceId) {
         return sessions.get(instanceId);
     }

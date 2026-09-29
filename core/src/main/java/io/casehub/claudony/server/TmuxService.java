@@ -1,7 +1,11 @@
 package io.casehub.claudony.server;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.io.*;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -118,6 +122,24 @@ public class TmuxService {
         p.waitFor();
         return output;
     }
+
+    public long panePid(String sessionName) throws IOException, InterruptedException {
+        String pidStr = displayMessage(sessionName, "#{pane_pid}");
+        if (pidStr == null || pidStr.isBlank()) {return 0;}
+        try {
+            return Long.parseLong(pidStr.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    public void respawnPane(String sessionName, String command) throws IOException, InterruptedException {
+        var p = new ProcessBuilder("tmux", "respawn-pane", "-k", "-t", sessionName, "sh", "-c", command)
+                        .redirectErrorStream(true).start();
+        p.getInputStream().transferTo(OutputStream.nullOutputStream());
+        p.waitFor();
+    }
+
 
     public Process attachSession(String sessionName) throws IOException {
         var pb = new ProcessBuilder("tmux", "attach-session", "-t", sessionName);

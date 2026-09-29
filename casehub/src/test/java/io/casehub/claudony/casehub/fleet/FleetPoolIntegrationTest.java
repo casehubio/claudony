@@ -187,7 +187,8 @@ class FleetPoolIntegrationTest {
         assertThat(tmux.sessionExists(session.instanceId())).isTrue();
 
         manager.suspendSession(session.instanceId());
-        assertThat(tmux.sessionExists(session.instanceId())).isFalse();
+        // Session stays alive — only the process is killed
+        assertThat(tmux.sessionExists(session.instanceId())).isTrue();
         assertThat(session.state()).isEqualTo(SessionState.SUSPENDED);
 
         var resumed = manager.resumeSession(session.instanceId());
@@ -201,6 +202,154 @@ class FleetPoolIntegrationTest {
 
         manager.destroySession(session.instanceId());
     }
+
+    @Test
+    void suspend_killsProcessButKeepsTmuxSession() throws Exception {
+        var definition = AgentPoolDefinition.builder()
+                                            .agent("suspend-test")
+                                            .command(mockAgentCommand)
+                                            .pool()
+                                            .minActive(0)
+                                            .maxActive(5)
+                                            .build();
+
+        var ops     = new TmuxSessionOperations(tmux, TEST_PREFIX, definition.agent().command());
+        var manager = new AgentSessionManager(definition.toSessionManagerConfig(), ops);
+
+        var session = manager.acquireSession("worker-1", "/tmp");
+        createdSessions.add(session.instanceId());
+        assertThat(tmux.sessionExists(session.instanceId())).isTrue();
+
+        Thread.sleep(500);
+        long pidBefore = tmux.panePid(session.instanceId());
+        assertThat(pidBefore).isGreaterThan(0);
+
+        manager.suspendSession(session.instanceId());
+        assertThat(session.state()).isEqualTo(SessionState.SUSPENDED);
+
+        // tmux session must survive suspend
+        assertThat(tmux.sessionExists(session.instanceId())).isTrue();
+
+        // @claudony_state must be "suspended"
+        assertThat(tmux.getSessionOption(session.instanceId(), "@claudony_state"))
+                .isPresent().hasValue("suspended");
+
+        manager.destroySession(session.instanceId());
+    }
+
+    @Test
+    void resume_respawnsPaneInExistingSession() throws Exception {
+        var definition = AgentPoolDefinition.builder()
+                                            .agent("respawn-test")
+                                            .command(mockAgentCommand)
+                                            .pool()
+                                            .minActive(0)
+                                            .maxActive(5)
+                                            .build();
+
+        var ops     = new TmuxSessionOperations(tmux, TEST_PREFIX, definition.agent().command());
+        var manager = new AgentSessionManager(definition.toSessionManagerConfig(), ops);
+
+        var session = manager.acquireSession("worker-1", "/tmp");
+        createdSessions.add(session.instanceId());
+
+        Thread.sleep(500);
+        assertThat(tmux.capturePane(session.instanceId(), 20)).contains("MOCK_AGENT_READY");
+
+        manager.suspendSession(session.instanceId());
+        assertThat(tmux.sessionExists(session.instanceId())).isTrue();
+
+        var resumed = manager.resumeSession(session.instanceId());
+        assertThat(resumed).isNotNull();
+        assertThat(resumed.state()).isEqualTo(SessionState.ACTIVE);
+        assertThat(tmux.sessionExists(session.instanceId())).isTrue();
+
+        // @claudony_state must be "active" after resume
+        assertThat(tmux.getSessionOption(session.instanceId(), "@claudony_state"))
+                .isPresent().hasValue("active");
+
+        Thread.sleep(1000);
+        assertThat(tmux.capturePane(session.instanceId(), 20)).contains("MOCK_AGENT_READY");
+
+        manager.destroySession(session.instanceId());
+    }
+
+    @Test
+    void create_storesConversationIdAndStateInTmux() throws Exception {
+        var definition = AgentPoolDefinition.builder()
+                                            .agent("metadata-test")
+                                            .command(mockAgentCommand)
+                                            .pool()
+                                            .minActive(0)
+                                            .maxActive(5)
+                                            .build();
+
+        var ops     = new TmuxSessionOperations(tmux, TEST_PREFIX, definition.agent().command());
+        var manager = new AgentSessionManager(definition.toSessionManagerConfig(), ops);
+
+        var session = manager.acquireSession("worker-1", "/tmp");
+        createdSessions.add(session.instanceId());
+
+        // conversationId must be stored in tmux session option
+        assertThat(tmux.getSessionOption(session.instanceId(), "@claudony_conversation_id"))
+                .isPresent().hasValue(session.conversationId());
+
+        // @claudony_state must be "active"
+        assertThat(tmux.getSessionOption(session.instanceId(), "@claudony_state"))
+                .isPresent().hasValue("active");
+
+        // @claudony_identity must still be set
+        assertThat(tmux.getSessionOption(session.instanceId(), "@claudony_identity"))
+                .isPresent().hasValue("worker-1");
+
+        manager.destroySession(session.instanceId());
+    }
+
+    @Test
+    void bootstrapFromTmux_reconstructsSuspendedSessions() throws Exception {
+        var definition = AgentPoolDefinition.builder()
+                                            .agent("bootstrap-test")
+                                            .command(mockAgentCommand)
+                                            .pool()
+                                            .minActive(0)
+                                            .maxActive(5)
+                                            .build();
+
+        var ops     = new TmuxSessionOperations(tmux, TEST_PREFIX, definition.agent().command());
+        var manager = new AgentSessionManager(definition.toSessionManagerConfig(), ops);
+
+        var session = manager.acquireSession("worker-1", "/tmp");
+        createdSessions.add(session.instanceId());
+        String originalConversationId = session.conversationId();
+
+        Thread.sleep(500);
+        manager.suspendSession(session.instanceId());
+        assertThat(tmux.sessionExists(session.instanceId())).isTrue();
+
+        // Simulate JVM restart — create a new manager and ops, bootstrap from tmux
+        var newOps     = new TmuxSessionOperations(tmux, TEST_PREFIX, definition.agent().command());
+        var newManager = new AgentSessionManager(definition.toSessionManagerConfig(), newOps);
+        newOps.bootstrapFromTmux(newManager);
+
+        // The suspended session must be reconstructed with full metadata
+        var recovered = newManager.getSession(session.instanceId());
+        assertThat(recovered).isNotNull();
+        assertThat(recovered.state()).isEqualTo(SessionState.SUSPENDED);
+        assertThat(recovered.identity()).isEqualTo("worker-1");
+        assertThat(recovered.conversationId()).isEqualTo(originalConversationId);
+        assertThat(recovered.workingDir()).isEqualTo("/tmp");
+
+        // Must be resumable
+        var resumed = newManager.resumeSession(session.instanceId());
+        assertThat(resumed).isNotNull();
+        assertThat(resumed.state()).isEqualTo(SessionState.ACTIVE);
+
+        Thread.sleep(1000);
+        assertThat(tmux.capturePane(session.instanceId(), 20)).contains("MOCK_AGENT_READY");
+
+        newManager.destroySession(session.instanceId());
+    }
+
 
     @Test
     void memoryBytes_readsRealProcessMemory() throws Exception {
