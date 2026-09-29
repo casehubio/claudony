@@ -24,7 +24,8 @@ public class ClaudonyAgentBackend implements AgentBackend {
     private final ClaudonyConfig config;
 
     @Inject
-    public ClaudonyAgentBackend(TmuxService tmux, ClaudonyConfig config, AgentPoolConfig poolConfig) {
+    public ClaudonyAgentBackend(TmuxService tmux, ClaudonyConfig config, AgentPoolConfig poolConfig,
+                                AgentPoolManagerRegistry managerRegistry) {
         this.tmux           = tmux;
         this.config         = config;
         this.ops            = new TmuxSessionOperations(tmux, SESSION_PREFIX, "claude");
@@ -32,6 +33,7 @@ public class ClaudonyAgentBackend implements AgentBackend {
                 new AgentSessionManagerConfig(poolConfig.minActive(), poolConfig.maxActive()),
                 ops
         );
+        managerRegistry.register("default", sessionManager);
     }
 
     public ClaudonyAgentBackend(AgentSessionManager sessionManager, SessionOperations ops,
@@ -43,10 +45,14 @@ public class ClaudonyAgentBackend implements AgentBackend {
     }
 
     public static ClaudonyAgentBackend fromDefinition(AgentPoolDefinition definition,
-                                                       TmuxService tmux, ClaudonyConfig config) {
+                                                       TmuxService tmux, ClaudonyConfig config,
+                                                       AgentPoolManagerRegistry managerRegistry) {
         String command = definition.agent().command() != null ? definition.agent().command() : "claude";
         var ops = new TmuxSessionOperations(tmux, SESSION_PREFIX, command);
         var sessionManager = new AgentSessionManager(definition.toSessionManagerConfig(), ops);
+        if (managerRegistry != null) {
+            managerRegistry.register(definition.agent().name(), sessionManager);
+        }
         return new ClaudonyAgentBackend(sessionManager, ops, tmux, config);
     }
 

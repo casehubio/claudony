@@ -19,6 +19,7 @@ class ClaudonyAgentBackendTest {
     private TmuxService tmux;
     private ClaudonyConfig config;
     private AgentPoolConfig poolConfig;
+    private AgentPoolManagerRegistry managerRegistry;
 
     private ClaudonyAgentBackend backend;
 
@@ -27,10 +28,11 @@ class ClaudonyAgentBackendTest {
         tmux       = mock(TmuxService.class);
         config     = mock(ClaudonyConfig.class);
         poolConfig = mock(AgentPoolConfig.class);
+        managerRegistry = new AgentPoolManagerRegistry();
         when(config.defaultWorkingDir()).thenReturn("/tmp/claudony-workspace");
         when(poolConfig.minActive()).thenReturn(0);
         when(poolConfig.maxActive()).thenReturn(10);
-        backend = new ClaudonyAgentBackend(tmux, config, poolConfig);
+        backend = new ClaudonyAgentBackend(tmux, config, poolConfig, managerRegistry);
     }
 
     @Test
@@ -60,7 +62,7 @@ class ClaudonyAgentBackendTest {
         var customPoolConfig = mock(AgentPoolConfig.class);
         when(customPoolConfig.minActive()).thenReturn(2);
         when(customPoolConfig.maxActive()).thenReturn(20);
-        var customBackend = new ClaudonyAgentBackend(tmux, config, customPoolConfig);
+        var customBackend = new ClaudonyAgentBackend(tmux, config, customPoolConfig, managerRegistry);
         var status        = customBackend.poolStatus();
         assertThat(status.min()).isEqualTo(2);
         assertThat(status.max()).isEqualTo(20);
@@ -137,7 +139,7 @@ class ClaudonyAgentBackendTest {
                     .maxActive(5)
                 .build();
 
-        var definedBackend = ClaudonyAgentBackend.fromDefinition(def, tmux, config);
+        var definedBackend = ClaudonyAgentBackend.fromDefinition(def, tmux, config, managerRegistry);
 
         assertThat(definedBackend.key()).isEqualTo("claudony");
         var status = definedBackend.poolStatus();
@@ -151,7 +153,7 @@ class ClaudonyAgentBackendTest {
                 .agent("worker")
                 .build();
 
-        var definedBackend = ClaudonyAgentBackend.fromDefinition(def, tmux, config);
+        var definedBackend = ClaudonyAgentBackend.fromDefinition(def, tmux, config, managerRegistry);
         assertThat(definedBackend).isNotNull();
         assertThat(definedBackend.poolStatus().min()).isZero();
         assertThat(definedBackend.poolStatus().max()).isEqualTo(10);
