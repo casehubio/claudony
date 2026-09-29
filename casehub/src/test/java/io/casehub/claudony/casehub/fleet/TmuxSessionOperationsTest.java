@@ -40,24 +40,32 @@ class TmuxSessionOperationsTest {
     void create_storesIdentityAsSessionOption() throws Exception {
         String sessionId = ops.create("reviewer", "/workspace/pr-42");
         verify(tmux).setSessionOption(sessionId, "@claudony_identity", "reviewer");
+        verify(tmux).setSessionOption(eq(sessionId), eq("@claudony_conversation_id"), any());
+        verify(tmux).setSessionOption(sessionId, "@claudony_working_dir", "/workspace/pr-42");
+        verify(tmux).setSessionOption(sessionId, "@claudony_state", "active");
     }
 
     @Test
     void suspend_killsSession() throws Exception {
+        when(tmux.panePid("claudony-pool-abc123")).thenReturn(12345L);
         ops.suspend("claudony-pool-abc123");
-        verify(tmux).killSession("claudony-pool-abc123");
+        verify(tmux).setSessionOption("claudony-pool-abc123", "remain-on-exit", "on");
+        verify(tmux).panePid("claudony-pool-abc123");
+        verify(tmux).setSessionOption("claudony-pool-abc123", "@claudony_state", "suspended");
     }
 
     @Test
     void suspend_toleratesAlreadyGone() throws Exception {
-        doThrow(new IOException("session not found")).when(tmux).killSession(any());
+        doThrow(new IOException("session not found")).when(tmux).setSessionOption(any(), any(), any());
         assertThatCode(() -> ops.suspend("claudony-pool-gone")).doesNotThrowAnyException();
     }
 
     @Test
     void resume_createsSessionWithContinueFlag() throws Exception {
         ops.resume("claudony-pool-abc123", "conv_xyz", "/workspace/pr-42");
-        verify(tmux).createWorkerSession("claudony-pool-abc123", "/workspace/pr-42", "claude -r conv_xyz");
+        verify(tmux).respawnPane("claudony-pool-abc123", "claude -r conv_xyz");
+        verify(tmux).setSessionOption("claudony-pool-abc123", "remain-on-exit", "off");
+        verify(tmux).setSessionOption("claudony-pool-abc123", "@claudony_state", "active");
     }
 
     @Test
@@ -122,7 +130,7 @@ class TmuxSessionOperationsTest {
     @Test
     void resume_withNullConversationId_usesDefaultCommand() throws Exception {
         ops.resume("claudony-pool-abc123", null, "/workspace/pr-42");
-        verify(tmux).createWorkerSession("claudony-pool-abc123", "/workspace/pr-42", "claude");
+        verify(tmux).respawnPane("claudony-pool-abc123", "claude");
     }
 
     @Test

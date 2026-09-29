@@ -3,9 +3,13 @@ package io.casehub.claudony.server;
 import io.casehub.claudony.Await;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 class TmuxServiceTest {
@@ -105,6 +109,39 @@ class TmuxServiceTest {
         var result = tmux.getSessionOption(TEST_SESSION, "@nonexistent_key");
         assertThat(result).isEmpty();
     }
+
+
+    @Test
+    void panePid_returnsValidPid_forRunningSession() throws Exception {
+        tmux.createWorkerSession(TEST_SESSION, System.getProperty("user.home"), "sleep 30");
+        Thread.sleep(300);
+        long pid = tmux.panePid(TEST_SESSION);
+        assertThat(pid).isGreaterThan(0);
+    }
+
+    @Test
+    void respawnPane_restartsProcessInExistingSession() throws Exception {
+        tmux.createWorkerSession(TEST_SESSION, System.getProperty("user.home"), "sleep 30");
+        Thread.sleep(300);
+        long originalPid = tmux.panePid(TEST_SESSION);
+        assertThat(originalPid).isGreaterThan(0);
+
+        tmux.setSessionOption(TEST_SESSION, "remain-on-exit", "on");
+        new ProcessBuilder("kill", String.valueOf(originalPid)).start().waitFor();
+        Await.until(() -> {
+            try {
+                long currentPid = tmux.panePid(TEST_SESSION);
+                return currentPid != originalPid;
+            } catch (Exception e) {return false;}
+        }, "process to die");
+
+        tmux.respawnPane(TEST_SESSION, "echo RESPAWNED");
+        Await.until(() -> {
+            try {return tmux.capturePane(TEST_SESSION, 20).contains("RESPAWNED");} catch (Exception e) {return false;}
+        }, "'RESPAWNED' to appear in pane output");
+        assertThat(tmux.sessionExists(TEST_SESSION)).isTrue();
+    }
+
 
     @Test
     void sendKeysLiteralModeDoesNotInterpretTmuxKeyNames() throws Exception {
