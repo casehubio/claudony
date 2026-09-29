@@ -13,11 +13,19 @@ public class AgentSessionManager {
     private final SessionOperations ops;
     private final Map<String, ManagedSession> sessions = new ConcurrentHashMap<>();
     private final ReentrantLock lock = new ReentrantLock();
+    private final EvictionPolicy evictionPolicy;
+
 
     public AgentSessionManager(AgentSessionManagerConfig config, SessionOperations ops) {
-        this.config = config;
-        this.ops = ops;
+        this(config, ops, new DefaultEvictionPolicy());
     }
+
+    public AgentSessionManager(AgentSessionManagerConfig config, SessionOperations ops, EvictionPolicy evictionPolicy) {
+        this.config         = config;
+        this.ops            = ops;
+        this.evictionPolicy = evictionPolicy;
+    }
+
 
     public ManagedSession acquireSession(String identity, String workingDir) {
         return acquireSession(identity, workingDir, null, WorkingDirPolicy.EXCLUSIVE);
@@ -198,9 +206,9 @@ public class AgentSessionManager {
 
         Instant now = Instant.now();
         var victim = sessions.values().stream()
-                .filter(s -> s.state() == SessionState.ACTIVE)
-                .max(Comparator.comparingDouble(s -> s.evictionScore(now)))
-                .orElseThrow(() -> new AgentPoolExhaustedException(status()));
+                             .filter(s -> s.state() == SessionState.ACTIVE)
+                             .max(Comparator.comparingDouble(s -> evictionPolicy.score(s, now)))
+                             .orElseThrow(() -> new AgentPoolExhaustedException(status()));
 
         ops.suspend(victim.instanceId());
         victim.setState(SessionState.SUSPENDED);

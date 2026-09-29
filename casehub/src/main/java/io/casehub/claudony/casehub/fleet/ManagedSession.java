@@ -40,9 +40,4 @@ public final class ManagedSession {
         this.lastMemoryBytes = memoryBytes;
     }
 
-    double evictionScore(Instant now) {
-        long   idleSeconds = java.time.Duration.between(lastInteraction, now).toSeconds();
-        double memoryMB    = lastMemoryBytes / (1024.0 * 1024.0);
-        return (idleSeconds + 1) * (1.0 + memoryMB / 100.0);
-    }
 }
