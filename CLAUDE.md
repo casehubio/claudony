@@ -222,6 +222,7 @@ docker compose up
 - Channel presence: `http://localhost:7777/api/mesh/channels/{name}/presence` (GET subscriber count)
 - Cases API: `http://localhost:7777/api/cases` (GET list, GET /{id} detail)
 - Actions API: `http://localhost:7777/api/actions` (GET unified action inbox)
+- Pools API: `http://localhost:7777/api/pools` (GET list, GET /{name} detail, GET /{name}/sessions, PATCH /{name}/capacity, PATCH /{name}/scaling)
 
 ---
 
@@ -473,6 +474,9 @@ claudony.case-worker-update=hybrid      # events-only | hybrid | registry-hooks
 claudony.case-worker-heartbeat-ms=30000 # heartbeat interval for hybrid strategy
 claudony.scaling.interval=15s       # global ScalingScheduler tick interval (Duration — e.g. 15s, 1m)
 claudony.work-service.url=                  # REST URL for external casehub-work service (Tier 1 inbox integration; omit for no-op)
+claudony.iotdb.enabled=false            # opt-in IoTDB time-series storage for pool metrics
+claudony.iotdb.host=localhost
+claudony.iotdb.port=6667
 # Production — optional; auto-generated and persisted to ~/.claudony/encryption-key on first run.
 # Set only if managing the key externally (secrets manager, etc.):
 # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY=<secret, >16 chars>
@@ -496,7 +500,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-09-29, after #206 ScalingPolicy SPI):** 16 in `claudony-core` + 394 in `claudony-casehub` + 29 in `claudony-testing` + ~436 in `claudony-app` = **~875 total**. #206 added PoolSnapshotTest (5), NoOpScalingPolicyTest (2), TargetTrackingPolicyTest (8), StepScalingPolicyTest (10), ScalingConfigTest (9), ScalingSchedulerTest (3), AgentPoolManagerRegistryTest (3), plus 7 new AgentSessionManagerTest tests (adjustMaxActive clamping, demand metrics) and 5 new AgentPoolYamlParserTest tests (scaling YAML parsing). #229 added DefaultEvictionPolicyTest (5) and EvictionPolicyPluggabilityTest (2). #239 added 4 FleetPoolIntegrationTest tests (suspend keeps tmux session, resume respawns pane, create stores metadata in tmux, bootstrap reconstructs from tmux) and updated existing suspend/resume test. #238 added FleetPoolIntegrationTest (7 tests: full chain YAML→registry→tmux, pool capacity eviction, pool status lifecycle, input/output round-trip, suspend/resume with real tmux, process memory observation, concurrent acquire thread safety). #235 replaced AgentPoolAnnotationScannerTest (10 tests) with AgentPoolSchemaTest (6), AgentPoolYamlParserTest validation tests (3), PoolDefinitionProcessorTest (2), PoolDefinitionSourceTest (3). #231–#234 added pool canonical layer tests. Previous baseline: ~721 (2026-09-22, after #205). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-09-30, after #208 ops pool provisioning):** 16 in `claudony-core` + ~425 in `claudony-casehub` + 29 in `claudony-testing` + ~441 in `claudony-app` = **~911 total**. #208 added ClaudonySessionSenderTest (5), PoolResourceTest (9), CredentialRoleAugmentorTest (2), PoolEventEmitterTest (5), IoTDBFlatLabelAdapterTest (4), PoolMetricsRegistrarTest (5), ScalingStateTest (5), ScalingConfigTest (4 new type() tests), ScalingSchedulerTest (2 new event emission tests), AgentPoolDefinitionRegistryUpdateTest (4). Previous baseline: ~875 (2026-09-29, after #206). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties

@@ -15,20 +15,15 @@ public class CredentialRoleAugmentor implements SecurityIdentityAugmentor {
 
     @Override
     public Uni<SecurityIdentity> augment(SecurityIdentity identity, AuthenticationRequestContext context) {
-        if (identity.isAnonymous()) return Uni.createFrom().item(identity);
+        if (identity.isAnonymous()) {return Uni.createFrom().item(identity);}
         var username = identity.getPrincipal().getName();
-        return credentialStore.findByUsername(username)
-            .onItem().transform(records -> {
-                if (records == null || records.isEmpty()) return identity;
-                var stored = credentialStore.loadForTest();
-                var match = stored.stream()
-                    .filter(c -> c.username().equals(username))
-                    .findFirst()
-                    .orElse(null);
-                if (match == null || match.roles().isEmpty()) return identity;
-                var builder = QuarkusSecurityIdentity.builder(identity);
-                match.roles().forEach(builder::addRole);
-                return builder.build();
-            });
+        return Uni.createFrom().item(() -> credentialStore.findRolesByUsername(username))
+                  .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
+                  .onItem().transform(roles -> {
+                    if (roles.isEmpty()) {return identity;}
+                    var builder = QuarkusSecurityIdentity.builder(identity);
+                    roles.forEach(builder::addRole);
+                    return builder.build();
+                });
     }
 }

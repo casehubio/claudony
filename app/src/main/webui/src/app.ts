@@ -6,6 +6,7 @@ import "./components/claudony-fleet-panel";
 import "./components/claudony-mesh-panel";
 import "./components/claudony-case-browser";
 import "./components/claudony-action-inbox";
+import "./components/claudony-pool-panel";
 
 initTheme();
 
@@ -14,11 +15,13 @@ registerPanel("fleet-panel", "claudony-fleet-panel");
 registerPanel("mesh-panel", "claudony-mesh-panel");
 registerPanel("case-browser", "claudony-case-browser");
 registerPanel("action-inbox", "claudony-action-inbox");
+registerPanel("pool-panel", "claudony-pool-panel");
 
 const app = tabs(
   ["Sessions", hostPanel("session-panel")],
   ["Cases", hostPanel("case-browser")],
   ["Inbox", hostPanel("action-inbox")],
+  ["Pools", hostPanel("pool-panel")],
   ["Fleet", hostPanel("fleet-panel")],
   ["Mesh", hostPanel("mesh-panel")],
 );

@@ -33,13 +33,15 @@ public class PoolResource {
 
     @GET
     public List<PoolSummary> listPools() {
-        return mgrRegistry.poolNames().stream().map(name -> {
-            var mgr = mgrRegistry.get(name).orElseThrow();
-            var scalingType = defRegistry.get(name)
-                .map(d -> d.pool().scaling().type())
-                .orElse("none");
-            return new PoolSummary(name, mgr.status(), scalingType);
-        }).toList();
+        return mgrRegistry.poolNames().stream()
+                          .map(name -> mgrRegistry.get(name).map(mgr -> {
+                              var scalingType = defRegistry.get(name)
+                                                           .map(d -> d.pool().scaling().type())
+                                                           .orElse("none");
+                              return new PoolSummary(name, mgr.status(), scalingType);
+                          }).orElse(null))
+                          .filter(java.util.Objects::nonNull)
+                          .toList();
     }
 
     @GET @Path("/{name}")
@@ -167,9 +169,13 @@ public class PoolResource {
     }
 
     private Duration parseDuration(String s) {
-        if (s.endsWith("s")) {return Duration.ofSeconds(Long.parseLong(s.replace("s", "")));}
-        if (s.endsWith("m")) {return Duration.ofMinutes(Long.parseLong(s.replace("m", "")));}
-        return Duration.ofSeconds(Long.parseLong(s));
+        try {
+            if (s.endsWith("s")) {return Duration.ofSeconds(Long.parseLong(s.substring(0, s.length() - 1)));}
+            if (s.endsWith("m")) {return Duration.ofMinutes(Long.parseLong(s.substring(0, s.length() - 1)));}
+            return Duration.ofSeconds(Long.parseLong(s));
+        } catch (NumberFormatException e) {
+            throw new jakarta.ws.rs.BadRequestException("Invalid duration: " + s);
+        }
     }
 
 
