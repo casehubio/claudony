@@ -6,11 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Registry of {@link AgentPoolDefinition}s keyed by agent name.
- * Populated at startup from annotations ({@code @AgentPool}), YAML config, or programmatic registration.
- * Thread-safe — concurrent reads and writes are supported.
- */
+@jakarta.enterprise.context.ApplicationScoped
 public class AgentPoolDefinitionRegistry {
 
     private final Map<String, AgentPoolDefinition> definitions = new ConcurrentHashMap<>();
@@ -19,7 +15,7 @@ public class AgentPoolDefinitionRegistry {
         var prev = definitions.putIfAbsent(definition.agent().name(), definition);
         if (prev != null) {
             throw new IllegalStateException(
-                    "Duplicate agent pool definition for '" + definition.agent().name() + "'");
+                    "Pool definition already registered for agent: " + definition.agent().name());
         }
     }
 
@@ -28,11 +24,11 @@ public class AgentPoolDefinitionRegistry {
     }
 
     public Collection<AgentPoolDefinition> all() {
-        return definitions.values();
+        return java.util.List.copyOf(definitions.values());
     }
 
     public Set<String> names() {
-        return definitions.keySet();
+        return Set.copyOf(definitions.keySet());
     }
 
     public boolean isEmpty() {
@@ -42,4 +38,21 @@ public class AgentPoolDefinitionRegistry {
     public int size() {
         return definitions.size();
     }
+
+    public void updateScaling(String agentName, ScalingConfig newScaling) {
+        var existing = definitions.get(agentName);
+        if (existing == null) {throw new IllegalArgumentException("Pool not found: " + agentName);}
+        var oldPool = existing.pool();
+        var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), newScaling);
+        definitions.put(agentName, new AgentPoolDefinition(existing.agent(), newPool));
+    }
+
+    public void updateCapacity(String agentName, int minActive, int maxActive) {
+        var existing = definitions.get(agentName);
+        if (existing == null) {throw new IllegalArgumentException("Pool not found: " + agentName);}
+        var oldPool = existing.pool();
+        var newPool = new AgentPoolDefinition.PoolConfig(minActive, maxActive, oldPool.eviction(), oldPool.scaling());
+        definitions.put(agentName, new AgentPoolDefinition(existing.agent(), newPool));
+    }
+
 }

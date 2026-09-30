@@ -17,7 +17,7 @@ import io.casehub.claudony.server.model.SessionResponse;
 import io.casehub.claudony.server.model.SessionStatus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.ConflictException;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.NotFoundException;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
@@ -148,7 +148,7 @@ public class SessionService {
         var existingByName = registry.existsByName(name);
         if (existingByName) {
             if (!overwrite) {
-                throw new ConflictException("Session '" + name + "' already exists");
+                throw new WebApplicationException("Session '" + name + "' already exists", 409);
             }
             var existingSession = registry.allUnscoped().stream()
                     .filter(s -> s.name().equals(name))
@@ -200,7 +200,7 @@ public class SessionService {
         try {
             var newTmuxName = config.tmuxPrefix() + newName;
             if (registry.existsByName(newTmuxName)) {
-                throw new ConflictException("Session '" + newTmuxName + "' already exists");
+                throw new WebApplicationException("Session '" + newTmuxName + "' already exists", 409);
             }
             var p = new ProcessBuilder("tmux", "rename-session", "-t", session.name(), newTmuxName)
                     .redirectErrorStream(true).start();
