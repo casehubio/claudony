@@ -132,4 +132,58 @@ class ScalingSchedulerTest {
         var scheduler = new ScalingScheduler(defRegistry, mgrRegistry);
         assertThat(scheduler.scalingState("nonexistent")).isEmpty();
     }
+
+    @Test
+    void scalingDecisionEmitsEvent() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("test").pool().maxActive(20)
+                                     .scaling(new ScalingConfig.TargetTrackingConfig(0.7, null, null))
+                                     .build();
+        defRegistry.register(def);
+
+        var manager = createManager(0, 20);
+        manager.adjustMaxActive(10);
+        mgrRegistry.register("test", manager);
+
+        for (int i = 0; i < 8; i++) {
+            manager.acquireSession("test", "/ws/" + i, null, WorkingDirPolicy.SHARED_READ);
+        }
+
+        var emittedTopics = new java.util.ArrayList<String>();
+        var emitter = new PoolEventEmitter((topic, json) -> {
+            emittedTopics.add(topic);
+            return 1L;
+        });
+
+        var scheduler = new ScalingScheduler(defRegistry, mgrRegistry, emitter);
+        scheduler.tick();
+
+        assertThat(emittedTopics).containsExactly("pool:test:scaling");
+    }
+
+    @Test
+    void noEventWhenNoScalingNeeded() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("test").pool().maxActive(10)
+                                     .scaling(new ScalingConfig.TargetTrackingConfig(0.7, null, null))
+                                     .build();
+        defRegistry.register(def);
+
+        var manager = createManager(0, 10);
+        mgrRegistry.register("test", manager);
+        for (int i = 0; i < 7; i++) {
+            manager.acquireSession("test", "/ws/" + i, null, WorkingDirPolicy.SHARED_READ);
+        }
+
+        var emittedTopics = new java.util.ArrayList<String>();
+        var emitter = new PoolEventEmitter((topic, json) -> {
+            emittedTopics.add(topic);
+            return 1L;
+        });
+
+        var scheduler = new ScalingScheduler(defRegistry, mgrRegistry, emitter);
+        scheduler.tick();
+
+        assertThat(emittedTopics).isEmpty();
+    }
 }

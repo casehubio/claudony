@@ -20,13 +20,33 @@ public class ScalingScheduler {
     private final Map<String, ScalingState> scalingStates = new ConcurrentHashMap<>();
     private final Map<String, ScalingPolicy> policyCache = new ConcurrentHashMap<>();
     private final java.util.Set<String> failedPolicyLookups = ConcurrentHashMap.newKeySet();
+    private final PoolEventEmitter      eventEmitter;
+
 
     @Inject
     public ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
-                            AgentPoolManagerRegistry mgrRegistry) {
-        this.defRegistry = defRegistry;
-        this.mgrRegistry = mgrRegistry;
+                            AgentPoolManagerRegistry mgrRegistry,
+                            jakarta.enterprise.inject.Instance<PoolEventEmitter> eventEmitterInstance) {
+        this.defRegistry  = defRegistry;
+        this.mgrRegistry  = mgrRegistry;
+        this.eventEmitter = eventEmitterInstance.isUnsatisfied() ? null : eventEmitterInstance.get();
     }
+
+    ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
+                     AgentPoolManagerRegistry mgrRegistry) {
+        this.defRegistry  = defRegistry;
+        this.mgrRegistry  = mgrRegistry;
+        this.eventEmitter = null;
+    }
+
+    ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
+                     AgentPoolManagerRegistry mgrRegistry,
+                     PoolEventEmitter eventEmitter) {
+        this.defRegistry  = defRegistry;
+        this.mgrRegistry  = mgrRegistry;
+        this.eventEmitter = eventEmitter;
+    }
+
 
     @Scheduled(every = "${claudony.scaling.interval:15s}",
                concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
@@ -95,6 +115,9 @@ public class ScalingScheduler {
                 if (decision.direction() == ScalingDirection.OUT) {
                     scaleOutTime = now;
                 } else if (decision.direction() == ScalingDirection.IN) {scaleInTime = now;}
+                if (eventEmitter != null) {
+                    eventEmitter.emitScalingDecision(poolName, decision, currentMax, actualMax);
+                }
             }
         }
 
