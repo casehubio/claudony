@@ -103,4 +103,33 @@ class ScalingSchedulerTest {
         scheduler.tick();
         assertThat(manager.status().max()).isEqualTo(maxAfterFirst);
     }
+
+    @Test
+    void scalingStateRetainedAfterTick() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("test").pool().maxActive(5)
+                                     .scaling(new ScalingConfig.TargetTrackingConfig(0.5, Duration.ofSeconds(1), Duration.ofSeconds(1)))
+                                     .build();
+        defRegistry.register(def);
+        var mgr = createManager(0, 5);
+        mgrRegistry.register("test", mgr);
+        mgr.acquireSession("id", "/tmp");
+        mgr.acquireSession("id2", "/tmp2");
+        mgr.acquireSession("id3", "/tmp3");
+
+        var scheduler = new ScalingScheduler(defRegistry, mgrRegistry);
+        scheduler.tick();
+
+        var state = scheduler.scalingState("test");
+        assertThat(state).isPresent();
+        assertThat(state.get().lastDecision()).isNotNull();
+        assertThat(state.get().lastDecision().direction()).isEqualTo(ScalingDirection.OUT);
+        assertThat(state.get().config()).isInstanceOf(ScalingConfig.TargetTrackingConfig.class);
+    }
+
+    @Test
+    void scalingStateEmptyForUnknownPool() {
+        var scheduler = new ScalingScheduler(defRegistry, mgrRegistry);
+        assertThat(scheduler.scalingState("nonexistent")).isEmpty();
+    }
 }

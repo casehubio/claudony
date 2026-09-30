@@ -68,6 +68,31 @@ class ScalingConfigTest {
         assertThat(ScalingConfig.NoScalingConfig.INSTANCE.scaleInCooldown()).isEqualTo(Duration.ZERO);
     }
 
+
+    @Test
+    void targetTrackingType() {
+        var config = new ScalingConfig.TargetTrackingConfig(0.7, null, null);
+        assertThat(config.type()).isEqualTo("target-tracking");
+    }
+
+    @Test
+    void stepType() {
+        var config = new ScalingConfig.StepConfig(
+                List.of(new ScalingStep(0.8, 1)), null, null);
+        assertThat(config.type()).isEqualTo("step");
+    }
+
+    @Test
+    void customType() {
+        var config = new ScalingConfig.CustomScalingConfig("myBean", null, null);
+        assertThat(config.type()).isEqualTo("custom");
+    }
+
+    @Test
+    void noneType() {
+        assertThat(ScalingConfig.NoScalingConfig.INSTANCE.type()).isEqualTo("none");
+    }
+
     @Test
     void sealedHierarchyPatternMatching() {
         ScalingConfig config = new ScalingConfig.TargetTrackingConfig(0.7, null, null);
