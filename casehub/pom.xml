@@ -130,6 +130,11 @@
             <artifactId>casehub-qhorus-testing</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Micrometer core API for pool metrics -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

@@ -13,6 +13,16 @@ public sealed interface ScalingConfig
     Duration cooldown();
     Duration scaleInCooldown();
 
+    default String type() {
+        return switch (this) {
+            case TargetTrackingConfig t -> "target-tracking";
+            case StepConfig s -> "step";
+            case CustomScalingConfig c -> "custom";
+            case NoScalingConfig n -> "none";
+        };
+    }
+
+
     record TargetTrackingConfig(
         double targetFillRatio,
         Duration cooldown,

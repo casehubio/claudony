@@ -1,8 +1,8 @@
 package io.casehub.claudony.casehub.fleet;
 
+import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import io.quarkus.scheduler.Scheduled;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -17,8 +17,7 @@ public class ScalingScheduler {
 
     private final AgentPoolDefinitionRegistry defRegistry;
     private final AgentPoolManagerRegistry mgrRegistry;
-    private final Map<String, Instant> lastScaleOut = new ConcurrentHashMap<>();
-    private final Map<String, Instant> lastScaleIn = new ConcurrentHashMap<>();
+    private final Map<String, ScalingState> scalingStates = new ConcurrentHashMap<>();
     private final Map<String, ScalingPolicy> policyCache = new ConcurrentHashMap<>();
     private final java.util.Set<String> failedPolicyLookups = ConcurrentHashMap.newKeySet();
 
@@ -41,44 +40,65 @@ public class ScalingScheduler {
         }
     }
 
+    public java.util.Optional<ScalingState> scalingState(String poolName) {
+        return java.util.Optional.ofNullable(scalingStates.get(poolName));
+    }
+
+    public void invalidatePolicy(String poolName) {
+        policyCache.remove(poolName);
+        failedPolicyLookups.remove(poolName);
+    }
+
+
     private void evaluatePool(String poolName) {
-        var manager = mgrRegistry.get(poolName).orElse(null);
+        var manager    = mgrRegistry.get(poolName).orElse(null);
         var definition = defRegistry.get(poolName).orElse(null);
-        if (manager == null || definition == null) return;
+        if (manager == null || definition == null) {return;}
 
         var scalingConfig = definition.pool().scaling();
-        if (scalingConfig instanceof ScalingConfig.NoScalingConfig) return;
+        if (scalingConfig instanceof ScalingConfig.NoScalingConfig) {return;}
 
-        var demand = manager.snapshotAndResetDemandMetrics();
+        var demand        = manager.snapshotAndResetDemandMetrics();
+        var previousState = scalingStates.get(poolName);
 
-        if (inCooldown(poolName, scalingConfig)) return;
+        if (previousState != null && previousState.cooldownRemaining(Instant.now()).compareTo(Duration.ZERO) > 0) {
+            return;
+        }
 
         var status = manager.status();
         var snapshot = new PoolSnapshot(
-            status.active(), status.idle(), status.min(), status.max(), demand);
+                status.active(), status.idle(), status.min(), status.max(), demand);
 
-        if (failedPolicyLookups.contains(poolName)) return;
+        if (failedPolicyLookups.contains(poolName)) {return;}
         var policy = policyCache.computeIfAbsent(poolName, k -> {
             var p = createPolicy(scalingConfig);
-            if (p == null) failedPolicyLookups.add(poolName);
+            if (p == null) {failedPolicyLookups.add(poolName);}
             return p;
         });
-        if (policy == null) return;
+        if (policy == null) {return;}
 
         var decision = policy.evaluate(snapshot);
+
+        Instant now          = Instant.now();
+        Instant scaleOutTime = previousState != null ? previousState.lastScaleOut() : null;
+        Instant scaleInTime  = previousState != null ? previousState.lastScaleIn() : null;
 
         if (decision.direction() != ScalingDirection.NONE) {
             int currentMax = status.max();
             int newMax = switch (decision.direction()) {
                 case OUT -> currentMax + decision.count();
-                case IN  -> currentMax - decision.count();
+                case IN -> currentMax - decision.count();
                 case NONE -> currentMax;
             };
             int actualMax = manager.adjustMaxActive(newMax);
             if (actualMax != currentMax) {
-                recordCooldown(poolName, decision.direction());
+                if (decision.direction() == ScalingDirection.OUT) {
+                    scaleOutTime = now;
+                } else if (decision.direction() == ScalingDirection.IN) {scaleInTime = now;}
             }
         }
+
+        scalingStates.put(poolName, new ScalingState(decision, now, scaleOutTime, scaleInTime, scalingConfig));
     }
 
     private ScalingPolicy createPolicy(ScalingConfig config) {
@@ -111,21 +131,4 @@ public class ScalingScheduler {
         return null;
     }
 
-    private boolean inCooldown(String poolName, ScalingConfig config) {
-        Instant now = Instant.now();
-        var outTime = lastScaleOut.get(poolName);
-        if (outTime != null && Duration.between(outTime, now).compareTo(config.cooldown()) < 0) {
-            return true;
-        }
-        var inTime = lastScaleIn.get(poolName);
-        return inTime != null && Duration.between(inTime, now).compareTo(config.scaleInCooldown()) < 0;
-    }
-
-    private void recordCooldown(String poolName, ScalingDirection direction) {
-        if (direction == ScalingDirection.OUT) {
-            lastScaleOut.put(poolName, Instant.now());
-        } else if (direction == ScalingDirection.IN) {
-            lastScaleIn.put(poolName, Instant.now());
-        }
-    }
 }
