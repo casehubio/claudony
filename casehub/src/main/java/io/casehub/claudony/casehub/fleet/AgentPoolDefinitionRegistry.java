@@ -40,19 +40,21 @@ public class AgentPoolDefinitionRegistry {
     }
 
     public void updateScaling(String agentName, ScalingConfig newScaling) {
-        var existing = definitions.get(agentName);
-        if (existing == null) {throw new IllegalArgumentException("Pool not found: " + agentName);}
-        var oldPool = existing.pool();
-        var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), newScaling);
-        definitions.put(agentName, new AgentPoolDefinition(existing.agent(), newPool));
+        definitions.compute(agentName, (k, existing) -> {
+            if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
+            var oldPool = existing.pool();
+            var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), newScaling);
+            return new AgentPoolDefinition(existing.agent(), newPool);
+        });
     }
 
     public void updateCapacity(String agentName, int minActive, int maxActive) {
-        var existing = definitions.get(agentName);
-        if (existing == null) {throw new IllegalArgumentException("Pool not found: " + agentName);}
-        var oldPool = existing.pool();
-        var newPool = new AgentPoolDefinition.PoolConfig(minActive, maxActive, oldPool.eviction(), oldPool.scaling());
-        definitions.put(agentName, new AgentPoolDefinition(existing.agent(), newPool));
+        definitions.compute(agentName, (k, existing) -> {
+            if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
+            var oldPool = existing.pool();
+            var newPool = new AgentPoolDefinition.PoolConfig(minActive, maxActive, oldPool.eviction(), oldPool.scaling());
+            return new AgentPoolDefinition(existing.agent(), newPool);
+        });
     }
 
 }

@@ -63,6 +63,15 @@ public class CredentialStore implements WebAuthnUserProvider {
         return load().isEmpty();
     }
 
+    public List<String> findRolesByUsername(String username) {
+        return load().stream()
+                     .filter(c -> c.username().equals(username))
+                     .findFirst()
+                     .map(StoredCredential::roles)
+                     .orElse(List.of());
+    }
+
+
     @Override
     public Uni<List<WebAuthnCredentialRecord>> findByUsername(String username) {
         return Uni.createFrom()
