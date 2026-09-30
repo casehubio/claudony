@@ -10,6 +10,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
+@Deprecated(since = "0.2", forRemoval = true)
 @HandWrittenEndpoint("Agent pool observability — internal infrastructure, not domain CRUD")
 @Path("/api/agent-pools")
 @Authenticated

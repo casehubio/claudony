@@ -113,7 +113,7 @@ public class PeerRegistry {
     }
 
     /** Returns all PeerEntry objects — package-private, used by health check loop inside this package. */
-    List<PeerEntry> getAllEntries() {
+    public List<PeerEntry> getAllEntries() {
         return List.copyOf(peers.values());
     }
 

@@ -188,6 +188,11 @@ public class AgentSessionManager {
         return sessions.get(instanceId);
     }
 
+    public java.util.Collection<ManagedSession> sessions() {
+        return java.util.List.copyOf(sessions.values());
+    }
+
+
     public int activeCount() {
         return (int) sessions.values().stream()
                 .filter(s -> s.state() == SessionState.ACTIVE).count();

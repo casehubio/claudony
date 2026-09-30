@@ -24,15 +24,19 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class CredentialStore implements WebAuthnUserProvider {
 
-    // Persisted format. publicKey is Base64-encoded COSE key bytes; aaguid is UUID string.
     record StoredCredential(
-        String username,
-        String credentialId,
-        String aaguid,
-        String publicKey,
-        long publicKeyAlgorithm,
-        long counter
-    ) {}
+            String username,
+            String credentialId,
+            String aaguid,
+            String publicKey,
+            long publicKeyAlgorithm,
+            long counter,
+            java.util.List<String> roles
+    ) {
+        public StoredCredential {
+            if (roles == null) {roles = java.util.List.of();}
+        }
+    }
 
     private static final Logger LOG = Logger.getLogger(CredentialStore.class);
 
@@ -119,7 +123,7 @@ public class CredentialStore implements WebAuthnUserProvider {
             var creds = new ArrayList<>(load());
             creds.add(new StoredCredential(
                 username, credentialId, parsedAaguid.toString(),
-                Base64.getEncoder().encodeToString(pubKeyBytes), -7L, counter));
+                Base64.getEncoder().encodeToString(pubKeyBytes), -7L, counter, null));
             save(creds);
         }
     }
@@ -139,15 +143,18 @@ public class CredentialStore implements WebAuthnUserProvider {
     private void doStore(WebAuthnCredentialRecord record) {
         var data = record.getRequiredPersistedData();
         synchronized (this) {
-            var creds = new ArrayList<>(load());
+            var     creds           = new ArrayList<>(load());
+            boolean firstCredential = creds.isEmpty();
             creds.removeIf(c -> c.credentialId().equals(data.credentialId()));
+            var roles = firstCredential ? java.util.List.of("admin") : java.util.List.<String>of();
             creds.add(new StoredCredential(
-                data.username(),
-                data.credentialId(),
-                data.aaguid().toString(),
-                Base64.getEncoder().encodeToString(data.publicKey()),
-                data.publicKeyAlgorithm(),
-                data.counter()
+                    data.username(),
+                    data.credentialId(),
+                    data.aaguid().toString(),
+                    Base64.getEncoder().encodeToString(data.publicKey()),
+                    data.publicKeyAlgorithm(),
+                    data.counter(),
+                    roles
             ));
             save(creds);
         }
@@ -156,11 +163,11 @@ public class CredentialStore implements WebAuthnUserProvider {
     private void doUpdate(String credentialId, long newCounter) {
         synchronized (this) {
             var creds = load().stream()
-                .map(c -> c.credentialId().equals(credentialId)
-                    ? new StoredCredential(c.username(), c.credentialId(), c.aaguid(),
-                                          c.publicKey(), c.publicKeyAlgorithm(), newCounter)
-                    : c)
-                .collect(Collectors.toCollection(ArrayList::new));
+                              .map(c -> c.credentialId().equals(credentialId)
+                                        ? new StoredCredential(c.username(), c.credentialId(), c.aaguid(),
+                                                               c.publicKey(), c.publicKeyAlgorithm(), newCounter, c.roles())
+                                        : c)
+                              .collect(Collectors.toCollection(ArrayList::new));
             save(creds);
         }
     }

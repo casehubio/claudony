@@ -9,14 +9,14 @@ import java.util.List;
  * Package-private — only PeerRegistry and other fleet classes use this directly.
  * External callers get PeerRecord snapshots via PeerEntry.toRecord().
  */
-final class PeerEntry {
+public final class PeerEntry {
 
     static final long INITIAL_BACKOFF_MS = 30_000L;
     static final long MAX_BACKOFF_MS = 300_000L; // 5 minutes
     static final int FAILURE_THRESHOLD = 3;
 
-    final String id;
-    final String url;
+    public final String id;
+    public final String url;
     volatile String name;
     final DiscoverySource source;
     volatile TerminalMode terminalMode;
