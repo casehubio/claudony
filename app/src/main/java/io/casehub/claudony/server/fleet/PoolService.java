@@ -112,6 +112,19 @@ public class PoolService {
         mgr.destroySession(id);
     }
 
+    public String buildPoolSnapshot(String name) {
+        try {
+            var detail = getPool(name);
+            var sessions = listSessions(name);
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            mapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            return mapper.writeValueAsString(java.util.Map.of("detail", detail, "sessions", sessions));
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
     ScalingConfig parseScalingConfig(PoolUpdateRequest u) {
         var cooldown = u.cooldown() != null ? parseDuration(u.cooldown()) : null;
         var scaleInCooldown = u.scaleInCooldown() != null ? parseDuration(u.scaleInCooldown()) : null;
