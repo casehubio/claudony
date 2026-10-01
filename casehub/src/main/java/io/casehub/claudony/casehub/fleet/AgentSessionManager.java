@@ -18,6 +18,9 @@ public class AgentSessionManager {
     private          int         acquireCount;
     private          int         evictionCount;
     private          int         exhaustionCount;
+    private          long        totalAcquireNanos;
+    private          long        maxAcquireNanos;
+    private volatile PoolSnapshot.DemandMetrics lastDemandSnapshot = PoolSnapshot.DemandMetrics.ZERO;
 
 
     public AgentSessionManager(AgentSessionManagerConfig config, SessionOperations ops) {this(config, ops, new DefaultEvictionPolicy());}
@@ -40,6 +43,7 @@ public class AgentSessionManager {
 
     public ManagedSession acquireSession(String identity, String workingDir,
                                          String command, WorkingDirPolicy policy) {
+        long start = System.nanoTime();
         lock.lock();
         try {
             acquireCount++;
@@ -51,6 +55,9 @@ public class AgentSessionManager {
                                     .findFirst();
 
             if (suspended.isPresent()) {
+                long elapsed = System.nanoTime() - start;
+                totalAcquireNanos += elapsed;
+                maxAcquireNanos = Math.max(maxAcquireNanos, elapsed);
                 return doResume(suspended.get());
             }
 
@@ -72,7 +79,11 @@ public class AgentSessionManager {
                 evictOne();
             }
 
-            return command != null ? doCreate(identity, workingDir, command) : doCreate(identity, workingDir);
+            var  session = command != null ? doCreate(identity, workingDir, command) : doCreate(identity, workingDir);
+            long elapsed = System.nanoTime() - start;
+            totalAcquireNanos += elapsed;
+            maxAcquireNanos = Math.max(maxAcquireNanos, elapsed);
+            return session;
         } finally {
             lock.unlock();
         }
@@ -134,17 +145,32 @@ public class AgentSessionManager {
         }
     }
 
-    public PoolSnapshot.DemandMetrics snapshotAndResetDemandMetrics() {
+    public PoolSnapshot.DemandMetrics snapshotAndResetDemandMetrics(java.util.Map<String, Double> externalMetrics) {
         lock.lock();
         try {
-            var metrics = new PoolSnapshot.DemandMetrics(evictionCount, exhaustionCount, acquireCount);
-            evictionCount   = 0;
-            exhaustionCount = 0;
-            acquireCount    = 0;
+            long avgNanos = acquireCount > 0 ? totalAcquireNanos / acquireCount : 0;
+            var metrics = new PoolSnapshot.DemandMetrics(
+                    evictionCount, exhaustionCount, acquireCount,
+                    avgNanos, maxAcquireNanos,
+                    externalMetrics != null ? externalMetrics : java.util.Map.of());
+            evictionCount      = 0;
+            exhaustionCount    = 0;
+            acquireCount       = 0;
+            totalAcquireNanos  = 0;
+            maxAcquireNanos    = 0;
+            lastDemandSnapshot = metrics;
             return metrics;
         } finally {
             lock.unlock();
         }
+    }
+
+    public PoolSnapshot.DemandMetrics snapshotAndResetDemandMetrics() {
+        return snapshotAndResetDemandMetrics(java.util.Map.of());
+    }
+
+    public PoolSnapshot.DemandMetrics lastDemandSnapshot() {
+        return lastDemandSnapshot;
     }
 
 

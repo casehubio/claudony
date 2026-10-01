@@ -39,6 +39,14 @@ public final class AgentPoolSchema {
                 Arrays.stream(EvictionStrategy.values()).map(Enum::name).toList(),
                 null, "Eviction strategy when pool is at capacity"));
 
+        inputs.put("pool.scaling.exhaustion-threshold", new StepParameter(
+                StepParameterType.INTEGER, false, null, null, null,
+                "Exhaustion count per tick that triggers scale-out (demand-pressure)"));
+
+        inputs.put("pool.scaling.latency-threshold-ms", new StepParameter(
+                StepParameterType.INTEGER, false, null, null, null,
+                "Average acquire latency in ms that triggers scale-out (demand-pressure)"));
+
         DEFINITION = new StepDefinition("agent-pool", "Agent pool definition", inputs, Map.of(), null);
     }
 

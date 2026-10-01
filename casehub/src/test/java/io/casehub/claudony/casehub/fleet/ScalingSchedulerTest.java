@@ -186,4 +186,55 @@ class ScalingSchedulerTest {
 
         assertThat(emittedTopics).isEmpty();
     }
+
+    @Test
+    void tickCollectsExternalMetricsAndPassesToSnapshot() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("test").pool().maxActive(10)
+                                     .scaling(new ScalingConfig.TargetTrackingConfig(0.7, null, null))
+                                     .build();
+        defRegistry.register(def);
+
+        var manager = createManager(0, 10);
+        mgrRegistry.register("test", manager);
+        manager.acquireSession("test", "/ws/1", null, WorkingDirPolicy.SHARED_READ);
+
+        DemandMetricsSource source = poolName ->
+                                             java.util.Map.of("http.queue_depth", 3.0);
+
+        var scheduler = new ScalingScheduler(defRegistry, mgrRegistry,
+                                             null, java.util.List.of(source));
+        scheduler.tick();
+
+        var lastSnapshot = manager.lastDemandSnapshot();
+        assertThat(lastSnapshot.externalMetrics())
+                .containsEntry("http.queue_depth", 3.0);
+    }
+
+    @Test
+    void tickHandlesFailingMetricsSourceGracefully() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("test").pool().maxActive(10)
+                                     .scaling(new ScalingConfig.TargetTrackingConfig(0.7, null, null))
+                                     .build();
+        defRegistry.register(def);
+
+        var manager = createManager(0, 10);
+        mgrRegistry.register("test", manager);
+        manager.acquireSession("test", "/ws/1", null, WorkingDirPolicy.SHARED_READ);
+
+        DemandMetricsSource failingSource = poolName -> {
+            throw new RuntimeException("source down");
+        };
+        DemandMetricsSource goodSource = poolName ->
+                                                 java.util.Map.of("healthy", 1.0);
+
+        var scheduler = new ScalingScheduler(defRegistry, mgrRegistry,
+                                             null, java.util.List.of(failingSource, goodSource));
+        scheduler.tick();
+
+        var lastSnapshot = manager.lastDemandSnapshot();
+        assertThat(lastSnapshot.externalMetrics())
+                .containsEntry("healthy", 1.0);
+    }
 }

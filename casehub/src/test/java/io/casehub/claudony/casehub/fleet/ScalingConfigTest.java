@@ -101,7 +101,36 @@ class ScalingConfigTest {
             case ScalingConfig.StepConfig s -> "step";
             case ScalingConfig.CustomScalingConfig c -> "custom";
             case ScalingConfig.NoScalingConfig n -> "none";
+            case ScalingConfig.DemandPressureConfig d -> "demand-pressure";
         };
         assertThat(type).isEqualTo("target");
+    }
+
+    @Test
+    void demandPressureConfigValidatesFields() {
+        var config = new ScalingConfig.DemandPressureConfig(2, 500, null, null);
+        assertThat(config.exhaustionThreshold()).isEqualTo(2);
+        assertThat(config.latencyThresholdMs()).isEqualTo(500);
+        assertThat(config.cooldown()).isEqualTo(Duration.ofSeconds(60));
+    }
+
+    @Test
+    void demandPressureConfigType() {
+        var config = new ScalingConfig.DemandPressureConfig(1, 100, null, null);
+        assertThat(config.type()).isEqualTo("demand-pressure");
+    }
+
+    @Test
+    void demandPressureConfigRejectsNegativeExhaustionThreshold() {
+        assertThatThrownBy(() ->
+                                   new ScalingConfig.DemandPressureConfig(-1, 500, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void demandPressureConfigRejectsZeroLatencyThreshold() {
+        assertThatThrownBy(() ->
+                                   new ScalingConfig.DemandPressureConfig(2, 0, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

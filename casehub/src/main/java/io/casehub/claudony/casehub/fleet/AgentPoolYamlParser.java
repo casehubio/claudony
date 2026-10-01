@@ -138,6 +138,20 @@ public class AgentPoolYamlParser {
                 }).toList();
                 yield new ScalingConfig.StepConfig(steps, cooldown, scaleInCooldown);
             }
+            case "demand-pressure" -> {
+                var exhaustionThreshold = scalingMap.get("exhaustion-threshold");
+                if (exhaustionThreshold == null) {
+                    throw new IllegalArgumentException("demand-pressure scaling requires 'exhaustion-threshold'");
+                }
+                var latencyThresholdMs = scalingMap.get("latency-threshold-ms");
+                if (latencyThresholdMs == null) {
+                    throw new IllegalArgumentException("demand-pressure scaling requires 'latency-threshold-ms'");
+                }
+                yield new ScalingConfig.DemandPressureConfig(
+                    exhaustionThreshold instanceof Number n ? n.intValue() : Integer.parseInt(exhaustionThreshold.toString()),
+                    latencyThresholdMs instanceof Number n ? n.longValue() : Long.parseLong(latencyThresholdMs.toString()),
+                    cooldown, scaleInCooldown);
+            }
             case "none" -> ScalingConfig.NoScalingConfig.INSTANCE;
             default -> new ScalingConfig.CustomScalingConfig(type, cooldown, scaleInCooldown);
         };

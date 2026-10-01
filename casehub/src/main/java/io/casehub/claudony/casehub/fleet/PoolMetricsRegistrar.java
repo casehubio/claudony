@@ -34,6 +34,11 @@ public class PoolMetricsRegistrar {
             return s.max() == 0 ? 0.0 : (double) s.active() / s.max();
         });
 
+        registry.gauge("claudony.pool.acquire_latency_avg_ms", tags, mgr,
+            m -> m.lastDemandSnapshot().averageAcquireMs());
+        registry.gauge("claudony.pool.acquire_latency_max_ms", tags, mgr,
+            m -> m.lastDemandSnapshot().maxAcquireMs());
+
         var counters = new PoolCounters(
             Counter.builder("claudony.pool.acquires.total").tags(tags).register(registry),
             Counter.builder("claudony.pool.evictions.total").tags(tags).register(registry),
