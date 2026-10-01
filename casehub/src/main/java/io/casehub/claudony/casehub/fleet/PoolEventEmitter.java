@@ -9,10 +9,21 @@ public class PoolEventEmitter {
         long broadcast(String topic, String payloadJson);
     }
 
+    @FunctionalInterface
+    public interface EventCallback {
+        void onEvent(String poolName, String payloadJson);
+    }
+
     private final Broadcaster broadcaster;
+    private final EventCallback eventCallback;
 
     public PoolEventEmitter(Broadcaster broadcaster) {
+        this(broadcaster, null);
+    }
+
+    public PoolEventEmitter(Broadcaster broadcaster, EventCallback eventCallback) {
         this.broadcaster = broadcaster;
+        this.eventCallback = eventCallback;
     }
 
     public void emitScalingDecision(String pool, ScalingDecision decision, int previousMax, int newMax) {
@@ -21,6 +32,7 @@ public class PoolEventEmitter {
             decision.direction(), decision.count(), escapeJson(decision.reason()),
             previousMax, newMax, Instant.now());
         broadcaster.broadcast("pool:" + pool + ":scaling", json);
+        if (eventCallback != null) eventCallback.onEvent(pool, json);
     }
 
     public void emitSessionEvent(String pool, String event, String instanceId, String identity, String reason) {
@@ -28,6 +40,7 @@ public class PoolEventEmitter {
             "{\"type\":\"session\",\"event\":\"%s\",\"instanceId\":\"%s\",\"identity\":\"%s\",\"reason\":\"%s\",\"timestamp\":\"%s\"}",
             event, instanceId, identity != null ? identity : "", escapeJson(reason), Instant.now());
         broadcaster.broadcast("pool:" + pool + ":session", json);
+        if (eventCallback != null) eventCallback.onEvent(pool, json);
     }
 
     public void emitHealthChange(String pool, String previous, String current, String reason) {
@@ -35,6 +48,7 @@ public class PoolEventEmitter {
             "{\"type\":\"health\",\"previous\":\"%s\",\"current\":\"%s\",\"reason\":\"%s\",\"timestamp\":\"%s\"}",
             previous, current, escapeJson(reason), Instant.now());
         broadcaster.broadcast("pool:" + pool + ":health", json);
+        if (eventCallback != null) eventCallback.onEvent(pool, json);
     }
 
     private String escapeJson(String s) {
