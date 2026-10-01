@@ -12,7 +12,9 @@ public record PoolDetail(
 ) {
     public record DefinitionView(AgentPoolDefinition.AgentConfig agent, PoolConfigView pool) {}
     public record PoolConfigView(int minActive, int maxActive, String eviction) {}
-    public record ScalingView(String type, Object config, DecisionView lastDecision, String cooldownRemaining) {}
+
+    public record ScalingView(String type, ScalingConfigView config, DecisionView lastDecision,
+                              String cooldownRemaining) {}
     public record DecisionView(String direction, int count, String reason, String timestamp) {}
     public record DemandView(double acquires, double evictions, double exhaustions) {}
 }

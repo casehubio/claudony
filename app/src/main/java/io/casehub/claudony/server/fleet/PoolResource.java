@@ -30,6 +30,9 @@ public class PoolResource {
     @Inject AgentPoolDefinitionRegistry defRegistry;
     @Inject ScalingScheduler scalingScheduler;
     @Inject MeterRegistry meterRegistry;
+    @Inject
+            PoolService   poolService;
+
 
     @GET
     public List<PoolSummary> listPools() {
@@ -180,18 +183,19 @@ public class PoolResource {
 
 
     private PoolDetail.ScalingView buildScalingView(ScalingState state, AgentPoolDefinition def) {
-        if (state == null && def == null) return null;
+        if (state == null && def == null) {return null;}
         var config = state != null ? state.config() : (def != null ? def.pool().scaling() : null);
-        var type = config != null ? config.type() : "none";
+        var type   = config != null ? config.type() : "none";
         var lastDecision = state != null && state.lastDecision() != null
-            ? new PoolDetail.DecisionView(
+                           ? new PoolDetail.DecisionView(
                 state.lastDecision().direction().name(),
                 state.lastDecision().count(),
                 state.lastDecision().reason(),
                 state.lastDecisionTime() != null ? state.lastDecisionTime().toString() : null)
-            : null;
-        var cooldown = state != null ? formatDuration(state.cooldownRemaining(Instant.now())) : "0s";
-        return new PoolDetail.ScalingView(type, config, lastDecision, cooldown);
+                           : null;
+        var cooldown   = state != null ? formatDuration(state.cooldownRemaining(Instant.now())) : "0s";
+        var configView = poolService.buildScalingConfigView(config);
+        return new PoolDetail.ScalingView(type, configView, lastDecision, cooldown);
     }
 
     private PoolDetail.DemandView buildDemandView(String name) {
