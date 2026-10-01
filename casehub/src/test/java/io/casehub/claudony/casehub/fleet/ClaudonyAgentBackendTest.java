@@ -32,7 +32,7 @@ class ClaudonyAgentBackendTest {
         when(config.defaultWorkingDir()).thenReturn("/tmp/claudony-workspace");
         when(poolConfig.minActive()).thenReturn(0);
         when(poolConfig.maxActive()).thenReturn(10);
-        backend = new ClaudonyAgentBackend(tmux, config, poolConfig, managerRegistry);
+        backend = new ClaudonyAgentBackend(tmux, config, poolConfig, managerRegistry, SessionLifecycleListener.NOOP);
     }
 
     @Test
@@ -62,7 +62,7 @@ class ClaudonyAgentBackendTest {
         var customPoolConfig = mock(AgentPoolConfig.class);
         when(customPoolConfig.minActive()).thenReturn(2);
         when(customPoolConfig.maxActive()).thenReturn(20);
-        var customBackend = new ClaudonyAgentBackend(tmux, config, customPoolConfig, managerRegistry);
+        var customBackend = new ClaudonyAgentBackend(tmux, config, customPoolConfig, managerRegistry, SessionLifecycleListener.NOOP);
         var status        = customBackend.poolStatus();
         assertThat(status.min()).isEqualTo(2);
         assertThat(status.max()).isEqualTo(20);

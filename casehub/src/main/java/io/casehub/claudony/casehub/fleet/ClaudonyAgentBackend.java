@@ -25,13 +25,14 @@ public class ClaudonyAgentBackend implements AgentBackend {
 
     @Inject
     public ClaudonyAgentBackend(TmuxService tmux, ClaudonyConfig config, AgentPoolConfig poolConfig,
-                                AgentPoolManagerRegistry managerRegistry) {
+                                AgentPoolManagerRegistry managerRegistry,
+                                SessionLifecycleListener lifecycleListener) {
         this.tmux           = tmux;
         this.config         = config;
         this.ops            = new TmuxSessionOperations(tmux, SESSION_PREFIX, "claude");
         this.sessionManager = new AgentSessionManager(
                 new AgentSessionManagerConfig(poolConfig.minActive(), poolConfig.maxActive()),
-                ops
+                ops, lifecycleListener, "default"
         );
         managerRegistry.register("default", sessionManager);
     }
@@ -44,12 +45,21 @@ public class ClaudonyAgentBackend implements AgentBackend {
         this.config = config;
     }
 
+
     public static ClaudonyAgentBackend fromDefinition(AgentPoolDefinition definition,
-                                                       TmuxService tmux, ClaudonyConfig config,
-                                                       AgentPoolManagerRegistry managerRegistry) {
+                                                      TmuxService tmux, ClaudonyConfig config,
+                                                      AgentPoolManagerRegistry managerRegistry) {
+        return fromDefinition(definition, tmux, config, managerRegistry, SessionLifecycleListener.NOOP);
+    }
+
+    public static ClaudonyAgentBackend fromDefinition(AgentPoolDefinition definition,
+                                                      TmuxService tmux, ClaudonyConfig config,
+                                                      AgentPoolManagerRegistry managerRegistry,
+                                                      SessionLifecycleListener listener) {
         String command = definition.agent().command() != null ? definition.agent().command() : "claude";
-        var ops = new TmuxSessionOperations(tmux, SESSION_PREFIX, command);
-        var sessionManager = new AgentSessionManager(definition.toSessionManagerConfig(), ops);
+        var    ops     = new TmuxSessionOperations(tmux, SESSION_PREFIX, command);
+        var sessionManager = new AgentSessionManager(definition.toSessionManagerConfig(), ops,
+                                                     listener, definition.agent().name());
         if (managerRegistry != null) {
             managerRegistry.register(definition.agent().name(), sessionManager);
         }
