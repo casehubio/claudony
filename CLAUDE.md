@@ -222,7 +222,9 @@ docker compose up
 - Channel presence: `http://localhost:7777/api/mesh/channels/{name}/presence` (GET subscriber count)
 - Cases API: `http://localhost:7777/api/cases` (GET list, GET /{id} detail)
 - Actions API: `http://localhost:7777/api/actions` (GET unified action inbox)
-- Pools API: `http://localhost:7777/api/pools` (GET list, GET /{name} detail, GET /{name}/sessions, PATCH /{name}/capacity, PATCH /{name}/scaling)
+- Pools API (mcpDomain): `http://localhost:7777/api/claudony/pools` (list, detail, sessions, updatePool, suspend, resume, destroy)
+- Pools API (deprecated): `http://localhost:7777/api/pools` (legacy — delegates to PoolService)
+- Pool SSE events: `http://localhost:7777/api/pool-events/{name}` (text/event-stream)
 
 ---
 
@@ -500,7 +502,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-09-30, after #208 ops pool provisioning):** 16 in `claudony-core` + ~425 in `claudony-casehub` + 29 in `claudony-testing` + ~441 in `claudony-app` = **~911 total**. #208 added ClaudonySessionSenderTest (5), PoolResourceTest (9), CredentialRoleAugmentorTest (2), PoolEventEmitterTest (5), IoTDBFlatLabelAdapterTest (4), PoolMetricsRegistrarTest (5), ScalingStateTest (5), ScalingConfigTest (4 new type() tests), ScalingSchedulerTest (2 new event emission tests), AgentPoolDefinitionRegistryUpdateTest (4). Previous baseline: ~875 (2026-09-29, after #206). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-10-01, after #241 + #242 scaling API + dashboard):** 16 in `claudony-core` + ~452 in `claudony-casehub` + 29 in `claudony-testing` + ~463 in `claudony-app` = **~960 total**. #241/#242 added PoolServiceTest (17), PoolEventBusTest (5). Previous baseline: ~911 (2026-09-30, after #208). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest) pass independently.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties

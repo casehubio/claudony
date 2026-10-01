@@ -21,7 +21,7 @@ public class PoolEventsResource {
     @Path("/{name}")
     @Produces("text/event-stream")
     public Multi<String> poolEvents(@PathParam("name") String name) {
-        poolService.getPool(name);
+        poolService.validatePoolExists(name);
         return poolEventBus.subscribe(name, () -> poolService.buildPoolSnapshot(name));
     }
 }

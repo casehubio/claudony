@@ -9,11 +9,21 @@ interface PoolSummary {
   scalingType: string;
 }
 
+interface ScalingConfigView {
+  targetFillRatio: number | null;
+  steps: Array<{ threshold: number; adjustment: number }> | null;
+  exhaustionThreshold: number | null;
+  latencyThresholdMs: number | null;
+  beanName: string | null;
+  cooldown: string;
+  scaleInCooldown: string;
+}
+
 interface PoolDetail {
   name: string;
   status: { min: number; max: number; active: number; idle: number; total: number; health: string };
   definition: { agent: { name: string; workingDir: string }; pool: { minActive: number; maxActive: number; eviction: string } } | null;
-  scaling: { type: string; lastDecision: { direction: string; count: number; reason: string; timestamp: string } | null; cooldownRemaining: string } | null;
+  scaling: { type: string; config: ScalingConfigView | null; lastDecision: { direction: string; count: number; reason: string; timestamp: string } | null; cooldownRemaining: string } | null;
   demand: { acquires: number; evictions: number; exhaustions: number } | null;
 }
 
@@ -26,13 +36,23 @@ interface SessionInfo {
   memoryBytes: number;
 }
 
+interface PoolEvent {
+  type: string;
+  timestamp?: string;
+  [k: string]: unknown;
+}
+
 @customElement('claudony-pool-panel')
 export class ClaudonyPoolPanel extends LitElement {
   @state() private _pools: PoolSummary[] = [];
   @state() private _selectedPool = '';
   @state() private _detail: PoolDetail | null = null;
   @state() private _sessions: SessionInfo[] = [];
-  private _pollTimer: ReturnType<typeof setInterval> | null = null;
+  @state() private _events: PoolEvent[] = [];
+  @state() private _editingScaling = false;
+  @state() private _scalingForm: Record<string, unknown> = {};
+  private _eventSource: EventSource | null = null;
+  private _fallbackTimer: ReturnType<typeof setInterval> | null = null;
 
   static override styles = css`
     :host {
@@ -146,6 +166,38 @@ export class ClaudonyPoolPanel extends LitElement {
       border-radius: var(--pages-radius-md);
     }
     .scaling-section h3 { margin-top: 0; }
+    .scaling-editor label {
+      display: block;
+      margin: 8px 0;
+      font-size: var(--pages-font-size-sm);
+    }
+    .scaling-editor input, .scaling-editor select {
+      background: var(--pages-neutral-3);
+      border: 1px solid var(--pages-neutral-5);
+      color: var(--pages-neutral-11);
+      border-radius: var(--pages-radius-md);
+      padding: 4px 8px;
+      font-size: var(--pages-font-size-sm);
+      margin-left: 8px;
+    }
+    .scaling-editor select { min-width: 150px; }
+    .kpi-input {
+      width: 60px;
+      font-size: var(--pages-font-size-2xl);
+      font-weight: 600;
+      background: var(--pages-neutral-3);
+      border: 1px solid var(--pages-neutral-5);
+      color: var(--pages-neutral-11);
+      border-radius: var(--pages-radius-md);
+      padding: 2px 4px;
+      text-align: center;
+    }
+    .type-badge {
+      padding: 2px 6px;
+      border-radius: var(--pages-radius-md);
+      background: var(--pages-neutral-3);
+      font-size: var(--pages-font-size-xs);
+    }
     .chart-placeholder {
       flex: 1;
       height: 200px;
@@ -183,17 +235,43 @@ export class ClaudonyPoolPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this._fetchPools();
-    this._pollTimer = setInterval(() => this._fetchPools(), 10000);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    if (this._pollTimer) clearInterval(this._pollTimer);
+    if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
+    if (this._fallbackTimer) clearInterval(this._fallbackTimer);
+  }
+
+  private _connectSSE() {
+    if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
+    if (!this._selectedPool) return;
+    this._eventSource = new EventSource(`/api/pool-events/${this._selectedPool}`);
+    this._eventSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.detail) {
+          this._detail = data.detail;
+          this._sessions = data.sessions || [];
+        } else {
+          this._events = [data, ...this._events].slice(0, 50);
+          if (data.type === 'scaling' && this._detail?.scaling) {
+            this._detail = { ...this._detail, scaling: { ...this._detail.scaling, lastDecision: { direction: data.direction, count: data.count, reason: data.reason, timestamp: data.timestamp } } };
+          }
+          if (data.type === 'session') this._fetchDetail();
+        }
+      } catch (err) { console.error('SSE parse error', err); }
+    };
+    this._eventSource.onerror = () => {
+      if (this._eventSource) { this._eventSource.close(); this._eventSource = null; }
+      if (!this._fallbackTimer) { this._fallbackTimer = setInterval(() => this._fetchPools(), 60000); }
+    };
+    if (this._fallbackTimer) { clearInterval(this._fallbackTimer); this._fallbackTimer = null; }
   }
 
   private async _fetchPools() {
     try {
-      const resp = await fetchWithAuth('/api/pools');
+      const resp = await fetchWithAuth('/api/claudony/pools');
       if (resp.ok) {
         this._pools = await resp.json();
         if (!this._selectedPool && this._pools.length > 0) {
@@ -207,26 +285,47 @@ export class ClaudonyPoolPanel extends LitElement {
   private async _fetchDetail() {
     try {
       const [detailResp, sessionsResp] = await Promise.all([
-        fetchWithAuth(`/api/pools/${this._selectedPool}`),
-        fetchWithAuth(`/api/pools/${this._selectedPool}/sessions`),
+        fetchWithAuth(`/api/claudony/pools/${this._selectedPool}`),
+        fetchWithAuth(`/api/claudony/pools/${this._selectedPool}/sessions`),
       ]);
       if (detailResp.ok) this._detail = await detailResp.json();
       if (sessionsResp.ok) this._sessions = await sessionsResp.json();
     } catch (e) { console.error('Failed to fetch pool detail', e); }
   }
 
+  private _selectPool(name: string) {
+    this._selectedPool = name;
+    this._events = [];
+    this._editingScaling = false;
+    this._scalingForm = {};
+    this._fetchDetail();
+    this._connectSSE();
+  }
+
+  private async _updatePool(update: Record<string, unknown>) {
+    try {
+      const resp = await fetchWithAuth(`/api/claudony/pools/${this._selectedPool}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(update),
+      });
+      if (resp.ok) { this._detail = await resp.json(); this._fetchPools(); }
+      else { console.error('Update failed:', await resp.text()); }
+    } catch (e) { console.error('Update failed', e); }
+  }
+
   private async _suspendSession(id: string) {
-    await fetchWithAuth(`/api/pools/${this._selectedPool}/sessions/${id}/suspend`, { method: 'POST' });
+    await fetchWithAuth(`/api/claudony/pools/${this._selectedPool}/sessions/${id}/suspend`, { method: 'POST' });
     this._fetchDetail();
   }
 
   private async _resumeSession(id: string) {
-    await fetchWithAuth(`/api/pools/${this._selectedPool}/sessions/${id}/resume`, { method: 'POST' });
+    await fetchWithAuth(`/api/claudony/pools/${this._selectedPool}/sessions/${id}/resume`, { method: 'POST' });
     this._fetchDetail();
   }
 
   private async _destroySession(id: string) {
-    await fetchWithAuth(`/api/pools/${this._selectedPool}/sessions/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`/api/claudony/pools/${this._selectedPool}/sessions/${id}/destroy`, { method: 'POST' });
     this._fetchDetail();
   }
 
@@ -236,7 +335,7 @@ export class ClaudonyPoolPanel extends LitElement {
         <h3>Pools</h3>
         ${this._pools.map(p => html`
           <div class="pool-item ${p.name === this._selectedPool ? 'selected' : ''}"
-               @click=${() => { this._selectedPool = p.name; this._fetchDetail(); }}>
+               @click=${() => this._selectPool(p.name)}>
             <span class="health-dot ${p.status.health}"></span>
             <span>${p.name}</span>
             <span class="pool-count">${p.status.active}/${p.status.max}</span>
@@ -264,12 +363,19 @@ export class ClaudonyPoolPanel extends LitElement {
       <div class="kpi">
         <div class="kpi-card"><div class="kpi-value">${d.status.active}</div><div class="kpi-label">Active</div></div>
         <div class="kpi-card"><div class="kpi-value">${d.status.idle}</div><div class="kpi-label">Idle</div></div>
-        <div class="kpi-card"><div class="kpi-value">${d.status.min}</div><div class="kpi-label">Min</div></div>
-        <div class="kpi-card"><div class="kpi-value">${d.status.max}</div><div class="kpi-label">Max</div></div>
+        <div class="kpi-card">
+          <input class="kpi-input" type="number" min="0" .value=${String(d.status.min)}
+                 @change=${(e: Event) => this._updatePool({ minActive: +(e.target as HTMLInputElement).value })} />
+          <div class="kpi-label">Min</div>
+        </div>
+        <div class="kpi-card">
+          <input class="kpi-input" type="number" min="1" .value=${String(d.status.max)}
+                 @change=${(e: Event) => this._updatePool({ maxActive: +(e.target as HTMLInputElement).value })} />
+          <div class="kpi-label">Max</div>
+        </div>
       </div>
       ${this._renderSessions()}
       ${this._renderScaling()}
-      ${this._renderCharts()}
       ${this._renderEventLog()}
     `;
   }
@@ -305,24 +411,83 @@ export class ClaudonyPoolPanel extends LitElement {
     if (!s) return nothing;
     return html`
       <div class="scaling-section">
-        <h3>Scaling</h3>
-        <p>Policy: <strong>${s.type}</strong> | Cooldown: ${s.cooldownRemaining}</p>
-        ${s.lastDecision ? html`
-          <p>Last decision: <strong>${s.lastDecision.direction}</strong>
-            ${s.lastDecision.count > 0 ? `+${s.lastDecision.count}` : s.lastDecision.count}
-            — ${s.lastDecision.reason}
-            (${s.lastDecision.timestamp ? timeAgo(s.lastDecision.timestamp) : 'unknown'})</p>
-        ` : html`<p>No scaling decisions yet</p>`}
+        <h3>Scaling
+          <button class="action-btn" style="margin-left: 8px;" @click=${() => {
+            this._editingScaling = !this._editingScaling;
+            if (this._editingScaling) {
+              this._scalingForm = {
+                scalingType: s.type,
+                targetFillRatio: s.config?.targetFillRatio ?? 0.7,
+                exhaustionThreshold: s.config?.exhaustionThreshold ?? 5,
+                latencyThresholdMs: s.config?.latencyThresholdMs ?? 500,
+                cooldown: s.config?.cooldown ?? '60s',
+                scaleInCooldown: s.config?.scaleInCooldown ?? '120s',
+              };
+            }
+          }}>${this._editingScaling ? 'Cancel' : 'Edit'}</button>
+        </h3>
+        ${this._editingScaling ? this._renderScalingEditor() : html`
+          <p>Policy: <strong>${s.type}</strong> | Cooldown: ${s.cooldownRemaining}</p>
+          ${s.lastDecision ? html`
+            <p>Last decision: <strong>${s.lastDecision.direction}</strong>
+              ${s.lastDecision.count > 0 ? `+${s.lastDecision.count}` : s.lastDecision.count}
+              — ${s.lastDecision.reason}
+              (${s.lastDecision.timestamp ? timeAgo(s.lastDecision.timestamp) : 'unknown'})</p>
+          ` : html`<p>No scaling decisions yet</p>`}
+        `}
       </div>
     `;
   }
 
-  private _renderCharts() {
+  private _renderScalingEditor() {
+    const type = this._scalingForm.scalingType as string || 'none';
     return html`
-      <h3>Metrics</h3>
-      <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-        <div class="chart-placeholder">Fill Ratio (requires IoTDB)</div>
-        <div class="chart-placeholder">Demand Metrics (requires IoTDB)</div>
+      <div class="scaling-editor">
+        <label>Type:
+          <select @change=${(e: Event) => { this._scalingForm = { ...this._scalingForm, scalingType: (e.target as HTMLSelectElement).value }; this.requestUpdate(); }}>
+            <option value="none" ?selected=${type === 'none'}>None</option>
+            <option value="target-tracking" ?selected=${type === 'target-tracking'}>Target Tracking</option>
+            <option value="step" ?selected=${type === 'step'}>Step</option>
+            <option value="demand-pressure" ?selected=${type === 'demand-pressure'}>Demand Pressure</option>
+          </select>
+        </label>
+        ${type === 'target-tracking' ? html`
+          <label>Fill Ratio:
+            <input type="range" min="0.1" max="1.0" step="0.05"
+              .value=${String(this._scalingForm.targetFillRatio ?? 0.7)}
+              @input=${(e: Event) => { this._scalingForm = { ...this._scalingForm, targetFillRatio: +(e.target as HTMLInputElement).value }; this.requestUpdate(); }}
+            /> ${this._scalingForm.targetFillRatio ?? 0.7}
+          </label>
+        ` : nothing}
+        ${type === 'demand-pressure' ? html`
+          <label>Exhaustion Threshold:
+            <input type="number" min="0"
+              .value=${String(this._scalingForm.exhaustionThreshold ?? 5)}
+              @change=${(e: Event) => { this._scalingForm = { ...this._scalingForm, exhaustionThreshold: +(e.target as HTMLInputElement).value }; }}
+            />
+          </label>
+          <label>Latency Threshold (ms):
+            <input type="number" min="1"
+              .value=${String(this._scalingForm.latencyThresholdMs ?? 500)}
+              @change=${(e: Event) => { this._scalingForm = { ...this._scalingForm, latencyThresholdMs: +(e.target as HTMLInputElement).value }; }}
+            />
+          </label>
+        ` : nothing}
+        <label>Cooldown:
+          <input type="text" placeholder="60s"
+            .value=${(this._scalingForm.cooldown as string) ?? '60s'}
+            @change=${(e: Event) => { this._scalingForm = { ...this._scalingForm, cooldown: (e.target as HTMLInputElement).value }; }}
+          />
+        </label>
+        <label>Scale-in Cooldown:
+          <input type="text" placeholder="120s"
+            .value=${(this._scalingForm.scaleInCooldown as string) ?? '120s'}
+            @change=${(e: Event) => { this._scalingForm = { ...this._scalingForm, scaleInCooldown: (e.target as HTMLInputElement).value }; }}
+          />
+        </label>
+        <div style="margin-top: 12px;">
+          <button class="action-btn" @click=${() => { this._updatePool(this._scalingForm); this._editingScaling = false; this._scalingForm = {}; }}>Save</button>
+        </div>
       </div>
     `;
   }
@@ -331,9 +496,27 @@ export class ClaudonyPoolPanel extends LitElement {
     return html`
       <h3>Event Log</h3>
       <div class="event-log">
-        <div class="empty-state">Event log available when EventBroadcaster is connected</div>
+        ${this._events.length === 0
+          ? html`<div class="empty-state">No events yet — scaling decisions will appear here</div>`
+          : this._events.map(evt => html`
+            <div style="padding: 4px 0; border-bottom: 1px solid var(--pages-neutral-3); font-size: var(--pages-font-size-xs);">
+              <span style="color: var(--pages-neutral-6);">${evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : ''}</span>
+              <span class="type-badge" style="margin: 0 8px;">${evt.type}</span>
+              <span>${this._eventSummary(evt)}</span>
+            </div>
+          `)
+        }
       </div>
     `;
+  }
+
+  private _eventSummary(evt: PoolEvent): string {
+    switch (evt.type) {
+      case 'scaling': return `${evt.direction} ${evt.count} — ${evt.reason}`;
+      case 'session': return `${evt.event} ${evt.identity || evt.instanceId}`;
+      case 'health': return `${evt.previous} → ${evt.current}`;
+      default: return JSON.stringify(evt);
+    }
   }
 }
 
