@@ -24,6 +24,9 @@ public class PoolService {
     private final AgentPoolDefinitionRegistry defRegistry;
     private final ScalingScheduler scalingScheduler;
     private final MeterRegistry meterRegistry;
+    private static final com.fasterxml.jackson.databind.ObjectMapper SNAPSHOT_MAPPER = new com.fasterxml.jackson.databind.ObjectMapper()
+            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+            .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @Inject
     public PoolService(AgentPoolDefinitionRegistry defRegistry,
@@ -34,6 +37,11 @@ public class PoolService {
         this.mgrRegistry = mgrRegistry;
         this.scalingScheduler = scalingScheduler;
         this.meterRegistry = meterRegistry;
+    }
+
+    public void validatePoolExists(String name) {
+        mgrRegistry.get(name)
+                .orElseThrow(() -> new NotFoundException("Pool not found: " + name));
     }
 
     public List<PoolSummary> listPools() {
@@ -84,11 +92,15 @@ public class PoolService {
         if (request.minActive() != null || request.maxActive() != null) {
             int min = request.minActive() != null ? request.minActive() : mgr.status().min();
             int max = request.maxActive() != null ? request.maxActive() : mgr.status().max();
-            defRegistry.updateCapacity(name, min, max);
+            if (defRegistry.get(name).isPresent()) {
+                defRegistry.updateCapacity(name, min, max);
+            }
         }
         if (request.scalingType() != null) {
             var newConfig = parseScalingConfig(request);
-            defRegistry.updateScaling(name, newConfig);
+            if (defRegistry.get(name).isPresent()) {
+                defRegistry.updateScaling(name, newConfig);
+            }
             scalingScheduler.invalidatePolicy(name);
         }
         return getPool(name);
@@ -116,10 +128,7 @@ public class PoolService {
         try {
             var detail = getPool(name);
             var sessions = listSessions(name);
-            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-            mapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-            return mapper.writeValueAsString(java.util.Map.of("detail", detail, "sessions", sessions));
+            return SNAPSHOT_MAPPER.writeValueAsString(java.util.Map.of("detail", detail, "sessions", sessions));
         } catch (Exception e) {
             return "{}";
         }

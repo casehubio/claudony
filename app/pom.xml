@@ -312,7 +312,7 @@
             </path>
           </annotationProcessorPaths>
           <compilerArgs>
-            <arg>-AdomainFilter=claudony/sessions,claudony/mesh,claudony/cases,claudony/actions,claudony/peers</arg>
+            <arg>-AdomainFilter=claudony/sessions,claudony/mesh,claudony/cases,claudony/actions,claudony/peers,claudony/pools</arg>
             <arg>-AgenerateGraphQL=false</arg>
           </compilerArgs>
         </configuration>
