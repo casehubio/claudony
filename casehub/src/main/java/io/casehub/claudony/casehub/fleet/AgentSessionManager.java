@@ -1,7 +1,6 @@
 package io.casehub.claudony.casehub.fleet;
 
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -14,6 +13,10 @@ public class AgentSessionManager {
     private final Map<String, ManagedSession> sessions = new ConcurrentHashMap<>();
     private final ReentrantLock lock = new ReentrantLock();
     private final EvictionPolicy evictionPolicy;
+    private       SessionLifecycleListener listener = SessionLifecycleListener.NOOP;
+    private       String                   poolName = "";
+
+
     private volatile int         effectiveMaxActive;
     private          int         acquireCount;
     private          int         evictionCount;
@@ -30,6 +33,13 @@ public class AgentSessionManager {
         this.ops                = ops;
         this.evictionPolicy     = evictionPolicy;
         this.effectiveMaxActive = config.maxActive();
+    }
+
+    public AgentSessionManager(AgentSessionManagerConfig config, SessionOperations ops,
+                               SessionLifecycleListener listener, String poolName) {
+        this(config, ops);
+        this.listener = listener != null ? listener : SessionLifecycleListener.NOOP;
+        this.poolName = poolName != null ? poolName : "";
     }
 
 
@@ -58,7 +68,9 @@ public class AgentSessionManager {
                 long elapsed = System.nanoTime() - start;
                 totalAcquireNanos += elapsed;
                 maxAcquireNanos = Math.max(maxAcquireNanos, elapsed);
-                return doResume(suspended.get());
+                var session = doResume(suspended.get());
+                listener.onAcquired(session, poolName);
+                return session;
             }
 
             if (policy == WorkingDirPolicy.BRANCH_ISOLATED) {
@@ -83,6 +95,7 @@ public class AgentSessionManager {
             long elapsed = System.nanoTime() - start;
             totalAcquireNanos += elapsed;
             maxAcquireNanos = Math.max(maxAcquireNanos, elapsed);
+            listener.onAcquired(session, poolName);
             return session;
         } finally {
             lock.unlock();
@@ -101,9 +114,10 @@ public class AgentSessionManager {
         lock.lock();
         try {
             var session = sessions.get(instanceId);
-            if (session == null || session.state() != SessionState.ACTIVE) return;
+            if (session == null || session.state() != SessionState.ACTIVE) {return;}
             ops.suspend(instanceId);
             session.setState(SessionState.SUSPENDED);
+            listener.onSuspended(session, poolName);
         } finally {
             lock.unlock();
         }
@@ -119,7 +133,9 @@ public class AgentSessionManager {
                 evictOne();
             }
 
-            return doResume(session);
+            var resumed = doResume(session);
+            listener.onResumed(resumed, poolName);
+            return resumed;
         } finally {
             lock.unlock();
         }
@@ -178,8 +194,9 @@ public class AgentSessionManager {
         lock.lock();
         try {
             var session = sessions.remove(instanceId);
-            if (session == null) return;
+            if (session == null) {return;}
             ops.destroy(instanceId);
+            try {listener.onDestroyed(instanceId, poolName);} catch (Exception ignored) {}
         } finally {
             lock.unlock();
         }
@@ -190,6 +207,7 @@ public class AgentSessionManager {
         try {
             for (var session : sessions.values()) {
                 ops.destroy(session.instanceId());
+                try {listener.onDestroyed(session.instanceId(), poolName);} catch (Exception ignored) {}
             }
             sessions.clear();
         } finally {
@@ -217,6 +235,8 @@ public class AgentSessionManager {
     public java.util.Collection<ManagedSession> sessions() {
         return java.util.List.copyOf(sessions.values());
     }
+
+    public String poolName() {return poolName;}
 
 
     public int activeCount() {
@@ -271,7 +291,7 @@ public class AgentSessionManager {
         Instant now = Instant.now();
         var victim = sessions.values().stream()
                              .filter(s -> s.state() == SessionState.ACTIVE)
-                             .max(Comparator.comparingDouble(s -> evictionPolicy.score(s, now)))
+                             .max(java.util.Comparator.comparingDouble(s -> evictionPolicy.score(s, now)))
                              .orElseThrow(() -> {
                                  exhaustionCount++;
                                  return new AgentPoolExhaustedException(status());
@@ -279,6 +299,7 @@ public class AgentSessionManager {
 
         ops.suspend(victim.instanceId());
         victim.setState(SessionState.SUSPENDED);
+        listener.onSuspended(victim, poolName);
         evictionCount++;
     }
 }
