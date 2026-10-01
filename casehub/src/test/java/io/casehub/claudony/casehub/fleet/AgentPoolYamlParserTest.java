@@ -307,19 +307,19 @@ class AgentPoolYamlParserTest {
     @Test
     void customScalingType() {
         var yaml = """
-                agent-pools:
-                  reviewer:
-                    pool:
-                      scaling:
-                        type: demand-pressure
-                        cooldown: 45s
-                """;
+                   agent-pools:
+                     reviewer:
+                       pool:
+                         scaling:
+                           type: queue-aware
+                           cooldown: 45s
+                   """;
 
-        var def = parser.parse(yaml).getFirst();
+        var def     = parser.parse(yaml).getFirst();
         var scaling = def.pool().scaling();
         assertThat(scaling).isInstanceOf(ScalingConfig.CustomScalingConfig.class);
         var custom = (ScalingConfig.CustomScalingConfig) scaling;
-        assertThat(custom.beanName()).isEqualTo("demand-pressure");
+        assertThat(custom.beanName()).isEqualTo("queue-aware");
         assertThat(custom.cooldown()).isEqualTo(java.time.Duration.ofSeconds(45));
     }
 
@@ -338,5 +338,47 @@ class AgentPoolYamlParserTest {
         var scaling = (ScalingConfig.TargetTrackingConfig) def.pool().scaling();
         assertThat(scaling.cooldown()).isEqualTo(java.time.Duration.ofSeconds(60));
         assertThat(scaling.scaleInCooldown()).isEqualTo(java.time.Duration.ofSeconds(60));
+    }
+
+    @Test
+    void parsesDemandPressureScalingType() {
+        var yaml = """
+                   agent-pools:
+                     reviewer:
+                       command: claude
+                       pool:
+                         max-active: 10
+                         scaling:
+                           type: demand-pressure
+                           exhaustion-threshold: 2
+                           latency-threshold-ms: 500
+                           cooldown: 60s
+                           scale-in-cooldown: 300s
+                   """;
+        var defs    = parser.parse(yaml);
+        var scaling = defs.get(0).pool().scaling();
+        assertThat(scaling).isInstanceOf(ScalingConfig.DemandPressureConfig.class);
+        var dp = (ScalingConfig.DemandPressureConfig) scaling;
+        assertThat(dp.exhaustionThreshold()).isEqualTo(2);
+        assertThat(dp.latencyThresholdMs()).isEqualTo(500);
+        assertThat(dp.cooldown()).isEqualTo(java.time.Duration.ofSeconds(60));
+        assertThat(dp.scaleInCooldown()).isEqualTo(java.time.Duration.ofSeconds(300));
+    }
+
+    @Test
+    void demandPressureMissingLatencyThresholdThrows() {
+        var yaml = """
+                   agent-pools:
+                     reviewer:
+                       command: claude
+                       pool:
+                         max-active: 10
+                         scaling:
+                           type: demand-pressure
+                           exhaustion-threshold: 2
+                   """;
+        assertThatThrownBy(() -> parser.parse(yaml))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("latency-threshold-ms");
     }
 }

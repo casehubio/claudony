@@ -21,30 +21,45 @@ public class ScalingScheduler {
     private final Map<String, ScalingPolicy> policyCache = new ConcurrentHashMap<>();
     private final java.util.Set<String> failedPolicyLookups = ConcurrentHashMap.newKeySet();
     private final PoolEventEmitter      eventEmitter;
+    private final java.util.List<DemandMetricsSource> metricsSources;
 
 
     @Inject
     public ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
                             AgentPoolManagerRegistry mgrRegistry,
-                            jakarta.enterprise.inject.Instance<PoolEventEmitter> eventEmitterInstance) {
-        this.defRegistry  = defRegistry;
-        this.mgrRegistry  = mgrRegistry;
-        this.eventEmitter = eventEmitterInstance.isUnsatisfied() ? null : eventEmitterInstance.get();
+                            jakarta.enterprise.inject.Instance<PoolEventEmitter> eventEmitterInstance,
+                            jakarta.enterprise.inject.Instance<DemandMetricsSource> metricsSourcesInstance) {
+        this.defRegistry    = defRegistry;
+        this.mgrRegistry    = mgrRegistry;
+        this.eventEmitter   = eventEmitterInstance.isUnsatisfied() ? null : eventEmitterInstance.get();
+        this.metricsSources = metricsSourcesInstance.stream().toList();
     }
 
     ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
                      AgentPoolManagerRegistry mgrRegistry) {
-        this.defRegistry  = defRegistry;
-        this.mgrRegistry  = mgrRegistry;
-        this.eventEmitter = null;
+        this.defRegistry    = defRegistry;
+        this.mgrRegistry    = mgrRegistry;
+        this.eventEmitter   = null;
+        this.metricsSources = java.util.List.of();
     }
 
     ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
                      AgentPoolManagerRegistry mgrRegistry,
                      PoolEventEmitter eventEmitter) {
-        this.defRegistry  = defRegistry;
-        this.mgrRegistry  = mgrRegistry;
-        this.eventEmitter = eventEmitter;
+        this.defRegistry    = defRegistry;
+        this.mgrRegistry    = mgrRegistry;
+        this.eventEmitter   = eventEmitter;
+        this.metricsSources = java.util.List.of();
+    }
+
+    ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
+                     AgentPoolManagerRegistry mgrRegistry,
+                     PoolEventEmitter eventEmitter,
+                     java.util.List<DemandMetricsSource> metricsSources) {
+        this.defRegistry    = defRegistry;
+        this.mgrRegistry    = mgrRegistry;
+        this.eventEmitter   = eventEmitter;
+        this.metricsSources = metricsSources != null ? metricsSources : java.util.List.of();
     }
 
 
@@ -78,7 +93,8 @@ public class ScalingScheduler {
         var scalingConfig = definition.pool().scaling();
         if (scalingConfig instanceof ScalingConfig.NoScalingConfig) {return;}
 
-        var demand        = manager.snapshotAndResetDemandMetrics();
+        var externalMetrics = collectExternalMetrics(poolName);
+        var demand        = manager.snapshotAndResetDemandMetrics(externalMetrics);
         var previousState = scalingStates.get(poolName);
 
         if (previousState != null && previousState.cooldownRemaining(Instant.now()).compareTo(Duration.ZERO) > 0) {
@@ -124,16 +140,28 @@ public class ScalingScheduler {
         scalingStates.put(poolName, new ScalingState(decision, now, scaleOutTime, scaleInTime, scalingConfig));
     }
 
+
+    private java.util.Map<String, Double> collectExternalMetrics(String poolName) {
+        if (metricsSources.isEmpty()) {return java.util.Map.of();}
+        var merged = new java.util.HashMap<String, Double>();
+        for (var source : metricsSources) {
+            try {
+                var metrics = source.collect(poolName);
+                if (metrics != null) {merged.putAll(metrics);}
+            } catch (Exception e) {
+                LOG.warning("DemandMetricsSource failed for pool '" + poolName + "': " + e.getMessage());
+            }
+        }
+        return java.util.Map.copyOf(merged);
+    }
+
     private ScalingPolicy createPolicy(ScalingConfig config) {
         return switch (config) {
-            case ScalingConfig.TargetTrackingConfig t ->
-                new TargetTrackingPolicy(t.targetFillRatio());
-            case ScalingConfig.StepConfig s ->
-                new StepScalingPolicy(s.steps());
-            case ScalingConfig.CustomScalingConfig c ->
-                resolveCustomPolicy(c.beanName());
-            case ScalingConfig.NoScalingConfig n ->
-                new NoOpScalingPolicy();
+            case ScalingConfig.TargetTrackingConfig t -> new TargetTrackingPolicy(t.targetFillRatio());
+            case ScalingConfig.StepConfig s -> new StepScalingPolicy(s.steps());
+            case ScalingConfig.DemandPressureConfig d -> new DemandPressurePolicy(d.exhaustionThreshold(), d.latencyThresholdMs());
+            case ScalingConfig.CustomScalingConfig c -> resolveCustomPolicy(c.beanName());
+            case ScalingConfig.NoScalingConfig n -> new NoOpScalingPolicy();
         };
     }
 

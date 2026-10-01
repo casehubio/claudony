@@ -92,4 +92,19 @@ class PoolMetricsRegistrarTest {
 
         assertThat(registry.get("claudony.pool.exhaustions.total").tag("pool", "default").counter().count()).isEqualTo(1.0);
     }
+
+    @Test
+    void registersAcquireLatencyGauges() {
+        var mgr = stubManager(0, 10);
+        mgrRegistry.register("test", mgr);
+        var registrar = new PoolMetricsRegistrar(registry, mgrRegistry);
+        registrar.registerPool("test");
+
+        var avgGauge = registry.find("claudony.pool.acquire_latency_avg_ms").tag("pool", "test").gauge();
+        var maxGauge = registry.find("claudony.pool.acquire_latency_max_ms").tag("pool", "test").gauge();
+        assertThat(avgGauge).isNotNull();
+        assertThat(maxGauge).isNotNull();
+        assertThat(avgGauge.value()).isEqualTo(0.0);
+        assertThat(maxGauge.value()).isEqualTo(0.0);
+    }
 }

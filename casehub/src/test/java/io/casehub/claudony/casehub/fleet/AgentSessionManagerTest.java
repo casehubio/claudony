@@ -398,4 +398,49 @@ class AgentSessionManagerTest {
         assertThat(metrics.acquires()).isEqualTo(3);
         assertThat(metrics.exhaustions()).isEqualTo(1);
     }
+
+    @Test
+    void snapshotDemandMetrics_includesLatencyAfterAcquires() {
+        manager = createManager(0, 5);
+        manager.acquireSession("a", "/tmp/a");
+        manager.acquireSession("b", "/tmp/b");
+        var metrics = manager.snapshotAndResetDemandMetrics();
+        assertThat(metrics.averageAcquireNanos()).isGreaterThan(0);
+        assertThat(metrics.maxAcquireNanos()).isGreaterThanOrEqualTo(metrics.averageAcquireNanos());
+    }
+
+    @Test
+    void snapshotDemandMetrics_resetsLatencyCounters() {
+        manager = createManager(0, 5);
+        manager.acquireSession("a", "/tmp/a");
+        manager.snapshotAndResetDemandMetrics();
+        var after = manager.snapshotAndResetDemandMetrics();
+        assertThat(after.averageAcquireNanos()).isZero();
+        assertThat(after.maxAcquireNanos()).isZero();
+    }
+
+    @Test
+    void snapshotDemandMetrics_acceptsExternalMetrics() {
+        manager = createManager(0, 5);
+        manager.acquireSession("a", "/tmp/a");
+        var ext     = java.util.Map.of("http.queue_depth", 5.0);
+        var metrics = manager.snapshotAndResetDemandMetrics(ext);
+        assertThat(metrics.externalMetrics()).containsEntry("http.queue_depth", 5.0);
+    }
+
+    @Test
+    void snapshotDemandMetrics_noArgOverloadReturnsEmptyExternalMetrics() {
+        manager = createManager(0, 5);
+        manager.acquireSession("a", "/tmp/a");
+        var metrics = manager.snapshotAndResetDemandMetrics();
+        assertThat(metrics.externalMetrics()).isEmpty();
+    }
+
+    @Test
+    void lastDemandSnapshot_returnsLatestSnapshot() {
+        manager = createManager(0, 5);
+        manager.acquireSession("a", "/tmp/a");
+        var snapshot = manager.snapshotAndResetDemandMetrics();
+        assertThat(manager.lastDemandSnapshot()).isSameAs(snapshot);
+    }
 }

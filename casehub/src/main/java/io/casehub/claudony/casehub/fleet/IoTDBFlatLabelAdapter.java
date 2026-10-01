@@ -21,26 +21,30 @@ public class IoTDBFlatLabelAdapter {
 
     public void tick() {
         List<String> pools = registry.getMeters().stream()
-            .filter(m -> m.getId().getName().startsWith("claudony.pool."))
-            .filter(m -> m.getId().getTag("pool") != null)
-            .map(m -> m.getId().getTag("pool"))
-            .distinct()
-            .toList();
+                                     .filter(m -> m.getId().getName().startsWith("claudony.pool."))
+                                     .filter(m -> m.getId().getTag("pool") != null)
+                                     .map(m -> m.getId().getTag("pool"))
+                                     .distinct()
+                                     .toList();
 
         for (var pool : pools) {
-            double active = gaugeValue("claudony.pool.active", pool);
-            double idle = gaugeValue("claudony.pool.idle", pool);
-            double maxActive = gaugeValue("claudony.pool.max", pool);
-            double fillRatio = gaugeValue("claudony.pool.fill_ratio", pool);
-            double acquires = counterValue("claudony.pool.acquires.total", pool);
-            double evictions = counterValue("claudony.pool.evictions.total", pool);
-            double exhaustions = counterValue("claudony.pool.exhaustions.total", pool);
+            double active            = gaugeValue("claudony.pool.active", pool);
+            double idle              = gaugeValue("claudony.pool.idle", pool);
+            double maxActive         = gaugeValue("claudony.pool.max", pool);
+            double fillRatio         = gaugeValue("claudony.pool.fill_ratio", pool);
+            double acquires          = counterValue("claudony.pool.acquires.total", pool);
+            double evictions         = counterValue("claudony.pool.evictions.total", pool);
+            double exhaustions       = counterValue("claudony.pool.exhaustions.total", pool);
+            double acquireLatencyAvg = gaugeValue("claudony.pool.acquire_latency_avg_ms", pool);
+            double acquireLatencyMax = gaugeValue("claudony.pool.acquire_latency_max_ms", pool);
 
             var sql = String.format(
-                "INSERT INTO pool_metrics(pool, active, idle, max_active, fill_ratio, acquires, evictions, exhaustions) " +
-                "VALUES('%s', %d, %d, %d, %.4f, %d, %d, %d)",
-                pool, (int) active, (int) idle, (int) maxActive, fillRatio,
-                (long) acquires, (long) evictions, (long) exhaustions);
+                    "INSERT INTO pool_metrics(pool, active, idle, max_active, fill_ratio, " +
+                    "acquires, evictions, exhaustions, acquire_latency_avg_ms, acquire_latency_max_ms) " +
+                    "VALUES('%s', %d, %d, %d, %.4f, %d, %d, %d, %d, %d)",
+                    pool, (int) active, (int) idle, (int) maxActive, fillRatio,
+                    (long) acquires, (long) evictions, (long) exhaustions,
+                    (long) acquireLatencyAvg, (long) acquireLatencyMax);
             writer.execute(sql);
         }
     }

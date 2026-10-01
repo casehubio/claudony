@@ -98,4 +98,23 @@ class IoTDBFlatLabelAdapterTest {
 
         assertThat(insertedSql.get(0)).contains("0.3000");
     }
+
+    @Test
+    void tick_includesLatencyColumns() {
+        var mgrRegistry = new AgentPoolManagerRegistry();
+        var mgr         = stubManager(0, 10);
+        mgrRegistry.register("default", mgr);
+
+        var metricsRegistrar = new PoolMetricsRegistrar(registry, mgrRegistry);
+        metricsRegistrar.registerPool("default");
+        mgr.acquireSession("w1", "/tmp");
+        mgr.snapshotAndResetDemandMetrics();
+
+        var adapter = new IoTDBFlatLabelAdapter(registry, insertedSql::add);
+        adapter.tick();
+
+        assertThat(insertedSql).hasSize(1);
+        assertThat(insertedSql.get(0)).contains("acquire_latency_avg_ms");
+        assertThat(insertedSql.get(0)).contains("acquire_latency_max_ms");
+    }
 }

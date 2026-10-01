@@ -37,4 +37,30 @@ class PoolSnapshotTest {
         assertThat(zero.exhaustions()).isZero();
         assertThat(zero.acquires()).isZero();
     }
+
+    @Test
+    void demandMetricsZeroIncludesLatencyAndExternalFields() {
+        var zero = PoolSnapshot.DemandMetrics.ZERO;
+        assertThat(zero.averageAcquireNanos()).isZero();
+        assertThat(zero.maxAcquireNanos()).isZero();
+        assertThat(zero.externalMetrics()).isEmpty();
+    }
+
+    @Test
+    void demandMetricsAcquireMsConvertsFromNanos() {
+        var metrics = new PoolSnapshot.DemandMetrics(0, 0, 0,
+                                                     5_000_000L, 12_000_000L, java.util.Map.of());
+        assertThat(metrics.averageAcquireMs()).isEqualTo(5L);
+        assertThat(metrics.maxAcquireMs()).isEqualTo(12L);
+    }
+
+    @Test
+    void demandMetricsExternalMetricsImmutable() {
+        var mutable = new java.util.HashMap<String, Double>();
+        mutable.put("http.queue_depth", 3.0);
+        var metrics = new PoolSnapshot.DemandMetrics(0, 0, 0, 0L, 0L,
+                                                     java.util.Map.copyOf(mutable));
+        mutable.put("injected", 1.0);
+        assertThat(metrics.externalMetrics()).doesNotContainKey("injected");
+    }
 }

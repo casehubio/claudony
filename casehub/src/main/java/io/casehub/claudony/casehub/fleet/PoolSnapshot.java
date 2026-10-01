@@ -11,7 +11,17 @@ public record PoolSnapshot(
         return maxActive > 0 ? activeCount / (double) maxActive : 0.0;
     }
 
-    public record DemandMetrics(int evictions, int exhaustions, int acquires) {
-        public static final DemandMetrics ZERO = new DemandMetrics(0, 0, 0);
+    public record DemandMetrics(int evictions, int exhaustions, int acquires,
+                                long averageAcquireNanos, long maxAcquireNanos,
+                                java.util.Map<String, Double> externalMetrics) {
+        public static final DemandMetrics ZERO = new DemandMetrics(0, 0, 0, 0L, 0L, java.util.Map.of());
+
+        public long averageAcquireMs() {
+            return averageAcquireNanos / 1_000_000;
+        }
+
+        public long maxAcquireMs() {
+            return maxAcquireNanos / 1_000_000;
+        }
     }
 }
