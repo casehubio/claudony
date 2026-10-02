@@ -177,4 +177,20 @@ class AgentPoolDefinitionTest {
         assertThat(def.agent().name()).isEqualTo("second");
         assertThat(def.agent().workingDir()).isEqualTo("/second");
     }
+
+    @Test
+    void budgetInPoolConfig() {
+        var budget = new BudgetConfig(50.0, 10_000_000L, java.time.Duration.ofHours(24),
+                                      EnforcementPolicy.SUSPEND, new ReportInterval.Turn(), java.time.Duration.ofMinutes(10));
+        var def = AgentPoolDefinition.builder()
+                                     .agent("reviewer").pool().budget(budget).build();
+        assertThat(def.pool().budget()).isEqualTo(budget);
+    }
+
+    @Test
+    void nullBudgetDefault() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("reviewer").pool().build();
+        assertThat(def.pool().budget()).isNull();
+    }
 }

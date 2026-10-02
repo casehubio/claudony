@@ -24,6 +24,8 @@ public class PoolService {
     private final AgentPoolDefinitionRegistry defRegistry;
     private final ScalingScheduler scalingScheduler;
     private final MeterRegistry meterRegistry;
+    private final io.casehub.claudony.casehub.fleet.BudgetTracker budgetTracker;
+
     private static final com.fasterxml.jackson.databind.ObjectMapper SNAPSHOT_MAPPER = new com.fasterxml.jackson.databind.ObjectMapper()
             .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
             .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -32,11 +34,13 @@ public class PoolService {
     public PoolService(AgentPoolDefinitionRegistry defRegistry,
                        AgentPoolManagerRegistry mgrRegistry,
                        ScalingScheduler scalingScheduler,
-                       MeterRegistry meterRegistry) {
+                       MeterRegistry meterRegistry,
+                       io.casehub.claudony.casehub.fleet.BudgetTracker budgetTracker) {
         this.defRegistry = defRegistry;
         this.mgrRegistry = mgrRegistry;
         this.scalingScheduler = scalingScheduler;
         this.meterRegistry = meterRegistry;
+        this.budgetTracker = budgetTracker;
     }
 
     public void validatePoolExists(String name) {
@@ -68,7 +72,8 @@ public class PoolService {
                 : null;
         var scalingView = buildScalingView(scalingState, def);
         var demandView = buildDemandView(name);
-        return new PoolDetail(name, mgr.status(), definitionView, scalingView, demandView);
+        var budgetView = buildBudgetView(name, def);
+        return new PoolDetail(name, mgr.status(), definitionView, scalingView, demandView, budgetView);
     }
 
     public List<ManagedSessionInfo> listSessions(String name) {
@@ -102,6 +107,13 @@ public class PoolService {
                 defRegistry.updateScaling(name, newConfig);
             }
             scalingScheduler.invalidatePolicy(name);
+        }
+        if (hasBudgetFields(request)) {
+            var budgetConfig = parseBudgetConfig(request, name);
+            if (defRegistry.get(name).isPresent()) {
+                defRegistry.updateBudget(name, budgetConfig);
+            }
+            budgetTracker.invalidate(name);
         }
         return getPool(name);
     }
@@ -178,6 +190,48 @@ public class PoolService {
         }
     }
 
+    private boolean hasBudgetFields(PoolUpdateRequest r) {
+        return r.costLimit() != null || r.tokenLimit() != null || r.window() != null
+               || r.enforcement() != null || r.reportInterval() != null || r.noReportTimeout() != null;
+    }
+
+    io.casehub.claudony.casehub.fleet.BudgetConfig parseBudgetConfig(PoolUpdateRequest r, String poolName) {
+        var existing = defRegistry.get(poolName)
+                                  .map(d -> d.pool().budget())
+                                  .orElse(null);
+        Double   costLimit  = r.costLimit() != null ? r.costLimit() : (existing != null ? existing.costLimit() : null);
+        Long     tokenLimit = r.tokenLimit() != null ? r.tokenLimit() : (existing != null ? existing.tokenLimit() : null);
+        Duration window     = r.window() != null ? parseDuration(r.window()) : (existing != null ? existing.window() : Duration.ofHours(24));
+        io.casehub.claudony.casehub.fleet.EnforcementPolicy enforcement;
+        if (r.enforcement() != null) {
+            try { enforcement = io.casehub.claudony.casehub.fleet.EnforcementPolicy.valueOf(r.enforcement().toUpperCase().replace('-', '_')); }
+            catch (IllegalArgumentException e) { throw new BadRequestException("Invalid enforcement: " + r.enforcement()); }
+        } else {
+            enforcement = existing != null ? existing.enforcement() : io.casehub.claudony.casehub.fleet.EnforcementPolicy.BLOCK_NEW;
+        }
+        var reportInterval = r.reportInterval() != null
+                             ? parseReportInterval(r.reportInterval())
+                             : (existing != null ? existing.reportInterval() : new io.casehub.claudony.casehub.fleet.ReportInterval.Turn());
+        Duration noReportTimeout = r.noReportTimeout() != null ? parseDuration(r.noReportTimeout())
+                                                               : (existing != null ? existing.noReportTimeout() : Duration.ofMinutes(10));
+        return new io.casehub.claudony.casehub.fleet.BudgetConfig(costLimit, tokenLimit, window, enforcement, reportInterval, noReportTimeout);
+    }
+
+    private io.casehub.claudony.casehub.fleet.ReportInterval parseReportInterval(String value) {
+        if (value == null || value.equalsIgnoreCase("turn")) {
+            return new io.casehub.claudony.casehub.fleet.ReportInterval.Turn();
+        }
+        if (value.equalsIgnoreCase("completion")) {
+            return new io.casehub.claudony.casehub.fleet.ReportInterval.Completion();
+        }
+        var matcher = java.util.regex.Pattern.compile("periodic\\((\\d+)\\)").matcher(value);
+        if (matcher.matches()) {
+            return new io.casehub.claudony.casehub.fleet.ReportInterval.Periodic(Integer.parseInt(matcher.group(1)));
+        }
+        throw new BadRequestException("Invalid report-interval: " + value);
+    }
+
+
     PoolDetail.ScalingView buildScalingView(ScalingState state, AgentPoolDefinition def) {
         if (state == null && def == null) return null;
         var config = state != null ? state.config() : (def != null ? def.pool().scaling() : null);
@@ -225,6 +279,23 @@ public class PoolService {
         double exhaustions = counterValue("claudony.pool.exhaustions.total", name);
         return new PoolDetail.DemandView(acquires, evictions, exhaustions);
     }
+
+    private PoolDetail.BudgetView buildBudgetView(String name, AgentPoolDefinition def) {
+        if (def == null || def.pool().budget() == null) {return null;}
+        var    budget = def.pool().budget();
+        var    result = budgetTracker.checkBudget(name, budget);
+        String status = budgetTracker.isBudgetExceeded(name) ? "EXCEEDED" : "OK";
+        return new PoolDetail.BudgetView(
+                result.currentCostUsd(),
+                budget.costLimit(),
+                result.currentTokens(),
+                budget.tokenLimit(),
+                formatDuration(result.windowRemaining()),
+                budget.enforcement().name(),
+                status
+        );
+    }
+
 
     private double counterValue(String meterName, String poolName) {
         var counter = meterRegistry.find(meterName).tag("pool", poolName).counter();

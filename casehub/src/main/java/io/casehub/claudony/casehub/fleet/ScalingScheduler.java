@@ -4,7 +4,6 @@ import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,44 +21,55 @@ public class ScalingScheduler {
     private final java.util.Set<String> failedPolicyLookups = ConcurrentHashMap.newKeySet();
     private final PoolEventEmitter      eventEmitter;
     private final java.util.List<DemandMetricsSource> metricsSources;
+    private final BudgetTracker                       budgetTracker;
+    private final BudgetEnforcer                      budgetEnforcer;
 
 
     @Inject
     public ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
                             AgentPoolManagerRegistry mgrRegistry,
                             jakarta.enterprise.inject.Instance<PoolEventEmitter> eventEmitterInstance,
-                            jakarta.enterprise.inject.Instance<DemandMetricsSource> metricsSourcesInstance) {
+                            jakarta.enterprise.inject.Instance<DemandMetricsSource> metricsSourcesInstance,
+                            BudgetTracker budgetTracker,
+                            BudgetEnforcer budgetEnforcer) {
         this.defRegistry    = defRegistry;
         this.mgrRegistry    = mgrRegistry;
         this.eventEmitter   = eventEmitterInstance.isUnsatisfied() ? null : eventEmitterInstance.get();
         this.metricsSources = metricsSourcesInstance.stream().toList();
+        this.budgetTracker  = budgetTracker;
+        this.budgetEnforcer = budgetEnforcer;
     }
 
     ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
                      AgentPoolManagerRegistry mgrRegistry) {
-        this.defRegistry    = defRegistry;
-        this.mgrRegistry    = mgrRegistry;
-        this.eventEmitter   = null;
-        this.metricsSources = java.util.List.of();
+        this(defRegistry, mgrRegistry, (PoolEventEmitter) null, java.util.List.of(), null, null);
     }
 
     ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
                      AgentPoolManagerRegistry mgrRegistry,
                      PoolEventEmitter eventEmitter) {
-        this.defRegistry    = defRegistry;
-        this.mgrRegistry    = mgrRegistry;
-        this.eventEmitter   = eventEmitter;
-        this.metricsSources = java.util.List.of();
+        this(defRegistry, mgrRegistry, eventEmitter, java.util.List.of(), null, null);
     }
 
     ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
                      AgentPoolManagerRegistry mgrRegistry,
                      PoolEventEmitter eventEmitter,
                      java.util.List<DemandMetricsSource> metricsSources) {
+        this(defRegistry, mgrRegistry, eventEmitter, metricsSources, null, null);
+    }
+
+    ScalingScheduler(AgentPoolDefinitionRegistry defRegistry,
+                     AgentPoolManagerRegistry mgrRegistry,
+                     PoolEventEmitter eventEmitter,
+                     java.util.List<DemandMetricsSource> metricsSources,
+                     BudgetTracker budgetTracker,
+                     BudgetEnforcer budgetEnforcer) {
         this.defRegistry    = defRegistry;
         this.mgrRegistry    = mgrRegistry;
         this.eventEmitter   = eventEmitter;
         this.metricsSources = metricsSources != null ? metricsSources : java.util.List.of();
+        this.budgetTracker  = budgetTracker != null ? budgetTracker : new BudgetTracker();
+        this.budgetEnforcer = budgetEnforcer != null ? budgetEnforcer : new BudgetEnforcer();
     }
 
 
@@ -90,13 +100,31 @@ public class ScalingScheduler {
         var definition = defRegistry.get(poolName).orElse(null);
         if (manager == null || definition == null) {return;}
 
+        var     budgetConfig   = definition.pool().budget();
+        boolean budgetExceeded = false;
+        if (budgetConfig != null) {
+            var budgetResult = budgetTracker.checkBudget(poolName, budgetConfig);
+            if (budgetResult.overBudget()) {
+                budgetExceeded = true;
+                budgetTracker.setBudgetExceeded(poolName, true);
+                budgetEnforcer.apply(poolName, budgetConfig.enforcement(), budgetResult, manager);
+            } else if (budgetTracker.isBudgetExceeded(poolName)) {
+                budgetTracker.setBudgetExceeded(poolName, false);
+                manager.setBudgetLocked(false);
+                manager.adjustMaxActive(definition.pool().maxActive());
+            }
+            budgetTracker.flush(poolName);
+        }
+
+        if (budgetExceeded) {return;}
+
         var scalingConfig = definition.pool().scaling();
         if (scalingConfig instanceof ScalingConfig.NoScalingConfig) {return;}
 
         var previousState = scalingStates.get(poolName);
 
         if (scalingConfig instanceof ScalingConfig.ProactiveConfig proactive) {
-            if (previousState != null && previousState.cooldownRemaining(Instant.now()).compareTo(Duration.ZERO) > 0) {
+            if (previousState != null && previousState.cooldownRemaining(java.time.Instant.now()).compareTo(java.time.Duration.ZERO) > 0) {
                 return;
             }
             evaluateProactive(poolName, manager, proactive);
@@ -104,9 +132,9 @@ public class ScalingScheduler {
         }
 
         var externalMetrics = collectExternalMetrics(poolName);
-        var demand        = manager.snapshotAndResetDemandMetrics(externalMetrics);
+        var demand          = manager.snapshotAndResetDemandMetrics(externalMetrics);
 
-        if (previousState != null && previousState.cooldownRemaining(Instant.now()).compareTo(Duration.ZERO) > 0) {
+        if (previousState != null && previousState.cooldownRemaining(java.time.Instant.now()).compareTo(java.time.Duration.ZERO) > 0) {
             return;
         }
 
@@ -124,9 +152,9 @@ public class ScalingScheduler {
 
         var decision = policy.evaluate(snapshot);
 
-        Instant now          = Instant.now();
-        Instant scaleOutTime = previousState != null ? previousState.lastScaleOut() : null;
-        Instant scaleInTime  = previousState != null ? previousState.lastScaleIn() : null;
+        java.time.Instant now          = java.time.Instant.now();
+        java.time.Instant scaleOutTime = previousState != null ? previousState.lastScaleOut() : null;
+        java.time.Instant scaleInTime  = previousState != null ? previousState.lastScaleIn() : null;
 
         if (decision.direction() != ScalingDirection.NONE) {
             int currentMax = status.max();

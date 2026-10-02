@@ -22,4 +22,18 @@ public class AgentPoolManagerRegistry {
     public Set<String> poolNames() {
         return managers.keySet();
     }
+
+    private final Map<String, String> sessionToPool = new ConcurrentHashMap<>();
+
+    public void registerSession(String sessionId, String poolName) {
+        sessionToPool.put(sessionId, poolName);
+    }
+
+    public void deregisterSession(String sessionId) {
+        sessionToPool.remove(sessionId);
+    }
+
+    public Optional<String> poolNameForSession(String sessionId) {
+        return Optional.ofNullable(sessionToPool.get(sessionId));
+    }
 }
