@@ -30,6 +30,28 @@ class AgentPoolManagerRegistryTest {
         assertThat(registry.poolNames()).containsExactlyInAnyOrder("a", "b");
     }
 
+    @Test
+    void reverseIndexPopulated() {
+        var registry = new AgentPoolManagerRegistry();
+        registry.registerSession("session-1", "pool-a");
+        assertThat(registry.poolNameForSession("session-1")).contains("pool-a");
+    }
+
+    @Test
+    void reverseIndexCleaned() {
+        var registry = new AgentPoolManagerRegistry();
+        registry.registerSession("session-1", "pool-a");
+        registry.deregisterSession("session-1");
+        assertThat(registry.poolNameForSession("session-1")).isEmpty();
+    }
+
+    @Test
+    void unknownSessionReturnsEmpty() {
+        var registry = new AgentPoolManagerRegistry();
+        assertThat(registry.poolNameForSession("nonexistent")).isEmpty();
+    }
+
+
     private static class StubOps implements SessionOperations {
         @Override public String create(String i, String w) { return "s"; }
         @Override public String conversationId(String s) { return "c"; }

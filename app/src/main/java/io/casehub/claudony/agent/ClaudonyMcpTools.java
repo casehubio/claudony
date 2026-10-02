@@ -41,6 +41,15 @@ public class ClaudonyMcpTools {
     @Inject
     TerminalAdapterFactory terminalFactory;
 
+    @Inject
+    io.casehub.claudony.casehub.fleet.BudgetTracker budgetTracker;
+
+    @Inject
+    io.casehub.claudony.casehub.fleet.AgentPoolManagerRegistry poolManagerRegistry;
+
+    @Inject
+    jakarta.enterprise.event.Event<io.casehub.claudony.casehub.fleet.CostReportEvent> costReportEvent;
+
     // ── Tools ────────────────────────────────────────────────────────────────
 
     // @Tool(name = "list_sessions", description = "List all active Claude Code sessions")
@@ -152,6 +161,32 @@ public class ClaudonyMcpTools {
                     url, mode, adapter.map(a -> a.name()).orElse("none"));
         } catch (WebApplicationException e) { return serverError(e); }
           catch (Exception e)               { return connectError(e); }
+    }
+
+    // @Tool(name = "report_cost", description = "Report cumulative cost and token usage for the current session")
+    public String reportCost(
+            @ToolArg(description = "tmux session identifier") String sessionId,
+            @ToolArg(description = "cumulative cost in USD") double totalCostUsd,
+            @ToolArg(description = "cumulative input tokens") long inputTokens,
+            @ToolArg(description = "cumulative output tokens") long outputTokens,
+            @ToolArg(description = "cumulative cache read tokens") long cacheReadTokens,
+            @ToolArg(description = "cumulative cache creation tokens") long cacheCreationTokens,
+            @ToolArg(description = "canonical model name") String model) {
+        try {
+            var poolName = poolManagerRegistry.poolNameForSession(sessionId).orElse(null);
+            if (poolName == null) {
+                return "Session not found in any pool. Cost report ignored.";
+            }
+            var report = new io.casehub.claudony.casehub.fleet.CostReport(
+                    sessionId, totalCostUsd, inputTokens, outputTokens,
+                    cacheReadTokens, cacheCreationTokens, model, java.time.Instant.now());
+            budgetTracker.record(poolName, report);
+            costReportEvent.fireAsync(new io.casehub.claudony.casehub.fleet.CostReportEvent(poolName, report));
+            return "Cost report recorded for pool '%s': $%.4f, %d tokens.".formatted(
+                    poolName, totalCostUsd, inputTokens + outputTokens);
+        } catch (Exception e) {
+            return "Failed to record cost report: " + e.getMessage();
+        }
     }
 
     // ── Error helpers ────────────────────────────────────────────────────────

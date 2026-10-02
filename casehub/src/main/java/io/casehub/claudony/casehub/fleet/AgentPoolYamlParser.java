@@ -33,9 +33,12 @@ public class AgentPoolYamlParser {
         var pools = (Map<String, Map<String, Object>>) root.get("agent-pools");
         if (pools == null) {return Collections.emptyList();}
 
+        @SuppressWarnings("unchecked")
+        var budgetDefaults = (Map<String, Object>) root.get("budget-defaults");
+
         var results = new ArrayList<AgentPoolDefinition>();
         for (var entry : pools.entrySet()) {
-            results.add(toDefinition(entry.getKey(), entry.getValue()));
+            results.add(toDefinition(entry.getKey(), entry.getValue(), budgetDefaults));
         }
         return results;
     }
@@ -46,7 +49,8 @@ public class AgentPoolYamlParser {
         }
     }
 
-    private AgentPoolDefinition toDefinition(String name, Map<String, Object> config) {
+    @SuppressWarnings("unchecked")
+    private AgentPoolDefinition toDefinition(String name, Map<String, Object> config, Map<String, Object> budgetDefaults) {
         if (config == null) {config = Map.of();}
 
         var flat = AgentPoolSchema.flatten(config);
@@ -83,10 +87,13 @@ public class AgentPoolYamlParser {
             poolBuilder.eviction(EvictionStrategy.valueOf(eviction));
         }
 
-        @SuppressWarnings("unchecked")
         var scalingMap = (Map<String, Object>) (config.containsKey("pool") && config.get("pool") instanceof Map<?, ?> poolMap
-            ? ((Map<String, Object>) poolMap).get("scaling") : null);
+                                                ? ((Map<String, Object>) poolMap).get("scaling") : null);
         poolBuilder.scaling(parseScaling(scalingMap));
+
+        var budgetMap = (Map<String, Object>) (config.containsKey("pool") && config.get("pool") instanceof Map<?, ?> poolMap
+                                               ? ((Map<String, Object>) poolMap).get("budget") : null);
+        poolBuilder.budget(parseBudget(budgetMap, budgetDefaults));
 
         return poolBuilder.build();
     }
@@ -165,14 +172,60 @@ public class AgentPoolYamlParser {
         };
     }
 
+    @SuppressWarnings("unchecked")
+    private BudgetConfig parseBudget(Map<String, Object> budgetMap, Map<String, Object> defaults) {
+        if (budgetMap == null && defaults == null) {return null;}
+        if (budgetMap == null) {return null;}
+
+        var merged = new java.util.HashMap<String, Object>();
+        if (defaults != null) {merged.putAll(defaults);}
+        merged.putAll(budgetMap);
+
+        Double costLimit = null;
+        var    cl        = merged.get("cost-limit");
+        if (cl instanceof Number n) {costLimit = n.doubleValue();}
+
+        Long tokenLimit = null;
+        var  tl         = merged.get("token-limit");
+        if (tl instanceof Number n) {tokenLimit = n.longValue();}
+
+        var      windowStr = (String) merged.get("window");
+        Duration window    = windowStr != null ? parseDuration(windowStr) : Duration.ofHours(24);
+
+        var enforcementStr = (String) merged.get("enforcement");
+        EnforcementPolicy enforcement = enforcementStr != null
+                                        ? EnforcementPolicy.valueOf(enforcementStr.toUpperCase().replace('-', '_'))
+                                        : EnforcementPolicy.BLOCK_NEW;
+
+        var            intervalStr    = (String) merged.get("report-interval");
+        ReportInterval reportInterval = parseReportInterval(intervalStr);
+
+        var      timeoutStr      = (String) merged.get("no-report-timeout");
+        Duration noReportTimeout = timeoutStr != null ? parseDuration(timeoutStr) : Duration.ofMinutes(10);
+
+        return new BudgetConfig(costLimit, tokenLimit, window, enforcement, reportInterval, noReportTimeout);
+    }
+
+    private static ReportInterval parseReportInterval(String value) {
+        if (value == null || value.equalsIgnoreCase("turn")) {return new ReportInterval.Turn();}
+        if (value.equalsIgnoreCase("completion")) {return new ReportInterval.Completion();}
+        var matcher = java.util.regex.Pattern.compile("periodic\\((\\d+)\\)").matcher(value);
+        if (matcher.matches()) {return new ReportInterval.Periodic(Integer.parseInt(matcher.group(1)));}
+        throw new IllegalArgumentException("Unknown report-interval: " + value + ". Expected: turn, completion, or periodic(N)");
+    }
+
+
     private static Duration parseDuration(String value) {
-        if (value == null) return null;
+        if (value == null) {return null;}
         value = value.trim();
         if (value.endsWith("s")) {
             return Duration.ofSeconds(Long.parseLong(value.substring(0, value.length() - 1)));
         }
         if (value.endsWith("m")) {
             return Duration.ofMinutes(Long.parseLong(value.substring(0, value.length() - 1)));
+        }
+        if (value.endsWith("h")) {
+            return Duration.ofHours(Long.parseLong(value.substring(0, value.length() - 1)));
         }
         return Duration.ofSeconds(Long.parseLong(value));
     }

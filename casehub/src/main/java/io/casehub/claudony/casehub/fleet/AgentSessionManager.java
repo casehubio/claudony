@@ -18,6 +18,7 @@ public class AgentSessionManager {
 
 
     private volatile int         effectiveMaxActive;
+    private volatile boolean     budgetLocked;
     private          int         acquireCount;
     private          int         evictionCount;
     private          int         exhaustionCount;
@@ -53,6 +54,9 @@ public class AgentSessionManager {
 
     public ManagedSession acquireSession(String identity, String workingDir,
                                          String command, WorkingDirPolicy policy) {
+        if (budgetLocked) {
+            throw new AgentPoolExhaustedException(status());
+        }
         long start = System.nanoTime();
         lock.lock();
         try {
@@ -237,6 +241,11 @@ public class AgentSessionManager {
     }
 
     public String poolName() {return poolName;}
+
+    public AgentSessionManagerConfig config() {return config;}
+
+    public void setBudgetLocked(boolean locked) { this.budgetLocked = locked; }
+    public boolean isBudgetLocked() { return budgetLocked; }
 
 
     public int activeCount() {

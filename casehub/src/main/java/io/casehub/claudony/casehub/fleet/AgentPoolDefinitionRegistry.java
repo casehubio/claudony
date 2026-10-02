@@ -43,7 +43,7 @@ public class AgentPoolDefinitionRegistry {
         definitions.compute(agentName, (k, existing) -> {
             if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
             var oldPool = existing.pool();
-            var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), newScaling);
+            var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), newScaling, oldPool.budget());
             return new AgentPoolDefinition(existing.agent(), newPool);
         });
     }
@@ -52,7 +52,16 @@ public class AgentPoolDefinitionRegistry {
         definitions.compute(agentName, (k, existing) -> {
             if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
             var oldPool = existing.pool();
-            var newPool = new AgentPoolDefinition.PoolConfig(minActive, maxActive, oldPool.eviction(), oldPool.scaling());
+            var newPool = new AgentPoolDefinition.PoolConfig(minActive, maxActive, oldPool.eviction(), oldPool.scaling(), oldPool.budget());
+            return new AgentPoolDefinition(existing.agent(), newPool);
+        });
+    }
+
+    public void updateBudget(String agentName, BudgetConfig newBudget) {
+        definitions.compute(agentName, (k, existing) -> {
+            if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
+            var oldPool = existing.pool();
+            var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), oldPool.scaling(), newBudget);
             return new AgentPoolDefinition(existing.agent(), newPool);
         });
     }

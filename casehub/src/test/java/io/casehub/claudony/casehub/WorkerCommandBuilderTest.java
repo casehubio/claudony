@@ -1,9 +1,11 @@
 package io.casehub.claudony.casehub;
 
 import org.junit.jupiter.api.Test;
+
 import java.util.List;
 import java.util.Optional;
-import static org.assertj.core.api.Assertions.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class WorkerCommandBuilderTest {
 
@@ -166,5 +168,41 @@ class WorkerCommandBuilderTest {
         Optional<List<String>> disallowedTools = Optional.empty();
         Optional<List<String>> addDirs = Optional.empty();
         Optional<String> workingDir = Optional.empty();
+    }
+
+    @Test
+    void budgetTurnReportingPrompt() {
+        var budget = new io.casehub.claudony.casehub.fleet.BudgetConfig(50.0, null,
+                                                                        java.time.Duration.ofHours(1), io.casehub.claudony.casehub.fleet.EnforcementPolicy.SUSPEND,
+                                                                        new io.casehub.claudony.casehub.fleet.ReportInterval.Turn(), java.time.Duration.ofMinutes(10));
+        var prompt = WorkerCommandBuilder.budgetReportingPrompt(budget);
+        assertThat(prompt).isPresent().hasValueSatisfying(p ->
+                                                                  assertThat(p).contains("After every turn").contains("report_cost"));
+    }
+
+    @Test
+    void budgetPeriodicReportingPrompt() {
+        var budget = new io.casehub.claudony.casehub.fleet.BudgetConfig(50.0, null,
+                                                                        java.time.Duration.ofHours(1), io.casehub.claudony.casehub.fleet.EnforcementPolicy.ALERT,
+                                                                        new io.casehub.claudony.casehub.fleet.ReportInterval.Periodic(5), java.time.Duration.ofMinutes(10));
+        var prompt = WorkerCommandBuilder.budgetReportingPrompt(budget);
+        assertThat(prompt).isPresent().hasValueSatisfying(p ->
+                                                                  assertThat(p).contains("Every 5 turns").contains("report_cost"));
+    }
+
+    @Test
+    void budgetCompletionReportingPrompt() {
+        var budget = new io.casehub.claudony.casehub.fleet.BudgetConfig(50.0, null,
+                                                                        java.time.Duration.ofHours(1), io.casehub.claudony.casehub.fleet.EnforcementPolicy.ALERT,
+                                                                        new io.casehub.claudony.casehub.fleet.ReportInterval.Completion(), java.time.Duration.ofMinutes(10));
+        var prompt = WorkerCommandBuilder.budgetReportingPrompt(budget);
+        assertThat(prompt).isPresent().hasValueSatisfying(p ->
+                                                                  assertThat(p).contains("Before your session ends").contains("report_cost"));
+    }
+
+    @Test
+    void noBudgetNoPrompt() {
+        var prompt = WorkerCommandBuilder.budgetReportingPrompt(null);
+        assertThat(prompt).isEmpty();
     }
 }

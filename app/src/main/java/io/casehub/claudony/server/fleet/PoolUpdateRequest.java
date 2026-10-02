@@ -12,5 +12,11 @@ public record PoolUpdateRequest(
         Long latencyThresholdMs,
         Integer targetActive,
         String cooldown,
-        String scaleInCooldown
+        String scaleInCooldown,
+        Double costLimit,
+        Long tokenLimit,
+        String window,
+        String enforcement,
+        String reportInterval,
+        String noReportTimeout
 ) {}

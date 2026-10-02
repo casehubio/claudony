@@ -381,4 +381,119 @@ class AgentPoolYamlParserTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("latency-threshold-ms");
     }
+
+    @Test
+    void parseBudgetSection() {
+        var yaml = """
+                   agent-pools:
+                     reviewer:
+                       pool:
+                         budget:
+                           cost-limit: 50.0
+                           token-limit: 10000000
+                           window: 24h
+                           enforcement: suspend
+                           report-interval: turn
+                           no-report-timeout: 10m
+                   """;
+        var defs   = parser.parse(yaml);
+        var budget = defs.get(0).pool().budget();
+        assertThat(budget).isNotNull();
+        assertThat(budget.costLimit()).isEqualTo(50.0);
+        assertThat(budget.tokenLimit()).isEqualTo(10_000_000L);
+        assertThat(budget.window()).isEqualTo(java.time.Duration.ofHours(24));
+        assertThat(budget.enforcement()).isEqualTo(EnforcementPolicy.SUSPEND);
+        assertThat(budget.reportInterval()).isInstanceOf(ReportInterval.Turn.class);
+        assertThat(budget.noReportTimeout()).isEqualTo(java.time.Duration.ofMinutes(10));
+    }
+
+    @Test
+    void budgetDefaultsMerging() {
+        var yaml = """
+                   budget-defaults:
+                     cost-limit: 100.0
+                     window: 24h
+                     enforcement: block-new
+                     report-interval: turn
+                     no-report-timeout: 10m
+                   agent-pools:
+                     reviewer:
+                       pool:
+                         budget:
+                           cost-limit: 50.0
+                           enforcement: suspend
+                   """;
+        var defs   = parser.parse(yaml);
+        var budget = defs.get(0).pool().budget();
+        assertThat(budget).isNotNull();
+        assertThat(budget.costLimit()).isEqualTo(50.0);
+        assertThat(budget.window()).isEqualTo(java.time.Duration.ofHours(24));
+        assertThat(budget.enforcement()).isEqualTo(EnforcementPolicy.SUSPEND);
+    }
+
+    @Test
+    void noBudgetReturnsNull() {
+        var yaml = """
+                   agent-pools:
+                     reviewer:
+                       pool:
+                         min-active: 1
+                   """;
+        var defs = parser.parse(yaml);
+        assertThat(defs.get(0).pool().budget()).isNull();
+    }
+
+    @Test
+    void periodicReportInterval() {
+        var yaml = """
+                   agent-pools:
+                     reviewer:
+                       pool:
+                         budget:
+                           cost-limit: 50.0
+                           window: 1h
+                           enforcement: alert
+                           report-interval: periodic(5)
+                           no-report-timeout: 10m
+                   """;
+        var defs     = parser.parse(yaml);
+        var interval = defs.get(0).pool().budget().reportInterval();
+        assertThat(interval).isInstanceOf(ReportInterval.Periodic.class);
+        assertThat(((ReportInterval.Periodic) interval).turns()).isEqualTo(5);
+    }
+
+    @Test
+    void completionReportInterval() {
+        var yaml = """
+                   agent-pools:
+                     reviewer:
+                       pool:
+                         budget:
+                           cost-limit: 50.0
+                           window: 1h
+                           enforcement: alert
+                           report-interval: completion
+                           no-report-timeout: 10m
+                   """;
+        var defs = parser.parse(yaml);
+        assertThat(defs.get(0).pool().budget().reportInterval()).isInstanceOf(ReportInterval.Completion.class);
+    }
+
+    @Test
+    void budgetDefaultsOnlyAppliedWhenBudgetPresent() {
+        var yaml = """
+                   budget-defaults:
+                     cost-limit: 100.0
+                     window: 24h
+                     enforcement: block-new
+                     report-interval: turn
+                     no-report-timeout: 10m
+                   agent-pools:
+                     reviewer:
+                       pool:
+                         min-active: 1
+                   """;
+        var defs = parser.parse(yaml);
+        assertThat(defs.get(0).pool().budget()).isNull();
+    }
 }

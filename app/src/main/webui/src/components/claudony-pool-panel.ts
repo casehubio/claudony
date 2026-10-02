@@ -25,6 +25,7 @@ interface PoolDetail {
   definition: { agent: { name: string; workingDir: string }; pool: { minActive: number; maxActive: number; eviction: string } } | null;
   scaling: { type: string; config: ScalingConfigView | null; lastDecision: { direction: string; count: number; reason: string; timestamp: string } | null; cooldownRemaining: string } | null;
   demand: { acquires: number; evictions: number; exhaustions: number } | null;
+  budget: { currentCostUsd: number; costLimit: number | null; currentTokens: number; tokenLimit: number | null; windowRemaining: string; enforcement: string; status: string } | null;
 }
 
 interface SessionInfo {
@@ -230,6 +231,33 @@ export class ClaudonyPoolPanel extends LitElement {
       color: var(--pages-neutral-6);
       padding: 24px;
     }
+    .budget-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--pages-neutral-3);
+      border-radius: 2px;
+      margin: 4px 0;
+    }
+    .budget-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--pages-success-9);
+      transition: width 0.3s;
+    }
+    .budget-fill.warning { background: var(--pages-warning-9); }
+    .budget-fill.exceeded { background: var(--pages-danger-9); }
+    .badge {
+      font-size: var(--pages-font-size-xs);
+      padding: 2px 6px;
+      border-radius: var(--pages-radius-md);
+      background: var(--pages-success-3);
+      color: var(--pages-success-11);
+      margin-left: 8px;
+    }
+    .badge.exceeded {
+      background: var(--pages-danger-3);
+      color: var(--pages-danger-11);
+    }
   `;
 
   override connectedCallback() {
@@ -259,6 +287,7 @@ export class ClaudonyPoolPanel extends LitElement {
             this._detail = { ...this._detail, scaling: { ...this._detail.scaling, lastDecision: { direction: data.direction, count: data.count, reason: data.reason, timestamp: data.timestamp } } };
           }
           if (data.type === 'session') this._fetchDetail();
+          if (data.type === 'budget') this._fetchDetail();
         }
       } catch (err) { console.error('SSE parse error', err); }
     };
@@ -374,9 +403,36 @@ export class ClaudonyPoolPanel extends LitElement {
           <div class="kpi-label">Max</div>
         </div>
       </div>
+      ${this._renderBudget()}
       ${this._renderSessions()}
       ${this._renderScaling()}
       ${this._renderEventLog()}
+    `;
+  }
+
+  private _renderBudget() {
+    const b = this._detail?.budget;
+    if (!b) return nothing;
+    const costPct = b.costLimit ? Math.min((b.currentCostUsd / b.costLimit) * 100, 100) : 0;
+    const tokenPct = b.tokenLimit ? Math.min((b.currentTokens / b.tokenLimit) * 100, 100) : 0;
+    const barClass = (pct: number) => pct >= 100 ? 'exceeded' : pct >= 80 ? 'warning' : '';
+    const formatTokens = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : String(n);
+    return html`
+      <h3>Budget <span class="badge ${b.status === 'EXCEEDED' ? 'exceeded' : ''}">${b.status}</span></h3>
+      <div class="kpi">
+        <div class="kpi-card">
+          <div class="kpi-value">$${b.currentCostUsd.toFixed(2)}${b.costLimit ? ` / $${b.costLimit.toFixed(2)}` : ''}</div>
+          <div class="budget-bar"><div class="budget-fill ${barClass(costPct)}" style="width: ${costPct}%"></div></div>
+          <div class="kpi-label">Cost</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${formatTokens(b.currentTokens)}${b.tokenLimit ? ` / ${formatTokens(b.tokenLimit)}` : ''}</div>
+          <div class="budget-bar"><div class="budget-fill ${barClass(tokenPct)}" style="width: ${tokenPct}%"></div></div>
+          <div class="kpi-label">Tokens</div>
+        </div>
+        <div class="kpi-card"><div class="kpi-value">${b.windowRemaining}</div><div class="kpi-label">Window</div></div>
+        <div class="kpi-card"><div class="kpi-value">${b.enforcement.replace('_', ' ').toLowerCase()}</div><div class="kpi-label">Enforcement</div></div>
+      </div>
     `;
   }
 

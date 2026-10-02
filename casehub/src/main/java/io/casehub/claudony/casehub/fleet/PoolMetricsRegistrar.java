@@ -63,4 +63,33 @@ public class PoolMetricsRegistrar {
     }
 
     private record PoolCounters(Counter acquires, Counter evictions, Counter exhaustions) {}
+
+    private final Map<String, BudgetCounters> budgetCountersByPool = new ConcurrentHashMap<>();
+
+    public void registerBudgetMetrics(String poolName) {
+        var tags = Tags.of("pool", poolName);
+        var budgetCounters = new BudgetCounters(
+            Counter.builder("claudony.pool.budget.exceeded.total").tags(tags).register(registry),
+            Counter.builder("claudony.pool.budget.reports.total").tags(tags).register(registry),
+            Counter.builder("claudony.pool.budget.no_report_timeouts.total").tags(tags).register(registry)
+        );
+        budgetCountersByPool.put(poolName, budgetCounters);
+    }
+
+    public void recordCostReport(String poolName) {
+        var c = budgetCountersByPool.get(poolName);
+        if (c != null) c.reports.increment();
+    }
+
+    public void recordBudgetExceeded(String poolName) {
+        var c = budgetCountersByPool.get(poolName);
+        if (c != null) c.exceeded.increment();
+    }
+
+    public void recordNoReportTimeout(String poolName) {
+        var c = budgetCountersByPool.get(poolName);
+        if (c != null) c.noReportTimeouts.increment();
+    }
+
+    private record BudgetCounters(Counter exceeded, Counter reports, Counter noReportTimeouts) {}
 }
