@@ -505,7 +505,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-10-01, after #207 pool→mesh integration):** 16 in `claudony-core` + ~458 in `claudony-casehub` + 29 in `claudony-testing` + ~470 in `claudony-app` = **~973 total**. #207 added SessionLifecycleListenerTest (6), PoolMeshIntegrationTest (7). #241/#242 added PoolServiceTest (17), PoolEventBusTest (5). Previous baseline: ~911 (2026-09-30, after #208). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest) pass independently.
+**Baseline (as of 2026-10-02, after #243 proactive scaling):** 16 in `claudony-core` + ~466 in `claudony-casehub` + 29 in `claudony-testing` + ~470 in `claudony-app` = **~981 total**. #243 added ProactiveScalingTest (6), ProactiveYamlParserTest (2). #207 added SessionLifecycleListenerTest (6), PoolMeshIntegrationTest (7). #241/#242 added PoolServiceTest (17), PoolEventBusTest (5). Previous baseline: ~911 (2026-09-30, after #208). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest) pass independently.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -548,6 +548,8 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks
 - `JpaCaseLineageQueryTest` — JPA lineage query against qhorus PU
 - `ClaudonyWorkerExecutionManagerTest` — 2 drain signal tests: `workerExit_storesPendingExitSignal`, `drainExitSignal_unknownCaseId_returnsNull`
 - `SessionLifecycleListenerTest` — 6 unit tests: acquire/suspend/resume/destroy/shutdown notifications, NOOP listener safety
+- `ProactiveScalingTest` — 6 unit tests: resume suspended, no-action at target, respects maxActive, recency ordering, cooldown, event emission
+- `ProactiveYamlParserTest` — 2 unit tests: proactive type parsing, default cooldown
 - `FleetPoolIntegrationTest` — 11 integration tests (real tmux): fullChain (YAML→registry→tmux→capturePane→destroy), poolCapacity (eviction on maxActive), poolStatus (active count lifecycle), inputOutput (send-keys→ECHO round-trip), resumeSession (suspend→session survives→resume→respawnPane→MOCK_AGENT_READY), suspendKeepsSession (kill process, tmux session survives, @claudony_state=suspended), resumeRespawnsPane (respawn in existing session, @claudony_state=active), createStoresMetadata (conversationId+state+identity in tmux options), bootstrapFromTmux (reconstruct suspended sessions after JVM restart), memoryBytes (reads real PID/RSS > 0), concurrentAcquire (2 threads race, both succeed, no leak)
 - `DefaultEvictionPolicyTest` — 5 tests: baseline score, idle time scaling, memory scaling, combined idle+memory, high memory outscores longer idle
 - `EvictionPolicyPluggabilityTest` — 2 tests: custom policy determines eviction order, default constructor uses DefaultEvictionPolicy

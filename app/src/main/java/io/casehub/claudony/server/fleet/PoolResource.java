@@ -85,7 +85,7 @@ public class PoolResource {
     @jakarta.ws.rs.Consumes(MediaType.APPLICATION_JSON)
     public Response updateCapacity(@PathParam("name") String name, CapacityUpdate update) {
         var req = new PoolUpdateRequest(update.minActive(), update.maxActive(),
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         try {
             poolService.updatePool(name, req);
             return Response.ok(update).build();
@@ -100,7 +100,7 @@ public class PoolResource {
     @jakarta.ws.rs.Consumes(MediaType.APPLICATION_JSON)
     public Response updateScaling(@PathParam("name") String name, ScalingConfigUpdate update) {
         var req = new PoolUpdateRequest(null, null, update.type(), update.targetFillRatio(),
-                null, null, null, update.cooldown(), update.scaleInCooldown());
+                null, null, null, null, update.cooldown(), update.scaleInCooldown());
         try {
             poolService.updatePool(name, req);
             return Response.ok(update).build();

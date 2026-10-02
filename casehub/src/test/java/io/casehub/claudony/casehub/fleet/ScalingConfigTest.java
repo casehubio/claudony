@@ -102,6 +102,7 @@ class ScalingConfigTest {
             case ScalingConfig.CustomScalingConfig c -> "custom";
             case ScalingConfig.NoScalingConfig n -> "none";
             case ScalingConfig.DemandPressureConfig d -> "demand-pressure";
+            case ScalingConfig.ProactiveConfig p -> "proactive";
         };
         assertThat(type).isEqualTo("target");
     }

@@ -152,6 +152,14 @@ public class AgentPoolYamlParser {
                     latencyThresholdMs instanceof Number n ? n.longValue() : Long.parseLong(latencyThresholdMs.toString()),
                     cooldown, scaleInCooldown);
             }
+            case "proactive" -> {
+                var targetActive = scalingMap.get("target-active");
+                if (targetActive == null) {
+                    throw new IllegalArgumentException("proactive scaling requires a 'target-active' field");
+                }
+                int target = targetActive instanceof Number n ? n.intValue() : Integer.parseInt(targetActive.toString());
+                yield new ScalingConfig.ProactiveConfig(target, cooldown, scaleInCooldown);
+            }
             case "none" -> ScalingConfig.NoScalingConfig.INSTANCE;
             default -> new ScalingConfig.CustomScalingConfig(type, cooldown, scaleInCooldown);
         };
