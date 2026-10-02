@@ -93,9 +93,18 @@ public class ScalingScheduler {
         var scalingConfig = definition.pool().scaling();
         if (scalingConfig instanceof ScalingConfig.NoScalingConfig) {return;}
 
+        var previousState = scalingStates.get(poolName);
+
+        if (scalingConfig instanceof ScalingConfig.ProactiveConfig proactive) {
+            if (previousState != null && previousState.cooldownRemaining(Instant.now()).compareTo(Duration.ZERO) > 0) {
+                return;
+            }
+            evaluateProactive(poolName, manager, proactive);
+            return;
+        }
+
         var externalMetrics = collectExternalMetrics(poolName);
         var demand        = manager.snapshotAndResetDemandMetrics(externalMetrics);
-        var previousState = scalingStates.get(poolName);
 
         if (previousState != null && previousState.cooldownRemaining(Instant.now()).compareTo(Duration.ZERO) > 0) {
             return;
@@ -124,7 +133,7 @@ public class ScalingScheduler {
             int newMax = switch (decision.direction()) {
                 case OUT -> currentMax + decision.count();
                 case IN -> currentMax - decision.count();
-                case NONE -> currentMax;
+                case NONE, PREWARM -> currentMax;
             };
             int actualMax = manager.adjustMaxActive(newMax);
             if (actualMax != currentMax) {
@@ -138,6 +147,65 @@ public class ScalingScheduler {
         }
 
         scalingStates.put(poolName, new ScalingState(decision, now, scaleOutTime, scaleInTime, scalingConfig));
+    }
+
+    private void evaluateProactive(String poolName, AgentSessionManager manager,
+                                   ScalingConfig.ProactiveConfig config) {
+        var status         = manager.status();
+        int activeCount    = status.active();
+        int suspendedCount = status.idle();
+
+        var previousState = scalingStates.get(poolName);
+
+        if (activeCount >= config.targetActive() || suspendedCount == 0) {
+            scalingStates.put(poolName, new ScalingState(
+                    ScalingDecision.none(), java.time.Instant.now(),
+                    previousState != null ? previousState.lastScaleOut() : null,
+                    previousState != null ? previousState.lastScaleIn() : null,
+                    config));
+            return;
+        }
+
+        int deficit = Math.min(config.targetActive() - activeCount, suspendedCount);
+        deficit = Math.min(deficit, status.max() - activeCount);
+        if (deficit <= 0) {
+            scalingStates.put(poolName, new ScalingState(
+                    ScalingDecision.none(), java.time.Instant.now(),
+                    previousState != null ? previousState.lastScaleOut() : null,
+                    previousState != null ? previousState.lastScaleIn() : null,
+                    config));
+            return;
+        }
+
+        var suspended = manager.sessions().stream()
+                               .filter(s -> s.state() == SessionState.SUSPENDED)
+                               .sorted(java.util.Comparator.comparing(ManagedSession::lastInteraction).reversed())
+                               .limit(deficit)
+                               .toList();
+
+        int resumed = 0;
+        for (var session : suspended) {
+            try {
+                manager.resumeSession(session.instanceId());
+                resumed++;
+            } catch (Exception e) {
+                LOG.warning("Proactive resume failed for " + session.instanceId() + ": " + e.getMessage());
+            }
+        }
+
+        var decision = new ScalingDecision(ScalingDirection.PREWARM, resumed,
+                                           "proactive: resumed " + resumed + " of " + deficit + " to reach target " + config.targetActive());
+
+        Instant now          = Instant.now();
+        Instant scaleOutTime = resumed > 0 ? now : (previousState != null ? previousState.lastScaleOut() : null);
+        scalingStates.put(poolName, new ScalingState(
+                decision, now, scaleOutTime,
+                previousState != null ? previousState.lastScaleIn() : null,
+                config));
+
+        if (eventEmitter != null && resumed > 0) {
+            eventEmitter.emitScalingDecision(poolName, decision, status.max(), status.max());
+        }
     }
 
 
@@ -162,6 +230,7 @@ public class ScalingScheduler {
             case ScalingConfig.DemandPressureConfig d -> new DemandPressurePolicy(d.exhaustionThreshold(), d.latencyThresholdMs());
             case ScalingConfig.CustomScalingConfig c -> resolveCustomPolicy(c.beanName());
             case ScalingConfig.NoScalingConfig n -> new NoOpScalingPolicy();
+            case ScalingConfig.ProactiveConfig p -> new NoOpScalingPolicy();
         };
     }
 

@@ -157,6 +157,12 @@ public class PoolService {
                 yield new ScalingConfig.DemandPressureConfig(
                         u.exhaustionThreshold(), u.latencyThresholdMs(), cooldown, scaleInCooldown);
             }
+            case "proactive" -> {
+                if (u.targetActive() == null) {
+                    throw new IllegalArgumentException("targetActive required for proactive scaling");
+                }
+                yield new ScalingConfig.ProactiveConfig(u.targetActive(), cooldown, scaleInCooldown);
+            }
             case "none" -> ScalingConfig.NoScalingConfig.INSTANCE;
             default -> new ScalingConfig.CustomScalingConfig(u.scalingType(), cooldown, scaleInCooldown);
         };
@@ -189,24 +195,27 @@ public class PoolService {
     }
 
     ScalingConfigView buildScalingConfigView(ScalingConfig config) {
-        if (config == null) return null;
+        if (config == null) {return null;}
         return switch (config) {
             case ScalingConfig.TargetTrackingConfig t -> new ScalingConfigView(
-                    t.targetFillRatio(), null, null, null, null,
+                    t.targetFillRatio(), null, null, null, null, null,
                     formatDuration(t.cooldown()), formatDuration(t.scaleInCooldown()));
             case ScalingConfig.StepConfig s -> new ScalingConfigView(
                     null,
                     s.steps().stream().map(st -> new ScalingConfigView.ScalingStepView(st.threshold(), st.adjustment())).toList(),
-                    null, null, null,
+                    null, null, null, null,
                     formatDuration(s.cooldown()), formatDuration(s.scaleInCooldown()));
             case ScalingConfig.DemandPressureConfig d -> new ScalingConfigView(
-                    null, null, d.exhaustionThreshold(), d.latencyThresholdMs(), null,
+                    null, null, d.exhaustionThreshold(), d.latencyThresholdMs(), null, null,
                     formatDuration(d.cooldown()), formatDuration(d.scaleInCooldown()));
             case ScalingConfig.CustomScalingConfig c -> new ScalingConfigView(
-                    null, null, null, null, c.beanName(),
+                    null, null, null, null, c.beanName(), null,
                     formatDuration(c.cooldown()), formatDuration(c.scaleInCooldown()));
+            case ScalingConfig.ProactiveConfig p -> new ScalingConfigView(
+                    null, null, null, null, null, p.targetActive(),
+                    formatDuration(p.cooldown()), formatDuration(p.scaleInCooldown()));
             case ScalingConfig.NoScalingConfig n -> new ScalingConfigView(
-                    null, null, null, null, null, "0s", "0s");
+                    null, null, null, null, null, null, "0s", "0s");
         };
     }
 

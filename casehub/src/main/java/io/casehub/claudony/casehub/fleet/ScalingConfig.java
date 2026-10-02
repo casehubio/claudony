@@ -9,7 +9,8 @@ public sealed interface ScalingConfig
                 ScalingConfig.StepConfig,
                 ScalingConfig.CustomScalingConfig,
                 ScalingConfig.NoScalingConfig,
-                ScalingConfig.DemandPressureConfig {
+                ScalingConfig.DemandPressureConfig,
+                ScalingConfig.ProactiveConfig {
 
     Duration cooldown();
 
@@ -22,6 +23,7 @@ public sealed interface ScalingConfig
             case CustomScalingConfig c -> "custom";
             case NoScalingConfig n -> "none";
             case DemandPressureConfig d -> "demand-pressure";
+            case ProactiveConfig p -> "proactive";
         };
     }
 
@@ -72,7 +74,7 @@ public sealed interface ScalingConfig
         public static final NoScalingConfig INSTANCE = new NoScalingConfig();
 
         @Override
-        public Duration cooldown()        {return Duration.ZERO;}
+        public Duration cooldown() {return Duration.ZERO;}
 
         @Override
         public Duration scaleInCooldown() {return Duration.ZERO;}
@@ -92,6 +94,20 @@ public sealed interface ScalingConfig
             if (latencyThresholdMs <= 0) {
                 throw new IllegalArgumentException(
                         "latencyThresholdMs must be positive");
+            }
+            if (cooldown == null) {cooldown = Duration.ofSeconds(60);}
+            if (scaleInCooldown == null) {scaleInCooldown = cooldown;}
+        }
+    }
+
+    record ProactiveConfig(
+            int targetActive,
+            Duration cooldown,
+            Duration scaleInCooldown
+    ) implements ScalingConfig {
+        public ProactiveConfig {
+            if (targetActive < 1) {
+                throw new IllegalArgumentException("targetActive must be >= 1");
             }
             if (cooldown == null) {cooldown = Duration.ofSeconds(60);}
             if (scaleInCooldown == null) {scaleInCooldown = cooldown;}
