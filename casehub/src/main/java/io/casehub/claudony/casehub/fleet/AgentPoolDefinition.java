@@ -1,5 +1,9 @@
 package io.casehub.claudony.casehub.fleet;
 
+import io.casehub.platform.api.model.ModelChain;
+
+import java.time.Duration;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -39,11 +43,19 @@ public final class AgentPoolDefinition {
         return new Builder();
     }
 
-    public record AgentConfig(String name, String workingDir, WorkingDirPolicy policy, String command) {
+    public record AgentConfig(String name, String workingDir, WorkingDirPolicy policy, String command,
+                               ModelChain modelChain, Map<String, String> entryCommands,
+                               Map<String, Duration> gracePeriods) {
         public AgentConfig {
             Objects.requireNonNull(name, "agent name is required");
             if (name.isBlank()) throw new IllegalArgumentException("agent name must not be blank");
             if (policy == null) policy = WorkingDirPolicy.EXCLUSIVE;
+            if (entryCommands == null) entryCommands = Map.of();
+            if (gracePeriods == null) gracePeriods = Map.of();
+        }
+
+        public AgentConfig(String name, String workingDir, WorkingDirPolicy policy, String command) {
+            this(name, workingDir, policy, command, null, Map.of(), Map.of());
         }
     }
 
@@ -68,6 +80,9 @@ public final class AgentPoolDefinition {
         private String workingDir;
         private WorkingDirPolicy policy;
         private String command;
+        private ModelChain modelChain;
+        private Map<String, String> entryCommands;
+        private Map<String, Duration> gracePeriods;
         private int minActive = 0;
         private int maxActive = 10;
         private EvictionStrategy eviction;
@@ -83,7 +98,7 @@ public final class AgentPoolDefinition {
         }
 
         public AgentPoolDefinition build() {
-            var agentConfig = new AgentConfig(agentName, workingDir, policy, command);
+            var agentConfig = new AgentConfig(agentName, workingDir, policy, command, modelChain, entryCommands, gracePeriods);
             var poolConfig  = new PoolConfig(minActive, maxActive, eviction, scaling, budget);
             return new AgentPoolDefinition(agentConfig, poolConfig);
         }
@@ -109,6 +124,21 @@ public final class AgentPoolDefinition {
 
         public AgentBuilder command(String command) {
             parent.command = command;
+            return this;
+        }
+
+        public AgentBuilder modelChain(ModelChain modelChain) {
+            parent.modelChain = modelChain;
+            return this;
+        }
+
+        public AgentBuilder entryCommands(Map<String, String> entryCommands) {
+            parent.entryCommands = entryCommands;
+            return this;
+        }
+
+        public AgentBuilder gracePeriods(Map<String, Duration> gracePeriods) {
+            parent.gracePeriods = gracePeriods;
             return this;
         }
 

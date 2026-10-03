@@ -5,16 +5,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.casehub.yaml.core.step.StepValidator;
 
+import io.casehub.platform.api.model.ModelChain;
+import io.casehub.platform.api.model.ModelQuery;
+import io.casehub.platform.api.model.ModelTier;
+import org.jboss.logging.Logger;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class AgentPoolYamlParser {
 
+    private static final Logger LOG = Logger.getLogger(AgentPoolYamlParser.class);
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 
     public List<AgentPoolDefinition> parse(String yaml) {
@@ -74,6 +82,15 @@ public class AgentPoolYamlParser {
         var command = (String) flat.get("command");
         if (command != null) {agentBuilder.command(command);}
 
+        @SuppressWarnings("unchecked")
+        var modelChainList = (List<Object>) config.get("model-chain");
+        if (modelChainList != null) {
+            var chainResult = parseModelChain(modelChainList);
+            agentBuilder.modelChain(chainResult.chain());
+            agentBuilder.entryCommands(chainResult.entryCommands());
+            agentBuilder.gracePeriods(chainResult.gracePeriods());
+        }
+
         var poolBuilder = agentBuilder.pool();
 
         var minActive = flat.get("pool.min-active");
@@ -96,6 +113,47 @@ public class AgentPoolYamlParser {
         poolBuilder.budget(parseBudget(budgetMap, budgetDefaults));
 
         return poolBuilder.build();
+    }
+
+    record ModelChainParseResult(ModelChain chain, Map<String, String> entryCommands, Map<String, Duration> gracePeriods) {}
+
+    @SuppressWarnings("unchecked")
+    ModelChainParseResult parseModelChain(List<Object> chainList) {
+        var entries = new ArrayList<ModelChain.ModelChainEntry>();
+        var commands = new LinkedHashMap<String, String>();
+        var gracePeriods = new LinkedHashMap<String, Duration>();
+
+        for (Object item : chainList) {
+            if (item instanceof String s) {
+                entries.add(new ModelChain.ModelChainEntry.Named(s));
+            } else if (item instanceof Map<?, ?> rawMap) {
+                var m = (Map<String, Object>) rawMap;
+                if (m.containsKey("model")) {
+                    var name = (String) m.get("model");
+                    entries.add(new ModelChain.ModelChainEntry.Named(name));
+                    if (m.containsKey("command")) {
+                        commands.put(name, (String) m.get("command"));
+                    }
+                    if (m.containsKey("grace-period")) {
+                        gracePeriods.put(name, parseDuration((String) m.get("grace-period")));
+                    }
+                } else if (m.containsKey("tier")) {
+                    var builder = ModelQuery.builder()
+                            .tier(ModelTier.valueOf(((String) m.get("tier")).toUpperCase()));
+                    if (m.containsKey("vendor")) builder.vendor((String) m.get("vendor"));
+                    entries.add(new ModelChain.ModelChainEntry.Queried(builder.build()));
+                }
+            }
+        }
+
+        var seen = new HashSet<String>();
+        for (var entry : entries) {
+            if (entry instanceof ModelChain.ModelChainEntry.Named n && !seen.add(n.modelRef())) {
+                LOG.warnf("Duplicate model '%s' in chain — same model tried twice is likely misconfiguration", n.modelRef());
+            }
+        }
+
+        return new ModelChainParseResult(ModelChain.of(entries), Map.copyOf(commands), Map.copyOf(gracePeriods));
     }
 
     private static void normalizeEnumValues(Map<String, Object> flat) {
