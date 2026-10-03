@@ -1,0 +1,42 @@
+desiredState:
+  namespace: fleet
+  name: e2e-test
+
+variables:
+  workspace: /tmp/fleet-test
+  prefix: test/fleet
+
+nodes:
+  reviewer-pool:
+    type: pool
+    spec:
+      agentId: reviewer
+      minActive: 0
+      maxActive: 4
+      workingDir: ${var.workspace}
+      workingDirPolicy: SHARED_READ
+      eviction: MEMORY_WEIGHTED
+
+  auditor-pool:
+    type: pool
+    spec:
+      agentId: auditor
+      minActive: 0
+      maxActive: 2
+      workingDir: ${var.workspace}
+
+  review-channel:
+    type: channel
+    dependsOn: [reviewer-pool, auditor-pool]
+    spec:
+      name: ${var.prefix}/reviews
+      description: Code review coordination
+      semantic: APPEND
+
+  findings-channel:
+    type: channel
+    dependsOn: [reviewer-pool]
+    spec:
+      name: ${var.prefix}/findings
+      description: Review findings
+      semantic: APPEND
