@@ -78,6 +78,12 @@
             <artifactId>casehub-platform-agent-api</artifactId>
         </dependency>
 
+        <!-- Platform agent router — ModelChainExhaustedException for CLI chain resolution -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform-agent-router-core</artifactId>
+        </dependency>
+
         <!-- Platform YAML core — StepDefinition, StepValidator, StepParameterType -->
         <dependency>
             <groupId>io.casehub</groupId>

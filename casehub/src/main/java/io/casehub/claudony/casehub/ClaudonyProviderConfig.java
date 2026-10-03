@@ -46,6 +46,11 @@ public record ClaudonyProviderConfig(
                 cfg.disallowedTools(), cfg.addDirs(), cfg.workingDir());
     }
 
+    public ClaudonyProviderConfig withModel(String model) {
+        return new ClaudonyProviderConfig(command, Optional.ofNullable(model), appendSystemPrompt,
+            systemPrompt, effort, permissionMode, tools, allowedTools, disallowedTools, addDirs, workingDir);
+    }
+
     private static Optional<String> optString(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v instanceof String s ? Optional.of(s) : Optional.empty();
