@@ -141,6 +141,17 @@ public class AgentPoolYamlParser {
                     var builder = ModelQuery.builder()
                             .tier(ModelTier.valueOf(((String) m.get("tier")).toUpperCase()));
                     if (m.containsKey("vendor")) builder.vendor((String) m.get("vendor"));
+                    if (m.containsKey("max-cost-tier")) {
+                        builder.maxCostTier(io.casehub.platform.api.model.CostTier.valueOf(
+                                ((String) m.get("max-cost-tier")).toUpperCase()));
+                    }
+                    if (m.containsKey("min-context-window") && m.get("min-context-window") instanceof Number n) {
+                        builder.minContextWindow(n.intValue());
+                    }
+                    if (m.containsKey("capabilities") && m.get("capabilities") instanceof List<?> capList) {
+                        builder.requiredCapabilities(new java.util.HashSet<>(capList.stream()
+                                .map(Object::toString).toList()));
+                    }
                     entries.add(new ModelChain.ModelChainEntry.Queried(builder.build()));
                 }
             }
