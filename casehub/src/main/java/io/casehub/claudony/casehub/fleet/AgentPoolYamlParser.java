@@ -100,8 +100,13 @@ public class AgentPoolYamlParser {
         }
     }
 
+
+    public ScalingConfig parseScalingFromMap(Map<String, Object> scalingMap) {
+        return parseScaling(scalingMap);
+    }
+
     @SuppressWarnings("unchecked")
-    private ScalingConfig parseScaling(Map<String, Object> scalingMap) {
+    ScalingConfig parseScaling(Map<String, Object> scalingMap) {
         if (scalingMap == null || scalingMap.isEmpty()) {
             return ScalingConfig.NoScalingConfig.INSTANCE;
         }
