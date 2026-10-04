@@ -9,16 +9,16 @@ import io.casehub.claudony.casehub.fleet.AgentPoolDefinition;
 import io.casehub.claudony.casehub.fleet.AgentPoolDefinitionRegistry;
 import io.casehub.claudony.casehub.fleet.AgentSessionManager;
 import io.casehub.claudony.casehub.fleet.AgentSessionManagerConfig;
-import io.casehub.claudony.casehub.fleet.CliChainResolver;
 import io.casehub.claudony.casehub.fleet.ClaudonyAgentBackend;
+import io.casehub.claudony.casehub.fleet.CliChainResolver;
 import io.casehub.claudony.casehub.fleet.ModelFallbackEvent;
 import io.casehub.claudony.casehub.fleet.SessionOperations;
-import io.casehub.platform.api.model.ModelChain;
-import jakarta.enterprise.event.Event;
 import io.casehub.claudony.config.ClaudonyConfig;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
+import io.casehub.platform.api.model.ModelChain;
+import jakarta.enterprise.event.Event;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -551,6 +551,56 @@ class ClaudonyWorkerProvisionerTest {
 
         assertThat(lastCreatedCommand.get()).isEqualTo("claude");
     }
+
+
+    @Test
+    void provision_withModelChainFallback_cleansUpFailedSessions() throws Exception {
+        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        poolDefRegistry.register(AgentPoolDefinition.builder()
+                                                    .agent("code-reviewer")
+                                                    .command("claude")
+                                                    .modelChain(ModelChain.of("opus", "sonnet"))
+                                                    .build());
+        var prov = new ClaudonyWorkerProvisioner(
+                true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
+                null, null, null, agentBackend, poolDefRegistry, null);
+        prov.circuitBreakerSleeper = d -> {};
+
+        // First session (opus) fails — not alive, exit code 1
+        when(tmux.sessionExists("claudony-pool-1")).thenReturn(false);
+
+        prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
+
+        assertThat(agentBackend.sessionManager().getSession("claudony-pool-1"))
+                .as("failed session should be destroyed").isNull();
+        assertThat(agentBackend.sessionManager().getSession("claudony-pool-2"))
+                .as("successful session should remain").isNotNull();
+        assertThat(agentBackend.sessionManager().activeCount()).isEqualTo(1);
+    }
+
+    @Test
+    void provision_withModelChainExhausted_cleansUpAllSessions() throws Exception {
+        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        poolDefRegistry.register(AgentPoolDefinition.builder()
+                                                    .agent("code-reviewer")
+                                                    .command("claude")
+                                                    .modelChain(ModelChain.of("opus", "sonnet"))
+                                                    .build());
+        var prov = new ClaudonyWorkerProvisioner(
+                true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
+                null, null, null, agentBackend, poolDefRegistry, null);
+        prov.circuitBreakerSleeper = d -> {};
+
+        when(tmux.sessionExists(anyString())).thenReturn(false);
+
+        assertThatThrownBy(() -> prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
+                .isInstanceOf(ProvisioningException.class)
+                .hasMessageContaining("exhausted");
+
+        assertThat(agentBackend.sessionManager().activeCount())
+                .as("all created sessions should be destroyed on exhaustion").isZero();
+    }
+
 
     @Test
     void provision_withModelChainFallback_firesEvent() throws Exception {
