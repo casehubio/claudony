@@ -55,7 +55,7 @@ public class AgentSessionManager {
     public ManagedSession acquireSession(String identity, String workingDir,
                                          String command, WorkingDirPolicy policy) {
         if (budgetLocked) {
-            throw new AgentPoolExhaustedException(status());
+            throw new BudgetExceededException(status());
         }
         long start = System.nanoTime();
         lock.lock();
@@ -294,7 +294,7 @@ public class AgentSessionManager {
         int evictable = activeCount() - config.minActive();
         if (evictable <= 0) {
             exhaustionCount++;
-            throw new AgentPoolExhaustedException(status());
+            throw new PoolAtCapacityException(status());
         }
 
         Instant now = Instant.now();
@@ -303,7 +303,7 @@ public class AgentSessionManager {
                              .max(java.util.Comparator.comparingDouble(s -> evictionPolicy.score(s, now)))
                              .orElseThrow(() -> {
                                  exhaustionCount++;
-                                 return new AgentPoolExhaustedException(status());
+                                 return new PoolAtCapacityException(status());
                              });
 
         ops.suspend(victim.instanceId());

@@ -56,8 +56,9 @@ class ClaudonyWorkerProvisionerTest {
     private ClaudonyWorkerProvisioner provisioner;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         tmux = mock(TmuxService.class);
+        when(tmux.sessionExists(anyString())).thenReturn(true);
         registry = mock(SessionRegistry.class);
         sessionMapping = new WorkerSessionMapping();
         lastCreatedCommand = new AtomicReference<>();
@@ -494,6 +495,7 @@ class ClaudonyWorkerProvisionerTest {
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
                 null, null, null, agentBackend, poolDefRegistry, null);
+        prov.circuitBreakerSleeper = d -> {};
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
@@ -511,6 +513,7 @@ class ClaudonyWorkerProvisionerTest {
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
                 null, null, null, agentBackend, poolDefRegistry, null);
+        prov.circuitBreakerSleeper = d -> {};
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
@@ -529,6 +532,7 @@ class ClaudonyWorkerProvisionerTest {
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
                 null, null, null, agentBackend, poolDefRegistry, null);
+        prov.circuitBreakerSleeper = d -> {};
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
@@ -597,10 +601,11 @@ class ClaudonyWorkerProvisionerTest {
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
                 null, null, null, agentBackend, poolDefRegistry, mockEvent);
+        prov.circuitBreakerSleeper = d -> {};
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
-        // CLI_PASS_THROUGH always resolves first entry (opus), so no fallback event
+        // Circuit breaker resolves first entry (opus), session alive → no fallback event
         assertThat(firedEvents).isEmpty();
     }
 
