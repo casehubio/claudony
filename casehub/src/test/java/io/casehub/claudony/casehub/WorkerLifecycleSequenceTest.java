@@ -87,7 +87,7 @@ class WorkerLifecycleSequenceTest {
                 new AgentSessionManager(new AgentSessionManagerConfig(0, 10), stubOps),
                 stubOps, tmux, agentConfig);
         provisioner = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, configSource, sessionMapping, "claude", "/workspace", null, null, null, agentBackend);
+                true, tmux, registry, configSource, sessionMapping, "claude", "/workspace", null, null, null, agentBackend, null, null);
         listener = new ClaudonyWorkerStatusListener(registry, tmux, events, sessionMapping);
     }
 

@@ -5,14 +5,20 @@ import io.casehub.api.model.ProvisionContext;
 import io.casehub.api.spi.ProvisionResult;
 import io.casehub.api.spi.ProvisioningException;
 import io.casehub.api.spi.WorkerProvisioner;
+import io.casehub.claudony.casehub.fleet.AgentPoolDefinition;
+import io.casehub.claudony.casehub.fleet.AgentPoolDefinitionRegistry;
 import io.casehub.claudony.casehub.fleet.ClaudonyAgentBackend;
+import io.casehub.claudony.casehub.fleet.CliChainResolver;
+import io.casehub.claudony.casehub.fleet.ModelFallbackEvent;
 import io.casehub.claudony.casehub.fleet.TmuxAgentSession;
+import io.casehub.platform.api.model.ModelChain;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
 import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -48,6 +54,8 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
 
     private final ClaudonyWorkerExecutionManager execManager;
     private final QhorusCausalLinkResolver       causalLinkResolver;
+    private final AgentPoolDefinitionRegistry    poolDefRegistry;
+    private final Event<ModelFallbackEvent>      fallbackEvent;
 
     @Inject
     public ClaudonyWorkerProvisioner(
@@ -59,10 +67,13 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
             Instance<CaseHubRuntime> caseHubRuntime,
             @WorkerBackend ClaudonyWorkerExecutionManager execManager,
             QhorusCausalLinkResolver causalLinkResolver,
-            ClaudonyAgentBackend agentBackend) {
+            ClaudonyAgentBackend agentBackend,
+            AgentPoolDefinitionRegistry poolDefRegistry,
+            Event<ModelFallbackEvent> fallbackEvent) {
         this(config.enabled(), tmux, registry, providerConfigSource, sessionMapping,
              config.workers().defaultCommand(), config.workers().defaultWorkingDir(),
-             caseHubRuntime, execManager, causalLinkResolver, agentBackend);
+             caseHubRuntime, execManager, causalLinkResolver, agentBackend,
+             poolDefRegistry, fallbackEvent);
     }
 
     ClaudonyWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
@@ -73,7 +84,9 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                               Instance<CaseHubRuntime> caseHubRuntime,
                               ClaudonyWorkerExecutionManager execManager,
                               QhorusCausalLinkResolver causalLinkResolver,
-                              ClaudonyAgentBackend agentBackend) {
+                              ClaudonyAgentBackend agentBackend,
+                              AgentPoolDefinitionRegistry poolDefRegistry,
+                              Event<ModelFallbackEvent> fallbackEvent) {
         this.enabled              = enabled;
         this.tmux                 = tmux;
         this.registry             = registry;
@@ -85,6 +98,8 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         this.execManager          = execManager;
         this.causalLinkResolver   = causalLinkResolver;
         this.agentBackend         = agentBackend;
+        this.poolDefRegistry      = poolDefRegistry;
+        this.fallbackEvent        = fallbackEvent;
     }
 
     @Override
@@ -165,15 +180,37 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                           ? context.taskType()
                           : capabilities.stream().findFirst().orElse("worker");
 
-        ClaudonyProviderConfig config      = providerConfigSource.forAgent(roleName);
-        String                 baseCommand = config.command().orElse(defaultCommand);
+        ClaudonyProviderConfig config = providerConfigSource.forAgent(roleName);
+
+        String                 baseCommand;
+        ClaudonyProviderConfig effectiveConfig;
+
+        AgentPoolDefinition poolDef = poolDefRegistry != null
+                                      ? poolDefRegistry.get(roleName).orElse(null) : null;
+
+        if (poolDef != null && poolDef.agent().modelChain() != null
+            && !poolDef.agent().modelChain().isEmpty()) {
+            var resolved = CliChainResolver.resolve(
+                    poolDef.agent().modelChain(),
+                    poolDef.agent().command() != null ? poolDef.agent().command() : defaultCommand,
+                    poolDef.agent().entryCommands(),
+                    CliChainResolver.CLI_PASS_THROUGH);
+
+            baseCommand     = resolved.command();
+            effectiveConfig = resolved.model() != null ? config.withModel(resolved.model()) : config;
+
+            fireFallbackEventIfNeeded(roleName, poolDef, resolved);
+        } else {
+            baseCommand     = config.command().orElse(defaultCommand);
+            effectiveConfig = config;
+        }
 
         Optional<String> meshPrompt = Optional.ofNullable(context.workerContext())
                                               .map(wc -> wc.properties().get("systemPrompt"))
                                               .filter(String.class::isInstance)
                                               .map(String.class::cast);
 
-        String enrichedCommand     = WorkerCommandBuilder.build(baseCommand, config, meshPrompt);
+        String enrichedCommand     = WorkerCommandBuilder.build(baseCommand, effectiveConfig, meshPrompt);
         String effectiveWorkingDir = config.workingDir().orElse(defaultWorkingDir);
 
         TmuxAgentSession agentSession;
@@ -203,4 +240,26 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         registry.register(session);
         sessionMapping.register(roleName, context.caseId(), sessionId);
     }
+
+    private void fireFallbackEventIfNeeded(String roleName, AgentPoolDefinition poolDef,
+                                           CliChainResolver.CliResolvedModel resolved) {
+        if (fallbackEvent == null || resolved.model() == null) {return;}
+
+        var entries = poolDef.agent().modelChain().entries();
+        String primaryModel = entries.get(0) instanceof ModelChain.ModelChainEntry.Named n
+                              ? n.modelRef() : null;
+
+        if (primaryModel != null && !primaryModel.equals(resolved.model())) {
+            int depth = 0;
+            for (int i = 1; i < entries.size(); i++) {
+                if (entries.get(i) instanceof ModelChain.ModelChainEntry.Named n
+                    && n.modelRef().equals(resolved.model())) {
+                    depth = i;
+                    break;
+                }
+            }
+            fallbackEvent.fire(new ModelFallbackEvent(roleName, primaryModel, resolved.model(), depth));
+        }
+    }
+
 }
