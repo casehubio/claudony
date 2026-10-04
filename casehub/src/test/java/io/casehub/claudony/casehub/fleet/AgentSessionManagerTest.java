@@ -219,7 +219,7 @@ class AgentSessionManagerTest {
 
         // at max, minActive = max → can't evict
         assertThatThrownBy(() -> manager.acquireSession("tester", "/workspace/test-1"))
-                .isInstanceOf(AgentPoolExhaustedException.class);
+                .isInstanceOf(PoolAtCapacityException.class);
     }
 
     @Test
@@ -442,5 +442,43 @@ class AgentSessionManagerTest {
         manager.acquireSession("a", "/tmp/a");
         var snapshot = manager.snapshotAndResetDemandMetrics();
         assertThat(manager.lastDemandSnapshot()).isSameAs(snapshot);
+    }
+
+    @Test
+    void acquireSession_budgetLocked_throwsBudgetExceededException() {
+        manager = createManager(0, 5);
+        manager.setBudgetLocked(true);
+
+        assertThatThrownBy(() -> manager.acquireSession("reviewer", "/workspace/pr-1"))
+                .isInstanceOf(BudgetExceededException.class);
+    }
+
+    @Test
+    void acquireSession_atCapacity_throwsPoolAtCapacityException() {
+        manager = createManager(2, 2);
+        manager.acquireSession("reviewer", "/workspace/pr-1");
+        manager.acquireSession("coder", "/workspace/task-1");
+
+        assertThatThrownBy(() -> manager.acquireSession("tester", "/workspace/test-1"))
+                .isInstanceOf(PoolAtCapacityException.class);
+    }
+
+    @Test
+    void poolAtCapacityException_isAgentPoolExhaustedException() {
+        manager = createManager(2, 2);
+        manager.acquireSession("reviewer", "/workspace/pr-1");
+        manager.acquireSession("coder", "/workspace/task-1");
+
+        assertThatThrownBy(() -> manager.acquireSession("tester", "/workspace/test-1"))
+                .isInstanceOf(AgentPoolExhaustedException.class);
+    }
+
+    @Test
+    void budgetExceededException_isAgentPoolExhaustedException() {
+        manager = createManager(0, 5);
+        manager.setBudgetLocked(true);
+
+        assertThatThrownBy(() -> manager.acquireSession("reviewer", "/workspace/pr-1"))
+                .isInstanceOf(AgentPoolExhaustedException.class);
     }
 }

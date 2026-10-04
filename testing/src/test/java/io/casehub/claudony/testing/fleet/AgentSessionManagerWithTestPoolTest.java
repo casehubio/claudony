@@ -1,6 +1,7 @@
 package io.casehub.claudony.testing.fleet;
 
 import io.casehub.claudony.casehub.fleet.AgentPoolExhaustedException;
+import io.casehub.claudony.casehub.fleet.PoolAtCapacityException;
 import io.casehub.claudony.casehub.fleet.AgentPoolHealth;
 import io.casehub.claudony.casehub.fleet.AgentSessionManager;
 import io.casehub.claudony.casehub.fleet.AgentSessionManagerConfig;
@@ -108,7 +109,7 @@ class AgentSessionManagerWithTestPoolTest {
         manager.acquireSession("coder", "/workspace/task-1");
 
         assertThatThrownBy(() -> manager.acquireSession("tester", "/workspace/test-1"))
-                .isInstanceOf(AgentPoolExhaustedException.class);
+                .isInstanceOf(PoolAtCapacityException.class);
     }
 
     @Test
