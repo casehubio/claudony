@@ -27,6 +27,7 @@ import org.jboss.logging.Logger;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -215,6 +216,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
 
             var sessionRef = new AtomicReference<TmuxAgentSession>();
             var commandRef = new AtomicReference<String>();
+            var createdSessionIds = new ArrayList<String>();
 
             String poolCommand = poolDef.agent().command() != null
                                  ? poolDef.agent().command() : defaultCommand;
@@ -231,15 +233,24 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                             String enriched = WorkerCommandBuilder.build(command, eConfig, meshPrompt);
                             var session = agentBackend.openWorkerSession(
                                     roleName, effectiveWorkingDir, enriched);
+                            createdSessionIds.add(session.managedSession().instanceId());
                             sessionRef.set(session);
                             commandRef.set(enriched);
                             return session.managedSession().instanceId();
                         },
                         DEFAULT_GRACE_PERIOD);
             } catch (ModelChainExhaustedException e) {
+                createdSessionIds.forEach(id -> agentBackend.sessionManager().destroySession(id));
                 throw new ProvisioningException(
                         "All models in chain exhausted for " + roleName, e);
             }
+
+            createdSessionIds.stream()
+                    .filter(id -> !id.equals(result.sessionId()))
+                    .forEach(id -> {
+                        LOG.infof("Destroying failed circuit-breaker session %s", id);
+                        agentBackend.sessionManager().destroySession(id);
+                    });
 
             agentSession    = sessionRef.get();
             enrichedCommand = commandRef.get();
