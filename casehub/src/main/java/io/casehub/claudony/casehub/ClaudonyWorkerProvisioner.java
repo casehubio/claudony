@@ -7,8 +7,8 @@ import io.casehub.api.spi.ProvisioningException;
 import io.casehub.api.spi.WorkerProvisioner;
 import io.casehub.claudony.casehub.fleet.AgentPoolDefinition;
 import io.casehub.claudony.casehub.fleet.AgentPoolDefinitionRegistry;
-import io.casehub.claudony.casehub.fleet.CliCircuitBreaker;
 import io.casehub.claudony.casehub.fleet.ClaudonyAgentBackend;
+import io.casehub.claudony.casehub.fleet.CliCircuitBreaker;
 import io.casehub.claudony.casehub.fleet.ModelFallbackEvent;
 import io.casehub.claudony.casehub.fleet.TmuxAgentSession;
 import io.casehub.claudony.server.SessionRegistry;
@@ -240,7 +240,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                         },
                         DEFAULT_GRACE_PERIOD);
             } catch (ModelChainExhaustedException e) {
-                createdSessionIds.forEach(id -> agentBackend.sessionManager().destroySession(id));
+                createdSessionIds.forEach(id -> destroyQuietly(id));
                 throw new ProvisioningException(
                         "All models in chain exhausted for " + roleName, e);
             }
@@ -249,7 +249,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                     .filter(id -> !id.equals(result.sessionId()))
                     .forEach(id -> {
                         LOG.infof("Destroying failed circuit-breaker session %s", id);
-                        agentBackend.sessionManager().destroySession(id);
+                        destroyQuietly(id);
                     });
 
             agentSession    = sessionRef.get();
@@ -314,6 +314,15 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                 }
             }
             fallbackEvent.fire(new ModelFallbackEvent(roleName, primaryModel, resolvedModel, depth));
+        }
+    }
+
+
+    private void destroyQuietly(String sessionId) {
+        try {
+            agentBackend.sessionManager().destroySession(sessionId);
+        } catch (Exception e) {
+            LOG.warnf(e, "Failed to destroy circuit-breaker session %s", sessionId);
         }
     }
 
