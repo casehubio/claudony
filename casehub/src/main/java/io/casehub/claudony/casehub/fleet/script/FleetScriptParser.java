@@ -20,13 +20,16 @@ public class FleetScriptParser {
         try {
             return YAML.readValue(yaml, FleetScript.class);
         } catch (IOException e) {
+            if (e.getCause() instanceof IllegalArgumentException iae) {
+                throw iae;
+            }
             throw new UncheckedIOException("Failed to parse fleet script YAML", e);
         }
     }
 
     public FleetScript substituteVariables(FleetScript script) {
         var vars = script.variables();
-        if (vars == null || vars.isEmpty()) return script;
+        if (vars == null) vars = Map.of();
 
         var newNodes = new LinkedHashMap<String, FleetNode>();
         for (var entry : script.nodes().entrySet()) {
