@@ -1,0 +1,7 @@
+nodes:
+  test-pool:
+    type: pool
+    spec:
+      agentId: startup-test
+      minActive: 0
+      maxActive: 2
