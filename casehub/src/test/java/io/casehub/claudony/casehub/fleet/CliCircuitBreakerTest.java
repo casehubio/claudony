@@ -108,7 +108,7 @@ class CliCircuitBreakerTest {
     }
 
     @Test
-    void exitCodeAbove128_skipsRetry() {
+    void exitCodeAbove128_throwsSessionSignalKillException() {
         var b = breaker(sessionId -> false, sessionId -> 139);
 
         assertThatThrownBy(() -> b.tryChain(
@@ -116,7 +116,13 @@ class CliCircuitBreakerTest {
                 "claude", Map.of(), Map.of(),
                 (model, command) -> "session-" + model,
                 Duration.ofSeconds(1)))
-                .isNotInstanceOf(ModelChainExhaustedException.class);
+                .isInstanceOf(SessionSignalKillException.class)
+                .satisfies(ex -> {
+                    var kill = (SessionSignalKillException) ex;
+                    assertThat(kill.sessionId()).isEqualTo("session-opus");
+                    assertThat(kill.exitCode()).isEqualTo(139);
+                    assertThat(kill.signal()).isEqualTo(11);
+                });
     }
 
     @Test

@@ -69,7 +69,7 @@ public class CliCircuitBreaker {
             }
 
             if (exitCode >= 128) {
-                throw new RuntimeException("Session " + sessionId + " killed by signal (exit " + exitCode + ") — not model-related");
+                throw new SessionSignalKillException(sessionId, exitCode);
             }
 
             LOG.warnf("Session %s exited within grace period with exit code %d, model %s — trying next",
