@@ -28,6 +28,10 @@ public final class AgentPoolSchema {
         inputs.put("command", new StepParameter(
                 StepParameterType.STRING, false, null, null, null, "CLI command to run"));
 
+        inputs.put("model-chain", new StepParameter(
+                StepParameterType.LIST, false, null, null, null,
+                "Ordered model fallback chain (string or structured entries)"));
+
         inputs.put("pool.min-active", new StepParameter(
                 StepParameterType.INTEGER, false, "0", null, null, "Minimum pre-warmed sessions"));
 

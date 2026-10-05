@@ -16,6 +16,7 @@ class AgentPoolSchemaTest {
         assertThat(def.inputs()).containsKey("working-dir");
         assertThat(def.inputs()).containsKey("policy");
         assertThat(def.inputs()).containsKey("command");
+        assertThat(def.inputs()).containsKey("model-chain");
         assertThat(def.inputs()).containsKey("pool.min-active");
         assertThat(def.inputs()).containsKey("pool.max-active");
         assertThat(def.inputs()).containsKey("pool.eviction");
