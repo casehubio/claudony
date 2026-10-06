@@ -2,12 +2,11 @@ package io.casehub.claudony.casehub.fleet;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.casehub.yaml.core.step.StepValidator;
-
 import io.casehub.platform.api.model.ModelChain;
 import io.casehub.platform.api.model.ModelQuery;
 import io.casehub.platform.api.model.ModelTier;
+import io.casehub.yaml.core.step.StepValidator;
+import io.casehub.yaml.jackson.YamlMappers;
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
@@ -23,7 +22,7 @@ import java.util.Map;
 public class AgentPoolYamlParser {
 
     private static final Logger LOG = Logger.getLogger(AgentPoolYamlParser.class);
-    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper YAML_MAPPER = YamlMappers.create();
 
     public List<AgentPoolDefinition> parse(String yaml) {
         if (yaml == null || yaml.isBlank()) {return Collections.emptyList();}

@@ -1,7 +1,7 @@
 package io.casehub.claudony.casehub.fleet.script;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.casehub.yaml.jackson.YamlMappers;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 public class FleetScriptParser {
 
-    private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper YAML = YamlMappers.create();
     private static final Pattern VAR_PATTERN = Pattern.compile("\\$\\{var\\.([^}]+)}");
 
     public FleetScript parse(String yaml) {
