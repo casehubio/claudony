@@ -2,6 +2,9 @@ package io.casehub.claudony.server.fleet;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.claudony.server.model.SessionResponse;
+import io.casehub.platform.api.registry.HealthStatus;
+import io.casehub.platform.api.registry.RegistryEntry;
+import io.casehub.platform.api.registry.RegistryService;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
@@ -10,7 +13,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
@@ -24,35 +32,40 @@ public class PeerRegistry {
     private final ConcurrentHashMap<String, PeerEntry> peers = new ConcurrentHashMap<>();
     private final Path peersFile;
     private final ObjectMapper mapper;
+    private final RegistryService registryService;
 
-    /** CDI constructor — uses ~/.claudony/peers.json. */
-    PeerRegistry() {
-        this.peersFile = Path.of(System.getProperty("user.home"), ".claudony", "peers.json");
-        this.mapper = new ObjectMapper().findAndRegisterModules();
+
+    @jakarta.inject.Inject
+    PeerRegistry(RegistryService registryService) {
+        this.peersFile       = Path.of(System.getProperty("user.home"), ".claudony", "peers.json");
+        this.mapper          = new ObjectMapper().findAndRegisterModules();
+        this.registryService = registryService;
     }
 
-    /** Package-private constructor for unit tests — uses a temp directory. */
-    PeerRegistry(Path configDir) {
-        this.peersFile = configDir.resolve("peers.json");
-        this.mapper = new ObjectMapper().findAndRegisterModules();
+    PeerRegistry(Path configDir, RegistryService registryService) {
+        this.peersFile       = configDir.resolve("peers.json");
+        this.mapper          = new ObjectMapper().findAndRegisterModules();
+        this.registryService = registryService;
     }
 
     @PostConstruct
     void loadPersistedPeers() {
-        if (!Files.exists(peersFile)) return;
+        if (!Files.exists(peersFile)) {return;}
         try {
-            var json = Files.readString(peersFile);
+            var json    = Files.readString(peersFile);
             var records = mapper.readValue(json, PeerRecord[].class);
             for (var record : records) {
-                if (record.source() == DiscoverySource.CONFIG) continue;
+                if (record.source() == DiscoverySource.CONFIG) {continue;}
                 var entry = new PeerEntry(record.id(), record.url(), record.name(),
-                        record.source(), record.terminalMode());
+                                          record.source(), record.terminalMode());
                 peers.put(record.id(), entry);
+                registryService.register(toRegistryEntry(record.id(), record.url(),
+                                                         record.name(), record.source(), record.terminalMode()));
             }
             LOG.infof("Fleet: loaded %d peers from %s", peers.size(), peersFile);
         } catch (Exception e) {
             LOG.warnf("Fleet: could not load peers from %s: %s — starting with empty peer list",
-                    peersFile, e.getMessage());
+                      peersFile, e.getMessage());
         }
     }
 
@@ -65,18 +78,20 @@ public class PeerRegistry {
     public synchronized void addPeer(String id, String url, String name,
                                      DiscoverySource source, TerminalMode terminalMode) {
         var existing = peers.values().stream()
-                .filter(e -> e.url.equals(url))
-                .findFirst();
+                            .filter(e -> e.url.equals(url))
+                            .findFirst();
 
         if (existing.isPresent()) {
             if (sourcePriority(source) < sourcePriority(existing.get().source)) {
                 peers.remove(existing.get().id);
+                registryService.deregister(existing.get().id);
             } else {
-                return; // existing has equal or higher trust — keep it
+                return;
             }
         }
 
         peers.put(id, new PeerEntry(id, url, name, source, terminalMode));
+        registryService.register(toRegistryEntry(id, url, name, source, terminalMode));
         if (source != DiscoverySource.CONFIG) {
             persistAsync();
         }
@@ -87,19 +102,24 @@ public class PeerRegistry {
      */
     public synchronized boolean removePeer(String id) {
         var entry = peers.get(id);
-        if (entry == null) return false;
-        if (entry.source == DiscoverySource.CONFIG) return false;
+        if (entry == null) {return false;}
+        if (entry.source == DiscoverySource.CONFIG) {return false;}
         peers.remove(id);
+        registryService.deregister(id);
         persistAsync();
         return true;
     }
 
     public Optional<PeerRecord> findById(String id) {
-        return Optional.ofNullable(peers.get(id)).map(PeerEntry::toRecord);
+        var entry = peers.get(id);
+        if (entry == null) {return Optional.empty();}
+        return Optional.of(entry.toRecord(resolveHealth(id)));
     }
 
     public List<PeerRecord> getAllPeers() {
-        return peers.values().stream().map(PeerEntry::toRecord).toList();
+        return peers.values().stream()
+                    .map(e -> e.toRecord(resolveHealth(e.id)))
+                    .toList();
     }
 
     /**
@@ -107,9 +127,9 @@ public class PeerRegistry {
      */
     public List<PeerRecord> getHealthyPeers() {
         return peers.values().stream()
-                .filter(e -> e.circuitState != CircuitState.OPEN)
-                .map(PeerEntry::toRecord)
-                .toList();
+                    .filter(e -> e.circuitState != CircuitState.OPEN)
+                    .map(e -> e.toRecord(resolveHealth(e.id)))
+                    .toList();
     }
 
     /** Returns all PeerEntry objects — package-private, used by health check loop inside this package. */
@@ -119,21 +139,36 @@ public class PeerRegistry {
 
     public boolean updatePeer(String id, String name, TerminalMode terminalMode) {
         var entry = peers.get(id);
-        if (entry == null) return false;
-        if (name != null && !name.isBlank()) entry.name = name;
-        if (terminalMode != null) entry.terminalMode = terminalMode;
+        if (entry == null) {return false;}
+        if (name != null && !name.isBlank()) {entry.name = name;}
+        if (terminalMode != null) {entry.terminalMode = terminalMode;}
+        registryService.resolve(id).ifPresent(regEntry ->
+                                                      registryService.register(new RegistryEntry(
+                                                              regEntry.id(), regEntry.type(), regEntry.namespace(), regEntry.tenancyId(),
+                                                              Map.of("url", entry.url, "name", entry.name,
+                                                                     "source", entry.source.name(),
+                                                                     "terminalMode", entry.terminalMode.name()),
+                                                              regEntry.registeredAt(), regEntry.lastHeartbeat(), regEntry.ttl(), regEntry.health())));
         persistAsync();
         return true;
     }
 
     public void recordSuccess(String id) {
         var entry = peers.get(id);
-        if (entry != null) entry.recordSuccess();
+        if (entry != null) {
+            entry.recordSuccess();
+            registryService.resolve(id).ifPresent(e ->
+                                                          registryService.register(e.withHealth(HealthStatus.HEALTHY)));
+        }
     }
 
     public void recordFailure(String id) {
         var entry = peers.get(id);
-        if (entry != null) entry.recordFailure();
+        if (entry != null) {
+            entry.recordFailure();
+            registryService.resolve(id).ifPresent(e ->
+                                                          registryService.register(e.withHealth(HealthStatus.DOWN)));
+        }
     }
 
     public void updateCachedSessions(String id, List<SessionResponse> sessions) {
@@ -179,9 +214,9 @@ public class PeerRegistry {
     void persist() {
         try {
             var toSave = peers.values().stream()
-                    .filter(e -> e.source != DiscoverySource.CONFIG)
-                    .map(PeerEntry::toRecord)
-                    .toList();
+                              .filter(e -> e.source != DiscoverySource.CONFIG)
+                              .map(e -> e.toRecord(resolveHealth(e.id)))
+                              .toList();
             var json = mapper.writeValueAsString(toSave);
             Files.createDirectories(peersFile.getParent());
             var tmp = peersFile.resolveSibling("peers.json.tmp");
@@ -198,5 +233,29 @@ public class PeerRegistry {
             case MANUAL -> SOURCE_PRIORITY_MANUAL;
             case MDNS -> SOURCE_PRIORITY_MDNS;
         };
+    }
+
+    private RegistryEntry toRegistryEntry(String id, String url, String name,
+                                          DiscoverySource source, TerminalMode terminalMode) {
+        var now = Instant.now();
+        return new RegistryEntry(id, "node", "fleet", "default",
+                                 Map.of("url", url, "name", name,
+                                        "source", source.name(),
+                                        "terminalMode", terminalMode.name()),
+                                 now, now, Duration.ofMinutes(5), HealthStatus.DEGRADED);
+    }
+
+    static PeerHealth mapHealth(HealthStatus status) {
+        return switch (status) {
+            case HEALTHY -> PeerHealth.UP;
+            case DOWN -> PeerHealth.DOWN;
+            case DEGRADED -> PeerHealth.UNKNOWN;
+        };
+    }
+
+    private PeerHealth resolveHealth(String id) {
+        return registryService.resolve(id)
+                              .map(e -> mapHealth(e.health()))
+                              .orElse(PeerHealth.UNKNOWN);
     }
 }

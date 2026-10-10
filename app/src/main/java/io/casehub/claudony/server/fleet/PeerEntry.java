@@ -20,7 +20,6 @@ public final class PeerEntry {
     volatile String name;
     final DiscoverySource source;
     volatile TerminalMode terminalMode;
-    volatile PeerHealth health = PeerHealth.UNKNOWN;
     volatile CircuitState circuitState = CircuitState.CLOSED;
     final java.util.concurrent.atomic.AtomicInteger consecutiveFailures = new java.util.concurrent.atomic.AtomicInteger(0);
     volatile Instant lastSeen = null;
@@ -36,26 +35,28 @@ public final class PeerEntry {
         this.terminalMode = terminalMode;
     }
 
-    PeerRecord toRecord() {
+    PeerRecord toRecord(PeerHealth health) {
         return new PeerRecord(id, url, name, source, terminalMode, health, circuitState,
-                lastSeen, health == PeerHealth.DOWN && !cachedSessions.isEmpty(), cachedSessions.size());
+                              lastSeen, health == PeerHealth.DOWN && !cachedSessions.isEmpty(), cachedSessions.size());
     }
 
-    /** Record a successful peer call — resets circuit to CLOSED. */
+    /**
+     * Record a successful peer call — resets circuit to CLOSED.
+     */
     void recordSuccess() {
         consecutiveFailures.set(0);
         currentBackoffMs = INITIAL_BACKOFF_MS;
-        circuitState = CircuitState.CLOSED;
-        health = PeerHealth.UP;
-        lastSeen = Instant.now();
+        circuitState     = CircuitState.CLOSED;
+        lastSeen         = Instant.now();
     }
 
-    /** Record a failed peer call — may open circuit after threshold. */
+    /**
+     * Record a failed peer call — may open circuit after threshold.
+     */
     void recordFailure() {
         int failures = consecutiveFailures.incrementAndGet();
-        health = PeerHealth.DOWN;
         if (failures >= FAILURE_THRESHOLD && circuitState == CircuitState.CLOSED) {
-            circuitState = CircuitState.OPEN;
+            circuitState    = CircuitState.OPEN;
             circuitOpenedAt = Instant.now();
         }
     }

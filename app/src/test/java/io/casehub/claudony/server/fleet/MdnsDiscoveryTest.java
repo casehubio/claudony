@@ -1,5 +1,7 @@
 package io.casehub.claudony.server.fleet;
 
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
+
 import io.casehub.claudony.config.ClaudonyConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -21,7 +23,7 @@ class MdnsDiscoveryTest {
         when(config.mdnsDiscovery()).thenReturn(false);
         when(config.fleetKey()).thenReturn(Optional.empty());
         when(config.name()).thenReturn("Test");
-        var registry = new PeerRegistry(tempDir);
+        var registry = new PeerRegistry(tempDir, new InMemoryRegistryService(event -> {}));
 
         var discovery = new MdnsDiscovery(config, registry);
         discovery.init(); // must not throw, must not add any peers
@@ -35,7 +37,7 @@ class MdnsDiscoveryTest {
         when(config.mdnsDiscovery()).thenReturn(true);
         when(config.fleetKey()).thenReturn(Optional.empty());
         when(config.name()).thenReturn("Test");
-        var registry = new PeerRegistry(tempDir);
+        var registry = new PeerRegistry(tempDir, new InMemoryRegistryService(event -> {}));
 
         // Must not throw even if mDNS registration fails (e.g. no multicast network)
         var discovery = new MdnsDiscovery(config, registry);
