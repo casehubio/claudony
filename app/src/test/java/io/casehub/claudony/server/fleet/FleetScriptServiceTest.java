@@ -7,7 +7,9 @@ import io.casehub.claudony.casehub.fleet.SessionOperations;
 import io.casehub.claudony.casehub.fleet.script.*;
 import io.casehub.qhorus.api.channel.ChannelCreateRequest;
 import io.casehub.qhorus.api.channel.ChannelSemantic;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -28,7 +30,7 @@ class FleetScriptServiceTest {
 
     @BeforeEach
     void setUp() {
-        defRegistry = new AgentPoolDefinitionRegistry();
+        defRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         mgrRegistry = new AgentPoolManagerRegistry();
         createdChannels = new ConcurrentHashMap<>();
 

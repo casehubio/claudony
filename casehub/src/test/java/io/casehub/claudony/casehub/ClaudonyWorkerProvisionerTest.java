@@ -19,7 +19,9 @@ import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.platform.api.model.ModelChain;
 import jakarta.enterprise.event.Event;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -486,7 +488,7 @@ class ClaudonyWorkerProvisionerTest {
 
     @Test
     void provision_withModelChain_usesResolvedModel() throws Exception {
-        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        var poolDefRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         poolDefRegistry.register(AgentPoolDefinition.builder()
                                                     .agent("code-reviewer")
                                                     .command("claude")
@@ -504,7 +506,7 @@ class ClaudonyWorkerProvisionerTest {
 
     @Test
     void provision_withModelChain_overridesBaseCommand() throws Exception {
-        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        var poolDefRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         poolDefRegistry.register(AgentPoolDefinition.builder()
                                                     .agent("code-reviewer")
                                                     .command("ollama run")
@@ -522,7 +524,7 @@ class ClaudonyWorkerProvisionerTest {
 
     @Test
     void provision_withModelChainEntryCommandOverride_usesEntryCommand() throws Exception {
-        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        var poolDefRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         poolDefRegistry.register(AgentPoolDefinition.builder()
                                                     .agent("code-reviewer")
                                                     .command("claude")
@@ -542,7 +544,7 @@ class ClaudonyWorkerProvisionerTest {
 
     @Test
     void provision_withoutPoolDefinition_usesExistingBehavior() throws Exception {
-        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        var poolDefRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
                 null, null, null, agentBackend, poolDefRegistry, null);
@@ -555,7 +557,7 @@ class ClaudonyWorkerProvisionerTest {
 
     @Test
     void provision_withModelChainFallback_cleansUpFailedSessions() throws Exception {
-        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        var poolDefRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         poolDefRegistry.register(AgentPoolDefinition.builder()
                                                     .agent("code-reviewer")
                                                     .command("claude")
@@ -580,7 +582,7 @@ class ClaudonyWorkerProvisionerTest {
 
     @Test
     void provision_withModelChainExhausted_cleansUpAllSessions() throws Exception {
-        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        var poolDefRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         poolDefRegistry.register(AgentPoolDefinition.builder()
                                                     .agent("code-reviewer")
                                                     .command("claude")
@@ -604,7 +606,7 @@ class ClaudonyWorkerProvisionerTest {
 
     @Test
     void provision_withModelChainFallback_firesEvent() throws Exception {
-        var poolDefRegistry = new AgentPoolDefinitionRegistry();
+        var poolDefRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         poolDefRegistry.register(AgentPoolDefinition.builder()
                                                     .agent("code-reviewer")
                                                     .command("claude")

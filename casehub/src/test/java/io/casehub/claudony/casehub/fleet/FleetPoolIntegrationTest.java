@@ -1,8 +1,11 @@
 package io.casehub.claudony.casehub.fleet;
 
 import io.casehub.claudony.server.TmuxService;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.AfterEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -66,7 +69,7 @@ class FleetPoolIntegrationTest {
                 """.formatted(mockAgentCommand);
 
         var parser = new AgentPoolYamlParser();
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         parser.parseInto(yaml, registry);
 
         assertThat(registry.get("test-reviewer")).isPresent();

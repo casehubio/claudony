@@ -1,7 +1,9 @@
 package io.casehub.claudony.casehub.fleet.script;
 
 import io.casehub.claudony.casehub.fleet.*;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -17,7 +19,7 @@ class PoolNodeHandlerTest {
 
     @BeforeEach
     void setUp() {
-        defRegistry = new AgentPoolDefinitionRegistry();
+        defRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         mgrRegistry = new AgentPoolManagerRegistry();
         SessionOperations ops = new SessionOperations() {
             @Override public String create(String identity, String workingDir) {

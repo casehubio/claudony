@@ -1,6 +1,8 @@
 package io.casehub.claudony.casehub.fleet;
 
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -20,7 +22,7 @@ class BudgetEnforcementObserverTest {
     @BeforeEach
     void setUp() {
         tracker = new BudgetTracker();
-        defRegistry = new AgentPoolDefinitionRegistry();
+        defRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         mgrRegistry = new AgentPoolManagerRegistry();
         enforcer = mock(BudgetEnforcer.class);
         observer = new BudgetEnforcementObserver(tracker, defRegistry, mgrRegistry, enforcer);
