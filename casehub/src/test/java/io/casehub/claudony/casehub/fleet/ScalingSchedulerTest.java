@@ -1,6 +1,8 @@
 package io.casehub.claudony.casehub.fleet;
 
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,7 +16,7 @@ class ScalingSchedulerTest {
 
     @BeforeEach
     void setUp() {
-        defRegistry = new AgentPoolDefinitionRegistry();
+        defRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         mgrRegistry = new AgentPoolManagerRegistry();
         createCount = new AtomicInteger();
     }

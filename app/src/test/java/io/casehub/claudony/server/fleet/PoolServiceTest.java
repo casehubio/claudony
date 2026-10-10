@@ -5,7 +5,9 @@ import io.casehub.claudony.casehub.fleet.AgentPoolManagerRegistry;
 import io.casehub.claudony.casehub.fleet.ScalingConfig;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.ws.rs.BadRequestException;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -22,7 +24,7 @@ class PoolServiceTest {
 
     @BeforeEach
     void setUp() {
-        var defRegistry = new AgentPoolDefinitionRegistry();
+        var defRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         var mgrRegistry = new AgentPoolManagerRegistry();
         service = new PoolService(defRegistry, mgrRegistry, null, new SimpleMeterRegistry());
     }

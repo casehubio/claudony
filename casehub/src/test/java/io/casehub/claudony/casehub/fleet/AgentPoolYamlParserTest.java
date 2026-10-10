@@ -1,6 +1,8 @@
 package io.casehub.claudony.casehub.fleet;
 
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -137,7 +139,7 @@ class AgentPoolYamlParserTest {
                   beta: {}
                 """;
 
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         parser.parseInto(yaml, registry);
 
         assertThat(registry.size()).isEqualTo(2);

@@ -1,7 +1,9 @@
 package io.casehub.claudony.casehub.fleet;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.net.URL;
@@ -41,7 +43,7 @@ class PoolDefinitionSourceTest {
                 """);
 
         var cl = new URLClassLoader(new URL[]{tempDir.toUri().toURL()});
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         var source = new PoolDefinitionSource(new ObjectMapper());
         source.discover(cl, registry);
 
@@ -56,7 +58,7 @@ class PoolDefinitionSourceTest {
         var emptyDir = tempDir.resolve("empty");
         Files.createDirectories(emptyDir);
         var cl = new URLClassLoader(new URL[]{emptyDir.toUri().toURL()});
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         var source = new PoolDefinitionSource(new ObjectMapper());
         source.discover(cl, registry);
 
@@ -75,7 +77,7 @@ class PoolDefinitionSourceTest {
         }
 
         var cl = new URLClassLoader(new URL[]{tempDir.toUri().toURL()});
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         new PoolDefinitionSource(new ObjectMapper()).discover(cl, registry);
 
         assertThat(registry.size()).isEqualTo(2);

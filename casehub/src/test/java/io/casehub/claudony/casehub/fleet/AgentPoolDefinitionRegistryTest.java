@@ -1,5 +1,8 @@
 package io.casehub.claudony.casehub.fleet;
 
+import io.casehub.platform.api.registry.RegistryQuery;
+import io.casehub.platform.api.registry.RegistryService;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -8,11 +11,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AgentPoolDefinitionRegistryTest {
 
+
+    private RegistryService             registryService;
     private AgentPoolDefinitionRegistry registry;
 
     @BeforeEach
     void setUp() {
-        registry = new AgentPoolDefinitionRegistry();
+        registryService = new InMemoryRegistryService(event -> {});
+        registry        = new AgentPoolDefinitionRegistry(registryService);
     }
 
     @Test
@@ -78,4 +84,36 @@ class AgentPoolDefinitionRegistryTest {
         registry.register(AgentPoolDefinition.builder().agent("x").build());
         assertThat(registry.size()).isEqualTo(1);
     }
+
+    @Test
+    void register_createsRegistryEntry() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("code-reviewer")
+                                     .workingDir("/reviews")
+                                     .build();
+
+        registry.register(def);
+
+        var entries = registryService.discover(new RegistryQuery("default", "pool", "fleet"));
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).id()).isEqualTo("code-reviewer");
+        assertThat(entries.get(0).type()).isEqualTo("pool");
+        assertThat(entries.get(0).metadata()).containsEntry("agentName", "code-reviewer");
+    }
+
+    @Test
+    void registryEntry_updatedOnCapacityChange() {
+        var def = AgentPoolDefinition.builder().agent("test").pool()
+                                     .minActive(0).maxActive(10).build();
+        registry.register(def);
+
+        registry.updateCapacity("test", 2, 20);
+
+        var entries = registryService.discover(new RegistryQuery("default", "pool", "fleet"));
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).metadata()).containsEntry("minActive", "2");
+        assertThat(entries.get(0).metadata()).containsEntry("maxActive", "20");
+    }
+
+
 }

@@ -1,5 +1,6 @@
 package io.casehub.claudony.casehub.fleet;
 
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,7 +10,7 @@ class AgentPoolDefinitionRegistryUpdateTest {
 
     @Test
     void updateScaling_replacesConfig() {
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         var def = AgentPoolDefinition.builder().agent("test").pool()
             .scaling(new ScalingConfig.TargetTrackingConfig(0.7, null, null)).build();
         registry.register(def);
@@ -23,14 +24,14 @@ class AgentPoolDefinitionRegistryUpdateTest {
 
     @Test
     void updateScaling_unknownPool_throws() {
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         assertThatThrownBy(() -> registry.updateScaling("missing", ScalingConfig.NoScalingConfig.INSTANCE))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void updateCapacity_updatesMinMax() {
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         var def = AgentPoolDefinition.builder().agent("test").pool().minActive(0).maxActive(10).build();
         registry.register(def);
 
@@ -43,7 +44,7 @@ class AgentPoolDefinitionRegistryUpdateTest {
 
     @Test
     void updateCapacity_preservesScalingAndEviction() {
-        var registry = new AgentPoolDefinitionRegistry();
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         var scaling = new ScalingConfig.TargetTrackingConfig(0.7, null, null);
         var def = AgentPoolDefinition.builder().agent("test").pool()
             .minActive(0).maxActive(10).scaling(scaling).build();
