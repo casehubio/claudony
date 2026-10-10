@@ -1,215 +1,121 @@
 package io.casehub.claudony.server.fleet;
 
-import io.casehub.claudony.casehub.fleet.AgentSessionManager;
-import io.casehub.claudony.casehub.fleet.AgentSessionManagerConfig;
-import io.casehub.claudony.casehub.fleet.TmuxSessionOperations;
-import io.casehub.claudony.server.TmuxService;
-import io.casehub.qhorus.persistence.memory.InMemoryInstanceStore;
-import io.casehub.qhorus.runtime.instance.InstanceService;
-import org.junit.jupiter.api.AfterEach;
+import io.casehub.claudony.casehub.fleet.ManagedSession;
+import io.casehub.platform.api.registry.HealthStatus;
+import io.casehub.platform.api.registry.RegistryEntry;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PoolMeshIntegrationTest {
 
-    private static final String TEST_PREFIX = "test-mesh-";
-
-    private TmuxService tmux;
-    private String mockAgentCommand;
-    private Path mockAgentScript;
-    private final List<String> createdSessions = new ArrayList<>();
-    private InMemoryInstanceStore instanceStore;
-    private InstanceService instanceService;
+    private InMemoryRegistryService registryService;
+    private PoolMeshRegistrar       registrar;
 
     @BeforeEach
-    void setUp() throws IOException {
-        tmux = new TmuxService();
-        mockAgentScript = Files.createTempFile("mock-agent-", ".sh");
-        Files.writeString(mockAgentScript, """
-                #!/bin/sh
-                echo MOCK_AGENT_READY
-                while IFS= read -r line; do
-                    echo "ECHO:$line"
-                done
-                """);
-        mockAgentScript.toFile().setExecutable(true);
-        mockAgentCommand = mockAgentScript.toAbsolutePath().toString();
-        instanceStore = new InMemoryInstanceStore();
-        instanceService = new InstanceService(instanceStore);
+    void setUp() {
+        registryService = new InMemoryRegistryService(event -> {});
+        registrar       = new PoolMeshRegistrar(registryService);
     }
 
-    @AfterEach
-    void tearDown() throws Exception {
-        for (String sessionId : createdSessions) {
-            try { tmux.killSession(sessionId); } catch (Exception ignored) {}
-        }
-        for (String name : tmux.listSessionNames()) {
-            if (name.startsWith(TEST_PREFIX)) {
-                try { tmux.killSession(name); } catch (Exception ignored) {}
-            }
-        }
-        Files.deleteIfExists(mockAgentScript);
+    private ManagedSession session(String id, String identity) {
+        return new ManagedSession(id, identity, "/tmp", null);
+    }
+
+    private void registerAgentInstance(String instanceId) {
+        var now = java.time.Instant.now();
+        registryService.register(new RegistryEntry(
+                instanceId, "agent-instance", "default", "default",
+                java.util.Map.of("description", "test"),
+                now, now, java.time.Duration.ofMinutes(5), HealthStatus.HEALTHY));
     }
 
     @Test
-    void acquire_registersAsQhorusInstance() {
-        var registrar = new PoolMeshRegistrar(instanceService);
-        var ops = new TmuxSessionOperations(tmux, TEST_PREFIX, mockAgentCommand);
-        var manager = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 5), ops, registrar, "code-reviewer");
+    void acquire_linksPoolToSession() {
+        var session = session("session-1", "reviewer-1");
+        registrar.onAcquired(session, "code-reviewer");
 
-        var session = manager.acquireSession("reviewer-1", "/tmp");
-        createdSessions.add(session.instanceId());
-
-        var instance = instanceService.findByInstanceId(session.instanceId());
-        assertThat(instance).isPresent();
-        assertThat(instance.get().status()).isEqualTo("online");
-        assertThat(instance.get().description()).isEqualTo("pool:code-reviewer/reviewer-1");
-        assertThat(instance.get().claudonySessionId()).isEqualTo(session.instanceId());
-
-        var caps = instanceService.findCapabilityTagsForInstance(session.instanceId());
-        assertThat(caps).containsExactly("pool:code-reviewer");
-
-        manager.destroySession(session.instanceId());
+        var rels = registryService.relationships("code-reviewer");
+        assertThat(rels).hasSize(1);
+        assertThat(rels.get(0).sourceId()).isEqualTo("code-reviewer");
+        assertThat(rels.get(0).targetId()).isEqualTo("session-1");
+        assertThat(rels.get(0).type()).isEqualTo("contains");
     }
 
     @Test
-    void suspend_marksInstanceOffline() {
-        var registrar = new PoolMeshRegistrar(instanceService);
-        var ops = new TmuxSessionOperations(tmux, TEST_PREFIX, mockAgentCommand);
-        var manager = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 5), ops, registrar, "code-reviewer");
+    void suspend_updatesHealthToDegraded() {
+        var session = session("session-1", "reviewer-1");
+        registerAgentInstance("session-1");
 
-        var session = manager.acquireSession("reviewer-1", "/tmp");
-        createdSessions.add(session.instanceId());
+        registrar.onSuspended(session, "code-reviewer");
 
-        manager.suspendSession(session.instanceId());
-
-        var instance = instanceService.findByInstanceId(session.instanceId());
-        assertThat(instance).isPresent();
-        assertThat(instance.get().status()).isEqualTo("offline");
-
-        manager.destroySession(session.instanceId());
+        var entry = registryService.resolve("session-1");
+        assertThat(entry).isPresent();
+        assertThat(entry.get().health()).isEqualTo(HealthStatus.DEGRADED);
     }
 
     @Test
-    void resume_marksInstanceOnline() {
-        var registrar = new PoolMeshRegistrar(instanceService);
-        var ops = new TmuxSessionOperations(tmux, TEST_PREFIX, mockAgentCommand);
-        var manager = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 5), ops, registrar, "code-reviewer");
+    void resume_updatesHealthToHealthy() {
+        var session = session("session-1", "reviewer-1");
+        registerAgentInstance("session-1");
+        registrar.onSuspended(session, "code-reviewer");
 
-        var session = manager.acquireSession("reviewer-1", "/tmp");
-        createdSessions.add(session.instanceId());
+        registrar.onResumed(session, "code-reviewer");
 
-        manager.suspendSession(session.instanceId());
-        assertThat(instanceService.findByInstanceId(session.instanceId()).get().status())
-                .isEqualTo("offline");
-
-        manager.resumeSession(session.instanceId());
-
-        var instance = instanceService.findByInstanceId(session.instanceId());
-        assertThat(instance).isPresent();
-        assertThat(instance.get().status()).isEqualTo("online");
-
-        manager.destroySession(session.instanceId());
+        var entry = registryService.resolve("session-1");
+        assertThat(entry).isPresent();
+        assertThat(entry.get().health()).isEqualTo(HealthStatus.HEALTHY);
     }
 
     @Test
-    void destroy_deregistersInstance() {
-        var registrar = new PoolMeshRegistrar(instanceService);
-        var ops = new TmuxSessionOperations(tmux, TEST_PREFIX, mockAgentCommand);
-        var manager = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 5), ops, registrar, "code-reviewer");
+    void destroy_unlinksPoolFromSession() {
+        var session = session("session-1", "reviewer-1");
+        registrar.onAcquired(session, "code-reviewer");
+        assertThat(registryService.relationships("code-reviewer")).hasSize(1);
 
-        var session = manager.acquireSession("reviewer-1", "/tmp");
-        createdSessions.add(session.instanceId());
-
-        assertThat(instanceService.findByInstanceId(session.instanceId())).isPresent();
-
-        manager.destroySession(session.instanceId());
-
-        assertThat(instanceService.findByInstanceId(session.instanceId())).isEmpty();
+        registrar.onDestroyed("session-1", "code-reviewer");
+        assertThat(registryService.relationships("code-reviewer")).isEmpty();
     }
 
     @Test
     void fullLifecycle_cleanState() {
-        var registrar = new PoolMeshRegistrar(instanceService);
-        var ops = new TmuxSessionOperations(tmux, TEST_PREFIX, mockAgentCommand);
-        var manager = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 5), ops, registrar, "code-reviewer");
+        var session = session("session-1", "reviewer-1");
+        registerAgentInstance("session-1");
 
-        var session = manager.acquireSession("reviewer-1", "/tmp");
-        createdSessions.add(session.instanceId());
-        String id = session.instanceId();
+        registrar.onAcquired(session, "code-reviewer");
+        assertThat(registryService.relationships("code-reviewer")).hasSize(1);
+        assertThat(registryService.resolve("session-1").get().health()).isEqualTo(HealthStatus.HEALTHY);
 
-        assertThat(instanceService.findByInstanceId(id).get().status()).isEqualTo("online");
+        registrar.onSuspended(session, "code-reviewer");
+        assertThat(registryService.resolve("session-1").get().health()).isEqualTo(HealthStatus.DEGRADED);
 
-        manager.suspendSession(id);
-        assertThat(instanceService.findByInstanceId(id).get().status()).isEqualTo("offline");
+        registrar.onResumed(session, "code-reviewer");
+        assertThat(registryService.resolve("session-1").get().health()).isEqualTo(HealthStatus.HEALTHY);
 
-        manager.resumeSession(id);
-        assertThat(instanceService.findByInstanceId(id).get().status()).isEqualTo("online");
-
-        manager.destroySession(id);
-        assertThat(instanceService.findByInstanceId(id)).isEmpty();
-        assertThat(instanceService.listAll()).isEmpty();
+        registrar.onDestroyed("session-1", "code-reviewer");
+        assertThat(registryService.relationships("code-reviewer")).isEmpty();
     }
 
     @Test
-    void capabilityRouting_findsPoolInstances() {
-        var registrar = new PoolMeshRegistrar(instanceService);
+    void multipleSessionsInPool_allLinked() {
+        var s1 = session("session-1", "reviewer-1");
+        var s2 = session("session-2", "reviewer-2");
 
-        var ops1 = new TmuxSessionOperations(tmux, TEST_PREFIX, mockAgentCommand);
-        var mgr1 = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 5), ops1, registrar, "code-reviewer");
-        var s1 = mgr1.acquireSession("reviewer-1", "/tmp");
-        createdSessions.add(s1.instanceId());
+        registrar.onAcquired(s1, "code-reviewer");
+        registrar.onAcquired(s2, "code-reviewer");
 
-        var ops2 = new TmuxSessionOperations(tmux, TEST_PREFIX + "r-", mockAgentCommand);
-        var mgr2 = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 5), ops2, registrar, "test-runner");
-        var s2 = mgr2.acquireSession("runner-1", "/tmp/runner");
-        createdSessions.add(s2.instanceId());
-
-        var reviewers = instanceService.findByCapability("pool:code-reviewer");
-        assertThat(reviewers).hasSize(1);
-        assertThat(reviewers.get(0).instanceId()).isEqualTo(s1.instanceId());
-
-        var runners = instanceService.findByCapability("pool:test-runner");
-        assertThat(runners).hasSize(1);
-        assertThat(runners.get(0).instanceId()).isEqualTo(s2.instanceId());
-
-        mgr1.destroySession(s1.instanceId());
-        mgr2.destroySession(s2.instanceId());
+        var rels = registryService.relationships("code-reviewer");
+        assertThat(rels).hasSize(2);
+        assertThat(rels).extracting("targetId")
+                        .containsExactlyInAnyOrder("session-1", "session-2");
     }
 
     @Test
-    void multipleSessionsInPool_allRegistered() {
-        var registrar = new PoolMeshRegistrar(instanceService);
-        var ops = new TmuxSessionOperations(tmux, TEST_PREFIX, mockAgentCommand);
-        var manager = new AgentSessionManager(
-                new AgentSessionManagerConfig(0, 5), ops, registrar, "code-reviewer");
-
-        var s1 = manager.acquireSession("reviewer-1", "/tmp");
-        var s2 = manager.acquireSession("reviewer-2", "/tmp/other");
-        createdSessions.add(s1.instanceId());
-        createdSessions.add(s2.instanceId());
-
-        var instances = instanceService.findByCapability("pool:code-reviewer");
-        assertThat(instances).hasSize(2);
-        assertThat(instances).extracting("instanceId")
-                .containsExactlyInAnyOrder(s1.instanceId(), s2.instanceId());
-
-        manager.destroySession(s1.instanceId());
-        manager.destroySession(s2.instanceId());
+    void suspend_noOpWhenSessionNotInRegistry() {
+        var session = session("session-1", "reviewer-1");
+        registrar.onSuspended(session, "code-reviewer");
+        assertThat(registryService.resolve("session-1")).isEmpty();
     }
 }
