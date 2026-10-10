@@ -1,5 +1,8 @@
 package io.casehub.claudony.server.fleet;
 
+import io.casehub.platform.api.registry.HealthStatus;
+import io.casehub.platform.api.registry.RegistryQuery;
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,11 +17,14 @@ class PeerRegistryTest {
     @TempDir
     Path tempDir;
 
+
+    InMemoryRegistryService registryService;
     PeerRegistry registry;
 
     @BeforeEach
     void setUp() {
-        registry = new PeerRegistry(tempDir);
+        registryService = new InMemoryRegistryService(event -> {});
+        registry        = new PeerRegistry(tempDir, registryService);
     }
 
     /**
@@ -178,8 +184,45 @@ class PeerRegistryTest {
     void corruptedPeersJsonIsIgnored() throws Exception {
         java.nio.file.Files.writeString(tempDir.resolve("peers.json"), "NOT VALID JSON {{{");
         // Should not throw — graceful recovery
-        var freshRegistry = new PeerRegistry(tempDir);
+        var freshRegistry = new PeerRegistry(tempDir, new InMemoryRegistryService(event -> {}));
         freshRegistry.loadPersistedPeers();
         assertThat(freshRegistry.getAllPeers()).isEmpty();
+    }
+
+    @Test
+    void addPeer_createsRegistryEntry() {
+        registry.addPeer("id1", "http://peer-a:7777", "Peer A", DiscoverySource.MANUAL, TerminalMode.DIRECT);
+        var entry = registryService.resolve("id1");
+        assertThat(entry).isPresent();
+        assertThat(entry.get().type()).isEqualTo("node");
+        assertThat(entry.get().namespace()).isEqualTo("fleet");
+        assertThat(entry.get().metadata()).containsEntry("url", "http://peer-a:7777");
+        assertThat(entry.get().metadata()).containsEntry("name", "Peer A");
+        assertThat(entry.get().metadata()).containsEntry("source", "MANUAL");
+    }
+
+    @Test
+    void removePeer_deregistersFromRegistry() {
+        registry.addPeer("id1", "http://peer-a:7777", "Peer A", DiscoverySource.MANUAL, TerminalMode.DIRECT);
+        registry.removePeer("id1");
+        assertThat(registryService.resolve("id1")).isEmpty();
+    }
+
+    @Test
+    void recordSuccess_updatesRegistryHealth() {
+        registry.addPeer("id1", "http://peer-a:7777", "A", DiscoverySource.MANUAL, TerminalMode.DIRECT);
+        registry.recordSuccess("id1");
+        var entry = registryService.resolve("id1");
+        assertThat(entry).isPresent();
+        assertThat(entry.get().health()).isEqualTo(HealthStatus.HEALTHY);
+    }
+
+    @Test
+    void recordFailure_updatesRegistryHealthToDown() {
+        registry.addPeer("id1", "http://peer-a:7777", "A", DiscoverySource.MANUAL, TerminalMode.DIRECT);
+        registry.recordFailure("id1");
+        var entry = registryService.resolve("id1");
+        assertThat(entry).isPresent();
+        assertThat(entry.get().health()).isEqualTo(HealthStatus.DOWN);
     }
 }

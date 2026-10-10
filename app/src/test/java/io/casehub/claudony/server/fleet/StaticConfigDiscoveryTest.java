@@ -1,5 +1,7 @@
 package io.casehub.claudony.server.fleet;
 
+import io.casehub.platform.registry.memory.InMemoryRegistryService;
+
 import io.casehub.claudony.config.ClaudonyConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,7 +17,7 @@ class StaticConfigDiscoveryTest {
 
     @TempDir Path tempDir;
 
-    private PeerRegistry registry() { return new PeerRegistry(tempDir); }
+    private PeerRegistry registry() { return new PeerRegistry(tempDir, new InMemoryRegistryService(event -> {})); }
 
     private ClaudonyConfig config(String peers) {
         var c = mock(ClaudonyConfig.class);
