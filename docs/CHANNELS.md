@@ -16,6 +16,7 @@ between contexts that independently create channels.
 | `team/` | Team rooms | `team/engineering`, `team/general` | General-purpose team communication. Created via `POST /api/channels`. |
 | `issue/` | Issue-scoped | `issue/177`, `issue/177/review` | Discussion tied to a specific issue. Created programmatically when an issue context is stood up. |
 | `collab/` | Collaboration | `collab/design-sprint`, `collab/onboarding` | Ad-hoc collaboration channels. Created by users or systems. |
+| `app:{name}/` | Registered apps | `app:scaffold/work`, `app:trellis/observe` | Per-application channels. `{name}` is the app's namespace from `ApplicationRegistrationService`. Created on demand by the app via `ChannelService`. |
 
 ## Rules
 
