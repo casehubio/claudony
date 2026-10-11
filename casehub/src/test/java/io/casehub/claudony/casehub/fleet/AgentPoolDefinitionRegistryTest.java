@@ -102,6 +102,36 @@ class AgentPoolDefinitionRegistryTest {
     }
 
     @Test
+    void register_withNamespace_usesProvidedNamespace() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("code-reviewer")
+                                     .workingDir("/reviews")
+                                     .build();
+
+        registry.register(def, "scaffold");
+
+        var entries = registryService.discover(new RegistryQuery("default", "pool", "scaffold"));
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).id()).isEqualTo("code-reviewer");
+        assertThat(entries.get(0).namespace()).isEqualTo("scaffold");
+    }
+
+    @Test
+    void register_withoutNamespace_defaultsToFleet() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("reviewer")
+                                     .workingDir("/work")
+                                     .build();
+
+        registry.register(def);
+
+        var entries = registryService.discover(new RegistryQuery("default", "pool", "fleet"));
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).namespace()).isEqualTo("fleet");
+    }
+
+
+    @Test
     void registryEntry_updatedOnCapacityChange() {
         var def = AgentPoolDefinition.builder().agent("test").pool()
                                      .minActive(0).maxActive(10).build();
