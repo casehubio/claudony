@@ -23,13 +23,18 @@ public class AgentPoolDefinitionRegistry {
     }
 
     public void register(AgentPoolDefinition definition) {
+        register(definition, "fleet");
+    }
+
+    public void register(AgentPoolDefinition definition, String namespace) {
         var prev = definitions.putIfAbsent(definition.agent().name(), definition);
         if (prev != null) {
             throw new IllegalStateException(
                     "Pool definition already registered for agent: " + definition.agent().name());
         }
-        registryService.register(toRegistryEntry(definition));
+        registryService.register(toRegistryEntry(definition, namespace));
     }
+
 
     public Optional<AgentPoolDefinition> get(String agentName) {
         return Optional.ofNullable(definitions.get(agentName));
@@ -58,7 +63,9 @@ public class AgentPoolDefinitionRegistry {
             var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), newScaling, oldPool.budget());
             return new AgentPoolDefinition(existing.agent(), newPool);
         });
-        registryService.register(toRegistryEntry(definitions.get(agentName)));
+        var updated = definitions.get(agentName);
+        var ns      = registryService.resolve(agentName).map(RegistryEntry::namespace).orElse("fleet");
+        registryService.register(toRegistryEntry(updated, ns));
     }
 
     public void updateCapacity(String agentName, int minActive, int maxActive) {
@@ -68,7 +75,9 @@ public class AgentPoolDefinitionRegistry {
             var newPool = new AgentPoolDefinition.PoolConfig(minActive, maxActive, oldPool.eviction(), oldPool.scaling(), oldPool.budget());
             return new AgentPoolDefinition(existing.agent(), newPool);
         });
-        registryService.register(toRegistryEntry(definitions.get(agentName)));
+        var updated = definitions.get(agentName);
+        var ns      = registryService.resolve(agentName).map(RegistryEntry::namespace).orElse("fleet");
+        registryService.register(toRegistryEntry(updated, ns));
     }
 
     public void updateBudget(String agentName, BudgetConfig newBudget) {
@@ -78,19 +87,21 @@ public class AgentPoolDefinitionRegistry {
             var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), oldPool.scaling(), newBudget);
             return new AgentPoolDefinition(existing.agent(), newPool);
         });
-        registryService.register(toRegistryEntry(definitions.get(agentName)));
+        var updated = definitions.get(agentName);
+        var ns      = registryService.resolve(agentName).map(RegistryEntry::namespace).orElse("fleet");
+        registryService.register(toRegistryEntry(updated, ns));
     }
 
 
-    private RegistryEntry toRegistryEntry(AgentPoolDefinition def) {
+    private RegistryEntry toRegistryEntry(AgentPoolDefinition def, String namespace) {
         var now = java.time.Instant.now();
         return new RegistryEntry(
-                def.agent().name(), "pool", "fleet", "default",
+                def.agent().name(), "pool", namespace, "default",
                 java.util.Map.of(
                         "agentName", def.agent().name(),
                         "minActive", String.valueOf(def.pool().minActive()),
                         "maxActive", String.valueOf(def.pool().maxActive())
                                 ),
-                now, now, java.time.Duration.ofHours(24), HealthStatus.HEALTHY);
+                now, now, java.time.Duration.ofHours(24), HealthStatus.HEALTHY, null);
     }
 }
