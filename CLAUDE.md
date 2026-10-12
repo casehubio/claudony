@@ -227,6 +227,8 @@ docker compose up
 - Registry API (mcpDomain): `http://localhost:7777/api/claudony/registry` (register, resolve, heartbeat, deregister, discover, link, unlink, relationships)
 - Pools API (deprecated): `http://localhost:7777/api/pools` (legacy — delegates to PoolService)
 - Pool SSE events: `http://localhost:7777/api/pool-events/{name}` (text/event-stream)
+- Ops API (mcpDomain): `http://localhost:7777/api/claudony/ops` (snapshot, health — fleet-wide aggregation)
+- Ops SSE events: `http://localhost:7777/api/ops/events` (text/event-stream — live topology updates)
 - Fleet script execute: `http://localhost:7777/api/claudony/fleet/execute` (POST text/plain YAML → JSON result)
 
 ---
@@ -343,10 +345,23 @@ claudony-app/src/main/java/dev/claudony/
 │   │   ├── MdnsDiscovery.java          — mDNS advertise/discover (scaffold; full impl follow-on)
 │   │   ├── PoolMeshRegistrar.java     — SessionLifecycleListener impl: bridges pool lifecycle → Qhorus instance registration
 │   │   └── FleetScriptStartup.java    — @Startup classpath scan of META-INF/fleet-scripts/*.yaml
-│   ├── api/                            — @McpDomain API surface (8 classes: pools, sessions, peers, mesh, cases, fleet, apps, registry)
+│   ├── api/                            — @McpDomain API surface (9 classes: pools, sessions, peers, mesh, cases, fleet, apps, registry, ops)
 │   │   ├── ClaudonyAppApi.java        — @McpDomain claudony/apps: application registration, namespace, lifecycle
 │   │   ├── ClaudonyFleetApi.java      — @McpDomain claudony/fleet: execute_fleet_script tool
+│   │   ├── ClaudonyOpsApi.java        — @McpDomain claudony/ops: fleet-wide snapshot + health aggregation
 │   │   └── ClaudonyRegistryApi.java   — @McpDomain claudony/registry: generic RegistryService REST surface
+│   ├── ops/                            — fleet-wide operational visibility (#271)
+│   │   ├── OpsSnapshot.java           — top-level snapshot record (health, pools, peers, apps, mesh, topology)
+│   │   ├── FleetHealth.java           — aggregate health counts (healthy/degraded/down/orphaned)
+│   │   ├── PoolOpsView.java           — per-pool summary (capacity, fill ratio, scaling)
+│   │   ├── PeerOpsView.java           — per-peer summary (health, circuit state)
+│   │   ├── AppOpsView.java            — per-app summary (health, pool count)
+│   │   ├── MeshOpsView.java           — mesh aggregate + channel list
+│   │   ├── ChannelOpsView.java        — per-channel summary (name, purpose, message count)
+│   │   ├── TopologyEdge.java          — registry relationship edge
+│   │   ├── OpsService.java            — aggregation service composing from 5 backing services
+│   │   ├── OpsEventBus.java           — SSE event bus observing RegistryEvent CDI events
+│   │   └── OpsEventsResource.java     — SSE endpoint GET /api/ops/events
 │   └── auth/
 │       ├── ApiKeyService.java          — key resolution (config → file → generate), first-run banner
 │       ├── ApiKeyAuthMechanism.java    — X-Api-Key header auth (Agent→Server) + dev cookie
@@ -513,7 +528,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-10-12, after #270 registry REST endpoints):** 16 in `claudony-core` + 598 in `claudony-casehub` + 29 in `claudony-testing` + ~496 in `claudony-app` = **~1139 total**. #270 added ClaudonyRegistryApiTest (8). Previous baseline: ~1131 (2026-10-11, after #269). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest) pass independently.
+**Baseline (as of 2026-10-12, after #271 ops view):** 16 in `claudony-core` + 598 in `claudony-casehub` + 29 in `claudony-testing` + ~509 in `claudony-app` = **~1152 total**. #271 added OpsServiceTest (4 unit), OpsEventBusTest (5 unit), ClaudonyOpsApiTest (3 integration), OpsEventsResourceTest (1 integration) = 13 new. Previous baseline: ~1139 (2026-10-12, after #270). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest, OpsServiceTest, OpsEventBusTest) pass independently.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -579,7 +594,8 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks
 - `server/expiry/` — ExpiryPolicyRegistryTest, UserInteractionExpiryPolicyTest, TerminalOutputExpiryPolicyTest, StatusAwareExpiryPolicyTest, SessionIdleSchedulerTest
 - `config/` — EncryptionKeyConfigSource (15 unit tests + 5 QuarkusTest integration), SessionTimeoutConfigTest (3 QuarkusTest integration)
 - `server/fleet/` — PeerRegistryTest (unit), StaticConfigDiscoveryTest (unit), MdnsDiscoveryTest (unit), PeerResourceTest (QuarkusTest + proxy resize), SessionFederationTest (QuarkusTest), ProxyWebSocketTest (QuarkusTest), PoolMeshIntegrationTest (7 integration tests, real tmux + InMemoryInstanceStore: acquire registers, suspend marks offline, resume marks online, destroy deregisters, full lifecycle, capability routing, multiple sessions), FleetScriptServiceTest (5 unit tests: full fleet script, dependency ordering, unknown type skip, variable substitution, scaling config), FleetScriptStartupTest (6 unit tests: classpath discovery, multiple scripts, failure resilience, empty classpath, non-YAML filtering, exception handling)
-- `server/api/` — ClaudonyPoolApiTest (7 QuarkusTest: list, get, not found, sessions, scaling target-tracking, scaling none, capacity), ClaudonyFleetApiTest (3 unit tests: mcpDomain annotation, mutation annotation, result structure), ClaudonyAppApiTest (4 QuarkusTest: list, register, not found, heartbeat), ClaudonyRegistryApiTest (8 QuarkusTest: registerAndResolve, resolve_notFound, heartbeat, deregister, discover, linkAndRelationships, unlink, relationships_empty)
+- `server/api/` — ClaudonyPoolApiTest (7 QuarkusTest: list, get, not found, sessions, scaling target-tracking, scaling none, capacity), ClaudonyFleetApiTest (3 unit tests: mcpDomain annotation, mutation annotation, result structure), ClaudonyAppApiTest (4 QuarkusTest: list, register, not found, heartbeat), ClaudonyRegistryApiTest (8 QuarkusTest: registerAndResolve, resolve_notFound, heartbeat, deregister, discover, linkAndRelationships, unlink, relationships_empty), ClaudonyOpsApiTest (3 QuarkusTest: snapshot structure, health counts, pool data in snapshot)
+- `server/ops/` — OpsServiceTest (4 unit: snapshot assembly, health counts, zero fill ratio, JSON serialisation), OpsEventBusTest (5 unit: initial snapshot, broadcast, no-op, subscriber count, cancel cleanup), OpsEventsResourceTest (1 QuarkusTest: SSE content-type)
 - `agent/` — McpServer (mocked), McpServerIntegrationTest (real HTTP), ServerClient, ClipboardChecker, ITerm2Adapter, TerminalAdapterFactory, AgentStartup
 - `casehub/` — MeshParticipationIntegrationTest (full Quarkus context, ACTIVE — default config), MeshParticipationSilentProfileTest (SILENT config profile), `SystemPromptIntegrationTest`, `SystemPromptSilentProfileTest` — Quarkus integration: systemPrompt present for ACTIVE, absent for SILENT; `CaseLineageQueryIntegrationTest` — JPA integration: lineage query against real H2 with camelCase event types; `CaseEngineRoundTripTest` — engine integration (CasehubEnabledProfile): startCase()→CaseStartedEventHandler(blocking=true, engine#367)→CONTEXT_CHANGED→tryProvision()→WorkflowExecutionCompleted→ClaudonyLedgerEventCapture→findCompletedWorkers() round-trip; TmuxService mocked; real `ClaudonyWorkerContextProvider` exercised (no @InjectMock); `TestAgentCase` + `NoOpWorkerExecutionManager` + `NoOpJobScheduler` support beans in test sources; test manually fires `WorkerExecutionStarted` CaseLifecycleEvent before completion (engine#390 changed `WorkerExecutionCompleted` actorId to "system" — worker name now resolved from preceding started entry by sequence number); `ClaudonyLedgerEventCaptureTest` — 13 tests: happy path fields, sequence increment per case, sequence independence, null guards (2), worker event type, WorkerStarted drain sets causedByEntryId, WorkerStarted without pre-stored context causedByEntryId is null, drain is idempotent on second fire, tenancyId propagated from event (#143), tenancyId defaults to "default" when null (#143), WorkerExecutionCompleted drain fires exit signal, WorkerExecutionCompleted drain no-op when empty; `ClaudonyLedgerEventCaptureSignalTest` — 2 tests (CasehubEnabledProfile): signal fires with mock runtime, no signal when drain empty; `AgentCaseStartupTest` — plain JUnit: YAML loads, 5 field assertions (name, namespace, capability, binding, goal); `AgentCaseCompletionTest` — CompletionTestProfile: 1 E2E test: full chain from startCase to CaseStatus.COMPLETED; `CasehubStartupServiceTest` — plain JUnit (no Quarkus): 3 tests: UUID guard, null instance, roleName fallback; `ClaudonyCaseChannelProviderPostgresIT` — 4 PostgreSQL IT tests (profile-gated, not run in default `mvn test`): openChannel, listChannels via findByNamePrefix (asserts work/observe/oversight purposes), listChannels excludes other cases, postToChannel; uses `@RunOnVertxContext + UniAsserter` (Panache.withTransaction() requires Vert.x context on the test thread), `PostgresTestResource` (QuarkusTestResourceLifecycleManager starts `postgres:17-alpine` before augmentation — highest config priority), `ReactivePostgresTestProfile`
 - `frontend/` — StaticFilesTest (all static files + content), AppAuthProtectionTest (/app/* unauthenticated), ResizeEndpointTest
