@@ -88,7 +88,14 @@
             <artifactId>casehub-platform-agent-router-core</artifactId>
         </dependency>
 
-        <!-- Platform YAML core — StepDefinition, StepValidator, StepParameterType -->
+        <!-- Eidos agent identity API — optional; EidosPoolBridge activates when enabled -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-eidos-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Platform YAML core — Declaration, Validator -->
         <dependency>
             <groupId>io.casehub</groupId>
             <artifactId>casehub-platform-yaml-core</artifactId>
