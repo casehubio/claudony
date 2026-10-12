@@ -22,7 +22,7 @@ public class BudgetPersistence {
     private static final Logger LOG = Logger.getLogger(BudgetPersistence.class.getName());
 
     @Inject
-    @io.casehub.ledger.runtime.persistence.LedgerPersistenceUnit
+    @io.casehub.ledger.jpa.LedgerPersistenceUnit
     EntityManager em;
 
     void onStartup(@Observes StartupEvent event) {

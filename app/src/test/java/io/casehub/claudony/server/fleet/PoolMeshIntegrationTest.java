@@ -29,7 +29,7 @@ class PoolMeshIntegrationTest {
         registryService.register(new RegistryEntry(
                 instanceId, "agent-instance", "default", "default",
                 java.util.Map.of("description", "test"),
-                now, now, java.time.Duration.ofMinutes(5), HealthStatus.HEALTHY));
+                now, now, java.time.Duration.ofMinutes(5), HealthStatus.HEALTHY, null));
     }
 
     @Test

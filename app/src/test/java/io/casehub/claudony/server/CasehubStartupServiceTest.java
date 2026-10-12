@@ -61,7 +61,7 @@ class CasehubStartupServiceTest {
         CaseInstance inst = new CaseInstance();
         inst.setUuid(caseId);
         when(caseInstanceRepo.findByUuid(caseId))
-                .thenReturn(inst);
+                .thenReturn(java.util.Optional.of(inst));
 
         int started = service.bootstrapWatchers();
 

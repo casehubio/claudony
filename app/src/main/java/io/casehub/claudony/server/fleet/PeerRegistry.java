@@ -148,7 +148,7 @@ public class PeerRegistry {
                                                               Map.of("url", entry.url, "name", entry.name,
                                                                      "source", entry.source.name(),
                                                                      "terminalMode", entry.terminalMode.name()),
-                                                              regEntry.registeredAt(), regEntry.lastHeartbeat(), regEntry.ttl(), regEntry.health())));
+                                                              regEntry.registeredAt(), regEntry.lastHeartbeat(), regEntry.ttl(), regEntry.health(), regEntry.orphanedAt())));
         persistAsync();
         return true;
     }
@@ -242,7 +242,7 @@ public class PeerRegistry {
                                  Map.of("url", url, "name", name,
                                         "source", source.name(),
                                         "terminalMode", terminalMode.name()),
-                                 now, now, Duration.ofMinutes(5), HealthStatus.DEGRADED);
+                                 now, now, Duration.ofMinutes(5), HealthStatus.DEGRADED, null);
     }
 
     static PeerHealth mapHealth(HealthStatus status) {

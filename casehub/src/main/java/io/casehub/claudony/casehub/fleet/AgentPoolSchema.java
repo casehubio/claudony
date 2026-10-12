@@ -29,7 +29,7 @@ public final class AgentPoolSchema {
                 StepParameterType.STRING, false, null, null, null, "CLI command to run"));
 
         inputs.put("model-chain", new StepParameter(
-                StepParameterType.LIST, false, null, null, null,
+                StepParameterType.ARRAY, false, null, null, null,
                 "Ordered model fallback chain (string or structured entries)"));
 
         inputs.put("pool.min-active", new StepParameter(

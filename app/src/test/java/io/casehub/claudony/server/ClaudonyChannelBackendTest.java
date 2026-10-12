@@ -6,7 +6,7 @@ import io.casehub.qhorus.api.gateway.ChannelInitialisedEvent;
 import io.casehub.qhorus.api.gateway.ChannelRef;
 import io.casehub.qhorus.api.gateway.OutboundMessage;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.push.QhorusWebSocketBroadcaster;
+import io.casehub.qhorus.push.core.QhorusWebSocketBroadcasterCore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,13 +22,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 class ClaudonyChannelBackendTest {
 
-    private QhorusWebSocketBroadcaster broadcaster;
+    private QhorusWebSocketBroadcasterCore broadcaster;
     private BackendRegistry registry;
     private ClaudonyChannelBackend backend;
 
     @BeforeEach
     void setUp() throws Exception {
-        broadcaster = mock(QhorusWebSocketBroadcaster.class);
+        broadcaster = mock(QhorusWebSocketBroadcasterCore.class);
         registry = mock(BackendRegistry.class);
         backend = new ClaudonyChannelBackend();
         setField(backend, "broadcaster", broadcaster);
