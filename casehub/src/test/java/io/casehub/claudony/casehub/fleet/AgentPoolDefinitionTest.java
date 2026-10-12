@@ -193,4 +193,23 @@ class AgentPoolDefinitionTest {
                                      .agent("reviewer").pool().build();
         assertThat(def.pool().budget()).isNull();
     }
+
+    @Test
+    void eidosAgentIdOnAgentConfig() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("code-reviewer")
+                                     .eidosAgentId("eidos-code-reviewer-001")
+                                     .build();
+
+        assertThat(def.agent().eidosAgentId()).isEqualTo("eidos-code-reviewer-001");
+    }
+
+    @Test
+    void eidosAgentIdDefaultsToNull() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("researcher")
+                                     .build();
+
+        assertThat(def.agent().eidosAgentId()).isNull();
+    }
 }

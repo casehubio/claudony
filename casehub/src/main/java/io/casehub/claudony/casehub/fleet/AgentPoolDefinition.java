@@ -44,18 +44,25 @@ public final class AgentPoolDefinition {
     }
 
     public record AgentConfig(String name, String workingDir, WorkingDirPolicy policy, String command,
-                               ModelChain modelChain, Map<String, String> entryCommands,
-                               Map<String, Duration> gracePeriods) {
+                              ModelChain modelChain, Map<String, String> entryCommands,
+                              Map<String, Duration> gracePeriods,
+                              String eidosAgentId) {
         public AgentConfig {
             Objects.requireNonNull(name, "agent name is required");
-            if (name.isBlank()) throw new IllegalArgumentException("agent name must not be blank");
-            if (policy == null) policy = WorkingDirPolicy.EXCLUSIVE;
-            if (entryCommands == null) entryCommands = Map.of();
-            if (gracePeriods == null) gracePeriods = Map.of();
+            if (name.isBlank()) {throw new IllegalArgumentException("agent name must not be blank");}
+            if (policy == null) {policy = WorkingDirPolicy.EXCLUSIVE;}
+            if (entryCommands == null) {entryCommands = Map.of();}
+            if (gracePeriods == null) {gracePeriods = Map.of();}
         }
 
         public AgentConfig(String name, String workingDir, WorkingDirPolicy policy, String command) {
-            this(name, workingDir, policy, command, null, Map.of(), Map.of());
+            this(name, workingDir, policy, command, null, Map.of(), Map.of(), null);
+        }
+
+        public AgentConfig(String name, String workingDir, WorkingDirPolicy policy, String command,
+                           ModelChain modelChain, Map<String, String> entryCommands,
+                           Map<String, Duration> gracePeriods) {
+            this(name, workingDir, policy, command, modelChain, entryCommands, gracePeriods, null);
         }
     }
 
@@ -88,6 +95,7 @@ public final class AgentPoolDefinition {
         private EvictionStrategy eviction;
         private ScalingConfig    scaling;
         private BudgetConfig     budget;
+        private String           eidosAgentId;
 
 
         private Builder() {}
@@ -98,7 +106,7 @@ public final class AgentPoolDefinition {
         }
 
         public AgentPoolDefinition build() {
-            var agentConfig = new AgentConfig(agentName, workingDir, policy, command, modelChain, entryCommands, gracePeriods);
+            var agentConfig = new AgentConfig(agentName, workingDir, policy, command, modelChain, entryCommands, gracePeriods, eidosAgentId);
             var poolConfig  = new PoolConfig(minActive, maxActive, eviction, scaling, budget);
             return new AgentPoolDefinition(agentConfig, poolConfig);
         }
@@ -141,6 +149,12 @@ public final class AgentPoolDefinition {
             parent.gracePeriods = gracePeriods;
             return this;
         }
+
+        public AgentBuilder eidosAgentId(String eidosAgentId) {
+            parent.eidosAgentId = eidosAgentId;
+            return this;
+        }
+
 
         public PoolBuilder pool() {
             return new PoolBuilder(parent);
