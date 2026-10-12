@@ -1,8 +1,8 @@
 package io.casehub.claudony.casehub.fleet;
 
-import io.casehub.yaml.core.step.StepDefinition;
-import io.casehub.yaml.core.step.StepParameter;
-import io.casehub.yaml.core.step.StepParameterType;
+import io.casehub.yaml.core.step.Declaration;
+import io.casehub.yaml.plugin.api.Parameter;
+import io.casehub.yaml.plugin.api.ParameterType;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -12,46 +12,46 @@ public final class AgentPoolSchema {
 
     private AgentPoolSchema() {}
 
-    public static final StepDefinition DEFINITION;
+    public static final Declaration DEFINITION;
 
     static {
-        var inputs = new LinkedHashMap<String, StepParameter>();
+        var inputs = new LinkedHashMap<String, Parameter>();
 
-        inputs.put("working-dir", new StepParameter(
-                StepParameterType.STRING, false, null, null, null, "Default working directory"));
+        inputs.put("working-dir", new Parameter(
+                ParameterType.STRING, false, null, null, null, "Default working directory"));
 
-        inputs.put("policy", new StepParameter(
-                StepParameterType.STRING, false, "EXCLUSIVE",
+        inputs.put("policy", new Parameter(
+                ParameterType.STRING, false, "EXCLUSIVE",
                 Arrays.stream(WorkingDirPolicy.values()).map(Enum::name).toList(),
                 null, "Working directory concurrency policy"));
 
-        inputs.put("command", new StepParameter(
-                StepParameterType.STRING, false, null, null, null, "CLI command to run"));
+        inputs.put("command", new Parameter(
+                ParameterType.STRING, false, null, null, null, "CLI command to run"));
 
-        inputs.put("model-chain", new StepParameter(
-                StepParameterType.ARRAY, false, null, null, null,
+        inputs.put("model-chain", new Parameter(
+                ParameterType.ARRAY, false, null, null, null,
                 "Ordered model fallback chain (string or structured entries)"));
 
-        inputs.put("pool.min-active", new StepParameter(
-                StepParameterType.INTEGER, false, "0", null, null, "Minimum pre-warmed sessions"));
+        inputs.put("pool.min-active", new Parameter(
+                ParameterType.INTEGER, false, "0", null, null, "Minimum pre-warmed sessions"));
 
-        inputs.put("pool.max-active", new StepParameter(
-                StepParameterType.INTEGER, false, "10", null, null, "Maximum concurrent active sessions"));
+        inputs.put("pool.max-active", new Parameter(
+                ParameterType.INTEGER, false, "10", null, null, "Maximum concurrent active sessions"));
 
-        inputs.put("pool.eviction", new StepParameter(
-                StepParameterType.STRING, false, "MEMORY_WEIGHTED",
+        inputs.put("pool.eviction", new Parameter(
+                ParameterType.STRING, false, "MEMORY_WEIGHTED",
                 Arrays.stream(EvictionStrategy.values()).map(Enum::name).toList(),
                 null, "Eviction strategy when pool is at capacity"));
 
-        inputs.put("pool.scaling.exhaustion-threshold", new StepParameter(
-                StepParameterType.INTEGER, false, null, null, null,
+        inputs.put("pool.scaling.exhaustion-threshold", new Parameter(
+                ParameterType.INTEGER, false, null, null, null,
                 "Exhaustion count per tick that triggers scale-out (demand-pressure)"));
 
-        inputs.put("pool.scaling.latency-threshold-ms", new StepParameter(
-                StepParameterType.INTEGER, false, null, null, null,
+        inputs.put("pool.scaling.latency-threshold-ms", new Parameter(
+                ParameterType.INTEGER, false, null, null, null,
                 "Average acquire latency in ms that triggers scale-out (demand-pressure)"));
 
-        DEFINITION = new StepDefinition("agent-pool", "Agent pool definition", inputs, Map.of(), null);
+        DEFINITION = new Declaration("agent-pool", "Agent pool definition", inputs, Map.of(), null);
     }
 
     @SuppressWarnings("unchecked")

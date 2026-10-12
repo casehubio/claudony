@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.platform.api.model.ModelChain;
 import io.casehub.platform.api.model.ModelQuery;
 import io.casehub.platform.api.model.ModelTier;
-import io.casehub.yaml.core.step.StepValidator;
+import io.casehub.yaml.core.step.Validator;
 import io.casehub.yaml.jackson.YamlMappers;
 import org.jboss.logging.Logger;
 
@@ -62,7 +62,7 @@ public class AgentPoolYamlParser {
 
         var flat = AgentPoolSchema.flatten(config);
         normalizeEnumValues(flat);
-        var errors = StepValidator.validateStep(name, flat, AgentPoolSchema.DEFINITION);
+        var errors = Validator.validateStep(name, flat, AgentPoolSchema.DEFINITION);
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(
                     "Invalid agent pool definition '" + name + "': " + String.join("; ", errors));
