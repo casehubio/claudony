@@ -1,6 +1,6 @@
 package io.casehub.claudony.casehub.fleet;
 
-import io.casehub.yaml.core.step.StepParameterType;
+import io.casehub.yaml.plugin.api.ParameterType;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -25,7 +25,7 @@ class AgentPoolSchemaTest {
     @Test
     void policyHasAllowedValues() {
         var policy = AgentPoolSchema.DEFINITION.inputs().get("policy");
-        assertThat(policy.type()).isEqualTo(StepParameterType.STRING);
+        assertThat(policy.type()).isEqualTo(ParameterType.STRING);
         assertThat(policy.required()).isFalse();
         assertThat(policy.allowedValues()).containsExactlyInAnyOrder(
                 "EXCLUSIVE", "SHARED_READ", "BRANCH_ISOLATED");
@@ -34,7 +34,7 @@ class AgentPoolSchemaTest {
     @Test
     void evictionHasAllowedValues() {
         var eviction = AgentPoolSchema.DEFINITION.inputs().get("pool.eviction");
-        assertThat(eviction.type()).isEqualTo(StepParameterType.STRING);
+        assertThat(eviction.type()).isEqualTo(ParameterType.STRING);
         assertThat(eviction.allowedValues()).containsExactlyInAnyOrder(
                 "MEMORY_WEIGHTED", "LRU");
     }
@@ -42,11 +42,11 @@ class AgentPoolSchemaTest {
     @Test
     void integerFieldsHaveDefaults() {
         var minActive = AgentPoolSchema.DEFINITION.inputs().get("pool.min-active");
-        assertThat(minActive.type()).isEqualTo(StepParameterType.INTEGER);
+        assertThat(minActive.type()).isEqualTo(ParameterType.INTEGER);
         assertThat(minActive.defaultValue()).isEqualTo("0");
 
         var maxActive = AgentPoolSchema.DEFINITION.inputs().get("pool.max-active");
-        assertThat(maxActive.type()).isEqualTo(StepParameterType.INTEGER);
+        assertThat(maxActive.type()).isEqualTo(ParameterType.INTEGER);
         assertThat(maxActive.defaultValue()).isEqualTo("10");
     }
 
