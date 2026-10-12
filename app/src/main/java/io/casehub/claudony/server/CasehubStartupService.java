@@ -47,7 +47,7 @@ class CasehubStartupService {
                 continue;
             }
             try {
-                CaseInstance instance = caseInstanceRepo.findByUuid(caseId);
+                CaseInstance instance = caseInstanceRepo.findByUuid(caseId).orElse(null);
                 if (instance == null) {
                     LOG.infof("No CaseInstance for caseId %s — skipping recovery watcher", caseId);
                     continue;

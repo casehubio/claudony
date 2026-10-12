@@ -119,7 +119,7 @@ class AgentCaseCompletionTest {
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(300))
                 .untilAsserted(() -> {
-                    CaseInstance updated = caseInstanceRepository.findByUuid(caseId);
+                    CaseInstance updated = caseInstanceRepository.findByUuid(caseId).orElse(null);
                     assertThat(updated.getState())
                             .as("case state after agent exit")
                             .isEqualTo(CaseStatus.COMPLETED);

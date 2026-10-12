@@ -30,15 +30,17 @@ class FleetScriptStartupTest {
 
         startup = new FleetScriptStartup();
         startup.config = stubConfig("server");
-        startup.fleetScriptService = yaml -> {
-            executedYamls.add(yaml);
-            if (shouldFail) {
-                return new FleetScriptResult(List.of(
-                        NodeResult.failed("node", "pool", "test failure")));
-            }
-            return new FleetScriptResult(List.of(
-                    NodeResult.ok("node", "pool", "created")));
-        };
+        startup.fleetScriptService = org.mockito.Mockito.mock(FleetScriptService.class);
+        org.mockito.Mockito.when(startup.fleetScriptService.execute(org.mockito.ArgumentMatchers.anyString()))
+                .thenAnswer(inv -> {
+                    executedYamls.add(inv.getArgument(0));
+                    if (shouldFail) {
+                        return new FleetScriptResult(List.of(
+                                NodeResult.failed("node", "pool", "test failure")));
+                    }
+                    return new FleetScriptResult(List.of(
+                            NodeResult.ok("node", "pool", "created")));
+                });
     }
 
     @Test
@@ -110,14 +112,16 @@ class FleetScriptStartupTest {
         Files.writeString(metaInf.resolve("good.yaml"), "nodes:\n  b:\n    type: pool\n    spec:\n      agentId: test2\n");
 
         List<String> callOrder = new ArrayList<>();
-        startup.fleetScriptService = yaml -> {
-            callOrder.add(yaml);
-            if (callOrder.size() == 1) {
-                throw new RuntimeException("parse error");
-            }
-            return new FleetScriptResult(List.of(
-                    NodeResult.ok("node", "pool", "created")));
-        };
+        startup.fleetScriptService = org.mockito.Mockito.mock(FleetScriptService.class);
+        org.mockito.Mockito.when(startup.fleetScriptService.execute(org.mockito.ArgumentMatchers.anyString()))
+                .thenAnswer(inv -> {
+                    callOrder.add(inv.getArgument(0));
+                    if (callOrder.size() == 1) {
+                        throw new RuntimeException("parse error");
+                    }
+                    return new FleetScriptResult(List.of(
+                            NodeResult.ok("node", "pool", "created")));
+                });
 
         URLClassLoader cl = new URLClassLoader(
                 new URL[]{tempDir.toUri().toURL()}, null);

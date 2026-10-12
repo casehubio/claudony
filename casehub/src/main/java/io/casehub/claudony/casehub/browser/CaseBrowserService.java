@@ -66,7 +66,7 @@ public class CaseBrowserService {
 
     public Optional<CaseDetail> getCaseDetail(UUID caseId) {
         String tenancyId = tenantContext.currentTenantId();
-        CaseInstance ci = caseRepo.findByUuid(caseId, tenancyId);
+        CaseInstance ci = caseRepo.findByUuid(caseId, tenancyId).orElse(null);
         if (ci == null) return Optional.empty();
 
         List<Session> sessions = sessionRegistry.findByCaseId(caseId.toString());

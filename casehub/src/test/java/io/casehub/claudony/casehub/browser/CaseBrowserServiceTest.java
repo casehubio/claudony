@@ -70,7 +70,7 @@ class CaseBrowserServiceTest {
     void getCaseDetail_withWorkers() {
         var uuid = UUID.randomUUID();
         var ci = caseInstance(uuid, CaseStatus.RUNNING, "investigation");
-        when(caseRepo.findByUuid(uuid, "default")).thenReturn(ci);
+        when(caseRepo.findByUuid(uuid, "default")).thenReturn(java.util.Optional.of(ci));
         sessionRegistry.register(session("s1", uuid.toString(), "analyst"));
 
         var result = service.getCaseDetail(uuid);
