@@ -13,9 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @jakarta.enterprise.context.ApplicationScoped
 public class AgentPoolDefinitionRegistry {
 
-    private final Map<String, AgentPoolDefinition> definitions = new ConcurrentHashMap<>();
-    private final RegistryService                  registryService;
-
+    private final Map<PoolKey, AgentPoolDefinition> definitions = new ConcurrentHashMap<>();
+    private final RegistryService                   registryService;
 
     @jakarta.inject.Inject
     public AgentPoolDefinitionRegistry(RegistryService registryService) {
@@ -27,25 +26,47 @@ public class AgentPoolDefinitionRegistry {
     }
 
     public void register(AgentPoolDefinition definition, String namespace) {
-        var prev = definitions.putIfAbsent(definition.agent().name(), definition);
+        register(definition, namespace, "default");
+    }
+
+    public void register(AgentPoolDefinition definition, String namespace, String tenancyId) {
+        var key = new PoolKey(definition.agent().name(), tenancyId);
+        var prev = definitions.putIfAbsent(key, definition);
         if (prev != null) {
             throw new IllegalStateException(
-                    "Pool definition already registered for agent: " + definition.agent().name());
+                    "Pool definition already registered for agent: " + PoolKey.poolName(key.agentName(), key.tenancyId()));
         }
         registryService.register(toRegistryEntry(definition, namespace));
     }
 
-
     public Optional<AgentPoolDefinition> get(String agentName) {
-        return Optional.ofNullable(definitions.get(agentName));
+        return get(agentName, "default");
+    }
+
+    public Optional<AgentPoolDefinition> get(String agentName, String tenancyId) {
+        return Optional.ofNullable(definitions.get(new PoolKey(agentName, tenancyId)));
     }
 
     public Collection<AgentPoolDefinition> all() {
-        return java.util.List.copyOf(definitions.values());
+        return all("default");
+    }
+
+    public Collection<AgentPoolDefinition> all(String tenancyId) {
+        return definitions.entrySet().stream()
+                          .filter(e -> e.getKey().tenancyId().equals(tenancyId))
+                          .map(Map.Entry::getValue)
+                          .toList();
     }
 
     public Set<String> names() {
-        return Set.copyOf(definitions.keySet());
+        return names("default");
+    }
+
+    public Set<String> names(String tenancyId) {
+        return definitions.keySet().stream()
+                          .filter(k -> k.tenancyId().equals(tenancyId))
+                          .map(PoolKey::agentName)
+                          .collect(java.util.stream.Collectors.toSet());
     }
 
     public boolean isEmpty() {
@@ -57,51 +78,78 @@ public class AgentPoolDefinitionRegistry {
     }
 
     public void updateScaling(String agentName, ScalingConfig newScaling) {
-        definitions.compute(agentName, (k, existing) -> {
-            if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
+        updateScaling(agentName, "default", newScaling);
+    }
+
+    public void updateScaling(String agentName, String tenancyId, ScalingConfig newScaling) {
+        var key = new PoolKey(agentName, tenancyId);
+        definitions.compute(key, (k, existing) -> {
+            if (existing == null) {
+                throw new IllegalArgumentException("Pool not found: " + PoolKey.poolName(k.agentName(), k.tenancyId()));
+            }
             var oldPool = existing.pool();
             var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), newScaling, oldPool.budget());
             return new AgentPoolDefinition(existing.agent(), newPool);
         });
-        var updated = definitions.get(agentName);
+        var updated = definitions.get(key);
         var ns      = registryService.resolve(agentName).map(RegistryEntry::namespace).orElse("fleet");
         registryService.register(toRegistryEntry(updated, ns));
     }
 
     public void updateCapacity(String agentName, int minActive, int maxActive) {
-        definitions.compute(agentName, (k, existing) -> {
-            if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
+        updateCapacity(agentName, "default", minActive, maxActive);
+    }
+
+    public void updateCapacity(String agentName, String tenancyId, int minActive, int maxActive) {
+        var key = new PoolKey(agentName, tenancyId);
+        definitions.compute(key, (k, existing) -> {
+            if (existing == null) {
+                throw new IllegalArgumentException("Pool not found: " + PoolKey.poolName(k.agentName(), k.tenancyId()));
+            }
             var oldPool = existing.pool();
             var newPool = new AgentPoolDefinition.PoolConfig(minActive, maxActive, oldPool.eviction(), oldPool.scaling(), oldPool.budget());
             return new AgentPoolDefinition(existing.agent(), newPool);
         });
-        var updated = definitions.get(agentName);
+        var updated = definitions.get(key);
         var ns      = registryService.resolve(agentName).map(RegistryEntry::namespace).orElse("fleet");
         registryService.register(toRegistryEntry(updated, ns));
     }
 
     public void updateBudget(String agentName, BudgetConfig newBudget) {
-        definitions.compute(agentName, (k, existing) -> {
-            if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
+        updateBudget(agentName, "default", newBudget);
+    }
+
+    public void updateBudget(String agentName, String tenancyId, BudgetConfig newBudget) {
+        var key = new PoolKey(agentName, tenancyId);
+        definitions.compute(key, (k, existing) -> {
+            if (existing == null) {
+                throw new IllegalArgumentException("Pool not found: " + PoolKey.poolName(k.agentName(), k.tenancyId()));
+            }
             var oldPool = existing.pool();
             var newPool = new AgentPoolDefinition.PoolConfig(oldPool.minActive(), oldPool.maxActive(), oldPool.eviction(), oldPool.scaling(), newBudget);
             return new AgentPoolDefinition(existing.agent(), newPool);
         });
-        var updated = definitions.get(agentName);
+        var updated = definitions.get(key);
         var ns      = registryService.resolve(agentName).map(RegistryEntry::namespace).orElse("fleet");
         registryService.register(toRegistryEntry(updated, ns));
     }
 
     public void updateAgentConfig(String agentName, AgentPoolDefinition.AgentConfig newAgentConfig) {
-        definitions.compute(agentName, (k, existing) -> {
-            if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
+        updateAgentConfig(agentName, "default", newAgentConfig);
+    }
+
+    public void updateAgentConfig(String agentName, String tenancyId, AgentPoolDefinition.AgentConfig newAgentConfig) {
+        var key = new PoolKey(agentName, tenancyId);
+        definitions.compute(key, (k, existing) -> {
+            if (existing == null) {
+                throw new IllegalArgumentException("Pool not found: " + PoolKey.poolName(k.agentName(), k.tenancyId()));
+            }
             return new AgentPoolDefinition(newAgentConfig, existing.pool());
         });
-        var updated = definitions.get(agentName);
+        var updated = definitions.get(key);
         var ns      = registryService.resolve(agentName).map(RegistryEntry::namespace).orElse("fleet");
         registryService.register(toRegistryEntry(updated, ns));
     }
-
 
     private RegistryEntry toRegistryEntry(AgentPoolDefinition def, String namespace) {
         var now = java.time.Instant.now();

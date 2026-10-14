@@ -146,4 +146,68 @@ class AgentPoolDefinitionRegistryTest {
     }
 
 
+    @Test
+    void sameAgentDifferentTenantsSeparatePools() {
+        var defA = AgentPoolDefinition.builder()
+                                      .agent("reviewer").command("claude").pool().minActive(1).maxActive(5).build();
+        var defB = AgentPoolDefinition.builder()
+                                      .agent("reviewer").command("claude --model opus").pool().minActive(2).maxActive(8).build();
+
+        registry.register(defA, "eidos", "tenant-a");
+        registry.register(defB, "eidos", "tenant-b");
+
+        assertThat(registry.get("reviewer", "tenant-a")).isPresent();
+        assertThat(registry.get("reviewer", "tenant-b")).isPresent();
+        assertThat(registry.get("reviewer", "tenant-a").get().agent().command()).isEqualTo("claude");
+        assertThat(registry.get("reviewer", "tenant-b").get().agent().command()).isEqualTo("claude --model opus");
+    }
+
+    @Test
+    void defaultTenantBackwardsCompat() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("reviewer").command("claude").pool().minActive(1).maxActive(5).build();
+        registry.register(def, "eidos");
+
+        assertThat(registry.get("reviewer")).isPresent();
+        assertThat(registry.get("reviewer", "default")).isPresent();
+    }
+
+    @Test
+    void namesFilteredByTenant() {
+        var defA = AgentPoolDefinition.builder()
+                                      .agent("reviewer").command("claude").pool().minActive(1).maxActive(5).build();
+        var defB = AgentPoolDefinition.builder()
+                                      .agent("coder").command("claude").pool().minActive(0).maxActive(3).build();
+
+        registry.register(defA, "eidos", "tenant-a");
+        registry.register(defB, "eidos", "tenant-b");
+
+        assertThat(registry.names("tenant-a")).containsExactly("reviewer");
+        assertThat(registry.names("tenant-b")).containsExactly("coder");
+    }
+
+    @Test
+    void allFilteredByTenant() {
+        var defA = AgentPoolDefinition.builder().agent("reviewer").build();
+        var defB = AgentPoolDefinition.builder().agent("coder").build();
+
+        registry.register(defA, "eidos", "tenant-a");
+        registry.register(defB, "eidos", "tenant-b");
+
+        assertThat(registry.all("tenant-a")).hasSize(1);
+        assertThat(registry.all("tenant-b")).hasSize(1);
+    }
+
+    @Test
+    void updateCapacityWithTenant() {
+        var def = AgentPoolDefinition.builder()
+                                     .agent("reviewer").pool().minActive(0).maxActive(5).build();
+        registry.register(def, "eidos", "tenant-x");
+
+        registry.updateCapacity("reviewer", "tenant-x", 2, 10);
+
+        var updated = registry.get("reviewer", "tenant-x").orElseThrow();
+        assertThat(updated.pool().minActive()).isEqualTo(2);
+        assertThat(updated.pool().maxActive()).isEqualTo(10);
+    }
 }

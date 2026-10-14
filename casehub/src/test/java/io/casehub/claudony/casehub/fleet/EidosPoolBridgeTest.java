@@ -34,7 +34,7 @@ class EidosPoolBridgeTest {
     void setUp() {
         agentRegistry = mock(AgentRegistry.class);
         poolRegistry = mock(AgentPoolDefinitionRegistry.class);
-        when(poolRegistry.names()).thenReturn(Set.of());
+        when(poolRegistry.names(TENANCY_ID)).thenReturn(Set.of());
         bridge = new EidosPoolBridge(agentRegistry, poolRegistry, CONFIG, TENANCY_ID);
     }
 
@@ -48,7 +48,7 @@ class EidosPoolBridgeTest {
 
         verify(poolRegistry).register(argThat(def ->
                 def.agent().name().equals("code-reviewer")
-                && "code-reviewer".equals(def.agent().eidosAgentId())), eq("eidos"));
+                && "code-reviewer".equals(def.agent().eidosAgentId())), eq("eidos"), eq(TENANCY_ID));
     }
 
     @Test
@@ -65,12 +65,12 @@ class EidosPoolBridgeTest {
 
         bridge.onStartup();
 
-        verify(poolRegistry, never()).register(any(), anyString());
+        verify(poolRegistry, never()).register(any(), anyString(), anyString());
     }
 
     @Test
     void reconcileAddsNewAgents() {
-        when(poolRegistry.names()).thenReturn(Set.of());
+        when(poolRegistry.names(TENANCY_ID)).thenReturn(Set.of());
         var descriptor = descriptorWithClaudonyConfig("new-agent");
         when(agentRegistry.find(any(AgentQuery.class)))
                 .thenReturn(List.of(new AgentMatch(descriptor, null)));
@@ -78,19 +78,19 @@ class EidosPoolBridgeTest {
         bridge.reconcile();
 
         verify(poolRegistry).register(argThat(def ->
-                def.agent().name().equals("new-agent")), eq("eidos"));
+                def.agent().name().equals("new-agent")), eq("eidos"), eq(TENANCY_ID));
     }
 
     @Test
     void reconcileSkipsAlreadyRegistered() {
-        when(poolRegistry.names()).thenReturn(Set.of("existing-agent"));
+        when(poolRegistry.names(TENANCY_ID)).thenReturn(Set.of("existing-agent"));
         var descriptor = descriptorWithClaudonyConfig("existing-agent");
         when(agentRegistry.find(any(AgentQuery.class)))
                 .thenReturn(List.of(new AgentMatch(descriptor, null)));
 
         bridge.reconcile();
 
-        verify(poolRegistry, never()).register(any(), anyString());
+        verify(poolRegistry, never()).register(any(), anyString(), anyString());
     }
 
     @Test
@@ -100,7 +100,7 @@ class EidosPoolBridgeTest {
 
         bridge.onStartup();
 
-        verify(poolRegistry, never()).register(any(), anyString());
+        verify(poolRegistry, never()).register(any(), anyString(), anyString());
     }
 
     @Test
@@ -110,7 +110,7 @@ class EidosPoolBridgeTest {
 
         bridge.onStartup();
 
-        verify(poolRegistry, never()).register(any(), anyString());
+        verify(poolRegistry, never()).register(any(), anyString(), anyString());
     }
 
     @Test
@@ -119,16 +119,16 @@ class EidosPoolBridgeTest {
         when(agentRegistry.find(any(AgentQuery.class)))
                 .thenReturn(List.of(new AgentMatch(original, null)));
         bridge.onStartup();
-        verify(poolRegistry).register(any(), eq("eidos"));
+        verify(poolRegistry).register(any(), eq("eidos"), eq(TENANCY_ID));
 
         var updated = descriptorWithClaudonyConfig("agent-a", java.util.Map.of("minActive", "2", "maxActive", "10"));
         when(agentRegistry.find(any(AgentQuery.class)))
                 .thenReturn(List.of(new AgentMatch(updated, null)));
-        when(poolRegistry.names()).thenReturn(Set.of("agent-a"));
+        when(poolRegistry.names(TENANCY_ID)).thenReturn(Set.of("agent-a"));
 
         bridge.reconcile();
 
-        verify(poolRegistry).updateCapacity("agent-a", 2, 10);
+        verify(poolRegistry).updateCapacity("agent-a", TENANCY_ID, 2, 10);
     }
 
     @Test
@@ -141,11 +141,11 @@ class EidosPoolBridgeTest {
         var updated = descriptorWithClaudonyConfig("agent-b", java.util.Map.of("command", "claude --model opus"));
         when(agentRegistry.find(any(AgentQuery.class)))
                 .thenReturn(List.of(new AgentMatch(updated, null)));
-        when(poolRegistry.names()).thenReturn(Set.of("agent-b"));
+        when(poolRegistry.names(TENANCY_ID)).thenReturn(Set.of("agent-b"));
 
         bridge.reconcile();
 
-        verify(poolRegistry).updateAgentConfig(eq("agent-b"), argThat(c -> "claude --model opus".equals(c.command())));
+        verify(poolRegistry).updateAgentConfig(eq("agent-b"), eq(TENANCY_ID), argThat(c -> "claude --model opus".equals(c.command())));
     }
 
     @Test
@@ -155,14 +155,14 @@ class EidosPoolBridgeTest {
                 .thenReturn(List.of(new AgentMatch(descriptor, null)));
         bridge.onStartup();
 
-        when(poolRegistry.names()).thenReturn(Set.of("agent-c"));
+        when(poolRegistry.names(TENANCY_ID)).thenReturn(Set.of("agent-c"));
         when(agentRegistry.find(any(AgentQuery.class)))
                 .thenReturn(List.of(new AgentMatch(descriptor, null)));
 
         bridge.reconcile();
 
-        verify(poolRegistry, never()).updateCapacity(anyString(), anyInt(), anyInt());
-        verify(poolRegistry, never()).updateAgentConfig(anyString(), any());
+        verify(poolRegistry, never()).updateCapacity(anyString(), anyString(), anyInt(), anyInt());
+        verify(poolRegistry, never()).updateAgentConfig(anyString(), anyString(), any());
     }
 
     @Test
@@ -172,7 +172,7 @@ class EidosPoolBridgeTest {
                 .thenReturn(List.of(new AgentMatch(descriptor, null)));
         bridge.onStartup();
 
-        when(poolRegistry.names()).thenReturn(Set.of("agent-d"));
+        when(poolRegistry.names(TENANCY_ID)).thenReturn(Set.of("agent-d"));
         when(agentRegistry.find(any(AgentQuery.class)))
                 .thenReturn(List.of());
 
