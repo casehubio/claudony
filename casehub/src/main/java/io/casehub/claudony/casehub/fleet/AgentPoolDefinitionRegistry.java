@@ -39,6 +39,17 @@ public class AgentPoolDefinitionRegistry {
         registryService.register(toRegistryEntry(definition, namespace));
     }
 
+    public void deregister(String agentName) {
+        deregister(agentName, "default");
+    }
+
+    public void deregister(String agentName, String tenancyId) {
+        var key = new PoolKey(agentName, tenancyId);
+        definitions.remove(key);
+        registryService.deregister(PoolKey.poolName(agentName, tenancyId));
+    }
+
+
     public Optional<AgentPoolDefinition> get(String agentName) {
         return get(agentName, "default");
     }
