@@ -249,7 +249,7 @@ public class PeerRegistry {
         return switch (status) {
             case HEALTHY -> PeerHealth.UP;
             case DOWN -> PeerHealth.DOWN;
-            case DEGRADED -> PeerHealth.UNKNOWN;
+            case DEGRADED, SUSPENDED -> PeerHealth.UNKNOWN;
         };
     }
 
