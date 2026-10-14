@@ -14,12 +14,19 @@ public class TmuxSessionOperations implements SessionOperations {
     private final TmuxService tmux;
     private final String sessionPrefix;
     private final String defaultCommand;
+    private final String eidosAgentId;
     private final ConcurrentHashMap<String, String> conversationIds = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> eidosAgentIds = new ConcurrentHashMap<>();
 
     public TmuxSessionOperations(TmuxService tmux, String sessionPrefix, String defaultCommand) {
+        this(tmux, sessionPrefix, defaultCommand, null);
+    }
+
+    public TmuxSessionOperations(TmuxService tmux, String sessionPrefix, String defaultCommand, String eidosAgentId) {
         this.tmux = tmux;
         this.sessionPrefix = sessionPrefix;
         this.defaultCommand = defaultCommand;
+        this.eidosAgentId = eidosAgentId;
     }
 
     @Override
@@ -38,6 +45,10 @@ public class TmuxSessionOperations implements SessionOperations {
             tmux.setSessionOption(sessionId, "@claudony_conversation_id", conversationUuid);
             tmux.setSessionOption(sessionId, "@claudony_working_dir", workingDir);
             tmux.setSessionOption(sessionId, "@claudony_state", "active");
+            if (eidosAgentId != null) {
+                tmux.setSessionOption(sessionId, "@claudony_eidos_agent_id", eidosAgentId);
+                eidosAgentIds.put(sessionId, eidosAgentId);
+            }
             conversationIds.put(sessionId, conversationUuid);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException("Failed to create session for identity " + identity, e);
@@ -53,6 +64,11 @@ public class TmuxSessionOperations implements SessionOperations {
     public void setConversationId(String sessionId, String conversationId) {
         conversationIds.put(sessionId, conversationId);
     }
+
+    public String eidosAgentId(String sessionId) {
+        return eidosAgentIds.get(sessionId);
+    }
+
 
     @Override
     public void suspend(String sessionId) {
@@ -86,6 +102,7 @@ public class TmuxSessionOperations implements SessionOperations {
     @Override
     public void destroy(String sessionId) {
         conversationIds.remove(sessionId);
+        eidosAgentIds.remove(sessionId);
         try {
             tmux.killSession(sessionId);
         } catch (IOException | InterruptedException e) {
@@ -120,6 +137,7 @@ public class TmuxSessionOperations implements SessionOperations {
                 var identityOpt     = tmux.getSessionOption(name, "@claudony_identity");
                 var conversationOpt = tmux.getSessionOption(name, "@claudony_conversation_id");
                 var workingDirOpt   = tmux.getSessionOption(name, "@claudony_working_dir");
+                var eidosOpt        = tmux.getSessionOption(name, "@claudony_eidos_agent_id");
 
                 String identity   = identityOpt.orElse("unknown");
                 String convId     = conversationOpt.orElse(null);
@@ -130,6 +148,7 @@ public class TmuxSessionOperations implements SessionOperations {
                 if (convId != null) {
                     conversationIds.put(name, convId);
                 }
+                eidosOpt.ifPresent(id -> eidosAgentIds.put(name, id));
                 manager.registerBootstrapped(name, identity, workingDir, convId, state);
                 LOG.infof("Bootstrapped pool session %s (identity=%s, state=%s)", name, identity, state);
             }
