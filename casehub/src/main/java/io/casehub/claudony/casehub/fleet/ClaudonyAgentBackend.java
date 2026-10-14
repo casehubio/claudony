@@ -57,7 +57,7 @@ public class ClaudonyAgentBackend implements AgentBackend {
                                                       AgentPoolManagerRegistry managerRegistry,
                                                       SessionLifecycleListener listener) {
         String command = definition.agent().command() != null ? definition.agent().command() : "claude";
-        var    ops     = new TmuxSessionOperations(tmux, SESSION_PREFIX, command);
+        var    ops     = new TmuxSessionOperations(tmux, SESSION_PREFIX, command, definition.agent().eidosAgentId());
         var sessionManager = new AgentSessionManager(definition.toSessionManagerConfig(), ops,
                                                      listener, definition.agent().name());
         if (managerRegistry != null) {

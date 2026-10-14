@@ -141,4 +141,47 @@ class TmuxSessionOperationsTest {
         assertThat(ops.conversationId(sessionId)).isNull();
     }
 
+    @Test
+    void create_stampsEidosAgentIdWhenPresent() throws Exception {
+        var    eidosOps  = new TmuxSessionOperations(tmux, "claudony-pool-", "claude", "my-eidos-agent");
+        String sessionId = eidosOps.create("reviewer", "/workspace/pr-42");
+        verify(tmux).setSessionOption(sessionId, "@claudony_eidos_agent_id", "my-eidos-agent");
+    }
+
+    @Test
+    void create_skipsEidosAgentIdWhenNull() throws Exception {
+        String sessionId = ops.create("reviewer", "/workspace/pr-42");
+        verify(tmux, org.mockito.Mockito.never()).setSessionOption(any(), eq("@claudony_eidos_agent_id"), any());
+    }
+
+    @Test
+    void create_storesEidosAgentIdInMemory() throws Exception {
+        var    eidosOps  = new TmuxSessionOperations(tmux, "claudony-pool-", "claude", "my-eidos-agent");
+        String sessionId = eidosOps.create("reviewer", "/workspace/pr-42");
+        assertThat(eidosOps.eidosAgentId(sessionId)).isEqualTo("my-eidos-agent");
+    }
+
+    @Test
+    void bootstrapFromTmux_readsEidosAgentId() throws Exception {
+        var manager = mock(AgentSessionManager.class);
+        when(tmux.listSessionNames()).thenReturn(java.util.List.of("claudony-pool-abc123"));
+        when(tmux.getSessionOption("claudony-pool-abc123", "@claudony_state")).thenReturn(java.util.Optional.of("active"));
+        when(tmux.getSessionOption("claudony-pool-abc123", "@claudony_identity")).thenReturn(java.util.Optional.of("reviewer"));
+        when(tmux.getSessionOption("claudony-pool-abc123", "@claudony_conversation_id")).thenReturn(java.util.Optional.empty());
+        when(tmux.getSessionOption("claudony-pool-abc123", "@claudony_working_dir")).thenReturn(java.util.Optional.of("/tmp"));
+        when(tmux.getSessionOption("claudony-pool-abc123", "@claudony_eidos_agent_id")).thenReturn(java.util.Optional.of("eidos-reviewer"));
+        ops.bootstrapFromTmux(manager);
+        assertThat(ops.eidosAgentId("claudony-pool-abc123")).isEqualTo("eidos-reviewer");
+    }
+
+    @Test
+    void destroy_clearsEidosAgentId() throws Exception {
+        var    eidosOps  = new TmuxSessionOperations(tmux, "claudony-pool-", "claude", "my-eidos-agent");
+        String sessionId = eidosOps.create("reviewer", "/workspace/pr-42");
+        assertThat(eidosOps.eidosAgentId(sessionId)).isEqualTo("my-eidos-agent");
+        eidosOps.destroy(sessionId);
+        assertThat(eidosOps.eidosAgentId(sessionId)).isNull();
+    }
+
+
 }
