@@ -34,7 +34,7 @@ class EidosPoolConverterTest {
                                 "command", "claude --model opus"))))
                 .build();
 
-        var result = EidosPoolConverter.toPoolDefinition(descriptor, DEFAULTS);
+        var result = new EidosPoolConverter().toPoolDefinition(descriptor, DEFAULTS);
 
         assertThat(result.agent().name()).isEqualTo("code-reviewer");
         assertThat(result.agent().eidosAgentId()).isEqualTo("code-reviewer");
@@ -54,7 +54,7 @@ class EidosPoolConverterTest {
                         new ProviderConfig("claudony", Map.of())))
                 .build();
 
-        var result = EidosPoolConverter.toPoolDefinition(descriptor, DEFAULTS);
+        var result = new EidosPoolConverter().toPoolDefinition(descriptor, DEFAULTS);
 
         assertThat(result.pool().minActive()).isEqualTo(0);
         assertThat(result.pool().maxActive()).isEqualTo(5);
@@ -72,7 +72,7 @@ class EidosPoolConverterTest {
                         new ProviderConfig("claudony", Map.of())))
                 .build();
 
-        var result = EidosPoolConverter.toPoolDefinition(descriptor, DEFAULTS);
+        var result = new EidosPoolConverter().toPoolDefinition(descriptor, DEFAULTS);
 
         assertThat(result.agent().modelChain()).isNull();
     }
@@ -94,7 +94,7 @@ class EidosPoolConverterTest {
                         new ProviderConfig("claudony", Map.of())))
                 .build();
 
-        var result = EidosPoolConverter.toPoolDefinition(descriptor, DEFAULTS);
+        var result = new EidosPoolConverter().toPoolDefinition(descriptor, DEFAULTS);
 
         assertThat(result.agent().modelChain()).isNotNull();
         assertThat(result.agent().modelChain().entries()).hasSize(1);
@@ -143,7 +143,7 @@ class EidosPoolConverterTest {
                         new ProviderConfig("claudony", Map.of("minActive", "not-a-number"))))
                 .build();
 
-        var result = EidosPoolConverter.toPoolDefinition(descriptor, DEFAULTS);
+        var result = new EidosPoolConverter().toPoolDefinition(descriptor, DEFAULTS);
 
         assertThat(result.pool().minActive()).isEqualTo(0);
     }
@@ -159,8 +159,93 @@ class EidosPoolConverterTest {
                         new ProviderConfig("claudony", Map.of("workingDir", "/workspace/reviews"))))
                 .build();
 
-        var result = EidosPoolConverter.toPoolDefinition(descriptor, DEFAULTS);
+        var result = new EidosPoolConverter().toPoolDefinition(descriptor, DEFAULTS);
 
         assertThat(result.agent().workingDir()).isEqualTo("/workspace/reviews");
+    }
+
+    @Test
+    void withRegistryResolvesViaQuery() {
+        var registry = org.mockito.Mockito.mock(io.casehub.platform.api.model.ModelRegistry.class);
+        var modelDescriptor = new io.casehub.platform.api.model.ModelDescriptor(
+                "opus-4-6", "claude-opus-4-6", "anthropic", "default",
+                "anthropic", "claude", "Claude Opus 4.6",
+                io.casehub.platform.api.model.ModelTier.FLAGSHIP,
+                java.util.Set.of("code", "reasoning"), 200000, 32000,
+                io.casehub.platform.api.model.ModelLocality.CLOUD,
+                io.casehub.platform.api.model.CostTier.HIGH, "api-key", Map.of());
+        org.mockito.Mockito.when(registry.query(org.mockito.ArgumentMatchers.any(ModelQuery.class)))
+                           .thenReturn(List.of(modelDescriptor));
+
+        var converter = new EidosPoolConverter(registry);
+        var descriptor = AgentDescriptor.builder()
+                                        .agentId("reviewer")
+                                        .name("Reviewer")
+                                        .slot("worker")
+                                        .tenancyId("default")
+                                        .capabilities(List.of(
+                                                AgentCapability.builder()
+                                                               .name("review")
+                                                               .model(ModelQuery.builder().family("claude").build())
+                                                               .build()))
+                                        .providerConfigs(List.of(new ProviderConfig("claudony", Map.of())))
+                                        .build();
+
+        var result = converter.toPoolDefinition(descriptor, DEFAULTS);
+
+        assertThat(result.agent().modelChain()).isNotNull();
+        assertThat(result.agent().modelChain().entries()).hasSize(1);
+        assertThat(result.agent().modelChain().entries().get(0))
+                .isInstanceOf(io.casehub.platform.api.model.ModelChain.ModelChainEntry.Named.class);
+    }
+
+    @Test
+    void withoutRegistryFallsBackToQueried() {
+        var converter = new EidosPoolConverter();
+        var descriptor = AgentDescriptor.builder()
+                                        .agentId("reviewer")
+                                        .name("Reviewer")
+                                        .slot("worker")
+                                        .tenancyId("default")
+                                        .capabilities(List.of(
+                                                AgentCapability.builder()
+                                                               .name("review")
+                                                               .model(ModelQuery.builder().family("claude").build())
+                                                               .build()))
+                                        .providerConfigs(List.of(new ProviderConfig("claudony", Map.of())))
+                                        .build();
+
+        var result = converter.toPoolDefinition(descriptor, DEFAULTS);
+
+        assertThat(result.agent().modelChain()).isNotNull();
+        assertThat(result.agent().modelChain().entries().get(0))
+                .isInstanceOf(io.casehub.platform.api.model.ModelChain.ModelChainEntry.Queried.class);
+    }
+
+    @Test
+    void registryReturnsEmptyFallsBackToQueried() {
+        var registry = org.mockito.Mockito.mock(io.casehub.platform.api.model.ModelRegistry.class);
+        org.mockito.Mockito.when(registry.query(org.mockito.ArgumentMatchers.any(ModelQuery.class)))
+                           .thenReturn(List.of());
+
+        var converter = new EidosPoolConverter(registry);
+        var descriptor = AgentDescriptor.builder()
+                                        .agentId("reviewer")
+                                        .name("Reviewer")
+                                        .slot("worker")
+                                        .tenancyId("default")
+                                        .capabilities(List.of(
+                                                AgentCapability.builder()
+                                                               .name("review")
+                                                               .model(ModelQuery.builder().family("claude").build())
+                                                               .build()))
+                                        .providerConfigs(List.of(new ProviderConfig("claudony", Map.of())))
+                                        .build();
+
+        var result = converter.toPoolDefinition(descriptor, DEFAULTS);
+
+        assertThat(result.agent().modelChain()).isNotNull();
+        assertThat(result.agent().modelChain().entries().get(0))
+                .isInstanceOf(io.casehub.platform.api.model.ModelChain.ModelChainEntry.Queried.class);
     }
 }
