@@ -260,8 +260,8 @@ claudony-core/src/main/java/dev/claudony/
 ├── config/ClaudonyConfig.java          — all config properties
 └── server/
     ├── model/                          — Session (id, name, workingDir, command, status, createdAt,
-    │                                       lastActive, expiryPolicy, caseId, roleName, tenancyId),
-    │                                       SessionStatus, SessionExpiredEvent
+    │                                       lastActive, expiryPolicy, caseId, roleName, tenancyId,
+    │                                       eidosAgentId), SessionStatus, SessionExpiredEvent
     ├── TenantContext.java              — tenant resolution interface (single method: currentTenantId())
     ├── DefaultTenantContext.java       — @ApplicationScoped impl; delegates to CurrentPrincipal when
     │                                       request scope active, falls back to DEFAULT_TENANT_ID
@@ -280,8 +280,9 @@ claudony-casehub/src/main/java/dev/claudony/casehub/
 │                                             replaces ConfigMappingProviderConfigSource (#164)
 ├── ClaudonyProviderConfig.java           — per-agent config record (command, model, tools, etc.)
 ├── WorkerCommandBuilder.java             — builds enriched CLI command with shell-safe quoting;
-│                                             3-arg build(baseCommand, config, dynamicAppendPrompt);
-│                                             --system-prompt and --append-system-prompt coexist (not mutual exclusive);
+│                                             4-arg build(baseCommand, config, dynamicAppendPrompt, identitySystemPrompt);
+│                                             3-arg overload delegates with Optional.empty() identity;
+│                                             --system-prompt (Eidos identity or config) and --append-system-prompt coexist;
 │                                             mergeAppendPrompts() combines static (operator) + dynamic (mesh) prompts
 ├── CaseLineageQuery.java               — interface for prior worker queries (default: empty stub)
 ├── EmptyCaseLineageQuery.java          — @DefaultBean no-op impl (swap for JPA impl when casehub DB configured)
@@ -301,6 +302,7 @@ claudony-casehub/src/main/java/dev/claudony/casehub/
 ├── ReactiveParticipationStrategy.java  — engage only when directly addressed
 ├── SilentParticipationStrategy.java    — no mesh participation
 ├── MeshSystemPromptTemplate.java       — package-private: generates ACTIVE/REACTIVE/SILENT prompt from channels + prior workers
+├── EidosIdentityPromptTemplate.java    — package-private: generates identity prompt from AgentDescriptor (briefing, goals, constraints)
 ├── ClaudonyLedgerEventCapture.java     — @ObservesAsync CaseLifecycleEvent → writes CaseLedgerEntry via @LedgerPersistenceUnit EM
 ├── browser/                            — case browser aggregation layer
 │   ├── CaseSummary.java                — list DTO: id, status, definitionName, workerCount, channelCount
@@ -534,7 +536,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-10-13, after #209 Eidos pool bridge):** 16 in `claudony-core` + 616 in `claudony-casehub` + 29 in `claudony-testing` + ~510 in `claudony-app` = **~1171 total**. #209 added EidosPoolConverterTest (8 unit), EidosPoolBridgeTest (6 unit), AgentPoolDefinitionTest +2, EidosPoolBridgeIntegrationTest (1 integration) = 17 new. Also fixed pre-existing yaml-core API rename (StepParameter → Parameter). Previous baseline: ~1152 (2026-10-12, after #271). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest, OpsServiceTest, OpsEventBusTest) pass independently.
+**Baseline (as of 2026-10-14, after #275 Eidos pool bridge hardening):** 16 in `claudony-core` + 646 in `claudony-casehub` + 29 in `claudony-testing` + ~510 in `claudony-app` = **~1201 total**. #275 added TmuxSessionOperationsTest +5 (eidosAgentId stamping), AgentPoolDefinitionRegistryTest +5 (multi-tenant), AgentPoolDefinitionRegistryUpdateTest +2 (updateAgentConfig), EidosPoolBridgeTest +8 (reconciliation + CDI events), EidosPoolConverterTest +3 (ModelRegistry resolution), EidosIdentityPromptTemplateTest +4 (new), WorkerCommandBuilderTest +3 (identity prompt) = 30 new. Previous baseline: ~1171 (2026-10-13, after #209). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest, OpsServiceTest, OpsEventBusTest) pass independently.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
@@ -560,7 +562,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks
 
 `claudony-casehub` tests:
 - `ClaudonyProviderConfigTest` — fromMap, fromConfigMapping, EMPTY sentinel, fromMap empty map
-- `WorkerCommandBuilderTest` — base command only, model flag, all flags, shell quoting, empty config
+- `WorkerCommandBuilderTest` — base command only, model flag, all flags, shell quoting, empty config, identity prompt becomes system prompt, identity prompt overrides config system prompt, no identity prompt preserves config
 - `CompositeProviderConfigSourceTest` — registry-has-config, registry-empty-fallback, unknown-agent-returns-EMPTY, registry-displaces-config-mapping, declaredAgentIds-union, registry-only-agent-discovered, noOp-registry-behaves-like-config-only
 - `ClaudonyWorkerProvisionerTest` — tmux session creation, disabled guard, terminate robustness, caseId/roleName stamped; returns ProvisionResult; enriched command, workingDir override, defaultCommand fallback, session records effective values, getCapabilities returns declaredAgentIds; 2 causal context tests: trigger fields → storesCausalContextAndReturnsEntryId, null trigger fields → guardShortCircuits (engine#390 changed return type from Worker; claudony#94 added causedByEntryId provision path)
 - `QhorusCausalLinkResolverTest` — 8 unit tests: null channelId, null correlationId, repo unsatisfied, invalid UUID, blank correlationId, empty channelId, entry found → returns UUID, entry not found → empty
@@ -586,8 +588,9 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks
 - `FleetScriptRunnerTest` — 8 unit tests: single node, linear chain ordering, independent nodes, cycle detection, dependency failure cascade, sibling isolation, unknown type skip, empty nodes
 - `PoolNodeHandlerTest` — 5 unit tests: type, full spec, minimal spec, scaling spec, missing agentId
 - `ChannelNodeHandlerTest` — 4 unit tests: type, full spec with semantic + allowedTypes, minimal spec, missing name
-- `EidosPoolConverterTest` — 8 unit tests: full descriptor conversion, defaults, no model, multi-capability first-wins, findClaudonyProviderConfig present/absent, malformed int, workingDir
-- `EidosPoolBridgeTest` — 6 unit tests: startup registers, non-claudony skipped, reconcile adds new, reconcile skips existing, empty registry, exception resilience
+- `EidosPoolConverterTest` — 11 unit tests: full descriptor conversion, defaults, no model, multi-capability first-wins, findClaudonyProviderConfig present/absent, malformed int, workingDir, withRegistry resolves via query, withoutRegistry falls back to Queried, registryReturnsEmpty falls back
+- `EidosPoolBridgeTest` — 14 unit tests: startup registers, non-claudony skipped, reconcile adds new, reconcile skips existing, empty registry, exception resilience, reconcile detects capacity change, reconcile detects config change, reconcile no-op when unchanged, reconcile logs missing descriptor, registered event triggers pool creation, registered event skips non-claudony, updated event triggers reconcile, removed event does not destroy
+- `EidosIdentityPromptTemplateTest` — 4 unit tests: full prompt with briefing+goals+constraints, briefing only no goals/constraints, null descriptor returns empty, no briefing returns empty
 
 `claudony-testing` tests (in `testing/`):
 - `InMemorySessionOperationsTest` — 14 tests: SPI conformance, create/suspend/resume/destroy lifecycle, suspend-survives semantics, conversation ID management, configurable memoryBytes, reset, concurrent creates (20 threads)
