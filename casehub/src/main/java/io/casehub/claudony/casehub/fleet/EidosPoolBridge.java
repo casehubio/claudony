@@ -1,19 +1,29 @@
 package io.casehub.claudony.casehub.fleet;
 
 import io.casehub.eidos.api.AgentDescriptor;
+import io.casehub.eidos.api.AgentDescriptorRegistered;
+import io.casehub.eidos.api.AgentDescriptorRemoved;
+import io.casehub.eidos.api.AgentDescriptorUpdated;
 import io.casehub.eidos.api.AgentMatch;
 import io.casehub.eidos.api.AgentQuery;
 import io.casehub.eidos.api.AgentRegistry;
+import io.casehub.platform.api.model.ModelRegistry;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.runtime.StartupEvent;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
 @IfBuildProperty(name = "claudony.eidos.pool-bridge.enabled", stringValue = "true")
@@ -26,14 +36,14 @@ public class EidosPoolBridge {
     private final EidosPoolConverter converter;
     private final EidosPoolBridgeConfig config;
     private final String tenancyId;
-    private final java.util.Map<String, AgentPoolDefinition> lastKnownDefinitions = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, AgentPoolDefinition> lastKnownDefinitions = new ConcurrentHashMap<>();
 
 
     @Inject
     public EidosPoolBridge(
             AgentRegistry agentRegistry,
             AgentPoolDefinitionRegistry poolRegistry,
-            jakarta.enterprise.inject.Instance<io.casehub.platform.api.model.ModelRegistry> modelRegistry,
+            Instance<ModelRegistry> modelRegistry,
             @ConfigProperty(name = "claudony.eidos.pool-bridge.default-min-active", defaultValue = "0") int defaultMinActive,
             @ConfigProperty(name = "claudony.eidos.pool-bridge.default-max-active", defaultValue = "5") int defaultMaxActive,
             @ConfigProperty(name = "claudony.eidos.pool-bridge.default-command", defaultValue = "claude") String defaultCommand,
@@ -79,10 +89,10 @@ public class EidosPoolBridge {
     @Scheduled(every = "${claudony.eidos.pool-bridge.reconcile-interval:30s}")
     void reconcile() {
         try {
-            java.util.List<AgentMatch> matches       = agentRegistry.find(AgentQuery.all(tenancyId));
-            java.util.Set<String>      existingPools = poolRegistry.names(tenancyId);
-            java.util.Set<String>      currentIds    = new java.util.HashSet<>();
-            int                        added         = 0, updated = 0;
+            List<AgentMatch> matches       = agentRegistry.find(AgentQuery.all(tenancyId));
+            Set<String>      existingPools = poolRegistry.names(tenancyId);
+            Set<String>      currentIds    = new HashSet<>();
+            int              added         = 0, updated = 0;
 
             for (AgentMatch match : matches) {
                 AgentDescriptor descriptor = match.descriptor();
@@ -98,15 +108,7 @@ public class EidosPoolBridge {
                     }
                 } else if (existing == null) {
                     lastKnownDefinitions.put(descriptor.agentId(), newDef);
-                } else if (!newDef.agent().equals(existing.agent()) || !newDef.pool().equals(existing.pool())) {
-                    if (newDef.pool().minActive() != existing.pool().minActive()
-                        || newDef.pool().maxActive() != existing.pool().maxActive()) {
-                        poolRegistry.updateCapacity(descriptor.agentId(), tenancyId, newDef.pool().minActive(), newDef.pool().maxActive());
-                    }
-                    if (!newDef.agent().equals(existing.agent())) {
-                        poolRegistry.updateAgentConfig(descriptor.agentId(), tenancyId, newDef.agent());
-                    }
-                    lastKnownDefinitions.put(descriptor.agentId(), newDef);
+                } else if (reconcilePool(descriptor.agentId(), existing, newDef)) {
                     updated++;
                 }
             }
@@ -140,4 +142,40 @@ public class EidosPoolBridge {
             return false;
         }
     }
+
+    void onRegistered(@ObservesAsync AgentDescriptorRegistered event) {
+        if (EidosPoolConverter.findClaudonyProviderConfig(event.descriptor()).isPresent()) {
+            registerIfClaudony(event.descriptor());
+        }
+    }
+
+    void onUpdated(@ObservesAsync AgentDescriptorUpdated event) {
+        if (EidosPoolConverter.findClaudonyProviderConfig(event.current()).isEmpty()) {return;}
+        var newDef   = converter.toPoolDefinition(event.current(), config);
+        var existing = lastKnownDefinitions.get(event.current().agentId());
+        if (existing != null) {
+            reconcilePool(event.current().agentId(), existing, newDef);
+        }
+    }
+
+    void onRemoved(@ObservesAsync AgentDescriptorRemoved event) {
+        LOG.warnf("Eidos pool bridge: descriptor '%s' removed via CDI event (pool retained)", event.agentId());
+    }
+
+    private boolean reconcilePool(String agentId, AgentPoolDefinition existing, AgentPoolDefinition newDef) {
+        if (newDef.agent().equals(existing.agent()) && newDef.pool().equals(existing.pool())) {
+            return false;
+        }
+        if (newDef.pool().minActive() != existing.pool().minActive()
+            || newDef.pool().maxActive() != existing.pool().maxActive()) {
+            poolRegistry.updateCapacity(agentId, tenancyId, newDef.pool().minActive(), newDef.pool().maxActive());
+        }
+        if (!newDef.agent().equals(existing.agent())) {
+            poolRegistry.updateAgentConfig(agentId, tenancyId, newDef.agent());
+        }
+        lastKnownDefinitions.put(agentId, newDef);
+        return true;
+    }
+
+
 }

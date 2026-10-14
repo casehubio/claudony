@@ -200,4 +200,52 @@ class EidosPoolBridgeTest {
                         new ProviderConfig("claudony", Map.of())))
                 .build();
     }
+
+    @Test
+    void registeredEventTriggersPoolCreation() {
+        var descriptor = descriptorWithClaudonyConfig("event-agent");
+        var event      = new io.casehub.eidos.api.AgentDescriptorRegistered(descriptor);
+
+        bridge.onRegistered(event);
+
+        verify(poolRegistry).register(argThat(def ->
+                                                      def.agent().name().equals("event-agent")), eq("eidos"), eq(TENANCY_ID));
+    }
+
+    @Test
+    void registeredEventSkipsNonClaudony() {
+        var descriptor = AgentDescriptor.builder()
+                                        .agentId("openai-agent")
+                                        .name("OpenAI Agent")
+                                        .slot("worker")
+                                        .tenancyId("default")
+                                        .providerConfigs(List.of(new ProviderConfig("openai", java.util.Map.of())))
+                                        .build();
+
+        bridge.onRegistered(new io.casehub.eidos.api.AgentDescriptorRegistered(descriptor));
+
+        verify(poolRegistry, never()).register(any(), anyString(), anyString());
+    }
+
+    @Test
+    void updatedEventTriggersReconcile() {
+        var previous = descriptorWithClaudonyConfig("event-agent", java.util.Map.of("command", "claude"));
+        bridge.onRegistered(new io.casehub.eidos.api.AgentDescriptorRegistered(previous));
+        org.mockito.Mockito.reset(poolRegistry);
+        when(poolRegistry.names(TENANCY_ID)).thenReturn(Set.of("event-agent"));
+
+        var current = descriptorWithClaudonyConfig("event-agent", java.util.Map.of("command", "claude --model opus"));
+        bridge.onUpdated(new io.casehub.eidos.api.AgentDescriptorUpdated(previous, current));
+
+        verify(poolRegistry).updateAgentConfig(eq("event-agent"), eq(TENANCY_ID), argThat(c -> "claude --model opus".equals(c.command())));
+    }
+
+    @Test
+    void removedEventDoesNotDestroy() {
+        var descriptor = descriptorWithClaudonyConfig("event-agent");
+        bridge.onRegistered(new io.casehub.eidos.api.AgentDescriptorRegistered(descriptor));
+
+        bridge.onRemoved(new io.casehub.eidos.api.AgentDescriptorRemoved("event-agent", TENANCY_ID));
+        // No destroy method exists — just logs warning. Verify no exception.
+    }
 }

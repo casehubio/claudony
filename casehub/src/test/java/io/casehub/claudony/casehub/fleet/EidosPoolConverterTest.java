@@ -3,13 +3,23 @@ package io.casehub.claudony.casehub.fleet;
 import io.casehub.eidos.api.AgentCapability;
 import io.casehub.eidos.api.AgentDescriptor;
 import io.casehub.eidos.api.ProviderConfig;
+import io.casehub.platform.api.model.CostTier;
+import io.casehub.platform.api.model.ModelChain;
+import io.casehub.platform.api.model.ModelDescriptor;
+import io.casehub.platform.api.model.ModelLocality;
 import io.casehub.platform.api.model.ModelQuery;
+import io.casehub.platform.api.model.ModelRegistry;
+import io.casehub.platform.api.model.ModelTier;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class EidosPoolConverterTest {
 
@@ -166,15 +176,15 @@ class EidosPoolConverterTest {
 
     @Test
     void withRegistryResolvesViaQuery() {
-        var registry = org.mockito.Mockito.mock(io.casehub.platform.api.model.ModelRegistry.class);
-        var modelDescriptor = new io.casehub.platform.api.model.ModelDescriptor(
+        var registry = mock(ModelRegistry.class);
+        var modelDescriptor = new ModelDescriptor(
                 "opus-4-6", "claude-opus-4-6", "anthropic", "default",
                 "anthropic", "claude", "Claude Opus 4.6",
-                io.casehub.platform.api.model.ModelTier.FLAGSHIP,
-                java.util.Set.of("code", "reasoning"), 200000, 32000,
-                io.casehub.platform.api.model.ModelLocality.CLOUD,
-                io.casehub.platform.api.model.CostTier.HIGH, "api-key", Map.of());
-        org.mockito.Mockito.when(registry.query(org.mockito.ArgumentMatchers.any(ModelQuery.class)))
+                ModelTier.FLAGSHIP,
+                Set.of("code", "reasoning"), 200000, 32000,
+                ModelLocality.CLOUD,
+                CostTier.HIGH, "api-key", Map.of());
+        when(registry.query(any(ModelQuery.class)))
                            .thenReturn(List.of(modelDescriptor));
 
         var converter = new EidosPoolConverter(registry);
@@ -196,7 +206,7 @@ class EidosPoolConverterTest {
         assertThat(result.agent().modelChain()).isNotNull();
         assertThat(result.agent().modelChain().entries()).hasSize(1);
         assertThat(result.agent().modelChain().entries().get(0))
-                .isInstanceOf(io.casehub.platform.api.model.ModelChain.ModelChainEntry.Named.class);
+                .isInstanceOf(ModelChain.ModelChainEntry.Named.class);
     }
 
     @Test
@@ -219,13 +229,13 @@ class EidosPoolConverterTest {
 
         assertThat(result.agent().modelChain()).isNotNull();
         assertThat(result.agent().modelChain().entries().get(0))
-                .isInstanceOf(io.casehub.platform.api.model.ModelChain.ModelChainEntry.Queried.class);
+                .isInstanceOf(ModelChain.ModelChainEntry.Queried.class);
     }
 
     @Test
     void registryReturnsEmptyFallsBackToQueried() {
-        var registry = org.mockito.Mockito.mock(io.casehub.platform.api.model.ModelRegistry.class);
-        org.mockito.Mockito.when(registry.query(org.mockito.ArgumentMatchers.any(ModelQuery.class)))
+        var registry = mock(ModelRegistry.class);
+        when(registry.query(any(ModelQuery.class)))
                            .thenReturn(List.of());
 
         var converter = new EidosPoolConverter(registry);
@@ -246,6 +256,6 @@ class EidosPoolConverterTest {
 
         assertThat(result.agent().modelChain()).isNotNull();
         assertThat(result.agent().modelChain().entries().get(0))
-                .isInstanceOf(io.casehub.platform.api.model.ModelChain.ModelChainEntry.Queried.class);
+                .isInstanceOf(ModelChain.ModelChainEntry.Queried.class);
     }
 }
