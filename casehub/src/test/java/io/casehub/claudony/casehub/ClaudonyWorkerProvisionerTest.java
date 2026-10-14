@@ -115,7 +115,7 @@ class ClaudonyWorkerProvisionerTest {
                 return Set.of("code-reviewer");
             }
         };
-        provisioner = new ClaudonyWorkerProvisioner(true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null);
+        provisioner = new ClaudonyWorkerProvisioner(true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null, null);
     }
 
     @Test
@@ -159,7 +159,7 @@ class ClaudonyWorkerProvisionerTest {
     @Test
     void provision_disabled_failsWithProvisioningException() {
         var disabledProvisioner = new ClaudonyWorkerProvisioner(
-                false, tmux, registry, configSource, sessionMapping, "claude", "/tmp", null, null, null, agentBackend, null, null);
+                false, tmux, registry, configSource, sessionMapping, "claude", "/tmp", null, null, null, agentBackend, null, null, null);
 
         assertThatThrownBy(() -> disabledProvisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
                 .isInstanceOf(ProvisioningException.class)
@@ -190,7 +190,7 @@ class ClaudonyWorkerProvisionerTest {
                 new AgentSessionManager(new AgentSessionManagerConfig(0, 10), failingOps),
                 failingOps, tmux, failConfig);
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null, failBackend, null, null);
+                true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null, failBackend, null, null, null);
 
         assertThatThrownBy(() -> prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
                 .isInstanceOf(ProvisioningException.class)
@@ -306,7 +306,7 @@ class ClaudonyWorkerProvisionerTest {
         when(mockResolver.resolve("ch-123", "corr-456"))
             .thenReturn(Optional.of(entryId));
         var prov = new ClaudonyWorkerProvisioner(
-            true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver, agentBackend, null, null);
+            true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver, agentBackend, null, null, null);
         UUID caseId = UUID.randomUUID();
         var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, "ch-123", "corr-456", null);
 
@@ -321,7 +321,7 @@ class ClaudonyWorkerProvisionerTest {
     void provision_withNullTriggerFields_guardShortCircuits() throws Exception {
         QhorusCausalLinkResolver mockResolver = mock(QhorusCausalLinkResolver.class);
         var prov = new ClaudonyWorkerProvisioner(
-            true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver, agentBackend, null, null);
+            true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver, agentBackend, null, null, null);
         UUID caseId = UUID.randomUUID();
         var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null, null);
 
@@ -351,7 +351,7 @@ class ClaudonyWorkerProvisionerTest {
             }
         };
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null);
+                true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null, null);
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
@@ -376,7 +376,7 @@ class ClaudonyWorkerProvisionerTest {
             }
         };
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, dirSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null);
+                true, tmux, registry, dirSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null, null);
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
@@ -397,7 +397,7 @@ class ClaudonyWorkerProvisionerTest {
             }
         };
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, emptySource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null);
+                true, tmux, registry, emptySource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null, null);
 
         prov.provision(Set.of("unknown-agent"), provisionContext(UUID.randomUUID()));
 
@@ -422,7 +422,7 @@ class ClaudonyWorkerProvisionerTest {
             }
         };
         var prov = new ClaudonyWorkerProvisioner(
-                true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null);
+                true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null, agentBackend, null, null, null);
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
@@ -496,7 +496,7 @@ class ClaudonyWorkerProvisionerTest {
                                                     .build());
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
-                null, null, null, agentBackend, poolDefRegistry, null);
+                null, null, null, agentBackend, poolDefRegistry, null, null);
         prov.circuitBreakerSleeper = d -> {};
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
@@ -514,7 +514,7 @@ class ClaudonyWorkerProvisionerTest {
                                                     .build());
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
-                null, null, null, agentBackend, poolDefRegistry, null);
+                null, null, null, agentBackend, poolDefRegistry, null, null);
         prov.circuitBreakerSleeper = d -> {};
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
@@ -533,7 +533,7 @@ class ClaudonyWorkerProvisionerTest {
                                                     .build());
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
-                null, null, null, agentBackend, poolDefRegistry, null);
+                null, null, null, agentBackend, poolDefRegistry, null, null);
         prov.circuitBreakerSleeper = d -> {};
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
@@ -547,7 +547,7 @@ class ClaudonyWorkerProvisionerTest {
         var poolDefRegistry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
-                null, null, null, agentBackend, poolDefRegistry, null);
+                null, null, null, agentBackend, poolDefRegistry, null, null);
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
@@ -565,7 +565,7 @@ class ClaudonyWorkerProvisionerTest {
                                                     .build());
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
-                null, null, null, agentBackend, poolDefRegistry, null);
+                null, null, null, agentBackend, poolDefRegistry, null, null);
         prov.circuitBreakerSleeper = d -> {};
 
         // First session (opus) fails — not alive, exit code 1
@@ -590,7 +590,7 @@ class ClaudonyWorkerProvisionerTest {
                                                     .build());
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
-                null, null, null, agentBackend, poolDefRegistry, null);
+                null, null, null, agentBackend, poolDefRegistry, null, null);
         prov.circuitBreakerSleeper = d -> {};
 
         when(tmux.sessionExists(anyString())).thenReturn(false);
@@ -652,7 +652,7 @@ class ClaudonyWorkerProvisionerTest {
         // The real test: create a pool with two Named entries and verify no event fires when first wins.
         var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers",
-                null, null, null, agentBackend, poolDefRegistry, mockEvent);
+                null, null, null, agentBackend, poolDefRegistry, mockEvent, null);
         prov.circuitBreakerSleeper = d -> {};
 
         prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
