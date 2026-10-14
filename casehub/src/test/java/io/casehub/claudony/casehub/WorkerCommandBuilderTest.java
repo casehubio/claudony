@@ -205,4 +205,30 @@ class WorkerCommandBuilderTest {
         var prompt = WorkerCommandBuilder.budgetReportingPrompt(null);
         assertThat(prompt).isEmpty();
     }
+
+    @Test
+    void identityPrompt_becomesSystemPrompt() {
+        String cmd = WorkerCommandBuilder.build("claude", ClaudonyProviderConfig.EMPTY,
+                                                Optional.of("Mesh context"), Optional.of("# Identity\n\nYou are a code reviewer."));
+        assertThat(cmd).contains("--system-prompt '# Identity");
+        assertThat(cmd).contains("--append-system-prompt 'Mesh context'");
+    }
+
+    @Test
+    void identityPrompt_overridesConfigSystemPrompt() {
+        var config = configWith(b -> b.systemPrompt = Optional.of("Config persona"));
+        String cmd = WorkerCommandBuilder.build("claude", config,
+                                                Optional.of("Mesh context"), Optional.of("# Identity\n\nEidos persona"));
+        assertThat(cmd).contains("--system-prompt '# Identity");
+        assertThat(cmd).doesNotContain("Config persona");
+    }
+
+    @Test
+    void noIdentityPrompt_configSystemPromptPreserved() {
+        var config = configWith(b -> b.systemPrompt = Optional.of("Config persona"));
+        String cmd = WorkerCommandBuilder.build("claude", config,
+                                                Optional.of("Mesh context"), Optional.empty());
+        assertThat(cmd).contains("--system-prompt 'Config persona'");
+    }
+
 }

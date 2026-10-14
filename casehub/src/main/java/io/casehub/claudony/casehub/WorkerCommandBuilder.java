@@ -27,6 +27,30 @@ public final class WorkerCommandBuilder {
         return sb.toString();
     }
 
+    public static String build(String baseCommand, ClaudonyProviderConfig config,
+                               Optional<String> dynamicAppendPrompt,
+                               Optional<String> identitySystemPrompt) {
+        var sb = new StringBuilder(baseCommand);
+
+        appendString(sb, "--model", config.model());
+        Optional<String> effectiveSystemPrompt = identitySystemPrompt.isPresent()
+                                                 ? identitySystemPrompt : config.systemPrompt();
+        appendString(sb, "--system-prompt", effectiveSystemPrompt);
+        Optional<String> effectiveAppend = mergeAppendPrompts(
+                config.appendSystemPrompt(), dynamicAppendPrompt);
+        appendString(sb, "--append-system-prompt", effectiveAppend);
+        appendString(sb, "--effort", config.effort());
+        appendString(sb, "--permission-mode", config.permissionMode());
+        appendList(sb, "--tools", config.tools());
+        appendList(sb, "--allowedTools", config.allowedTools());
+        appendList(sb, "--disallowedTools", config.disallowedTools());
+        config.addDirs().ifPresent(dirs ->
+                                           dirs.forEach(dir -> appendString(sb, "--add-dir", Optional.of(dir))));
+
+        return sb.toString();
+    }
+
+
     static Optional<String> mergeAppendPrompts(Optional<String> staticAppend,
                                                 Optional<String> dynamicAppend) {
         if (staticAppend.isEmpty() && dynamicAppend.isEmpty()) return Optional.empty();

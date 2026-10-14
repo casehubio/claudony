@@ -15,6 +15,7 @@ import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
+import io.casehub.eidos.api.AgentRegistry;
 import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.platform.agent.router.ModelChainExhaustedException;
 import io.casehub.platform.api.model.ModelChain;
@@ -63,6 +64,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
     private final QhorusCausalLinkResolver       causalLinkResolver;
     private final AgentPoolDefinitionRegistry    poolDefRegistry;
     private final Event<ModelFallbackEvent>      fallbackEvent;
+    private final Instance<AgentRegistry>        agentRegistry;
     Consumer<Duration> circuitBreakerSleeper = d -> {
         try {Thread.sleep(d.toMillis());} catch (InterruptedException e) {Thread.currentThread().interrupt();}
     };
@@ -80,11 +82,12 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
             QhorusCausalLinkResolver causalLinkResolver,
             ClaudonyAgentBackend agentBackend,
             AgentPoolDefinitionRegistry poolDefRegistry,
-            Event<ModelFallbackEvent> fallbackEvent) {
+            Event<ModelFallbackEvent> fallbackEvent,
+            Instance<AgentRegistry> agentRegistry) {
         this(config.enabled(), tmux, registry, providerConfigSource, sessionMapping,
              config.workers().defaultCommand(), config.workers().defaultWorkingDir(),
              caseHubRuntime, execManager, causalLinkResolver, agentBackend,
-             poolDefRegistry, fallbackEvent);
+             poolDefRegistry, fallbackEvent, agentRegistry);
     }
 
     ClaudonyWorkerProvisioner(boolean enabled, TmuxService tmux, SessionRegistry registry,
@@ -97,7 +100,8 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                               QhorusCausalLinkResolver causalLinkResolver,
                               ClaudonyAgentBackend agentBackend,
                               AgentPoolDefinitionRegistry poolDefRegistry,
-                              Event<ModelFallbackEvent> fallbackEvent) {
+                              Event<ModelFallbackEvent> fallbackEvent,
+                              Instance<AgentRegistry> agentRegistry) {
         this.enabled              = enabled;
         this.tmux                 = tmux;
         this.registry             = registry;
@@ -111,6 +115,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         this.agentBackend         = agentBackend;
         this.poolDefRegistry      = poolDefRegistry;
         this.fallbackEvent        = fallbackEvent;
+        this.agentRegistry        = agentRegistry;
     }
 
     @Override
@@ -202,6 +207,8 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         AgentPoolDefinition poolDef = poolDefRegistry != null
                                       ? poolDefRegistry.get(roleName).orElse(null) : null;
 
+        Optional<String> identityPrompt = resolveIdentityPrompt(poolDef, context.tenancyId());
+
         TmuxAgentSession agentSession;
         String           enrichedCommand;
 
@@ -230,7 +237,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                         poolDef.agent().gracePeriods(),
                         (model, command) -> {
                             var    eConfig  = model != null ? config.withModel(model) : config;
-                            String enriched = WorkerCommandBuilder.build(command, eConfig, meshPrompt);
+                            String enriched = WorkerCommandBuilder.build(command, eConfig, meshPrompt, identityPrompt);
                             var session = agentBackend.openWorkerSession(
                                     roleName, effectiveWorkingDir, enriched);
                             createdSessionIds.add(session.managedSession().instanceId());
@@ -260,7 +267,7 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
             }
         } else {
             String baseCommand = config.command().orElse(defaultCommand);
-            enrichedCommand = WorkerCommandBuilder.build(baseCommand, config, meshPrompt);
+            enrichedCommand = WorkerCommandBuilder.build(baseCommand, config, meshPrompt, identityPrompt);
 
             try {
                 agentSession = agentBackend.openWorkerSession(
@@ -295,6 +302,20 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
         registry.register(session);
         sessionMapping.register(roleName, context.caseId(), sessionId);
     }
+
+    private Optional<String> resolveIdentityPrompt(AgentPoolDefinition poolDef, String tenancyId) {
+        if (poolDef == null || poolDef.agent().eidosAgentId() == null) {return Optional.empty();}
+        if (agentRegistry == null || !agentRegistry.isResolvable()) {return Optional.empty();}
+        try {
+            return agentRegistry.get()
+                                .findById(poolDef.agent().eidosAgentId(), tenancyId != null ? tenancyId : "default")
+                                .flatMap(EidosIdentityPromptTemplate::generate);
+        } catch (Exception e) {
+            LOG.debugf("Could not resolve Eidos identity for %s: %s", poolDef.agent().eidosAgentId(), e.getMessage());
+            return Optional.empty();
+        }
+    }
+
 
     private void fireFallbackEvent(String roleName, AgentPoolDefinition poolDef,
                                    String resolvedModel) {
