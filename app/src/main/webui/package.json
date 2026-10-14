@@ -25,6 +25,7 @@
     "@casehubio/pages-viz": "portal:./.casehub-packages/packages/pages-viz",
     "jsonata": "^2.2.1",
     "lit": "^3.3.3",
+    "yaml": "^2.7.0",
     "zod": "^3.23.0"
   },
   "resolutions": {
