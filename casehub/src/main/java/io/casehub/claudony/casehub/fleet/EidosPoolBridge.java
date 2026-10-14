@@ -80,7 +80,7 @@ public class EidosPoolBridge {
     void reconcile() {
         try {
             java.util.List<AgentMatch> matches       = agentRegistry.find(AgentQuery.all(tenancyId));
-            java.util.Set<String>      existingPools = poolRegistry.names();
+            java.util.Set<String>      existingPools = poolRegistry.names(tenancyId);
             java.util.Set<String>      currentIds    = new java.util.HashSet<>();
             int                        added         = 0, updated = 0;
 
@@ -101,10 +101,10 @@ public class EidosPoolBridge {
                 } else if (!newDef.agent().equals(existing.agent()) || !newDef.pool().equals(existing.pool())) {
                     if (newDef.pool().minActive() != existing.pool().minActive()
                         || newDef.pool().maxActive() != existing.pool().maxActive()) {
-                        poolRegistry.updateCapacity(descriptor.agentId(), newDef.pool().minActive(), newDef.pool().maxActive());
+                        poolRegistry.updateCapacity(descriptor.agentId(), tenancyId, newDef.pool().minActive(), newDef.pool().maxActive());
                     }
                     if (!newDef.agent().equals(existing.agent())) {
-                        poolRegistry.updateAgentConfig(descriptor.agentId(), newDef.agent());
+                        poolRegistry.updateAgentConfig(descriptor.agentId(), tenancyId, newDef.agent());
                     }
                     lastKnownDefinitions.put(descriptor.agentId(), newDef);
                     updated++;
@@ -131,7 +131,7 @@ public class EidosPoolBridge {
         }
         try {
             var definition = converter.toPoolDefinition(descriptor, config);
-            poolRegistry.register(definition, "eidos");
+            poolRegistry.register(definition, "eidos", tenancyId);
             lastKnownDefinitions.put(descriptor.agentId(), definition);
             return true;
         } catch (Exception e) {
