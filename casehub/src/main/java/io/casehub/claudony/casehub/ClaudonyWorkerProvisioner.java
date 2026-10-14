@@ -294,11 +294,14 @@ public class ClaudonyWorkerProvisioner implements WorkerProvisioner {
                     "Failed to set session options for worker " + sessionId, e);
         }
 
+        String eidosId = poolDef != null ? poolDef.agent().eidosAgentId() : null;
+        Optional<String> eidosAgentId = Optional.ofNullable(eidosId);
         var session = new Session(sessionId, sessionName, effectiveWorkingDir,
                                   enrichedCommand, SessionStatus.IDLE, Instant.now(),
-                                  Instant.now(), Optional.empty(),
+                                  Instant.now(), Optional.<String>empty(),
                                   Optional.ofNullable(context.caseId()).map(UUID::toString),
-                                  Optional.of(roleName), context.tenancyId());
+                                  Optional.of(roleName), context.tenancyId(),
+                                  eidosAgentId);
         registry.register(session);
         sessionMapping.register(roleName, context.caseId(), sessionId);
     }
