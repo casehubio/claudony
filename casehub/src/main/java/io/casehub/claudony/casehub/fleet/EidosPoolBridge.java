@@ -14,7 +14,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import java.util.List;
-import java.util.Set;
 
 @ApplicationScoped
 @IfBuildProperty(name = "claudony.eidos.pool-bridge.enabled", stringValue = "true")
@@ -26,6 +25,8 @@ public class EidosPoolBridge {
     private final AgentPoolDefinitionRegistry poolRegistry;
     private final EidosPoolBridgeConfig config;
     private final String tenancyId;
+    private final java.util.Map<String, AgentPoolDefinition> lastKnownDefinitions = new java.util.concurrent.ConcurrentHashMap<>();
+
 
     @Inject
     public EidosPoolBridge(
@@ -74,22 +75,46 @@ public class EidosPoolBridge {
     @Scheduled(every = "${claudony.eidos.pool-bridge.reconcile-interval:30s}")
     void reconcile() {
         try {
-            List<AgentMatch> matches = agentRegistry.find(AgentQuery.all(tenancyId));
-            Set<String> existingPools = poolRegistry.names();
-            int added = 0;
+            java.util.List<AgentMatch> matches       = agentRegistry.find(AgentQuery.all(tenancyId));
+            java.util.Set<String>      existingPools = poolRegistry.names();
+            java.util.Set<String>      currentIds    = new java.util.HashSet<>();
+            int                        added         = 0, updated = 0;
+
             for (AgentMatch match : matches) {
                 AgentDescriptor descriptor = match.descriptor();
-                if (EidosPoolConverter.findClaudonyProviderConfig(descriptor).isEmpty()) {
-                    continue;
-                }
-                if (!existingPools.contains(descriptor.agentId())) {
+                if (EidosPoolConverter.findClaudonyProviderConfig(descriptor).isEmpty()) {continue;}
+
+                currentIds.add(descriptor.agentId());
+                var newDef   = EidosPoolConverter.toPoolDefinition(descriptor, config);
+                var existing = lastKnownDefinitions.get(descriptor.agentId());
+
+                if (existing == null && !existingPools.contains(descriptor.agentId())) {
                     if (registerIfClaudony(descriptor)) {
                         added++;
                     }
+                } else if (existing == null) {
+                    lastKnownDefinitions.put(descriptor.agentId(), newDef);
+                } else if (!newDef.agent().equals(existing.agent()) || !newDef.pool().equals(existing.pool())) {
+                    if (newDef.pool().minActive() != existing.pool().minActive()
+                        || newDef.pool().maxActive() != existing.pool().maxActive()) {
+                        poolRegistry.updateCapacity(descriptor.agentId(), newDef.pool().minActive(), newDef.pool().maxActive());
+                    }
+                    if (!newDef.agent().equals(existing.agent())) {
+                        poolRegistry.updateAgentConfig(descriptor.agentId(), newDef.agent());
+                    }
+                    lastKnownDefinitions.put(descriptor.agentId(), newDef);
+                    updated++;
                 }
             }
-            if (added > 0) {
-                LOG.infof("Eidos pool bridge: reconciliation added %d new pool(s)", added);
+
+            for (String knownId : lastKnownDefinitions.keySet()) {
+                if (!currentIds.contains(knownId)) {
+                    LOG.warnf("Eidos pool bridge: descriptor '%s' no longer in registry (pool retained)", knownId);
+                }
+            }
+
+            if (added > 0 || updated > 0) {
+                LOG.infof("Eidos pool bridge: reconciliation — added %d, updated %d pool(s)", added, updated);
             }
         } catch (Exception e) {
             LOG.warn("Eidos pool bridge: reconciliation failed", e);
@@ -103,10 +128,11 @@ public class EidosPoolBridge {
         try {
             var definition = EidosPoolConverter.toPoolDefinition(descriptor, config);
             poolRegistry.register(definition, "eidos");
+            lastKnownDefinitions.put(descriptor.agentId(), definition);
             return true;
         } catch (Exception e) {
             LOG.warnf("Eidos pool bridge: failed to register pool for agent '%s': %s",
-                    descriptor.agentId(), e.getMessage());
+                      descriptor.agentId(), e.getMessage());
             return false;
         }
     }

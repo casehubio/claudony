@@ -92,6 +92,16 @@ public class AgentPoolDefinitionRegistry {
         registryService.register(toRegistryEntry(updated, ns));
     }
 
+    public void updateAgentConfig(String agentName, AgentPoolDefinition.AgentConfig newAgentConfig) {
+        definitions.compute(agentName, (k, existing) -> {
+            if (existing == null) {throw new IllegalArgumentException("Pool not found: " + k);}
+            return new AgentPoolDefinition(newAgentConfig, existing.pool());
+        });
+        var updated = definitions.get(agentName);
+        var ns      = registryService.resolve(agentName).map(RegistryEntry::namespace).orElse("fleet");
+        registryService.register(toRegistryEntry(updated, ns));
+    }
+
 
     private RegistryEntry toRegistryEntry(AgentPoolDefinition def, String namespace) {
         var now = java.time.Instant.now();
