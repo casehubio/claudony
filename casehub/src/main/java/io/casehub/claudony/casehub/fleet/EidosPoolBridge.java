@@ -23,6 +23,7 @@ public class EidosPoolBridge {
 
     private final AgentRegistry agentRegistry;
     private final AgentPoolDefinitionRegistry poolRegistry;
+    private final EidosPoolConverter converter;
     private final EidosPoolBridgeConfig config;
     private final String tenancyId;
     private final java.util.Map<String, AgentPoolDefinition> lastKnownDefinitions = new java.util.concurrent.ConcurrentHashMap<>();
@@ -32,12 +33,14 @@ public class EidosPoolBridge {
     public EidosPoolBridge(
             AgentRegistry agentRegistry,
             AgentPoolDefinitionRegistry poolRegistry,
+            jakarta.enterprise.inject.Instance<io.casehub.platform.api.model.ModelRegistry> modelRegistry,
             @ConfigProperty(name = "claudony.eidos.pool-bridge.default-min-active", defaultValue = "0") int defaultMinActive,
             @ConfigProperty(name = "claudony.eidos.pool-bridge.default-max-active", defaultValue = "5") int defaultMaxActive,
             @ConfigProperty(name = "claudony.eidos.pool-bridge.default-command", defaultValue = "claude") String defaultCommand,
             @ConfigProperty(name = "claudony.eidos.pool-bridge.tenancy-id", defaultValue = "default") String tenancyId) {
         this.agentRegistry = agentRegistry;
         this.poolRegistry = poolRegistry;
+        this.converter = modelRegistry.isResolvable() ? new EidosPoolConverter(modelRegistry.get()) : new EidosPoolConverter();
         this.config = new EidosPoolBridgeConfig(defaultMinActive, defaultMaxActive, defaultCommand);
         this.tenancyId = tenancyId;
     }
@@ -48,6 +51,7 @@ public class EidosPoolBridge {
                     String tenancyId) {
         this.agentRegistry = agentRegistry;
         this.poolRegistry = poolRegistry;
+        this.converter = new EidosPoolConverter();
         this.config = config;
         this.tenancyId = tenancyId;
     }
@@ -85,7 +89,7 @@ public class EidosPoolBridge {
                 if (EidosPoolConverter.findClaudonyProviderConfig(descriptor).isEmpty()) {continue;}
 
                 currentIds.add(descriptor.agentId());
-                var newDef   = EidosPoolConverter.toPoolDefinition(descriptor, config);
+                var newDef   = converter.toPoolDefinition(descriptor, config);
                 var existing = lastKnownDefinitions.get(descriptor.agentId());
 
                 if (existing == null && !existingPools.contains(descriptor.agentId())) {
@@ -126,7 +130,7 @@ public class EidosPoolBridge {
             return false;
         }
         try {
-            var definition = EidosPoolConverter.toPoolDefinition(descriptor, config);
+            var definition = converter.toPoolDefinition(descriptor, config);
             poolRegistry.register(definition, "eidos");
             lastKnownDefinitions.put(descriptor.agentId(), definition);
             return true;
