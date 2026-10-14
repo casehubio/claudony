@@ -56,4 +56,32 @@ class AgentPoolDefinitionRegistryUpdateTest {
         assertThat(updated.pool().scaling()).isSameAs(scaling);
         assertThat(updated.pool().eviction()).isEqualTo(def.pool().eviction());
     }
+
+    @Test
+    void updateAgentConfig_replacesConfig() {
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
+        var original = AgentPoolDefinition.builder()
+                                          .agent("reviewer").command("claude").pool().minActive(1).maxActive(5).build();
+        registry.register(original, "eidos");
+
+        var newAgentConfig = new AgentPoolDefinition.AgentConfig(
+                "reviewer", "/new/dir", WorkingDirPolicy.EXCLUSIVE, "claude --model opus",
+                null, java.util.Map.of(), java.util.Map.of(), "eidos-reviewer");
+        registry.updateAgentConfig("reviewer", newAgentConfig);
+
+        var updated = registry.get("reviewer").orElseThrow();
+        assertThat(updated.agent().command()).isEqualTo("claude --model opus");
+        assertThat(updated.agent().workingDir()).isEqualTo("/new/dir");
+        assertThat(updated.agent().eidosAgentId()).isEqualTo("eidos-reviewer");
+        assertThat(updated.pool().minActive()).isEqualTo(1);
+        assertThat(updated.pool().maxActive()).isEqualTo(5);
+    }
+
+    @Test
+    void updateAgentConfig_unknownPool_throws() {
+        var registry = new AgentPoolDefinitionRegistry(new InMemoryRegistryService(event -> {}));
+        var config   = new AgentPoolDefinition.AgentConfig("missing", null, WorkingDirPolicy.EXCLUSIVE, "claude");
+        assertThatThrownBy(() -> registry.updateAgentConfig("missing", config))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
