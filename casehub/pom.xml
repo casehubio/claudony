@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-claudony-parent</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>casehub-claudony-casehub</artifactId>
