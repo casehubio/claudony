@@ -215,6 +215,20 @@ export class ClaudonyWorkbench extends LitElement {
       color: var(--pages-neutral-8, #888);
       padding: 8px 12px; border-bottom: 1px solid var(--pages-neutral-4, #3e3e42);
     }
+
+    .connection-banner {
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      text-align: center;
+    }
+    .connection-banner.reconnecting {
+      background: var(--pages-warning-bg, #fef3c7);
+      color: var(--pages-warning-text, #92400e);
+    }
+    .connection-banner.disconnected {
+      background: var(--pages-error-bg, #fee2e2);
+      color: var(--pages-error-text, #991b1b);
+    }
   `;
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
@@ -446,7 +460,8 @@ export class ClaudonyWorkbench extends LitElement {
         ${this._caseId ? this._renderCaseHeader() : nothing}
         ${this._lineageExpanded ? this._renderLineage() : nothing}
 
-        <channel-nav .channels=${this._channels.channels}
+        <channel-nav .channelTree=${this._channels.channelTree}
+          .channels=${this._channels.channels}
           .selectedChannelId=${this._channels.selectedChannelId}></channel-nav>
 
         ${topics.length > 0 ? html`
@@ -454,10 +469,17 @@ export class ClaudonyWorkbench extends LitElement {
             .viewMode=${this._channels.viewMode}></blocks-channel-topic-bar>
         ` : nothing}
 
+        ${this._push.connectionStatus !== 'connected' ? html`
+          <div class="connection-banner ${this._push.connectionStatus}">
+            ${this._push.connectionStatus === 'reconnecting' ? 'Reconnecting…' : 'Disconnected'}
+          </div>
+        ` : nothing}
+
         <div class="feed-container">
           <channel-feed .messages=${messages}
             .channelId=${this._channels.selectedChannelId}
             .reactions=${reactions}
+            .currentActorId=${'human'}
             .staleCursorMinutes=${0}></channel-feed>
         </div>
 

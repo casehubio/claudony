@@ -132,6 +132,20 @@ export class ClaudonyChannelPanel extends LitElement {
     @media (max-width: 767px) {
       :host { display: none; width: 0; min-width: 0; }
     }
+
+    .connection-banner {
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      text-align: center;
+    }
+    .connection-banner.reconnecting {
+      background: var(--pages-warning-bg, #fef3c7);
+      color: var(--pages-warning-text, #92400e);
+    }
+    .connection-banner.disconnected {
+      background: var(--pages-error-bg, #fee2e2);
+      color: var(--pages-error-text, #991b1b);
+    }
   `;
 
   override updated(changed: PropertyValues): void {
@@ -220,9 +234,16 @@ export class ClaudonyChannelPanel extends LitElement {
       ${this._caseId ? this._renderCaseHeader() : nothing}
       ${this._lineageExpanded ? this._renderLineage() : nothing}
 
+      ${this._push.connectionStatus !== 'connected' ? html`
+        <div class="connection-banner ${this._push.connectionStatus}">
+          ${this._push.connectionStatus === 'reconnecting' ? 'Reconnecting…' : 'Disconnected'}
+        </div>
+      ` : nothing}
+
       <div class="feed-container">
         <channel-feed .messages=${messages}
           .channelId=${this._channels.selectedChannelId}
+          .currentActorId=${'human'}
           .staleCursorMinutes=${0}></channel-feed>
       </div>
 

@@ -401,8 +401,10 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 │       ├── terminal-workspace.ts      — three-column flex coordinator for fleet mode (LitElement,
 │       │                                  delegates to terminal-controller.ts)
 │       ├── claudony-workbench.ts      — LitElement composition root for case-bound sessions; composes terminal,
-│       │                                  channel-nav, channel-feed, channel-input, task/correlation/artifact
-│       │                                  panels. Owns SSE lifecycle, cursor persistence, case context, commitments.
+│       │                                  channel-nav (tree mode with space grouping), channel-feed
+│       │                                  (currentActorId wired), channel-input, task/correlation/artifact
+│       │                                  panels. Owns SSE lifecycle, cursor persistence, case context,
+│       │                                  commitments. Connection status banner shows reconnecting/disconnected.
 │       │                                  Conditionally loaded via dynamic import when session has caseId.
 │       │                                  Task, correlation, and artifact panels promoted to
 │       │                                  @casehubio/blocks-ui-channel-activity (channel-task-panel,
