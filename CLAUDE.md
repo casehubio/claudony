@@ -103,7 +103,7 @@ Read `docs/guides/consumer-guide.md` for app-level work. Only read `docs/guides/
 
 **Type:** java
 
-**Stack:** Java 21 (on Java 26 JVM), Quarkus 3.32.2, GraalVM 25 (native image), tmux, xterm.js, Lit 3, `@casehubio/blocks-ui-channel-activity`, `@casehubio/pages-ui-tokens`
+**Stack:** Java 21 (on Java 26 JVM), Quarkus 3.32.2, GraalVM 25 (native image), tmux, xterm.js, Lit 3, `@casehubio/casehub-mosaic-channel-activity`, `@casehubio/pages-ui-tokens`
 
 ---
 
@@ -407,14 +407,14 @@ claudony-app/src/main/webui/  — TypeScript frontend built by Quinoa + esbuild
 │       │                                  commitments. Connection status banner shows reconnecting/disconnected.
 │       │                                  Conditionally loaded via dynamic import when session has caseId.
 │       │                                  Task, correlation, and artifact panels promoted to
-│       │                                  @casehubio/blocks-ui-channel-activity (channel-task-panel,
+│       │                                  @casehubio/casehub-mosaic-channel-activity (channel-task-panel,
 │       │                                  channel-correlation-panel, channel-artifact-panel).
 │       ├── claudony-fleet-panel.ts     — fleet peer management: health dots, circuit state, add/ping/remove (LitElement)
 │       ├── claudony-mesh-panel.ts     — mesh panel: overview/channel/feed views, SSE/polling, interjection dock (LitElement)
 │       ├── claudony-case-browser.ts    — LitElement wrapping blocks-case-explorer with caseInstanceType preset
 │       ├── claudony-action-inbox.ts    — LitElement action inbox: summary bar, urgency-sorted table, action buttons
 │       ├── worker-panel.ts            — SSE worker list, click-to-switch (LitElement)
-│       ├── channel-panel.ts           — LitElement composing blocks-ui <channel-feed> + <channel-input>;
+│       ├── channel-panel.ts           — LitElement composing casehub-mosaic <channel-feed> + <channel-input>;
 │       │                                  owns SSE/polling, cursor persistence, case context header, lineage.
 │       │                                  Superseded by claudony-workbench for case-bound sessions.
 │       └── key-bar.ts                 — touch device special keys (LitElement)
@@ -554,12 +554,12 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests -q -pl casehub
   -f /Users/mdproctor/claude/casehub/slots/194/engine/pom.xml
 ```
 
-**npm bridge JARs (local dev):** `casehub-pages-npm` and `casehub-blocks-ui-npm` are Maven JARs that bundle npm packages for the `maven-dependency-plugin` unpack into `.casehub-packages/`. CI builds these from source (self-contained). For local dev, install from source when stale:
+**npm bridge JARs (local dev):** `casehub-pages-npm` and `casehub-casehub-mosaic-npm` are Maven JARs that bundle npm packages for the `maven-dependency-plugin` unpack into `.casehub-packages/`. CI builds these from source (self-contained). For local dev, install from source when stale:
 ```bash
-# Pages (must be first — blocks-ui depends on it)
+# Pages (must be first — casehub-mosaic depends on it)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/pages/npm-packages/pom.xml
 # Blocks-ui
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/blocks-ui/npm-packages/pom.xml
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -f ~/claude/casehub/casehub-mosaic/npm-packages/pom.xml
 ```
 
 `claudony-casehub` tests:
@@ -698,9 +698,9 @@ cd docs && bundle exec jekyll serve --baseurl ""
 
 Claudony is the all-in-one workspace that combines terminal, observation, and conversation. The chat-app (`~/claude/casehub/chat-app`) is a standalone Qhorus demo — Claudony should progressively absorb its rich conversation capabilities rather than reimplementing them.
 
-**Current state:** `channel-panel.ts` composes `<channel-feed>` and `<channel-input>` from `@casehubio/blocks-ui-channel-activity`. The chat-app uses the full set: `<channel-nav>`, `<channel-member-panel>`, reactions, threading, commitments/tasks, correlation chains, artifact viewer.
+**Current state:** `channel-panel.ts` composes `<channel-feed>` and `<channel-input>` from `@casehubio/casehub-mosaic-channel-activity`. The chat-app uses the full set: `<channel-nav>`, `<channel-member-panel>`, reactions, threading, commitments/tasks, correlation chains, artifact viewer.
 
-**Direction:** Evolve incrementally — adopt more blocks-ui components, absorb the chat-app's panels (task, correlation, artifact), and unify or layer the backend APIs (`ChatPlatform` SPI vs Qhorus services). Explore multiple integration modes: case-scoped channels (current), general-purpose chat rooms, and hybrid patterns.
+**Direction:** Evolve incrementally — adopt more casehub-mosaic components, absorb the chat-app's panels (task, correlation, artifact), and unify or layer the backend APIs (`ChatPlatform` SPI vs Qhorus services). Explore multiple integration modes: case-scoped channels (current), general-purpose chat rooms, and hybrid patterns.
 
 **Reference issue:** see the conversation integration epic in GitHub issues for the full gap analysis and steps.
 
@@ -720,15 +720,15 @@ filtering or dropping commits that touch these paths.
 
 ## Frontend Dependencies
 
-This project consumes frontend packages from casehub-pages and blocks-ui via **Maven SNAPSHOT** artifacts (WebJar pattern).
+This project consumes frontend packages from casehub-pages and casehub-mosaic via **Maven SNAPSHOT** artifacts (WebJar pattern).
 See [casehub-pages ADR-0001](https://github.com/casehubio/casehub-pages/blob/main/docs/adr/0001-cross-repo-frontend-dependency-management.md).
 
 | Source | Mechanism |
 |--------|-----------|
 | casehub-pages | Maven SNAPSHOT (`META-INF/resources/`) |
-| blocks-ui | Maven SNAPSHOT (`META-INF/resources/`) |
+| casehub-mosaic | Maven SNAPSHOT (`META-INF/resources/`) |
 
-**Local development:** after changing pages or blocks-ui, run `yarn build && mvn install` in the source repo to publish the SNAPSHOT to `~/.m2`.
+**Local development:** after changing pages or casehub-mosaic, run `yarn build && mvn install` in the source repo to publish the SNAPSHOT to `~/.m2`.
 
 **Do not use npm `file:` references for cross-repo dependencies** — they break in CI. See ADR-0001.
 
