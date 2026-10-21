@@ -2,7 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import '@casehubio/pages-ui-components';
 import '@casehubio/pages-primitives/modal';
-import '@casehubio/blocks-ui-session-workbench';
+import '@casehubio/mosaic-session-workbench';
 import { fetchWithAuth } from '../util/auth.js';
 import { THEME_CSS } from '../theme.js';
 

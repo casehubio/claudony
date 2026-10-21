@@ -5,9 +5,9 @@ import {
   PushController, ALL_TOPICS,
   ChannelStateController,
   MessagingController,
-} from '@casehubio/blocks-ui-channel-activity';
-import type { SendMessagePayload, MessageType } from '@casehubio/blocks-ui-channel-activity';
-import '@casehubio/blocks-ui-channel-activity';
+} from '@casehubio/mosaic-channel-activity';
+import type { SendMessagePayload, MessageType } from '@casehubio/mosaic-channel-activity';
+import '@casehubio/mosaic-channel-activity';
 import '@casehubio/pages-ui-components';
 import { createEventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
 import type { EventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
