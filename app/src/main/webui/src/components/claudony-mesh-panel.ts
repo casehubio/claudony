@@ -2,10 +2,10 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import type { SelectOption } from '@casehubio/pages-ui-components';
 import '@casehubio/pages-ui-components';
-import type { QhorusMessage, Reaction, ChannelMember, PresenceState } from '@casehubio/blocks-ui-channel-activity';
-import '@casehubio/blocks-ui-channel-activity';
+import type { QhorusMessage, Reaction, ChannelMember, PresenceState } from '@casehubio/mosaic-channel-activity';
+import '@casehubio/mosaic-channel-activity';
 import { fetchWithAuth } from '../util/auth.js';
-import type { MessageType, ArtefactRef } from '@casehubio/blocks-ui-channel-activity';
+import type { MessageType, ArtefactRef } from '@casehubio/mosaic-channel-activity';
 
 interface TimelineEntry {
   id?: number;

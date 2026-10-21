@@ -8,9 +8,9 @@ import {
   MembershipController,
   ReactionController,
   CommitmentController,
-} from '@casehubio/blocks-ui-channel-activity';
-import type { SendMessagePayload, ArtefactRef, MessageType } from '@casehubio/blocks-ui-channel-activity';
-import '@casehubio/blocks-ui-channel-activity';
+} from '@casehubio/mosaic-channel-activity';
+import type { SendMessagePayload, ArtefactRef, MessageType } from '@casehubio/mosaic-channel-activity';
+import '@casehubio/mosaic-channel-activity';
 import '@casehubio/pages-ui-components';
 import { createEventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
 import type { EventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';

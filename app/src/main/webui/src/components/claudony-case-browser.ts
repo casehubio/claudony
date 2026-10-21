@@ -1,8 +1,8 @@
 import { LitElement, html, css } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import { caseInstanceType } from '@casehubio/blocks-ui-case-explorer';
-import type { EntityTypeRegistration } from '@casehubio/blocks-ui-case-explorer';
-import '@casehubio/blocks-ui-case-explorer';
+import { caseInstanceType } from '@casehubio/mosaic-case-explorer';
+import type { EntityTypeRegistration } from '@casehubio/mosaic-case-explorer';
+import '@casehubio/mosaic-case-explorer';
 import { fetchWithAuth } from '../util/auth';
 
 const CASE_TYPE: EntityTypeRegistration = {
