@@ -345,7 +345,7 @@ PostgreSQL required for all environments. Qhorus data (channels, messages, ledge
 | Terminal multiplexer | tmux |
 | Terminal emulator (browser) | xterm.js |
 | Frontend | TypeScript, Lit 3, Quinoa + esbuild |
-| UI components | `@casehubio/blocks-ui-channel-activity`, `@casehubio/pages-ui-tokens` |
+| UI components | `@casehubio/agency-ui-channel-activity`, `@casehubio/pages-ui-tokens` |
 | Auth | quarkus-security-webauthn + custom ApiKeyAuthMechanism |
 | MCP | quarkus-mcp-server-http (1.11.1) |
 | Build | Maven (`mvn`, not `./mvnw`) |
@@ -360,7 +360,7 @@ Two pages served by Quarkus:
 - **`/app/index.html`** -- Fleet home: session panel (grid/table view toggle), fleet panel, mesh panel
 - **`/app/session.html`** -- Terminal page: xterm.js terminal with compose overlay; case-bound sessions get the full workbench (channel nav, feed, input, task/correlation/artifact panels)
 
-The workbench (`claudony-workbench.ts`) is dynamically loaded when a session has a `caseId`. It composes `<channel-feed>` and `<channel-input>` from `@casehubio/blocks-ui-channel-activity` and owns SSE lifecycle, cursor persistence, case context, and commitments.
+The workbench (`claudony-workbench.ts`) is dynamically loaded when a session has a `caseId`. It composes `<channel-feed>` and `<channel-input>` from `@casehubio/agency-ui-channel-activity` and owns SSE lifecycle, cursor persistence, case context, and commitments.
 
 ### Responsive Design
 
