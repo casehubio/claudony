@@ -117,4 +117,16 @@ class DashboardE2ETest extends PlaywrightBase {
                     .isTrue();
         }
     }
+
+    @Test
+    void chatTab_rendersWorkbench() {
+        page.navigate(BASE_URL + "/app/");
+        // Click the Chat tab
+        page.locator("text=Chat").click();
+        // Verify the chat panel renders
+        page.locator("claudony-chat-panel").waitFor(
+                new Locator.WaitForOptions().setTimeout(10000));
+        assertThat(page.locator("claudony-chat-panel").isVisible()).isTrue();
+    }
+
 }
