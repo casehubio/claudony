@@ -130,7 +130,7 @@ element until `close()` is explicitly called.
 
 `messageBadges_showCorrectTypeLabel` uses the selector chain
 `channel-feed >> channel-message >> .msg-badge`. The `channel-message`
-component is from `@casehubio/blocks-ui-channel-activity` (v0.2.2). The
+component is from `@casehubio/agency-ui-channel-activity` (v0.2.2). The
 package source is not available in any indexed repository for verification.
 The badge class name must be verified at implementation time via browser
 DevTools inspection of the rendered `channel-message` component. If `.msg-badge`

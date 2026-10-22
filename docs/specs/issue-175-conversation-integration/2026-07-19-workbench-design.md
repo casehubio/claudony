@@ -56,7 +56,7 @@ A LitElement composition root that replaces `<terminal-workspace>` + `<channel-p
 | `<claudony-correlation-panel>` | chat-app `qhorus-correlation-panel` | Conversation chain visualization | Yes — uses `QhorusMessage` |
 | `<claudony-artifact-panel>` | chat-app `qhorus-artifact-panel` | Artifact reference viewer (v1: metadata only, no content fetching) | Yes — uses `ArtefactRef` |
 
-Absorbed panels use only types that are either already in blocks-ui (`QhorusMessage`, `CommitmentState`, `ArtefactRef`) or are blocks-ui promotion candidates (`CommitmentRecord`). No Claudony-specific imports. The chat-app's dockable panels spec defines `CommitmentRecord` for promotion to `@casehubio/blocks-ui-channel-activity/types.ts`; this spec depends on that promotion landing first. If it hasn't landed when implementation begins, define an identical local type in the Claudony adapter layer.
+Absorbed panels use only types that are either already in blocks-ui (`QhorusMessage`, `CommitmentState`, `ArtefactRef`) or are blocks-ui promotion candidates (`CommitmentRecord`). No Claudony-specific imports. The chat-app's dockable panels spec defines `CommitmentRecord` for promotion to `@casehubio/agency-ui-channel-activity/types.ts`; this spec depends on that promotion landing first. If it hasn't landed when implementation begins, define an identical local type in the Claudony adapter layer.
 
 **Children — Claudony-specific:**
 
@@ -296,7 +296,7 @@ return {
 
 ### Add `CommitmentRecord` type
 
-Shape (matching the chat-app's type, defined in `@casehubio/blocks-ui-channel-activity/types.ts` per the dockable panels spec):
+Shape (matching the chat-app's type, defined in `@casehubio/agency-ui-channel-activity/types.ts` per the dockable panels spec):
 
 ```typescript
 interface CommitmentRecord {
@@ -376,7 +376,7 @@ Deferred items without issue numbers must be filed as GitHub issues before this 
 | Prerequisite | Repo | Dependency |
 |-------------|------|------------|
 | `ReactiveCommitmentStore.findByChannel(UUID)` | casehub-qhorus | Must be added to the SPI interface (`casehub-qhorus-api`), implemented in `InMemoryReactiveCommitmentStore` (`casehub-qhorus-persistence-memory`), and implemented in `ReactiveJpaCommitmentStore` (`casehub-qhorus-runtime`). Without this, MeshResource's commitment endpoint has no method to call. |
-| `CommitmentRecord` in blocks-ui (optional) | casehub-blocks-ui | Per chat-app dockable panels spec. If not landed, use local identical type (fallback documented in §Frontend Adapter Enrichment). |
+| `CommitmentRecord` in blocks-ui (optional) | casehub-agency-ui | Per chat-app dockable panels spec. If not landed, use local identical type (fallback documented in §Frontend Adapter Enrichment). |
 
 Implementation of the commitment endpoint is blocked on the Qhorus SPI addition. The rest of this spec (workbench component, terminal extraction, timeline enrichment, adapter enrichment) can proceed in parallel.
 
