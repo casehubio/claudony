@@ -376,7 +376,7 @@ Deferred items without issue numbers must be filed as GitHub issues before this 
 | Prerequisite | Repo | Dependency |
 |-------------|------|------------|
 | `ReactiveCommitmentStore.findByChannel(UUID)` | casehub-qhorus | Must be added to the SPI interface (`casehub-qhorus-api`), implemented in `InMemoryReactiveCommitmentStore` (`casehub-qhorus-persistence-memory`), and implemented in `ReactiveJpaCommitmentStore` (`casehub-qhorus-runtime`). Without this, MeshResource's commitment endpoint has no method to call. |
-| `CommitmentRecord` in blocks-ui (optional) | casehub-agency-ui | Per chat-app dockable panels spec. If not landed, use local identical type (fallback documented in §Frontend Adapter Enrichment). |
+| `CommitmentRecord` in blocks-ui (optional) | casehub-blocks-ui | Per chat-app dockable panels spec. If not landed, use local identical type (fallback documented in §Frontend Adapter Enrichment). |
 
 Implementation of the commitment endpoint is blocked on the Qhorus SPI addition. The rest of this spec (workbench component, terminal extraction, timeline enrichment, adapter enrichment) can proceed in parallel.
 
