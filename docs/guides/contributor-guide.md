@@ -303,7 +303,7 @@ Key components (all LitElement):
 | `channel-panel` | `channel-panel.ts` | Channel feed + input (superseded by workbench for case-bound sessions) |
 | `key-bar` | `key-bar.ts` | Touch device special keys |
 
-UI components consumed from `@casehubio/blocks-ui-channel-activity` (channel-feed, channel-input, channel-task-panel, channel-correlation-panel, channel-artifact-panel) and `@casehubio/pages-ui-tokens` (design tokens). Delivered via Maven SNAPSHOT artifacts (WebJar pattern).
+UI components consumed from `@casehubio/agency-ui-channel-activity` (channel-feed, channel-input, channel-task-panel, channel-correlation-panel, channel-artifact-panel) and `@casehubio/pages-ui-tokens` (design tokens). Delivered via Maven SNAPSHOT artifacts (WebJar pattern).
 
 `theme.ts` bridges `--pages-*` design tokens to claudony's legacy CSS variable names via `initTheme()`.
 
