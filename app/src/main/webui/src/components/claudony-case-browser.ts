@@ -22,10 +22,10 @@ export class ClaudonyCaseBrowser extends LitElement {
 
   override render() {
     return html`
-      <blocks-case-explorer
+      <agency-case-explorer
         .entityTypes=${[CASE_TYPE]}
         .fetchFn=${fetchWithAuth}
-      ></blocks-case-explorer>
+      ></agency-case-explorer>
     `;
   }
 }
