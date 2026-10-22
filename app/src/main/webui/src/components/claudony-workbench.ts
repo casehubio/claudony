@@ -465,8 +465,8 @@ export class ClaudonyWorkbench extends LitElement {
           .selectedChannelId=${this._channels.selectedChannelId}></channel-nav>
 
         ${topics.length > 0 ? html`
-          <blocks-channel-topic-bar .topics=${topics}
-            .viewMode=${this._channels.viewMode}></blocks-channel-topic-bar>
+          <agency-channel-topic-bar .topics=${topics}
+            .viewMode=${this._channels.viewMode}></agency-channel-topic-bar>
         ` : nothing}
 
         ${this._push.connectionStatus !== 'connected' ? html`
@@ -525,9 +525,9 @@ export class ClaudonyWorkbench extends LitElement {
         return html`<channel-artifact-panel
           .selectedArtefactRef=${this._selectedArtefactRef}></channel-artifact-panel>`;
       case 'members':
-        return html`<blocks-channel-member-panel
+        return html`<agency-channel-member-panel
           .members=${this._members.filteredMembers()}
-          .presence=${this._members.presence}></blocks-channel-member-panel>`;
+          .presence=${this._members.presence}></agency-channel-member-panel>`;
       default:
         return nothing;
     }

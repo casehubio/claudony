@@ -498,8 +498,8 @@ export class ClaudonyMeshPanel extends LitElement {
         .staleCursorMinutes=${0}></channel-feed>
       ${this._channelMembers.length > 0 ? html`
         <div style="border-top:1px solid var(--pages-neutral-4); margin-top:8px; padding-top:4px">
-          <blocks-channel-member-panel .members=${this._channelMembers}
-            .presence=${this._channelMemberPresence}></blocks-channel-member-panel>
+          <agency-channel-member-panel .members=${this._channelMembers}
+            .presence=${this._channelMemberPresence}></agency-channel-member-panel>
         </div>
       ` : nothing}
     `;

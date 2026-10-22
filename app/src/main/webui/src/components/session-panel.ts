@@ -77,7 +77,7 @@ export class ClaudonySessionPanel extends LitElement {
     .view-toggle button { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; cursor: pointer; font-size: var(--pages-font-size-lg); color: var(--text-muted); }
     .view-toggle button:hover { background: rgba(255,255,255,0.05); }
     .view-toggle button.active { color: var(--accent); border-color: var(--accent); }
-    blocks-session-workbench { height: calc(100% - 3rem); }
+    agency-session-workbench { height: calc(100% - 3rem); }
     @media (max-width: 1024px) {
       .grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.6rem; }
       :host { padding: 0.75rem; }
@@ -241,7 +241,7 @@ export class ClaudonySessionPanel extends LitElement {
   }
 
   private _renderTable() {
-    return html`<blocks-session-workbench endpoint="/api/sessions"></blocks-session-workbench>`;
+    return html`<agency-session-workbench endpoint="/api/sessions"></agency-session-workbench>`;
   }
 
   private _renderCard(s: Session) {
