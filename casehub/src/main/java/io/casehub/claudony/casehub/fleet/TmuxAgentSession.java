@@ -39,8 +39,8 @@ public class TmuxAgentSession implements AgentSession {
             try {
                 tmux.sendKeys(managedSession.instanceId(), prompt + "\n");
                 em.emit(new AgentEvent.InvocationComplete(
-                        0, 0, 0, 0, 0, null, 0, 0,
-                        managedSession.instanceId(), 1, false));
+                        0, 0, 0, 0, 0, null, 0L, 0L,
+                        managedSession.instanceId(), 1, false, null, null));
                 em.complete();
             } catch (IOException | InterruptedException e) {
                 em.fail(e);
