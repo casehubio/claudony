@@ -57,6 +57,7 @@ jobs:
           cd .ci-deps/casehub-pages
           YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
           yarn build
+          node scripts/rewrite-exports-for-maven.mjs
           bash npm-packages/pack-all.sh $GITHUB_WORKSPACE/app/src/main/webui/.casehub-packages
         env:
           GH_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
