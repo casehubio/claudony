@@ -5,26 +5,26 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@casehubio/blocks-ui-case-explorer@portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A.":
+"@casehubio/mosaic-case-explorer@portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "@casehubio/blocks-ui-case-explorer@portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."
+  resolution: "@casehubio/mosaic-case-explorer@portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."
   dependencies:
-    "@casehubio/blocks-ui-core": "npm:0.2.2"
-    "@casehubio/blocks-ui-list-pane": "npm:0.2.2"
-    "@casehubio/blocks-ui-split-workbench": "npm:0.2.2"
+    "@casehubio/mosaic-core": "npm:0.2.2"
+    "@casehubio/mosaic-list-pane": "npm:0.2.2"
     "@casehubio/pages-component": "npm:*"
     "@casehubio/pages-data": "npm:*"
     "@casehubio/pages-primitives": "npm:*"
     "@casehubio/pages-table": "npm:*"
+    "@casehubio/pages-ui-components": "npm:*"
     lit: "npm:^3.2.1"
   languageName: node
   linkType: soft
 
-"@casehubio/blocks-ui-channel-activity@portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A.":
+"@casehubio/mosaic-channel-activity@portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "@casehubio/blocks-ui-channel-activity@portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."
+  resolution: "@casehubio/mosaic-channel-activity@portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."
   dependencies:
-    "@casehubio/blocks-ui-core": "npm:0.2.2"
+    "@casehubio/mosaic-core": "npm:0.2.2"
     "@casehubio/pages-ui-components": "npm:*"
     dompurify: "npm:^3.4.11"
     emoji-picker-element: "npm:^1.29.1"
@@ -33,35 +33,36 @@ __metadata:
   languageName: node
   linkType: soft
 
-"@casehubio/blocks-ui-core@portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A.":
+"@casehubio/mosaic-core@portal:./.casehub-packages/packages/mosaic-core::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "@casehubio/blocks-ui-core@portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."
+  resolution: "@casehubio/mosaic-core@portal:./.casehub-packages/packages/mosaic-core::locator=claudony-webui%40workspace%3A."
   dependencies:
     "@casehubio/pages-component": "npm:*"
     "@casehubio/pages-data": "npm:*"
     "@casehubio/pages-primitives": "npm:*"
+    "@casehubio/pages-ui-components": "npm:*"
     "@casehubio/pages-ui-tokens": "npm:*"
     lit: "npm:^3.3.3"
   languageName: node
   linkType: soft
 
-"@casehubio/blocks-ui-list-pane@portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A.":
+"@casehubio/mosaic-list-pane@portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "@casehubio/blocks-ui-list-pane@portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A."
+  resolution: "@casehubio/mosaic-list-pane@portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A."
   dependencies:
-    "@casehubio/blocks-ui-core": "npm:0.2.2"
+    "@casehubio/mosaic-core": "npm:0.2.2"
     "@casehubio/pages-primitives": "npm:*"
     "@casehubio/pages-table": "npm:*"
     lit: "npm:^3.0.0"
   languageName: node
   linkType: soft
 
-"@casehubio/blocks-ui-session-detail@portal:./.casehub-packages/packages/session-detail::locator=claudony-webui%40workspace%3A.":
+"@casehubio/mosaic-session-detail@portal:./.casehub-packages/packages/session-detail::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "@casehubio/blocks-ui-session-detail@portal:./.casehub-packages/packages/session-detail::locator=claudony-webui%40workspace%3A."
+  resolution: "@casehubio/mosaic-session-detail@portal:./.casehub-packages/packages/session-detail::locator=claudony-webui%40workspace%3A."
   dependencies:
-    "@casehubio/blocks-ui-core": "npm:0.2.2"
-    "@casehubio/blocks-ui-session-list": "npm:0.2.0"
+    "@casehubio/mosaic-core": "npm:0.2.2"
+    "@casehubio/mosaic-session-list": "npm:0.2.0"
     "@casehubio/pages-data": "npm:*"
     "@casehubio/pages-primitives": "npm:*"
     "@casehubio/pages-table": "npm:*"
@@ -69,38 +70,29 @@ __metadata:
   languageName: node
   linkType: soft
 
-"@casehubio/blocks-ui-session-list@portal:./.casehub-packages/packages/session-list::locator=claudony-webui%40workspace%3A.":
+"@casehubio/mosaic-session-list@portal:./.casehub-packages/packages/session-list::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "@casehubio/blocks-ui-session-list@portal:./.casehub-packages/packages/session-list::locator=claudony-webui%40workspace%3A."
+  resolution: "@casehubio/mosaic-session-list@portal:./.casehub-packages/packages/session-list::locator=claudony-webui%40workspace%3A."
   dependencies:
-    "@casehubio/blocks-ui-core": "npm:0.2.2"
+    "@casehubio/mosaic-core": "npm:0.2.2"
     "@casehubio/pages-data": "npm:*"
     "@casehubio/pages-primitives": "npm:*"
     "@casehubio/pages-table": "npm:*"
+    "@casehubio/pages-ui-components": "npm:*"
     lit: "npm:^3.1.0"
   languageName: node
   linkType: soft
 
-"@casehubio/blocks-ui-session-workbench@portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A.":
+"@casehubio/mosaic-session-workbench@portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "@casehubio/blocks-ui-session-workbench@portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A."
+  resolution: "@casehubio/mosaic-session-workbench@portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A."
   dependencies:
-    "@casehubio/blocks-ui-core": "npm:0.2.2"
-    "@casehubio/blocks-ui-session-detail": "npm:0.2.0"
-    "@casehubio/blocks-ui-session-list": "npm:0.2.0"
-    "@casehubio/blocks-ui-split-workbench": "npm:0.2.2"
+    "@casehubio/mosaic-core": "npm:0.2.2"
+    "@casehubio/mosaic-session-detail": "npm:0.2.0"
+    "@casehubio/mosaic-session-list": "npm:0.2.0"
     "@casehubio/pages-primitives": "npm:*"
+    "@casehubio/pages-ui-components": "npm:*"
     lit: "npm:^3.1.0"
-  languageName: node
-  linkType: soft
-
-"@casehubio/blocks-ui-split-workbench@portal:./.casehub-packages/packages/split-workbench::locator=claudony-webui%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@casehubio/blocks-ui-split-workbench@portal:./.casehub-packages/packages/split-workbench::locator=claudony-webui%40workspace%3A."
-  dependencies:
-    "@casehubio/blocks-ui-core": "npm:0.2.2"
-    "@casehubio/pages-primitives": "npm:*"
-    lit: "npm:^3.0.0"
   languageName: node
   linkType: soft
 
@@ -126,7 +118,17 @@ __metadata:
   resolution: "@casehubio/pages-data@portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."
   dependencies:
     jsonata: "npm:^2.2.1"
-    zod: "npm:^3.23.0"
+    zod: "npm:^4.0.0"
+  languageName: node
+  linkType: soft
+
+"@casehubio/pages-filter-bar@portal:./.casehub-packages/packages/pages-filter-bar::locator=claudony-webui%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@casehubio/pages-filter-bar@portal:./.casehub-packages/packages/pages-filter-bar::locator=claudony-webui%40workspace%3A."
+  dependencies:
+    "@casehubio/pages-data": "npm:0.2.3"
+    "@casehubio/pages-ui-tokens": "npm:0.3.0"
+    lit: "npm:^3.0.0"
   languageName: node
   linkType: soft
 
@@ -134,6 +136,16 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@casehubio/pages-primitives@portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."
   dependencies:
+    "@casehubio/pages-component": "npm:0.2.3"
+    lit: "npm:^3.3.3"
+  languageName: node
+  linkType: soft
+
+"@casehubio/pages-property-palette@portal:./.casehub-packages/packages/pages-property-palette::locator=claudony-webui%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@casehubio/pages-property-palette@portal:./.casehub-packages/packages/pages-property-palette::locator=claudony-webui%40workspace%3A."
+  dependencies:
+    "@casehubio/pages-ui-components": "npm:0.2.3"
     lit: "npm:^3.3.3"
   languageName: node
   linkType: soft
@@ -144,6 +156,7 @@ __metadata:
   dependencies:
     "@casehubio/pages-component": "npm:0.2.3"
     "@casehubio/pages-data": "npm:0.2.3"
+    "@casehubio/pages-primitives": "npm:0.2.3"
     "@casehubio/pages-table": "npm:0.2.3"
     "@casehubio/pages-ui": "npm:0.2.3"
     "@casehubio/pages-ui-components": "npm:0.2.3"
@@ -151,6 +164,16 @@ __metadata:
     "@casehubio/pages-viz": "npm:0.2.3"
     js-yaml: "npm:^4.1.0"
     marked: "npm:^15.0.0"
+  languageName: node
+  linkType: soft
+
+"@casehubio/pages-schema@portal:./.casehub-packages/packages/pages-schema::locator=claudony-webui%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@casehubio/pages-schema@portal:./.casehub-packages/packages/pages-schema::locator=claudony-webui%40workspace%3A."
+  dependencies:
+    "@casehubio/pages-data": "npm:0.2.3"
+    "@casehubio/yaml-core": "npm:0.2.0"
+    zod: "npm:^4.0.0"
   languageName: node
   linkType: soft
 
@@ -169,6 +192,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@casehubio/pages-ui-components@portal:./.casehub-packages/packages/pages-ui-components::locator=claudony-webui%40workspace%3A."
   dependencies:
+    "@casehubio/pages-component": "npm:0.2.3"
+    "@casehubio/pages-data": "npm:0.2.3"
+    "@casehubio/pages-filter-bar": "npm:0.1.0"
+    "@casehubio/pages-primitives": "npm:0.2.3"
+    "@casehubio/pages-table": "npm:0.2.3"
     lit: "npm:^3.3.3"
   languageName: node
   linkType: soft
@@ -189,7 +217,9 @@ __metadata:
   dependencies:
     "@casehubio/pages-component": "npm:0.2.3"
     "@casehubio/pages-data": "npm:0.2.3"
-    zod: "npm:^3.23.0"
+    "@casehubio/pages-schema": "npm:0.1.0"
+    "@casehubio/yaml-core": "npm:0.2.0"
+    zod: "npm:^4.0.0"
   languageName: node
   linkType: soft
 
@@ -199,11 +229,28 @@ __metadata:
   dependencies:
     "@casehubio/pages-component": "npm:0.2.3"
     "@casehubio/pages-data": "npm:0.2.3"
+    "@casehubio/pages-property-palette": "npm:0.1.0"
     "@casehubio/pages-ui-components": "npm:0.2.3"
+    "@drdreo/heatmap": "npm:^1.4.1"
     echarts: "npm:^5.6.0"
     lit: "npm:^3.3.3"
   languageName: node
   linkType: soft
+
+"@casehubio/yaml-core@portal:./.casehub-packages/packages/yaml-core::locator=claudony-webui%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@casehubio/yaml-core@portal:./.casehub-packages/packages/yaml-core::locator=claudony-webui%40workspace%3A."
+  dependencies:
+    zod: "npm:^4.0.0"
+  languageName: node
+  linkType: soft
+
+"@drdreo/heatmap@npm:^1.4.1":
+  version: 1.4.1
+  resolution: "@drdreo/heatmap@npm:1.4.1"
+  checksum: 10c0/775b7c99d4dceb1c19b73681d23c4d669d930d92080d585d613ef777ef4972cfb32daeb83d59a7ed95d19d27847909cc0c7dfb018d60dec1d29fc4faa26dd419
+  languageName: node
+  linkType: hard
 
 "@esbuild/aix-ppc64@npm:0.25.12":
   version: 0.25.12
@@ -704,10 +751,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "claudony-webui@workspace:."
   dependencies:
-    "@casehubio/blocks-ui-case-explorer": "portal:./.casehub-packages/packages/case-explorer"
-    "@casehubio/blocks-ui-channel-activity": "portal:./.casehub-packages/packages/channel-activity"
-    "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core"
-    "@casehubio/blocks-ui-session-workbench": "portal:./.casehub-packages/packages/session-workbench"
+    "@casehubio/mosaic-case-explorer": "portal:./.casehub-packages/packages/case-explorer"
+    "@casehubio/mosaic-channel-activity": "portal:./.casehub-packages/packages/channel-activity"
+    "@casehubio/mosaic-core": "portal:./.casehub-packages/packages/mosaic-core"
+    "@casehubio/mosaic-session-workbench": "portal:./.casehub-packages/packages/session-workbench"
     "@casehubio/pages-component": "portal:./.casehub-packages/packages/pages-component"
     "@casehubio/pages-component-terminal": "portal:./.casehub-packages/packages/pages-component-terminal"
     "@casehubio/pages-data": "portal:./.casehub-packages/packages/pages-data"
@@ -723,6 +770,7 @@ __metadata:
     lit: "npm:^3.3.3"
     typescript: "npm:^5.6.0"
     vitest: "npm:^4.1.10"
+    yaml: "npm:^2.7.0"
     zod: "npm:^3.23.0"
   languageName: unknown
   linkType: soft
@@ -1555,10 +1603,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"yaml@npm:^2.7.0":
+  version: 2.9.1
+  resolution: "yaml@npm:2.9.1"
+  bin:
+    yaml: bin.mjs
+  checksum: 10c0/9d06676ef02b89559a8b10a71882bd2cdae81e8393dc8dbc871615c3259475d9609ad973d19cb3c9e71e72d6206e3d1e7aa241c7e55f3d16fd2e77db305827d6
+  languageName: node
+  linkType: hard
+
 "zod@npm:^3.23.0":
   version: 3.25.76
   resolution: "zod@npm:3.25.76"
   checksum: 10c0/5718ec35e3c40b600316c5b4c5e4976f7fee68151bc8f8d90ec18a469be9571f072e1bbaace10f1e85cf8892ea12d90821b200e980ab46916a6166a4260a983c
+  languageName: node
+  linkType: hard
+
+"zod@npm:^4.0.0":
+  version: 4.6.7
+  resolution: "zod@npm:4.6.7"
+  checksum: 10c0/4ce2eb14034317b7254e347ca37b5ad591cf8333147030cf05b9b5d31692d45073f7f2747aa50cf8c6b29012194d2b22978cecc89969cf34a0d18e89d0ee7d7b
   languageName: node
   linkType: hard
 
