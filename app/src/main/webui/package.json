@@ -31,7 +31,7 @@
   "resolutions": {
     "@casehubio/mosaic-approval-gate": "portal:./.casehub-packages/packages/approval-gate",
     "@casehubio/mosaic-audit-trail-viewer": "portal:./.casehub-packages/packages/audit-trail-viewer",
-    "@casehubio/mosaic-blocks-timeline": "portal:./.casehub-packages/packages/blocks-timeline",
+    "@casehubio/mosaic-agency-timeline": "portal:./.casehub-packages/packages/agency-timeline",
     "@casehubio/mosaic-core": "portal:./.casehub-packages/packages/mosaic-core",
     "@casehubio/mosaic-case-explorer": "portal:./.casehub-packages/packages/case-explorer",
     "@casehubio/mosaic-casehub-diagram": "portal:./.casehub-packages/packages/casehub-diagram",
