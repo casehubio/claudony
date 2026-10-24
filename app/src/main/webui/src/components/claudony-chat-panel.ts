@@ -42,12 +42,14 @@ export class ClaudonyChatPanel extends LitElement {
       sendMessage: async (payload: SendMessagePayload) => {
         const body: Record<string, unknown> = {
           content: payload.content,
-          type: payload.speechAct || 'command',
+          sender: 'human',
+          actorType: 'HUMAN',
+          type: payload.speechAct || 'STATUS',
         };
         if (payload.inReplyTo) body.inReplyTo = Number(payload.inReplyTo);
         if (payload.topic) body.topic = payload.topic;
         await fetchWithAuth(
-          `/api/mesh/channels/${encodeURIComponent(payload.channelId)}/messages`,
+          `/api/channels/${encodeURIComponent(payload.channelId)}/messages`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
