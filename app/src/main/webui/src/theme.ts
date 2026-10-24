@@ -1,10 +1,11 @@
 import { applyTheme } from '@casehubio/pages-ui-tokens';
+import { css } from 'lit';
 
 export function initTheme(): void {
   applyTheme('casehub-dark');
 }
 
-export const THEME_CSS = `
+export const THEME_CSS = css`
   :host {
     --bg: var(--pages-neutral-1);
     --surface: var(--pages-neutral-2);

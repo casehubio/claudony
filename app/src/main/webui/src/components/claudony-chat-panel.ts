@@ -1,8 +1,9 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import type { ConversationWorkbenchConfig, ConnectPushOptions, PushConnection } from '@casehubio/mosaic-channel-activity';
-import type { SendMessagePayload } from '@casehubio/mosaic-channel-activity';
-import '@casehubio/mosaic-channel-activity';
+import { ConversationWorkbenchElement } from '@casehubio/mosaic-channel-activity';
+import type { ConversationWorkbenchConfig, ConnectPushOptions, PushConnection, SendMessagePayload } from '@casehubio/mosaic-channel-activity';
+
+void ConversationWorkbenchElement;
 import { createEventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
 import type { EventConnection } from '@casehubio/pages-data/dataset/external/sources/event-connection.js';
 import { fetchWithAuth } from '../util/auth.js';
