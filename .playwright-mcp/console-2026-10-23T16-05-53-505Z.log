@@ -1,0 +1,5 @@
+[      80ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/pages/ui/components.js:0
+[      80ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/pages/tokens/casehub-dark.css:0
+[     100ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/favicon.ico:0
+[    5613ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0
+[   24806ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/app/dist/app.js:0

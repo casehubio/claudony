@@ -1,0 +1,121 @@
+- generic [ref=f11e1]:
+  - banner [ref=f11e2]:
+    - heading "Claudony" [level=1] [ref=f11e3]
+  - generic [ref=f11e6]:
+    - generic [ref=f11e7]:
+      - button "Sessions" [ref=f11e8] [cursor=pointer]
+      - button "Cases" [ref=f11e9] [cursor=pointer]
+      - button "Inbox" [ref=f11e10] [cursor=pointer]
+      - button "Chat" [ref=f11e11] [cursor=pointer]
+      - button "Pools" [ref=f11e12] [cursor=pointer]
+      - button "Fleet" [ref=f11e13] [cursor=pointer]
+      - button "Mesh" [ref=f11e14] [cursor=pointer]
+    - generic [ref=f11e34]:
+      - generic [ref=f11e35]:
+        - generic [ref=f11e36]:
+          - button "Chans 3" [ref=f11e37] [cursor=pointer]:
+            - text: Chans
+            - generic [ref=f11e38]: "3"
+          - button "Mbrs" [ref=f11e39] [cursor=pointer]
+          - button "Tasks" [ref=f11e40] [cursor=pointer]
+          - button "Corr" [ref=f11e41] [cursor=pointer]
+          - button "Arts" [ref=f11e42] [cursor=pointer]
+        - generic [ref=f11e44]:
+          - generic [ref=f11e45]:
+            - combobox [ref=f11e46] [cursor=pointer]:
+              - option "All Spaces" [selected]
+            - button "Create Space" [ref=f11e47] [cursor=pointer]: +
+          - tree [ref=f11e48]:
+            - list [ref=f11e49]:
+              - option "# life/watercooler Delete channel life/watercooler" [ref=f11e50]:
+                - generic [ref=f11e51]: "#"
+                - generic [ref=f11e52]: life/watercooler
+                - generic "Delete channel life/watercooler" [ref=f11e53] [cursor=pointer]:
+                  - button "✕" [ref=f11e54]
+              - option "# team/design Delete channel team/design" [ref=f11e55]:
+                - generic [ref=f11e56]: "#"
+                - generic [ref=f11e57]: team/design
+                - generic "Delete channel team/design" [ref=f11e58] [cursor=pointer]:
+                  - button "✕" [ref=f11e59]
+              - option "# team/engineering Delete channel team/engineering" [selected] [ref=f11e60]:
+                - generic [ref=f11e61]: "#"
+                - generic [ref=f11e62]: team/engineering
+                - generic "Delete channel team/engineering" [ref=f11e63] [cursor=pointer]:
+                  - button "✕" [ref=f11e64]
+          - button "Create Channel" [ref=f11e66] [cursor=pointer]
+      - generic [ref=f11e67]:
+        - log [ref=f11e70]:
+          - generic [ref=f11e71]:
+            - generic [ref=f11e72]: alice
+            - generic "STATUS message from alice" [ref=f11e76]:
+              - generic [ref=f11e77]:
+                - generic [ref=f11e78]: 👤
+                - generic [ref=f11e79]: alice
+                - time [ref=f11e80]: now
+              - paragraph [ref=f11e139]: Has anyone looked at the new conversation workbench component in mosaic?
+              - group "Message reactions"
+          - generic [ref=f11e83]:
+            - generic [ref=f11e84]: agent-reviewer
+            - generic "STATUS message from agent-reviewer" [ref=f11e140]:
+              - generic [ref=f11e89]:
+                - generic [ref=f11e90]: 🤖
+                - generic [ref=f11e91]: agent-reviewer
+                - time [ref=f11e92]: now
+              - paragraph [ref=f11e141]: I reviewed it. Clean extraction from the chat-app. 450 lines, callback-based config for auth, messaging, and push. The connectPush abstraction is elegant.
+              - group "Message reactions"
+          - generic [ref=f11e95]:
+            - generic [ref=f11e96]: bob
+            - generic "STATUS message from bob" [ref=f11e142]:
+              - generic [ref=f11e101]:
+                - generic [ref=f11e102]: 👤
+                - generic [ref=f11e103]: bob
+                - time [ref=f11e104]: now
+              - paragraph [ref=f11e143]: Nice. Does it handle the responsive layout? Phone/tablet breakpoints?
+              - group "Message reactions"
+          - generic [ref=f11e107]:
+            - generic [ref=f11e108]: agent-reviewer
+            - generic "STATUS message from agent-reviewer" [ref=f11e144]:
+              - generic [ref=f11e113]:
+                - generic [ref=f11e114]: 🤖
+                - generic [ref=f11e115]: agent-reviewer
+                - time [ref=f11e116]: now
+              - paragraph [ref=f11e145]: "Yes. Three modes: desktop (dock strip + resizable panels), tablet (tab switcher sidebar), phone (slide-out drawers with swipe gestures). All from the SwipeController that was extracted alongside it."
+              - group "Message reactions"
+          - generic [ref=f11e119]:
+            - generic [ref=f11e120]: alice
+            - generic "STATUS message from alice" [ref=f11e124]:
+              - generic [ref=f11e125]:
+                - generic [ref=f11e126]: 👤
+                - generic [ref=f11e127]: alice
+                - time [ref=f11e128]: now
+              - paragraph [ref=f11e146]: What about the channel filtering? We need that for case-scoped views.
+              - group "Message reactions"
+          - generic [ref=f11e147]:
+            - generic [ref=f11e148]: agent-reviewer
+            - generic "STATUS message from agent-reviewer" [ref=f11e152]:
+              - generic [ref=f11e153]:
+                - generic [ref=f11e154]: 🤖
+                - generic [ref=f11e155]: agent-reviewer
+                - time [ref=f11e156]: now
+              - paragraph [ref=f11e158]:
+                - text: channelFilter is an optional predicate in the config. Claudony passes
+                - code [ref=f11e159]: ch => ch.name.startsWith(namespace)
+                - text: for case-scoped views. When absent, all channels show.
+              - group "Message reactions"
+          - generic [ref=f11e160]:
+            - generic [ref=f11e161]: bob
+            - generic "STATUS message from bob" [ref=f11e165]:
+              - generic [ref=f11e166]:
+                - generic [ref=f11e167]: 👤
+                - generic [ref=f11e168]: bob
+                - time [ref=f11e169]: now
+              - paragraph [ref=f11e171]: Ship it. This solves the parity problem we've been fighting.
+              - group "Message reactions"
+        - generic [ref=f11e131]:
+          - generic "New topic" [ref=f11e132] [cursor=pointer]:
+            - button "+" [ref=f11e133]
+          - generic [ref=f11e134]:
+            - textbox "Message" [ref=f11e135]:
+              - /placeholder: Type a message...
+            - button "Send message" [disabled] [ref=f11e136]
+  - status [ref=f11e172]: 2 new messages
