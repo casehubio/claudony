@@ -28,10 +28,10 @@ const RAW_RUNTIME_STATE =
       [null, {\
         "packageLocation": "./",\
         "packageDependencies": [\
-          ["@casehubio/blocks-ui-case-explorer", "portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-channel-activity", "portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-session-workbench", "portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-case-explorer", "portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-channel-activity", "portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-core", "portal:./.casehub-packages/packages/mosaic-core::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-session-workbench", "portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-component-terminal", "portal:./.casehub-packages/packages/pages-component-terminal::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
@@ -42,41 +42,36 @@ const RAW_RUNTIME_STATE =
           ["@casehubio/pages-ui-components", "portal:./.casehub-packages/packages/pages-ui-components::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-ui-tokens", "portal:./.casehub-packages/packages/pages-ui-tokens::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-viz", "portal:./.casehub-packages/packages/pages-viz::locator=claudony-webui%40workspace%3A."],\
+          ["@xterm/addon-fit", "npm:0.11.0"],\
+          ["@xterm/xterm", "npm:6.0.0"],\
           ["claudony-webui", "workspace:."],\
+          ["echarts", "npm:5.6.0"],\
           ["esbuild", "npm:0.25.12"],\
           ["jsonata", "npm:2.2.2"],\
           ["lit", "npm:3.3.3"],\
           ["typescript", "patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"],\
           ["vitest", "virtual:5006adb98e9cbf8d4b7311390396e7c67b787ce8291f6671a2187b22070455b88a531d6726ed6d93d377e3589e3f71bb1e205af199be90ed7b0dc490bcd6a994#npm:4.1.10"],\
+          ["yaml", "npm:2.9.1"],\
           ["zod", "npm:3.25.76"]\
         ],\
         "linkType": "SOFT"\
       }]\
     ]],\
-    ["@casehubio/blocks-ui-case-explorer", [\
+    ["@casehubio/mosaic-case-explorer", [\
       ["portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/case-explorer/",\
         "packageDependencies": [\
-          ["@casehubio/blocks-ui-case-explorer", "portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-list-pane", "portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-split-workbench", "portal:./.casehub-packages/packages/split-workbench::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-table", "portal:./.casehub-packages/packages/pages-table::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-case-explorer", "portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."],\
           ["lit", "npm:3.3.3"]\
         ],\
         "linkType": "SOFT"\
       }]\
     ]],\
-    ["@casehubio/blocks-ui-channel-activity", [\
+    ["@casehubio/mosaic-channel-activity", [\
       ["portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/channel-activity/",\
         "packageDependencies": [\
-          ["@casehubio/blocks-ui-channel-activity", "portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-ui-components", "portal:./.casehub-packages/packages/pages-ui-components::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-channel-activity", "portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."],\
           ["dompurify", "npm:3.4.13"],\
           ["emoji-picker-element", "npm:1.29.1"],\
           ["lit", "npm:3.3.3"],\
@@ -85,84 +80,21 @@ const RAW_RUNTIME_STATE =
         "linkType": "SOFT"\
       }]\
     ]],\
-    ["@casehubio/blocks-ui-core", [\
-      ["portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A.", {\
-        "packageLocation": "./.casehub-packages/packages/blocks-ui-core/",\
+    ["@casehubio/mosaic-core", [\
+      ["portal:./.casehub-packages/packages/mosaic-core::locator=claudony-webui%40workspace%3A.", {\
+        "packageLocation": "./.casehub-packages/packages/mosaic-core/",\
         "packageDependencies": [\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-ui-tokens", "portal:./.casehub-packages/packages/pages-ui-tokens::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-core", "portal:./.casehub-packages/packages/mosaic-core::locator=claudony-webui%40workspace%3A."],\
           ["lit", "npm:3.3.3"]\
         ],\
         "linkType": "SOFT"\
       }]\
     ]],\
-    ["@casehubio/blocks-ui-list-pane", [\
-      ["portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A.", {\
-        "packageLocation": "./.casehub-packages/packages/list-pane/",\
-        "packageDependencies": [\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-list-pane", "portal:./.casehub-packages/packages/list-pane::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-table", "portal:./.casehub-packages/packages/pages-table::locator=claudony-webui%40workspace%3A."],\
-          ["lit", "npm:3.3.3"]\
-        ],\
-        "linkType": "SOFT"\
-      }]\
-    ]],\
-    ["@casehubio/blocks-ui-session-detail", [\
-      ["portal:./.casehub-packages/packages/session-detail::locator=claudony-webui%40workspace%3A.", {\
-        "packageLocation": "./.casehub-packages/packages/session-detail/",\
-        "packageDependencies": [\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-session-detail", "portal:./.casehub-packages/packages/session-detail::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-session-list", "portal:./.casehub-packages/packages/session-list::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-table", "portal:./.casehub-packages/packages/pages-table::locator=claudony-webui%40workspace%3A."],\
-          ["lit", "npm:3.3.3"]\
-        ],\
-        "linkType": "SOFT"\
-      }]\
-    ]],\
-    ["@casehubio/blocks-ui-session-list", [\
-      ["portal:./.casehub-packages/packages/session-list::locator=claudony-webui%40workspace%3A.", {\
-        "packageLocation": "./.casehub-packages/packages/session-list/",\
-        "packageDependencies": [\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-session-list", "portal:./.casehub-packages/packages/session-list::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-table", "portal:./.casehub-packages/packages/pages-table::locator=claudony-webui%40workspace%3A."],\
-          ["lit", "npm:3.3.3"]\
-        ],\
-        "linkType": "SOFT"\
-      }]\
-    ]],\
-    ["@casehubio/blocks-ui-session-workbench", [\
+    ["@casehubio/mosaic-session-workbench", [\
       ["portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/session-workbench/",\
         "packageDependencies": [\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-session-detail", "portal:./.casehub-packages/packages/session-detail::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-session-list", "portal:./.casehub-packages/packages/session-list::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-session-workbench", "portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-split-workbench", "portal:./.casehub-packages/packages/split-workbench::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."],\
-          ["lit", "npm:3.3.3"]\
-        ],\
-        "linkType": "SOFT"\
-      }]\
-    ]],\
-    ["@casehubio/blocks-ui-split-workbench", [\
-      ["portal:./.casehub-packages/packages/split-workbench::locator=claudony-webui%40workspace%3A.", {\
-        "packageLocation": "./.casehub-packages/packages/split-workbench/",\
-        "packageDependencies": [\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-split-workbench", "portal:./.casehub-packages/packages/split-workbench::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-session-workbench", "portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A."],\
           ["lit", "npm:3.3.3"]\
         ],\
         "linkType": "SOFT"\
@@ -172,8 +104,7 @@ const RAW_RUNTIME_STATE =
       ["portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/pages-component/",\
         "packageDependencies": [\
-          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."]\
+          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."]\
         ],\
         "linkType": "SOFT"\
       }]\
@@ -195,7 +126,7 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
           ["jsonata", "npm:2.2.2"],\
-          ["zod", "npm:3.25.76"]\
+          ["zod", "npm:4.6.7"]\
         ],\
         "linkType": "SOFT"\
       }]\
@@ -214,14 +145,7 @@ const RAW_RUNTIME_STATE =
       ["portal:./.casehub-packages/packages/pages-runtime::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/pages-runtime/",\
         "packageDependencies": [\
-          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-runtime", "portal:./.casehub-packages/packages/pages-runtime::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-table", "portal:./.casehub-packages/packages/pages-table::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-ui", "portal:./.casehub-packages/packages/pages-ui::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-ui-components", "portal:./.casehub-packages/packages/pages-ui-components::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-ui-tokens", "portal:./.casehub-packages/packages/pages-ui-tokens::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-viz", "portal:./.casehub-packages/packages/pages-viz::locator=claudony-webui%40workspace%3A."],\
           ["js-yaml", "npm:4.3.1"],\
           ["marked", "npm:15.0.12"]\
         ],\
@@ -232,9 +156,6 @@ const RAW_RUNTIME_STATE =
       ["portal:./.casehub-packages/packages/pages-table::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/pages-table/",\
         "packageDependencies": [\
-          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-table", "portal:./.casehub-packages/packages/pages-table::locator=claudony-webui%40workspace%3A."],\
           ["lit", "npm:3.3.3"]\
         ],\
@@ -245,10 +166,8 @@ const RAW_RUNTIME_STATE =
       ["portal:./.casehub-packages/packages/pages-ui::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/pages-ui/",\
         "packageDependencies": [\
-          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-ui", "portal:./.casehub-packages/packages/pages-ui::locator=claudony-webui%40workspace%3A."],\
-          ["zod", "npm:3.25.76"]\
+          ["zod", "npm:4.6.7"]\
         ],\
         "linkType": "SOFT"\
       }]\
@@ -277,14 +196,21 @@ const RAW_RUNTIME_STATE =
       ["portal:./.casehub-packages/packages/pages-viz::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/pages-viz/",\
         "packageDependencies": [\
-          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/pages-ui-components", "portal:./.casehub-packages/packages/pages-ui-components::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-viz", "portal:./.casehub-packages/packages/pages-viz::locator=claudony-webui%40workspace%3A."],\
+          ["@drdreo/heatmap", "npm:1.4.1"],\
           ["echarts", "npm:5.6.0"],\
           ["lit", "npm:3.3.3"]\
         ],\
         "linkType": "SOFT"\
+      }]\
+    ]],\
+    ["@drdreo/heatmap", [\
+      ["npm:1.4.1", {\
+        "packageLocation": "../../../../../../../../../.yarn/berry/cache/@drdreo-heatmap-npm-1.4.1-2da3aae1f9-10c0.zip/node_modules/@drdreo/heatmap/",\
+        "packageDependencies": [\
+          ["@drdreo/heatmap", "npm:1.4.1"]\
+        ],\
+        "linkType": "HARD"\
       }]\
     ]],\
     ["@esbuild/aix-ppc64", [\
@@ -916,10 +842,10 @@ const RAW_RUNTIME_STATE =
       ["workspace:.", {\
         "packageLocation": "./",\
         "packageDependencies": [\
-          ["@casehubio/blocks-ui-case-explorer", "portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-channel-activity", "portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-core", "portal:./.casehub-packages/packages/blocks-ui-core::locator=claudony-webui%40workspace%3A."],\
-          ["@casehubio/blocks-ui-session-workbench", "portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-case-explorer", "portal:./.casehub-packages/packages/case-explorer::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-channel-activity", "portal:./.casehub-packages/packages/channel-activity::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-core", "portal:./.casehub-packages/packages/mosaic-core::locator=claudony-webui%40workspace%3A."],\
+          ["@casehubio/mosaic-session-workbench", "portal:./.casehub-packages/packages/session-workbench::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-component-terminal", "portal:./.casehub-packages/packages/pages-component-terminal::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=claudony-webui%40workspace%3A."],\
@@ -930,12 +856,16 @@ const RAW_RUNTIME_STATE =
           ["@casehubio/pages-ui-components", "portal:./.casehub-packages/packages/pages-ui-components::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-ui-tokens", "portal:./.casehub-packages/packages/pages-ui-tokens::locator=claudony-webui%40workspace%3A."],\
           ["@casehubio/pages-viz", "portal:./.casehub-packages/packages/pages-viz::locator=claudony-webui%40workspace%3A."],\
+          ["@xterm/addon-fit", "npm:0.11.0"],\
+          ["@xterm/xterm", "npm:6.0.0"],\
           ["claudony-webui", "workspace:."],\
+          ["echarts", "npm:5.6.0"],\
           ["esbuild", "npm:0.25.12"],\
           ["jsonata", "npm:2.2.2"],\
           ["lit", "npm:3.3.3"],\
           ["typescript", "patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"],\
           ["vitest", "virtual:5006adb98e9cbf8d4b7311390396e7c67b787ce8291f6671a2187b22070455b88a531d6726ed6d93d377e3589e3f71bb1e205af199be90ed7b0dc490bcd6a994#npm:4.1.10"],\
+          ["yaml", "npm:2.9.1"],\
           ["zod", "npm:3.25.76"]\
         ],\
         "linkType": "SOFT"\
@@ -1757,11 +1687,27 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["yaml", [\
+      ["npm:2.9.1", {\
+        "packageLocation": "../../../../../../../../../.yarn/berry/cache/yaml-npm-2.9.1-d61da744fe-10c0.zip/node_modules/yaml/",\
+        "packageDependencies": [\
+          ["yaml", "npm:2.9.1"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["zod", [\
       ["npm:3.25.76", {\
         "packageLocation": "../../../../../../../../../.yarn/berry/cache/zod-npm-3.25.76-7de26333f8-10c0.zip/node_modules/zod/",\
         "packageDependencies": [\
           ["zod", "npm:3.25.76"]\
+        ],\
+        "linkType": "HARD"\
+      }],\
+      ["npm:4.6.7", {\
+        "packageLocation": "../../../../../../../../../.yarn/berry/cache/zod-npm-4.6.7-93f9f3c3ad-10c0.zip/node_modules/zod/",\
+        "packageDependencies": [\
+          ["zod", "npm:4.6.7"]\
         ],\
         "linkType": "HARD"\
       }]\
