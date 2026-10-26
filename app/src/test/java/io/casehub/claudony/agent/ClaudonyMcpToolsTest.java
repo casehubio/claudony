@@ -62,7 +62,7 @@ class ClaudonyMcpToolsTest {
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
                 "http://localhost:7777/app/session/id-1",
-                null, null, null, null, null, null)));
+                null, null, null, null, null, null, null)));
         assertThat(tools.listSessions())
             .contains("claudony-proj")
             .contains("id-1")
@@ -77,7 +77,7 @@ class ClaudonyMcpToolsTest {
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-2",
                 "http://localhost:7777/app/session/id-2",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null));
 
         tools.createSession("new", "/home", null);
 
@@ -93,7 +93,7 @@ class ClaudonyMcpToolsTest {
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-3",
                 "http://localhost:7777/app/session/id-3",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null));
 
         tools.createSession("n", "/", "   ");
 
@@ -109,7 +109,7 @@ class ClaudonyMcpToolsTest {
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-4",
                 "http://localhost:7777/app/session/id-4",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null));
 
         tools.createSession("n", "/", "bash");
 
@@ -131,7 +131,7 @@ class ClaudonyMcpToolsTest {
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
                 "http://localhost:7777/app/session/id-1",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null));
 
         assertThat(tools.renameSession("id-1", "newname")).contains("claudony-newname");
     }
@@ -253,7 +253,7 @@ class ClaudonyMcpToolsTest {
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
                 "http://localhost:7777/app/session/id-1",
-                null, null, null, null, null, null)));
+                null, null, null, null, null, null, null)));
         Mockito.doThrow(new java.io.IOException("pipe broken"))
             .when(mockAdapter).openSession(Mockito.anyString());
 
@@ -271,7 +271,7 @@ class ClaudonyMcpToolsTest {
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
                 "http://localhost:7777/app/session/id-1",
-                null, null, null, null, null, null)));
+                null, null, null, null, null, null, null)));
         Mockito.doThrow(new InterruptedException("interrupted"))
             .when(mockAdapter).openSession(Mockito.anyString());
 
@@ -290,7 +290,7 @@ class ClaudonyMcpToolsTest {
                 SessionStatus.IDLE, now, now,
                 "ws://localhost:7777/ws/id-1",
                 "http://localhost:7777/app/session/id-1",
-                null, null, null, null, null, null)));
+                null, null, null, null, null, null, null)));
         Mockito.doNothing().when(mockAdapter).openSession("claudony-test");
 
         assertThat(tools.openInTerminal("id-1")).isEqualTo("Opened in iTerm2.");

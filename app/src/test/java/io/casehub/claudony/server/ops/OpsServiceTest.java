@@ -68,7 +68,7 @@ class OpsServiceTest {
                         Instant.now(), false, 3)
         ));
         when(appService.list()).thenReturn(List.of(
-                new ApplicationInfo("scaffold", "Scaffold", "Build tool", HealthStatus.HEALTHY, Instant.now(), List.of())
+                new ApplicationInfo("scaffold", "default", "Scaffold", "Build tool", null, Map.of(), HealthStatus.HEALTHY, Instant.now(), List.of())
         ));
         when(dashboard.listChannels()).thenReturn(List.of(
                 new ChannelDetail(UUID.randomUUID(), "team/general", "General chat", null,
