@@ -225,7 +225,6 @@ docker compose up
 - Pools API (mcpDomain): `http://localhost:7777/api/claudony/pools` (list, detail, sessions, updatePool, suspend, resume, destroy)
 - Apps API (mcpDomain): `http://localhost:7777/api/claudony/apps` (register, deregister, list, detail, heartbeat, updateApp, suspend, resume)
 - Registry API (mcpDomain): `http://localhost:7777/api/claudony/registry` (register, resolve, heartbeat, deregister, discover, link, unlink, relationships)
-- Pools API (deprecated): `http://localhost:7777/api/pools` (legacy — delegates to PoolService)
 - Pool SSE events: `http://localhost:7777/api/pool-events/{name}` (text/event-stream)
 - Ops API (mcpDomain): `http://localhost:7777/api/claudony/ops` (snapshot, health — fleet-wide aggregation)
 - Ops SSE events: `http://localhost:7777/api/ops/events` (text/event-stream — live topology updates)
@@ -538,7 +537,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-10-14, after #282 ops/desiredstate app lifecycle):** 16 in `claudony-core` + 669 in `claudony-casehub` + 29 in `claudony-testing` + ~510 in `claudony-app` = **~1224 total**. #282 added ApplicationRegistrationServiceTest +23 (namespace +4, updateApp +7, suspend/resume +9, deployment artifact +3). Previous baseline: ~1201 (2026-10-14, after #275). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest, OpsServiceTest, OpsEventBusTest) pass independently.
+**Baseline (as of 2026-10-26, after #204 @McpDomain cleanup):** 16 in `claudony-core` + 669 in `claudony-casehub` + 29 in `claudony-testing` + ~495 in `claudony-app` = **~1209 total**. #204 removed PoolResourceTest -9, AgentPoolResourceTest -2, CredentialRoleAugmentorTest -4 (deprecated endpoints deleted). #282 added ApplicationRegistrationServiceTest +23 (namespace +4, updateApp +7, suspend/resume +9, deployment artifact +3). Previous baseline: ~1201 (2026-10-14, after #275). Frontend: 28 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services). **Note:** app module `@QuarkusTest` classes currently fail with CDI deployment error (unsatisfied `CbrCaseMemoryStore` from casehub-neocortex SNAPSHOT) — pre-existing, not caused by #241/#242. Unit tests (PoolServiceTest, PoolEventBusTest, OpsServiceTest, OpsEventBusTest) pass independently.
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties
