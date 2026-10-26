@@ -110,7 +110,7 @@ A separate Qhorus MCP endpoint at `POST /qhorus` exposes 40+ agent mesh tools (c
 | `POST` | `/api/peers/{id}/ping` | Ping a peer |
 | `GET` | `/api/peers/{id}/sessions` | Get sessions from a specific peer |
 | `POST` | `/api/peers/generate-fleet-key` | Generate a fleet key |
-| `GET` | `/api/agent-pools` | Agent pool status (capacity, health) |
+| `GET` | `/api/claudony/pools` | Pool management (list, detail, sessions, suspend, resume, destroy) |
 
 #### WebSocket
 
@@ -226,7 +226,7 @@ When pool capacity is reached (`activeCount >= maxActive`), the session with the
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `GET` | `/api/agent-pools` | Pool status snapshot (`@Authenticated`) |
+| `GET` | `/api/claudony/pools` | Pool status, capacity, sessions (`@Authenticated`) |
 
 ### CDI Injection
 

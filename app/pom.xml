@@ -334,7 +334,7 @@
             </path>
           </annotationProcessorPaths>
           <compilerArgs>
-            <arg>-AdomainFilter=claudony/sessions,claudony/mesh,claudony/cases,claudony/actions,claudony/peers,claudony/pools,claudony/apps,claudony/registry,claudony/fleet,claudony/ops</arg>
+            <arg>-AdomainFilter=claudony/sessions,claudony/mesh,claudony/cases,claudony/actions,claudony/peers,claudony/pools,claudony/apps,claudony/registry,claudony/ops</arg>
             <arg>-AgenerateGraphQL=false</arg>
           </compilerArgs>
         </configuration>
