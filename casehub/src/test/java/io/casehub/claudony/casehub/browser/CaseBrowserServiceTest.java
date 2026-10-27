@@ -62,7 +62,7 @@ class CaseBrowserServiceTest {
 
     @Test
     void getCaseDetail_notFound() {
-        when(caseRepo.findByUuid(any(), eq("default"))).thenReturn(null);
+        when(caseRepo.findByUuid(any(), eq("default"))).thenReturn(Optional.empty());
         assertTrue(service.getCaseDetail(UUID.randomUUID()).isEmpty());
     }
 

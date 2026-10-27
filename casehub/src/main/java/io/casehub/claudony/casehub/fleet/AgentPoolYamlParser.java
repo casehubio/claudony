@@ -25,7 +25,7 @@ public class AgentPoolYamlParser {
     private static final ObjectMapper YAML_MAPPER = YamlMappers.create();
 
     public List<AgentPoolDefinition> parse(String yaml) {
-        if (yaml == null || yaml.isBlank()) {return Collections.emptyList();}
+        if (yaml == null || yaml.isBlank() || "---".equals(yaml.trim())) {return Collections.emptyList();}
 
         Map<String, Object> root;
         try {
