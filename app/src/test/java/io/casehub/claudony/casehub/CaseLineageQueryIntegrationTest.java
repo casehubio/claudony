@@ -5,10 +5,15 @@ import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorType;
+import io.casehub.ledger.jpa.LedgerPersistenceUnit;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -32,6 +37,14 @@ class CaseLineageQueryIntegrationTest {
 
     @Inject
     LedgerEntryRepository ledgerRepo;
+
+    @Inject @LedgerPersistenceUnit
+    EntityManager em;
+
+    @BeforeEach
+    void requireRealDatabase() {
+        assumeTrue(em.isOpen(), "Skipped — mock EntityManager (reactor build)");
+    }
 
     @Test
     @TestTransaction

@@ -19,7 +19,10 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Integration tests for {@link ClaudonyLedgerEventCapture}.
@@ -56,6 +59,11 @@ class ClaudonyLedgerEventCaptureTest {
     @InjectMock
     @WorkerBackend
     ClaudonyWorkerExecutionManager execManager;
+
+    @BeforeEach
+    void requireRealDatabase() {
+        assumeTrue(em.isOpen(), "Skipped — mock EntityManager (reactor build)");
+    }
 
     @Test
     @TestTransaction
