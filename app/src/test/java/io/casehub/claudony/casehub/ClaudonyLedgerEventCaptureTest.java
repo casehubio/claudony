@@ -62,7 +62,8 @@ class ClaudonyLedgerEventCaptureTest {
 
     @BeforeEach
     void requireRealDatabase() {
-        assumeTrue(em.isOpen(), "Skipped — mock EntityManager (reactor build)");
+        assumeTrue(!org.mockito.Mockito.mockingDetails(em).isMock(),
+                   "Skipped — mock EntityManager (reactor build)");
     }
 
     @Test

@@ -43,7 +43,9 @@ class CaseLineageQueryIntegrationTest {
 
     @BeforeEach
     void requireRealDatabase() {
-        assumeTrue(em.isOpen(), "Skipped — mock EntityManager (reactor build)");
+        assumeTrue(!org.mockito.Mockito.mockingDetails(em).isMock()
+                   && !org.mockito.Mockito.mockingDetails(ledgerRepo).isMock(),
+                   "Skipped — mock infrastructure (reactor build)");
     }
 
     @Test
