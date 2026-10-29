@@ -340,6 +340,7 @@
           <compilerArgs>
             <arg>-AdomainFilter=claudony/sessions,claudony/mesh,claudony/cases,claudony/actions,claudony/peers,claudony/pools,claudony/apps,claudony/registry,claudony/ops</arg>
             <arg>-AgenerateGraphQL=false</arg>
+            <arg>-ArestPathPrefix=/api</arg>
           </compilerArgs>
         </configuration>
       </plugin>
