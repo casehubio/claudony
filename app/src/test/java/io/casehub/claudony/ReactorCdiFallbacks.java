@@ -10,10 +10,8 @@ import io.casehub.qhorus.runtime.gateway.ChannelGateway;
 import io.casehub.qhorus.runtime.gateway.DeliverySignalQueue;
 import io.casehub.qhorus.push.QhorusWebSocketBroadcaster;
 import io.casehub.qhorus.push.core.QhorusWebSocketBroadcasterCore;
-import io.casehub.qhorus.runtime.identity.InboundTenancyContext;
 import io.quarkus.arc.DefaultBean;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.context.RequestScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -37,20 +35,13 @@ import static org.mockito.Mockito.when;
  * producers satisfy those injection points without affecting standalone CI
  * (where the real beans are present and take precedence).
  *
- * InboundTenancyContext is included because TenancyContextFilter (@Provider
- * @PreMatching) may survive CDI exclusion in the reactor — RESTEasy Reactive
- * discovers @Provider classes from Jandex before arc exclude-types applies.
- * Without this fallback, every HTTP request NPEs at the filter.
+ * TenancyContextFilter and InboundTenancyContext from qhorus.runtime.identity
+ * are intentionally NOT excluded — they must remain CDI beans so RESTEasy
+ * Reactive obtains TenancyContextFilter from CDI with proper @Inject wiring.
+ * The exclude-types uses sub-package globs to skip identity.
  */
 @ApplicationScoped
 public class ReactorCdiFallbacks {
-
-    // ── Request-scoped beans needed by qhorus JAX-RS filters ──────────
-
-    @Produces @DefaultBean @RequestScoped
-    InboundTenancyContext inboundTenancyContext() {
-        return new InboundTenancyContext();
-    }
 
     // ── Interfaces — clean no-op implementations ──────────────────────
     // BackendRegistry intentionally omitted — ChannelGateway implements it,
