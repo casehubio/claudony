@@ -29,6 +29,10 @@ public interface CaseHubConfig {
     @WithDefault("3")
     int workerExitMaxPollFailures();
 
+    @WithName("delegation-strictness")
+    @WithDefault("permissive")
+    String delegationStrictness();
+
     Workers workers();
 
     interface Workers {
