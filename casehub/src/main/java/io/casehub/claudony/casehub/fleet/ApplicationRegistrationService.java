@@ -42,6 +42,7 @@ public class ApplicationRegistrationService {
 
         var now      = Instant.now();
         var metadata = buildMetadata(spec);
+        metadata.put("_version", "1");
         var appEntry = new RegistryEntry(
                 spec.name(), "application", spec.namespace(), tenancyId,
                 Map.copyOf(metadata),
@@ -65,7 +66,7 @@ public class ApplicationRegistrationService {
 
         return new ApplicationInfo(spec.name(), spec.namespace(), spec.displayName(),
                                    spec.description(), spec.image(), spec.config(),
-                                   HealthStatus.HEALTHY, now, poolInfos);
+                                   HealthStatus.HEALTHY, now, poolInfos, 1L);
     }
 
 
@@ -77,6 +78,12 @@ public class ApplicationRegistrationService {
         var existing = registryService.resolve(name)
                                       .filter(e -> "application".equals(e.type()))
                                       .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+
+        long currentVersion = Long.parseLong(existing.metadata().getOrDefault("_version", "0"));
+        if (spec.expectedVersion() != null && spec.expectedVersion() != currentVersion) {
+            throw new WebApplicationException("Version conflict: expected " + spec.expectedVersion()
+                    + " but current is " + currentVersion, Response.Status.CONFLICT);
+        }
 
         var originalRegisteredAt  = existing.registeredAt();
         var originalLastHeartbeat = existing.lastHeartbeat();
@@ -91,6 +98,7 @@ public class ApplicationRegistrationService {
 
         var tenancyId = tenantContext.currentTenantId();
         var metadata  = buildMetadata(spec);
+        metadata.put("_version", String.valueOf(currentVersion + 1));
         var appEntry = new RegistryEntry(
                 spec.name(), "application", spec.namespace(), tenancyId,
                 Map.copyOf(metadata),
@@ -98,6 +106,7 @@ public class ApplicationRegistrationService {
                 Duration.ofHours(24), originalHealth, null);
         registryService.register(appEntry);
 
+        long newVersion = currentVersion + 1;
         var newPoolIds = new java.util.HashSet<String>();
         var poolInfos  = new java.util.ArrayList<ApplicationInfo.AppPoolInfo>();
         for (var poolSpec : spec.pools()) {
@@ -128,7 +137,7 @@ public class ApplicationRegistrationService {
 
         return new ApplicationInfo(spec.name(), spec.namespace(), spec.displayName(),
                                    spec.description(), spec.image(), spec.config(),
-                                   originalHealth, originalRegisteredAt, poolInfos);
+                                   originalHealth, originalRegisteredAt, poolInfos, newVersion);
     }
 
     public void deregister(String appName) {
@@ -301,6 +310,8 @@ public class ApplicationRegistrationService {
                                   e -> e.getKey().substring("config.".length()),
                                   Map.Entry::getValue));
 
+        long version = Long.parseLong(entry.metadata().getOrDefault("_version", "0"));
+
         return new ApplicationInfo(
                 entry.id(),
                 entry.namespace(),
@@ -310,6 +321,7 @@ public class ApplicationRegistrationService {
                 config,
                 entry.health(),
                 entry.registeredAt(),
-                poolInfos);
+                poolInfos,
+                version);
     }
 }

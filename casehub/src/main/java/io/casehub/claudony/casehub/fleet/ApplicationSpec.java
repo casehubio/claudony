@@ -11,8 +11,15 @@ public record ApplicationSpec(
         String description,
         String image,
         Map<String, String> config,
-        List<PoolSpec> pools
+        List<PoolSpec> pools,
+        Long expectedVersion
 ) {
+    public ApplicationSpec(String name, String namespace, String displayName,
+                           String description, String image, Map<String, String> config,
+                           List<PoolSpec> pools) {
+        this(name, namespace, displayName, description, image, config, pools, null);
+    }
+
     public ApplicationSpec {
         Objects.requireNonNull(name, "name");
         if (name.isBlank()) {throw new IllegalArgumentException("name must not be blank");}
