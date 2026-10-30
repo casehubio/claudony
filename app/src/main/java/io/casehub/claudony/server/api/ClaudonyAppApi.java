@@ -77,4 +77,23 @@ public class ClaudonyAppApi {
         appService.resume(name);
     }
 
+    @PlatformMutation("Add a pool to an application")
+    @RestPath("/{name}/pools")
+    public ApplicationInfo.AppPoolInfo addPool(@PathParam String name, ApplicationSpec.PoolSpec pool) {
+        return appService.addPool(name, pool);
+    }
+
+    @PlatformMutation("Update a pool's capacity")
+    @RestPath("/{name}/pools/{agentId}")
+    public ApplicationInfo.AppPoolInfo updatePool(@PathParam String name, @PathParam String agentId,
+                                                   ApplicationSpec.PoolSpec pool) {
+        return appService.updatePool(name, agentId, pool);
+    }
+
+    @PlatformMutation("Remove a pool from an application")
+    @RestPath("/{name}/pools/{agentId}/remove")
+    public void removePool(@PathParam String name, @PathParam String agentId) {
+        appService.removePool(name, agentId);
+    }
+
 }
