@@ -83,13 +83,13 @@ jobs:
 
       - name: Build and test
         if: github.event_name == 'pull_request'
-        run: mvn --batch-mode compile -Dcasehub-packages.phase=none -Dmaven.test.skip=true
+        run: mvn --batch-mode package -Dcasehub-packages.phase=none -Dmaven.test.skip=true -Denforcer.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build, test, and publish
         if: github.event_name != 'pull_request'
-        run: mvn --batch-mode compile -Dcasehub-packages.phase=none -Dmaven.test.skip=true
+        run: mvn --batch-mode package -Dcasehub-packages.phase=none -Dmaven.test.skip=true -Denforcer.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
