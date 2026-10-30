@@ -219,6 +219,53 @@ public class ApplicationRegistrationService {
     }
 
 
+    public ApplicationInfo.AppPoolInfo addPool(String appName, ApplicationSpec.PoolSpec pool) {
+        var app = registryService.resolve(appName)
+                .filter(e -> "application".equals(e.type()))
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+
+        var poolId = appName + "/" + pool.agentId();
+        if (registryService.resolve(poolId).isPresent()) {
+            throw new IllegalStateException("Pool already exists: " + pool.agentId());
+        }
+
+        var def = AgentPoolDefinition.builder()
+                .agent(poolId)
+                .pool()
+                .minActive(pool.minActive())
+                .maxActive(pool.maxActive())
+                .build();
+        poolRegistry.register(def, app.namespace());
+        registryService.link(new Relationship(appName, poolId, "owns"));
+        return new ApplicationInfo.AppPoolInfo(pool.agentId(), pool.minActive(), pool.maxActive());
+    }
+
+    public ApplicationInfo.AppPoolInfo updatePool(String appName, String agentId, ApplicationSpec.PoolSpec pool) {
+        registryService.resolve(appName)
+                .filter(e -> "application".equals(e.type()))
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+
+        var poolId = appName + "/" + agentId;
+        registryService.resolve(poolId)
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+
+        poolRegistry.updateCapacity(poolId, pool.minActive(), pool.maxActive());
+        return new ApplicationInfo.AppPoolInfo(agentId, pool.minActive(), pool.maxActive());
+    }
+
+    public void removePool(String appName, String agentId) {
+        registryService.resolve(appName)
+                .filter(e -> "application".equals(e.type()))
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+
+        var poolId = appName + "/" + agentId;
+        registryService.resolve(poolId)
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+
+        poolRegistry.deregister(poolId);
+        registryService.unlink(appName, poolId);
+    }
+
     private Map<String, String> buildMetadata(ApplicationSpec spec) {
         var metadata = new java.util.HashMap<String, String>();
         metadata.put("displayName", spec.displayName());
