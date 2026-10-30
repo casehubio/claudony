@@ -26,11 +26,11 @@ public interface ServerClient {
     @Produces(MediaType.APPLICATION_JSON)
     SessionResponse createSession(CreateSessionRequest request);
 
-    @DELETE
-    @Path("/sessions/{id}")
+    @POST
+    @Path("/sessions/{id}/delete")
     void deleteSession(@PathParam("id") String id);
 
-    @PATCH
+    @POST
     @Path("/sessions/{id}/rename")
     @Produces(MediaType.APPLICATION_JSON)
     SessionResponse renameSession(@PathParam("id") String id, @QueryParam("name") String name);
