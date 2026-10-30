@@ -16,8 +16,15 @@ public record ApplicationInfo(
         Map<String, String> config,
         HealthStatus health,
         Instant registeredAt,
-        List<AppPoolInfo> pools
+        List<AppPoolInfo> pools,
+        long version
 ) {
+    public ApplicationInfo(String name, String namespace, String displayName,
+                           String description, String image, Map<String, String> config,
+                           HealthStatus health, Instant registeredAt, List<AppPoolInfo> pools) {
+        this(name, namespace, displayName, description, image, config, health, registeredAt, pools, 0L);
+    }
+
     public ApplicationInfo {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(namespace, "namespace");
