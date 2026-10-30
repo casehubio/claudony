@@ -4,6 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <parent>
+    <groupId>io.casehub</groupId>
+    <artifactId>casehub-parent</artifactId>
+    <version>0.4-SNAPSHOT</version>
+    <relativePath/>
+  </parent>
+
   <groupId>io.casehub</groupId>
   <artifactId>casehub-claudony-parent</artifactId>
   <version>0.4-SNAPSHOT</version>
@@ -17,19 +24,14 @@
   </modules>
 
   <properties>
-    <assertj.version>3.24.2</assertj.version>
-    <compiler-plugin.version>3.13.0</compiler-plugin.version>
-    <maven.compiler.release>21</maven.compiler.release>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Override parent's Quarkus version — claudony needs migration work before upgrading -->
     <quarkus.platform.version>3.32.2</quarkus.platform.version>
-    <quarkus-mcp-server.version>1.11.1</quarkus-mcp-server.version>
-    <surefire-plugin.version>3.2.5</surefire-plugin.version>
-    <casehub.version>0.4-SNAPSHOT</casehub.version>
     <casehub-packages.phase>initialize</casehub-packages.phase>
   </properties>
 
   <dependencyManagement>
     <dependencies>
+      <!-- Quarkus BOM — uses local override version (3.32.2) -->
       <dependency>
         <groupId>io.quarkus.platform</groupId>
         <artifactId>quarkus-bom</artifactId>
@@ -37,204 +39,14 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- CaseHub ecosystem — all components versioned together -->
+      <!-- jackson-jq convergence: engine-common 1.6.0, quarkus-flow 1.6.5, quarkiverse-jackson-jq 1.6.2 -->
       <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-yaml-jackson</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-engine-persistence-memory</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-engine-scheduler-quartz</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-agent-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-agent-router</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-agent-router-core</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-agent-gate</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-agent-langchain4j</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-config</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <!-- casehub-engine self-indexes via its embedded application.properties, activating beans
-           that inject io.casehub.platform.expression.JQEvaluator — see #138 -->
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-expression</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-yaml-core</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-yaml-plugin-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-eidos-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-registry-inmem-core</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-registry-inmem</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-worker-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-engine-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-engine-common</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-engine-ledger</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-qhorus</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-qhorus-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-qhorus-push</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-qhorus-testing</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-qhorus-postgres-broadcaster</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-qhorus-persistence-memory</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-engine-testing</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-engine</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-ledger-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-ledger</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-work-api</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-work</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-work-persistence-memory</artifactId>
-        <version>${casehub.version}</version>
-      </dependency>
-      <!-- Test dependencies -->
-      <dependency>
-        <groupId>org.assertj</groupId>
-        <artifactId>assertj-core</artifactId>
-        <version>${assertj.version}</version>
+        <groupId>net.thisptr</groupId>
+        <artifactId>jackson-jq</artifactId>
+        <version>1.6.5</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
-
-  <repositories>
-    <repository>
-      <id>central</id>
-      <url>https://repo.maven.apache.org/maven2</url>
-    </repository>
-    <repository>
-      <id>github</id>
-      <name>casehubio GitHub Packages</name>
-      <url>https://maven.pkg.github.com/casehubio/*</url>
-      <releases><enabled>false</enabled></releases>
-
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
 
   <distributionManagement>
     <repository>
@@ -250,26 +62,9 @@
     </snapshotRepository>
   </distributionManagement>
 
-  <pluginRepositories>
-    <pluginRepository>
-      <id>central</id>
-      <url>https://repo.maven.apache.org/maven2</url>
-    </pluginRepository>
-  </pluginRepositories>
-
   <build>
     <pluginManagement>
       <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>${compiler-plugin.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>${surefire-plugin.version}</version>
-        </plugin>
         <plugin>
           <groupId>io.smallrye</groupId>
           <artifactId>jandex-maven-plugin</artifactId>
@@ -277,6 +72,6 @@
         </plugin>
       </plugins>
     </pluginManagement>
-</build>
+  </build>
 
 </project>
