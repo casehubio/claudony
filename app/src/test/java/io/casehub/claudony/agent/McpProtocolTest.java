@@ -90,7 +90,7 @@ class McpProtocolTest {
     }
 
     @Test
-    void toolsList_withValidSession_returnsAll8ClaudonyTools() {
+    void toolsList_withValidSession_returnsAll9ClaudonyTools() {
         var sid = initialize();
         mcp(sid)
             .body("""
@@ -102,7 +102,7 @@ class McpProtocolTest {
             .body("result.tools.name", hasItems(
                 "list_sessions", "create_session", "delete_session",
                 "rename_session", "send_input", "get_output",
-                "open_in_terminal", "get_server_info"));
+                "open_in_terminal", "get_server_info", "report_cost"));
     }
 
     @Test
