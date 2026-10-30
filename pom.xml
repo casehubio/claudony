@@ -26,6 +26,9 @@
   <properties>
     <!-- Override parent's Quarkus version — claudony needs migration work before upgrading -->
     <quarkus.platform.version>3.32.2</quarkus.platform.version>
+    <!-- Parent BOM sets 7.35.3.Final which is not on Maven Central (Red Hat release);
+         pin to 7.25.1.Final until parent resolves the repository gap -->
+    <serverlessworkflow.version>7.25.1.Final</serverlessworkflow.version>
     <casehub-packages.phase>initialize</casehub-packages.phase>
   </properties>
 
