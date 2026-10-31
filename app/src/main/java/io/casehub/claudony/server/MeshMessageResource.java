@@ -5,6 +5,7 @@ import io.casehub.qhorus.api.message.MessageType;
 import io.casehub.qhorus.runtime.dashboard.QhorusDashboardService;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -28,7 +29,7 @@ public class MeshMessageResource {
             MessageType.STATUS, MessageType.DECLINE, MessageType.HANDOFF,
             MessageType.DONE, MessageType.EVENT);
 
-    @Inject QhorusDashboardService dashboard;
+    @Inject Instance<QhorusDashboardService> dashboard;
     @Inject SecurityIdentity securityIdentity;
 
     @POST
@@ -84,8 +85,11 @@ public class MeshMessageResource {
             }
         }
 
+        if (!dashboard.isResolvable()) {
+            return Response.status(503).entity("Message service unavailable").build();
+        }
         try {
-            var result = dashboard.sendHumanMessage(name, sender, type, content,
+            var result = dashboard.get().sendHumanMessage(name, sender, type, content,
                     req != null ? req.inReplyTo() : null,
                     req != null ? req.correlationId() : null,
                     req != null ? req.artefactRefs() : null,
