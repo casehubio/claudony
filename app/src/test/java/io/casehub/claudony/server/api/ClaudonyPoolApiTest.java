@@ -15,7 +15,7 @@ class ClaudonyPoolApiTest {
     @Test
     void listPools() {
         RestAssured.given()
-                .when().get("/api/claudony/pools")
+                .when().get("/api/pools")
                 .then().statusCode(200)
                 .body("size()", greaterThanOrEqualTo(1))
                 .body("[0].name", notNullValue());
@@ -24,7 +24,7 @@ class ClaudonyPoolApiTest {
     @Test
     void getPool() {
         RestAssured.given()
-                .when().get("/api/claudony/pools/default")
+                .when().get("/api/pools/default")
                 .then().statusCode(200)
                 .body("name", is("default"))
                 .body("status.min", notNullValue())
@@ -34,14 +34,14 @@ class ClaudonyPoolApiTest {
     @Test
     void getPoolNotFound() {
         RestAssured.given()
-                .when().get("/api/claudony/pools/nonexistent")
+                .when().get("/api/pools/nonexistent")
                 .then().statusCode(404);
     }
 
     @Test
     void listSessions() {
         RestAssured.given()
-                .when().get("/api/claudony/pools/default/sessions")
+                .when().get("/api/pools/default/sessions")
                 .then().statusCode(200)
                 .body("$", instanceOf(java.util.List.class));
     }
@@ -51,7 +51,7 @@ class ClaudonyPoolApiTest {
         RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("{\"scalingType\": \"target-tracking\", \"targetFillRatio\": 0.85, \"cooldown\": \"30s\"}")
-                .when().post("/api/claudony/pools/default/update")
+                .when().post("/api/pools/default/update")
                 .then().statusCode(200)
                 .body("name", is("default"));
     }
@@ -61,7 +61,7 @@ class ClaudonyPoolApiTest {
         RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("{\"scalingType\": \"none\"}")
-                .when().post("/api/claudony/pools/default/update")
+                .when().post("/api/pools/default/update")
                 .then().statusCode(200)
                 .body("name", is("default"));
     }
@@ -71,7 +71,7 @@ class ClaudonyPoolApiTest {
         RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("{\"maxActive\": 8}")
-                .when().post("/api/claudony/pools/default/update")
+                .when().post("/api/pools/default/update")
                 .then().statusCode(200)
                 .body("status.max", is(8));
     }
@@ -81,7 +81,7 @@ class ClaudonyPoolApiTest {
         RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("{\"scalingType\": \"none\"}")
-                .when().post("/api/claudony/pools/nonexistent/update")
+                .when().post("/api/pools/nonexistent/update")
                 .then().statusCode(404);
     }
 }

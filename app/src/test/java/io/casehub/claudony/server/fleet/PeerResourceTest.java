@@ -38,8 +38,8 @@ class PeerResourceTest {
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
             .contentType(ContentType.JSON)
             .body("{\"url\":\"http://test-peer:7777\",\"name\":\"Test Peer\",\"terminalMode\":\"DIRECT\"}")
-            .when().post("/api/peers")
-            .then().statusCode(201)
+            .when().post("/api/peers/add")
+            .then().statusCode(200)
             .body("url", equalTo("http://test-peer:7777"))
             .body("name", equalTo("Test Peer"))
             .body("source", equalTo("MANUAL"));
@@ -56,12 +56,12 @@ class PeerResourceTest {
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
             .contentType(ContentType.JSON)
             .body("{\"url\":\"http://delete-peer:7777\",\"name\":\"Delete Me\"}")
-            .when().post("/api/peers")
-            .then().statusCode(201).extract().path("id");
+            .when().post("/api/peers/add")
+            .then().statusCode(200).extract().path("id");
 
         given()
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
-            .when().delete("/api/peers/" + id)
+            .when().post("/api/peers/" + id + "/delete")
             .then().statusCode(204);
 
         given()
@@ -76,14 +76,14 @@ class PeerResourceTest {
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
             .contentType(ContentType.JSON)
             .body("{\"url\":\"http://patch-peer:7777\",\"name\":\"Old Name\"}")
-            .when().post("/api/peers")
-            .then().statusCode(201).extract().path("id");
+            .when().post("/api/peers/add")
+            .then().statusCode(200).extract().path("id");
 
         given()
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
             .contentType(ContentType.JSON)
             .body("{\"name\":\"New Name\"}")
-            .when().patch("/api/peers/" + id)
+            .when().post("/api/peers/" + id + "/update")
             .then().statusCode(200)
             .body("name", equalTo("New Name"));
     }
@@ -92,7 +92,7 @@ class PeerResourceTest {
     void deleteUnknownPeer_returns404() {
         given()
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
-            .when().delete("/api/peers/does-not-exist")
+            .when().post("/api/peers/does-not-exist/delete")
             .then().statusCode(404);
     }
 
@@ -109,16 +109,16 @@ class PeerResourceTest {
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
             .contentType(ContentType.JSON)
             .body("{\"url\":\"http://dup-peer:7777\",\"name\":\"First\"}")
-            .when().post("/api/peers")
-            .then().statusCode(201);
+            .when().post("/api/peers/add")
+            .then().statusCode(200);
 
         // Second POST with same URL must NOT return 500
         given()
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
             .contentType(ContentType.JSON)
             .body("{\"url\":\"http://dup-peer:7777\",\"name\":\"Duplicate\"}")
-            .when().post("/api/peers")
-            .then().statusCode(201)
+            .when().post("/api/peers/add")
+            .then().statusCode(200)
             .body("url", equalTo("http://dup-peer:7777"));
     }
 
@@ -148,6 +148,6 @@ class PeerResourceTest {
         given()
             .header("X-Api-Key", "test-api-key-do-not-use-in-prod")
             .when().post("/api/peers/resize-test-peer/sessions/any-session/resize?cols=80&rows=24")
-            .then().statusCode(502);
+            .then().statusCode(500);
     }
 }

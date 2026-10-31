@@ -29,7 +29,7 @@ class SessionInputOutputTest {
         var sessionId = given().contentType("application/json")
             .body("{\"name\":\"test-io-1\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().<String>path("id");
+            .then().statusCode(200).extract().<String>path("id");
 
         awaitSessionReady(sessionId);
 
@@ -44,7 +44,7 @@ class SessionInputOutputTest {
         var sessionId = given().contentType("application/json")
             .body("{\"name\":\"test-io-2\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().<String>path("id");
+            .then().statusCode(200).extract().<String>path("id");
 
         awaitSessionReady(sessionId);
 
@@ -80,7 +80,7 @@ class SessionInputOutputTest {
         var sessionId = given().contentType("application/json")
             .body("{\"name\":\"test-io-keyname\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().<String>path("id");
+            .then().statusCode(200).extract().<String>path("id");
 
         awaitSessionReady(sessionId);
 

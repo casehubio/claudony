@@ -14,7 +14,7 @@ class ClaudonyOpsApiTest {
     @Test
     void snapshotReturnsOpsSnapshot() {
         RestAssured.given()
-                .when().get("/api/claudony/ops/snapshot")
+                .when().get("/api/ops/snapshot")
                 .then().statusCode(200)
                 .body("health", notNullValue())
                 .body("pools", instanceOf(java.util.List.class))
@@ -28,7 +28,7 @@ class ClaudonyOpsApiTest {
     @Test
     void healthReturnsFleetHealth() {
         RestAssured.given()
-                .when().get("/api/claudony/ops/health")
+                .when().get("/api/ops/health")
                 .then().statusCode(200)
                 .body("totalEntities", greaterThanOrEqualTo(0))
                 .body("healthy", greaterThanOrEqualTo(0))
@@ -40,7 +40,7 @@ class ClaudonyOpsApiTest {
     @Test
     void snapshotIncludesPoolData() {
         RestAssured.given()
-                .when().get("/api/claudony/ops/snapshot")
+                .when().get("/api/ops/snapshot")
                 .then().statusCode(200)
                 .body("pools.size()", greaterThanOrEqualTo(1))
                 .body("pools[0].name", notNullValue())
