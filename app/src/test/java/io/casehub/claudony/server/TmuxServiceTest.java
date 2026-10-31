@@ -128,12 +128,8 @@ class TmuxServiceTest {
 
         tmux.setSessionOption(TEST_SESSION, "remain-on-exit", "on");
         new ProcessBuilder("kill", String.valueOf(originalPid)).start().waitFor();
-        Await.until(() -> {
-            try {
-                long currentPid = tmux.panePid(TEST_SESSION);
-                return currentPid != originalPid;
-            } catch (Exception e) {return false;}
-        }, "process to die");
+        Await.until(() -> !ProcessHandle.of(originalPid).map(ProcessHandle::isAlive).orElse(false),
+                java.time.Duration.ofSeconds(5), "process to die");
 
         tmux.respawnPane(TEST_SESSION, "echo RESPAWNED");
         Await.until(() -> {
