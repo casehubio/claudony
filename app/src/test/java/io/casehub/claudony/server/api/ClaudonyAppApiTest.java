@@ -15,7 +15,7 @@ class ClaudonyAppApiTest {
     @Test
     void listApps_empty() {
         RestAssured.given()
-                .when().get("/api/claudony/apps")
+                .when().get("/api/apps")
                 .then().statusCode(200)
                 .body("$", instanceOf(java.util.List.class));
     }
@@ -37,7 +37,7 @@ class ClaudonyAppApiTest {
         RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body(body)
-                .when().post("/api/claudony/apps")
+                .when().post("/api/apps")
                 .then().statusCode(200)
                 .body("name", is(name))
                 .body("displayName", is("Test App"))
@@ -48,7 +48,7 @@ class ClaudonyAppApiTest {
     @Test
     void getApp_notFound() {
         RestAssured.given()
-                .when().get("/api/claudony/apps/nonexistent-app")
+                .when().get("/api/apps/nonexistent-app")
                 .then().statusCode(404);
     }
 
@@ -60,12 +60,12 @@ class ClaudonyAppApiTest {
                 .body("""
                         {"name": "%s", "displayName": "HB Test", "description": "", "pools": []}
                         """.formatted(name))
-                .when().post("/api/claudony/apps")
+                .when().post("/api/apps")
                 .then().statusCode(200);
 
         RestAssured.given()
                 .contentType(ContentType.JSON)
-                .when().post("/api/claudony/apps/" + name + "/heartbeat")
-                .then().statusCode(200);
+                .when().post("/api/apps/" + name + "/heartbeat")
+                .then().statusCode(204);
     }
 }

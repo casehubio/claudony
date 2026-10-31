@@ -32,7 +32,7 @@ class ActionInboxResourceTest {
         when(aggregationService.listActions())
                 .thenReturn(new ActionInboxResponse(List.of(), new ActionCounts(0, 0, 0)));
         RestAssured.given()
-                .when().get("/api/actions")
+                .when().get("/api/cases/actions")
                 .then().statusCode(200)
                 .body("items", hasSize(0))
                 .body("counts.high", is(0));
@@ -46,7 +46,7 @@ class ActionInboxResourceTest {
         when(aggregationService.listActions())
                 .thenReturn(new ActionInboxResponse(List.of(item), new ActionCounts(1, 0, 0)));
         RestAssured.given()
-                .when().get("/api/actions")
+                .when().get("/api/cases/actions")
                 .then().statusCode(200)
                 .body("items", hasSize(1))
                 .body("items[0].sourceType", is("COMMITMENT"))
@@ -63,7 +63,7 @@ class ActionInboxResourceTest {
         when(aggregationService.listActions())
                 .thenReturn(new ActionInboxResponse(List.of(item), new ActionCounts(0, 1, 0)));
         RestAssured.given()
-                   .when().get("/api/actions")
+                   .when().get("/api/cases/actions")
                    .then().statusCode(200)
                    .body("items", hasSize(1))
                    .body("items[0].sourceType", is("WORKITEM"))

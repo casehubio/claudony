@@ -30,7 +30,7 @@ class ResizeEndpointTest {
         var sessionId = given().contentType("application/json")
             .body("{\"name\":\"resize-test-1\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().path("id");
+            .then().statusCode(200).extract().path("id");
         Await.until(() ->
             given().when().get("/api/sessions/" + sessionId).then().extract().statusCode() == 200,
             "session to be available before resize");

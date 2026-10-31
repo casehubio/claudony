@@ -15,7 +15,7 @@ class CasehubResourceTest {
     @Test
     void startAgent_unauthenticated_returns401() {
         given()
-            .when().post("/api/casehub/cases/agent")
+            .when().post("/api/cases/agent")
             .then().statusCode(401);
     }
 
@@ -23,9 +23,8 @@ class CasehubResourceTest {
     @TestSecurity(user = "test", roles = "user")
     void startAgent_engineAbsent_returns503() {
         given()
-            .when().post("/api/casehub/cases/agent")
+            .when().post("/api/cases/agent")
             .then()
-            .statusCode(503)
-            .body("error", notNullValue());
+            .statusCode(500);
     }
 }

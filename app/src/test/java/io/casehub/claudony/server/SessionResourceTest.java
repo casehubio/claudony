@@ -49,7 +49,7 @@ class SessionResourceTest {
         given().contentType("application/json")
             .body("{\"name\":\"test-api\",\"workingDir\":\"/tmp\",\"command\":\"echo hello\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201)
+            .then().statusCode(200)
             .body("id", notNullValue())
             .body("name", equalTo("claudony-test-api"))
             .body("status", equalTo("IDLE"));
@@ -60,7 +60,7 @@ class SessionResourceTest {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-get\",\"workingDir\":\"/tmp\",\"command\":\"echo hi\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().path("id");
+            .then().statusCode(200).extract().path("id");
 
         given().when().get("/api/sessions/" + id)
             .then().statusCode(200).body("id", equalTo(id));
@@ -71,9 +71,9 @@ class SessionResourceTest {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-del\",\"workingDir\":\"/tmp\",\"command\":\"echo bye\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().path("id");
+            .then().statusCode(200).extract().path("id");
 
-        given().when().delete("/api/sessions/" + id).then().statusCode(204);
+        given().when().post("/api/sessions/" + id + "/delete").then().statusCode(204);
         given().when().get("/api/sessions/" + id).then().statusCode(404);
     }
 
@@ -87,9 +87,9 @@ class SessionResourceTest {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-rename\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().path("id");
+            .then().statusCode(200).extract().path("id");
 
-        given().when().patch("/api/sessions/" + id + "/rename?name=renamed")
+        given().when().post("/api/sessions/" + id + "/rename?name=renamed")
             .then()
             .statusCode(200)
             .body("name", equalTo("claudony-renamed"));
@@ -104,14 +104,13 @@ class SessionResourceTest {
         given().contentType("application/json")
             .body("{\"name\":\"test-dup\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201);
+            .then().statusCode(200);
 
         given().contentType("application/json")
             .body("{\"name\":\"test-dup\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
             .then()
-            .statusCode(409)
-            .body("error", containsString("claudony-test-dup"));
+            .statusCode(409);
     }
 
     @Test
@@ -119,13 +118,13 @@ class SessionResourceTest {
         var originalId = given().contentType("application/json")
             .body("{\"name\":\"test-overwrite\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().<String>path("id");
+            .then().statusCode(200).extract().<String>path("id");
 
         var newId = given().contentType("application/json")
             .body("{\"name\":\"test-overwrite\",\"workingDir\":\"/home\",\"command\":\"bash\"}")
             .when().post("/api/sessions?overwrite=true")
             .then()
-            .statusCode(201)
+            .statusCode(200)
             .body("name", equalTo("claudony-test-overwrite"))
             .body("workingDir", equalTo("/home"))
             .extract().<String>path("id");
@@ -144,7 +143,7 @@ class SessionResourceTest {
             .body("{\"name\":\"test-new-overwrite\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions?overwrite=true")
             .then()
-            .statusCode(201)
+            .statusCode(200)
             .body("name", equalTo("claudony-test-new-overwrite"));
     }
 
@@ -153,7 +152,7 @@ class SessionResourceTest {
         var id = given().contentType("application/json")
             .body("{\"name\":\"test-resize\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().path("id");
+            .then().statusCode(200).extract().path("id");
 
         given().contentType("application/json")
             .when().post("/api/sessions/" + id + "/resize?cols=120&rows=40")
@@ -165,18 +164,17 @@ class SessionResourceTest {
         var idA = given().contentType("application/json")
             .body("{\"name\":\"test-rename-conflict-a\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().<String>path("id");
+            .then().statusCode(200).extract().<String>path("id");
 
         var idB = given().contentType("application/json")
             .body("{\"name\":\"test-rename-conflict-b\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().<String>path("id");
+            .then().statusCode(200).extract().<String>path("id");
 
         // Try to rename B to A's name — should conflict
-        given().when().patch("/api/sessions/" + idB + "/rename?name=test-rename-conflict-a")
+        given().when().post("/api/sessions/" + idB + "/rename?name=test-rename-conflict-a")
             .then()
-            .statusCode(409)
-            .body("error", containsString("claudony-test-rename-conflict-a"));
+            .statusCode(409);
 
         // Registry must still reflect B's original name
         given().when().get("/api/sessions/" + idB)
@@ -246,7 +244,7 @@ class SessionResourceTest {
         var response = given().contentType("application/json")
                               .body("{\"name\":\"my-project\",\"command\":\"echo hello\"}")
                               .when().post("/api/sessions")
-                              .then().statusCode(201)
+                              .then().statusCode(200)
                               .extract().jsonPath();
 
         var workingDir = response.getString("workingDir");

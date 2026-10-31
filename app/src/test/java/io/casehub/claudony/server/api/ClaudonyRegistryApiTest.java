@@ -12,7 +12,7 @@ import static org.hamcrest.Matchers.*;
 @TestSecurity(user = "test", roles = "user")
 class ClaudonyRegistryApiTest {
 
-    private static final String BASE = "/api/claudony/registry";
+    private static final String BASE = "/api/registry";
 
     @Test
     void registerAndResolve() {

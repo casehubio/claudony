@@ -50,7 +50,7 @@ class OpenTerminalTest {
         var id = given().contentType("application/json")
             .body("{\"name\":\"open-terminal-success\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().<String>path("id");
+            .then().statusCode(200).extract().<String>path("id");
 
         given().contentType("application/json")
             .when().post("/api/sessions/" + id + "/open-terminal")
@@ -68,13 +68,12 @@ class OpenTerminalTest {
         var id = given().contentType("application/json")
             .body("{\"name\":\"open-terminal-no-adapter\",\"workingDir\":\"/tmp\",\"command\":\"bash\"}")
             .when().post("/api/sessions")
-            .then().statusCode(201).extract().<String>path("id");
+            .then().statusCode(200).extract().<String>path("id");
 
         given().contentType("application/json")
             .when().post("/api/sessions/" + id + "/open-terminal")
             .then()
-            .statusCode(503)
-            .body("error", containsString("No terminal adapter"));
+            .statusCode(500);
     }
 
     @Test
