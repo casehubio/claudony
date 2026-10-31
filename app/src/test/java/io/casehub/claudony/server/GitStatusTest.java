@@ -9,6 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import io.casehub.platform.api.identity.TenancyConstants;
 
 @QuarkusTest
@@ -71,6 +72,8 @@ class GitStatusTest {
     void gitStatusDetectsGitRepoAndBranch() {
         // Use this project's own directory — it's a git repo
         var projectDir = System.getProperty("user.dir");
+        assumeTrue(java.nio.file.Files.isDirectory(java.nio.file.Path.of(projectDir, ".git")),
+                "Not a full git checkout — skipping git status detection test");
         var session = new Session(
                 "test-git-repo-id", "claudony-test-git-repo", projectDir,
                 "bash", SessionStatus.IDLE,

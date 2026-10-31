@@ -5,6 +5,7 @@ import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.Test;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -23,6 +24,8 @@ class StaticFilesTest {
 
     @Test
     void terminalBundleIsAccessible() {
+        assumeTrue(java.nio.file.Files.exists(java.nio.file.Path.of("src/main/webui/dist/terminal.js")),
+                "Frontend not built — skipping terminal.js test");
         given().when().get("/app/terminal.js")
             .then().statusCode(200)
             .contentType(containsString("javascript"));
