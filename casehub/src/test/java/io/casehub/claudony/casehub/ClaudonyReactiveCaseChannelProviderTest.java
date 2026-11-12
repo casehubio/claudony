@@ -220,21 +220,24 @@ class ClaudonyReactiveCaseChannelProviderTest {
     // ── listChannels ─────────────────────────────────────────────────────────
 
     @Test
-    void listChannels_filtersToCase() {
+    void listChannels_mapsReturnedChannels() {
         UUID caseId = UUID.randomUUID();
-        Channel matching = stubChannel(UUID.randomUUID(), "case-" + caseId + "/coord");
-        Channel other    = stubChannel(UUID.randomUUID(), "case-" + UUID.randomUUID() + "/coord");
-        when(channelService.listAll()).thenReturn(Uni.createFrom().item(List.of(matching, other)));
+        Channel ch = stubChannel(UUID.randomUUID(), "case-" + caseId + "/coord");
+        when(channelService.findByNamePrefix("case-" + caseId))
+                .thenReturn(Uni.createFrom().item(List.of(ch)));
 
         List<CaseChannel> result = provider.listChannels(caseId).await().indefinitely();
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).name()).contains(caseId.toString());
+        assertThat(result.get(0).name()).isEqualTo("case-" + caseId + "/coord");
+        assertThat(result.get(0).purpose()).isEqualTo("coord");
+        assertThat(result.get(0).backendType()).isEqualTo("qhorus");
     }
 
     @Test
     void listChannels_noMatch_returnsEmpty() {
-        when(channelService.listAll()).thenReturn(Uni.createFrom().item(List.of()));
+        when(channelService.findByNamePrefix(anyString()))
+                .thenReturn(Uni.createFrom().item(List.of()));
 
         List<CaseChannel> result = provider.listChannels(UUID.randomUUID()).await().indefinitely();
 

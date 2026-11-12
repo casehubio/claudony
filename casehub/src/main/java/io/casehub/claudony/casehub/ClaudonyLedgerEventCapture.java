@@ -1,6 +1,6 @@
 package io.casehub.claudony.casehub;
 
-import io.casehub.engine.internal.event.CaseLifecycleEvent;
+import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.casehub.ledger.model.CaseLedgerEntry;
 import io.casehub.platform.api.identity.ActorTypeResolver;
 import io.casehub.ledger.api.model.LedgerEntryType;
