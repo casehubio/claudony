@@ -12,8 +12,6 @@ import jakarta.ws.rs.core.Response;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 @Path("/api/casehub")
 @Produces(MediaType.APPLICATION_JSON)
@@ -25,16 +23,14 @@ public class CasehubResource {
 
     @POST
     @Path("/cases/agent")
-    public CompletionStage<Response> startAgent() {
+    public Response startAgent() {
         if (agentCase.isUnsatisfied()) {
-            return CompletableFuture.completedFuture(
-                Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(Map.of("error", "CaseHub engine not available"))
-                    .build());
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                           .entity(Map.of("error", "CaseHub engine not available"))
+                           .build();
         }
-        return agentCase.get()
-            .startCase()
-            .thenApply(caseId -> Response.accepted(new CaseStartedResponse(caseId)).build());
+        UUID caseId = agentCase.get().startCase();
+        return Response.accepted(new CaseStartedResponse(caseId)).build();
     }
 
     record CaseStartedResponse(UUID caseId) {}

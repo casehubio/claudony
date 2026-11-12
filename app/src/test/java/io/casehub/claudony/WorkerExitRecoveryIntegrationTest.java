@@ -1,6 +1,6 @@
 package io.casehub.claudony;
 
-import io.casehub.claudony.casehub.ClaudonyReactiveWorkerProvisioner;
+import io.casehub.claudony.casehub.ClaudonyWorkerProvisioner;
 import io.casehub.claudony.casehub.ClaudonyWorkerExecutionManager;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.engine.common.spi.scheduler.WorkerBackend;
@@ -25,7 +25,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import io.casehub.platform.api.identity.TenancyConstants;
 
@@ -68,7 +67,7 @@ class WorkerExitRecoveryIntegrationTest {
         var caseId = UUID.randomUUID();
         var roleName = "agent";
         seededSessionId = UUID.randomUUID().toString();
-        var sessionName = ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + seededSessionId;
+        var sessionName = ClaudonyWorkerProvisioner.SESSION_PREFIX + seededSessionId;
 
         // Simulate what bootstrapRegistry() produces for a recovered casehub session
         registry.register(new Session(seededSessionId, sessionName, "unknown", "claude",
@@ -91,7 +90,7 @@ class WorkerExitRecoveryIntegrationTest {
 
         // Call watch() directly — this is what bootstrapCasehubWatchers() does
         execManager.watch(seededSessionId, sessionName, instance,
-                io.casehub.worker.api.Worker.builder().name(roleName).capabilityName(roleName).function(new io.casehub.worker.api.WorkerFunction.Sync<>(Void.class, ctx -> io.casehub.worker.api.WorkerResult.of(java.util.Map.of()))).build());
+                io.casehub.worker.api.Worker.builder().name(roleName).capabilityName(roleName).function(new io.casehub.worker.api.WorkerFunction.Sync<>(Void.class, java.util.Map.class, (input, scope) -> io.casehub.worker.api.WorkerResult.of(java.util.Map.of()))).build());
 
         // Wait for the watcher virtual thread to detect exit and publish
         Awaitility.await()

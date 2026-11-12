@@ -4,32 +4,37 @@ import io.casehub.api.model.CaseChannel;
 import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkerContext;
 import io.casehub.api.model.WorkerSummary;
-import io.casehub.api.spi.ReactiveCaseChannelProvider;
+import io.casehub.api.spi.CaseChannelProvider;
 import io.casehub.api.spi.mesh.ActiveParticipationStrategy;
 import io.casehub.api.spi.mesh.NormativeChannelLayout;
 import io.casehub.api.spi.mesh.ReactiveParticipationStrategy;
 import io.casehub.api.spi.mesh.SilentParticipationStrategy;
-import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-class ClaudonyReactiveWorkerContextProviderTest {
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
-    private CaseLineageQuery                    lineageQuery;
-    private ReactiveCaseChannelProvider         channelProvider;
-    private ClaudonyReactiveWorkerContextProvider provider;
+class ClaudonyWorkerContextProviderTest {
+
+    private CaseLineageQuery            lineageQuery;
+    private CaseChannelProvider         channelProvider;
+    private ClaudonyWorkerContextProvider provider;
 
     @BeforeEach
     void setUp() {
         lineageQuery    = mock(CaseLineageQuery.class);
-        channelProvider = mock(ReactiveCaseChannelProvider.class);
-        provider = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider);
+        channelProvider = mock(CaseChannelProvider.class);
+        provider = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider);
     }
 
     // ── Core context assembly ─────────────────────────────────────────────
@@ -37,12 +42,11 @@ class ClaudonyReactiveWorkerContextProviderTest {
     @Test
     void buildContext_noPriorWorkers_returnsEmptyPriorWorkers() {
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = provider.buildContext("worker-1", caseId,
-                WorkRequest.of("agent", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("agent", Map.of()));
 
         assertThat(ctx.priorWorkers()).isEmpty();
         assertThat(ctx.taskDescription()).isEqualTo("agent");
@@ -53,12 +57,11 @@ class ClaudonyReactiveWorkerContextProviderTest {
         UUID caseId = UUID.randomUUID();
         UUID entryId = UUID.randomUUID();
         var summary = new WorkerSummary("alice", "AliceRole", null, Instant.now().minusSeconds(60), null, entryId);
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of(summary)));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of(summary));
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = provider.buildContext("worker-2", caseId,
-                WorkRequest.of("coder", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("coder", Map.of()));
 
         assertThat(ctx.priorWorkers()).hasSize(1);
         assertThat(ctx.priorWorkers().get(0).workerId()).isEqualTo("alice");
@@ -70,12 +73,11 @@ class ClaudonyReactiveWorkerContextProviderTest {
     void buildContext_withChannel_includesChannelInContext() {
         UUID caseId = UUID.randomUUID();
         var channel = new CaseChannel("ch-id", "case-coord", "coordination", "qhorus", Map.of());
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of(channel)));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of(channel));
 
         WorkerContext ctx = provider.buildContext("worker-1", caseId,
-                WorkRequest.of("task", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.channels()).isNotEmpty();
         assertThat(ctx.channels().getFirst().name()).isEqualTo("case-coord");
@@ -86,8 +88,7 @@ class ClaudonyReactiveWorkerContextProviderTest {
     @Test
     void buildContext_cleanStart_returnsEmptyContextWithNoInteractions() {
         WorkerContext ctx = provider.buildContext("worker-new", null,
-                WorkRequest.of("task", Map.of("clean-start", true)))
-                .await().indefinitely();
+                WorkRequest.of("task", Map.of("clean-start", true)));
 
         assertThat(ctx.priorWorkers()).isEmpty();
         assertThat(ctx.properties()).containsKey("clean-start");
@@ -98,8 +99,7 @@ class ClaudonyReactiveWorkerContextProviderTest {
     @Test
     void buildContext_missingCaseId_returnsEmptyContextWithNoInteractions() {
         WorkerContext ctx = provider.buildContext("worker-1", null,
-                WorkRequest.of("task", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.priorWorkers()).isEmpty();
         assertThat(ctx.caseId()).isNull();
@@ -111,45 +111,42 @@ class ClaudonyReactiveWorkerContextProviderTest {
 
     @Test
     void buildContext_activeStrategy_stampsMeshParticipationActive() {
-        var p = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new ActiveParticipationStrategy());
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                  new ActiveParticipationStrategy());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("task", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.properties()).containsEntry("meshParticipation", "ACTIVE");
     }
 
     @Test
     void buildContext_reactiveStrategy_stampsMeshParticipationReactive() {
-        var p = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new ReactiveParticipationStrategy());
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                  new ReactiveParticipationStrategy());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("task", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.properties()).containsEntry("meshParticipation", "REACTIVE");
     }
 
     @Test
     void buildContext_silentStrategy_stampsMeshParticipationSilent() {
-        var p = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new SilentParticipationStrategy());
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                  new SilentParticipationStrategy());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("task", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.properties()).containsEntry("meshParticipation", "SILENT");
     }
@@ -158,12 +155,11 @@ class ClaudonyReactiveWorkerContextProviderTest {
 
     @Test
     void buildContext_cleanStart_meshParticipationStamped() {
-        var silentProvider = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new SilentParticipationStrategy());
+        var silentProvider = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                               new SilentParticipationStrategy());
 
         WorkerContext ctx = silentProvider.buildContext("w1", null,
-                WorkRequest.of("task", Map.of("clean-start", true)))
-                .await().indefinitely();
+                WorkRequest.of("task", Map.of("clean-start", true)));
 
         assertThat(ctx.properties()).containsEntry("meshParticipation", "SILENT");
         verifyNoInteractions(lineageQuery);
@@ -172,12 +168,12 @@ class ClaudonyReactiveWorkerContextProviderTest {
 
     @Test
     void buildContext_missingCaseId_meshParticipationStamped() {
-        var silentProvider = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new SilentParticipationStrategy());
+        var silentProvider = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                               new SilentParticipationStrategy());
 
         WorkerContext ctx = silentProvider.buildContext("w1", null,
                 WorkRequest.of("task", Map.of()))
-                .await().indefinitely();
+                ;
 
         assertThat(ctx.properties()).containsEntry("meshParticipation", "SILENT");
     }
@@ -186,30 +182,28 @@ class ClaudonyReactiveWorkerContextProviderTest {
 
     @Test
     void buildContext_activeStrategy_withCaseId_systemPromptPresent() {
-        var p = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new ActiveParticipationStrategy(), new NormativeChannelLayout());
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                  new ActiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("agent", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("agent", Map.of()));
 
         assertThat(ctx.properties()).containsKey("systemPrompt");
     }
 
     @Test
     void buildContext_silentStrategy_withCaseId_systemPromptAbsent() {
-        var p = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new SilentParticipationStrategy(), new NormativeChannelLayout());
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                  new SilentParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("agent", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("agent", Map.of()));
 
         assertThat(ctx.properties()).doesNotContainKey("systemPrompt");
     }
@@ -218,15 +212,14 @@ class ClaudonyReactiveWorkerContextProviderTest {
 
     @Test
     void buildContext_activeStrategy_systemPromptContainsCaseId() {
-        var p = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new ActiveParticipationStrategy(), new NormativeChannelLayout());
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                  new ActiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("agent", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("agent", Map.of()));
 
         String prompt = (String) ctx.properties().get("systemPrompt");
         assertThat(prompt).contains(caseId.toString());
@@ -234,15 +227,14 @@ class ClaudonyReactiveWorkerContextProviderTest {
 
     @Test
     void buildContext_activeStrategy_systemPromptContainsCapability() {
-        var p = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new ActiveParticipationStrategy(), new NormativeChannelLayout());
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                  new ActiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("code-reviewer", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("code-reviewer", Map.of()));
 
         String prompt = (String) ctx.properties().get("systemPrompt");
         assertThat(prompt).contains("code-reviewer");
@@ -250,15 +242,14 @@ class ClaudonyReactiveWorkerContextProviderTest {
 
     @Test
     void buildContext_reactiveStrategy_systemPromptLacksStartupSection() {
-        var p = new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider,
-                new ReactiveParticipationStrategy(), new NormativeChannelLayout());
+        var p = new ClaudonyWorkerContextProvider(lineageQuery, channelProvider,
+                                                  new ReactiveParticipationStrategy(), new NormativeChannelLayout());
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
         WorkerContext ctx = p.buildContext("w1", caseId,
-                WorkRequest.of("analyst", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("analyst", Map.of()));
 
         String prompt = (String) ctx.properties().get("systemPrompt");
         assertThat(prompt)
@@ -271,8 +262,7 @@ class ClaudonyReactiveWorkerContextProviderTest {
     @Test
     void buildContext_propagationContextIsAlwaysSet() {
         WorkerContext ctx = provider.buildContext("worker-1", null,
-                WorkRequest.of("task", Map.of()))
-                .await().indefinitely();
+                WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.propagationContext()).isNotNull();
     }
@@ -285,7 +275,7 @@ class ClaudonyReactiveWorkerContextProviderTest {
         when(config.meshParticipation()).thenReturn("bogus");
         when(config.channelLayout()).thenReturn("normative");
 
-        assertThatThrownBy(() -> new ClaudonyReactiveWorkerContextProvider(lineageQuery, channelProvider, config))
+        assertThatThrownBy(() -> new ClaudonyWorkerContextProvider(lineageQuery, channelProvider, config))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("bogus");
     }
@@ -295,11 +285,10 @@ class ClaudonyReactiveWorkerContextProviderTest {
     @Test
     void buildContext_lineageAndChannelRunInParallel() {
         UUID caseId = UUID.randomUUID();
-        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(Uni.createFrom().item(List.of()));
-        when(channelProvider.listChannels(caseId)).thenReturn(Uni.createFrom().item(List.of()));
+        when(lineageQuery.findCompletedWorkers(caseId)).thenReturn(List.of());
+        when(channelProvider.listChannels(caseId)).thenReturn(List.of());
 
-        provider.buildContext("w1", caseId, WorkRequest.of("task", Map.of()))
-                .await().indefinitely();
+        provider.buildContext("w1", caseId, WorkRequest.of("task", Map.of()));
 
         // Both must have been called — they run in the parallel combine
         verify(lineageQuery).findCompletedWorkers(caseId);

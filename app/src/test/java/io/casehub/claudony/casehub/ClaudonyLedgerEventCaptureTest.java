@@ -51,7 +51,7 @@ class ClaudonyLedgerEventCaptureTest {
     EntityManager em;
 
     @Inject
-    ClaudonyReactiveWorkerProvisioner provisioner;
+    ClaudonyWorkerProvisioner provisioner;
 
     @InjectMock
     @WorkerBackend

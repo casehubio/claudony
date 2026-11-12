@@ -1,34 +1,45 @@
 package io.casehub.claudony.casehub;
 
+import io.casehub.api.context.PropagationContext;
+import io.casehub.api.model.ProvisionContext;
+import io.casehub.api.model.WorkerContext;
+import io.casehub.api.spi.ProvisionResult;
+import io.casehub.api.spi.ProvisioningException;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.claudony.server.model.Session;
-import io.casehub.api.model.ProvisionContext;
-import io.casehub.api.model.WorkerContext;
-import io.casehub.api.context.PropagationContext;
-import io.casehub.api.spi.ProvisionResult;
-import io.casehub.api.spi.ProvisioningException;
-import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
-class ClaudonyReactiveWorkerProvisionerTest {
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
-    private TmuxService tmux;
-    private SessionRegistry registry;
-    private ProviderConfigSource configSource;
-    private WorkerSessionMapping sessionMapping;
-    private ClaudonyReactiveWorkerProvisioner provisioner;
+class ClaudonyWorkerProvisionerTest {
+
+    private TmuxService               tmux;
+    private SessionRegistry           registry;
+    private ProviderConfigSource      configSource;
+    private WorkerSessionMapping      sessionMapping;
+    private ClaudonyWorkerProvisioner provisioner;
 
     @BeforeEach
     void setUp() {
@@ -53,20 +64,18 @@ class ClaudonyReactiveWorkerProvisionerTest {
                 return Set.of("code-reviewer");
             }
         };
-        provisioner = new ClaudonyReactiveWorkerProvisioner(true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
+        provisioner = new ClaudonyWorkerProvisioner(true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
     }
 
     @Test
     void provision_createsWorkerSessionAndRegistersWorker() throws Exception {
         var caseId = UUID.randomUUID();
 
-        ProvisionResult result = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
-                .await()
-                .indefinitely();
+        ProvisionResult result = provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
 
         assertThat(result).isNotNull();
         verify(tmux).createWorkerSession(
-                contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX), eq("/tmp/workers"), eq("claude"));
+                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX), eq("/tmp/workers"), eq("claude"));
         verify(registry).register(any(Session.class));
     }
 
@@ -74,17 +83,15 @@ class ClaudonyReactiveWorkerProvisionerTest {
     void provision_setsCasehubTmuxOptions_afterSessionCreation() throws Exception {
         var caseId = UUID.randomUUID();
 
-        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
-                .await()
-                .indefinitely();
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
 
         // caseId and roleName must be persisted to tmux options for recovery after restart
         verify(tmux).setSessionOption(
-                contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX),
+                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX),
                 eq("@casehub_case_id"),
                 eq(caseId.toString()));
         verify(tmux).setSessionOption(
-                contains(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX),
+                contains(ClaudonyWorkerProvisioner.SESSION_PREFIX),
                 eq("@casehub_role"),
                 eq("code-reviewer"));
     }
@@ -93,9 +100,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
     void provision_registersRoleToSessionMapping() throws Exception {
         var caseId = UUID.randomUUID();
 
-        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
-                .await()
-                .indefinitely();
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
 
         assertThat(sessionMapping.findByRole("code-reviewer")).isPresent();
         assertThat(sessionMapping.findByCase(caseId.toString(), "code-reviewer")).isPresent();
@@ -103,12 +108,10 @@ class ClaudonyReactiveWorkerProvisionerTest {
 
     @Test
     void provision_disabled_failsWithProvisioningException() {
-        var disabledProvisioner = new ClaudonyReactiveWorkerProvisioner(
+        var disabledProvisioner = new ClaudonyWorkerProvisioner(
                 false, tmux, registry, configSource, sessionMapping, "claude", "/tmp", null, null, null);
 
-        assertThatThrownBy(() -> disabledProvisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
-                .await()
-                .indefinitely())
+        assertThatThrownBy(() -> disabledProvisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
                 .isInstanceOf(ProvisioningException.class)
                 .hasMessageContaining("disabled");
     }
@@ -118,9 +121,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
         doThrow(new java.io.IOException("tmux not found")).when(tmux)
                 .createWorkerSession(anyString(), anyString(), anyString());
 
-        assertThatThrownBy(() -> provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
-                .await()
-                .indefinitely())
+        assertThatThrownBy(() -> provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID())))
                 .isInstanceOf(ProvisioningException.class)
                 .hasMessageContaining("Failed to create tmux session");
     }
@@ -129,9 +130,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
     void provision_stampsSessionWithCaseIdAndRoleName() throws Exception {
         var caseId = UUID.randomUUID();
 
-        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId))
-                .await()
-                .indefinitely();
+        provisioner.provision(Set.of("code-reviewer"), provisionContext(caseId));
 
         var captor = ArgumentCaptor.forClass(Session.class);
         verify(registry).register(captor.capture());
@@ -145,39 +144,31 @@ class ClaudonyReactiveWorkerProvisionerTest {
         // Order matters: registry.remove() is the watcher cancellation signal.
         // It must happen BEFORE tmux.killSession() so the watcher sees the session
         // absent in the registry and stops without publishing a false completion.
-        provisioner.terminate("worker-abc", null)
-                .await()
-                .indefinitely();
+        provisioner.terminate("worker-abc", null);
 
         InOrder inOrder = inOrder(registry, tmux);
         inOrder.verify(registry).remove("worker-abc");
-        inOrder.verify(tmux).killSession(ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + "worker-abc");
+        inOrder.verify(tmux).killSession(ClaudonyWorkerProvisioner.SESSION_PREFIX + "worker-abc");
     }
 
     @Test
     void terminate_tmuxFails_stillRemovesFromRegistry() throws Exception {
         doThrow(new java.io.IOException("session not found")).when(tmux).killSession(anyString());
 
-        assertThatNoException().isThrownBy(() -> provisioner.terminate("ghost-worker", null)
-                .await()
-                .indefinitely());
+        assertThatNoException().isThrownBy(() -> provisioner.terminate("ghost-worker", null));
         verify(registry).remove("ghost-worker");
     }
 
     @Test
     void getCapabilities_returnsDeclaredAgentIds() {
-        var capabilities = provisioner.getCapabilities()
-                .await()
-                .indefinitely();
+        var capabilities = provisioner.getCapabilities();
 
         assertThat(capabilities).containsExactly("code-reviewer");
     }
 
     @Test
     void provision_withNullTriggerFields_returnsEmptyProvisionResult() throws Exception {
-        var result = provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
-                .await()
-                .indefinitely();
+        var result = provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
         assertThat(result.causedByEntryId()).isNull();
     }
@@ -212,14 +203,13 @@ class ClaudonyReactiveWorkerProvisionerTest {
         UUID entryId = UUID.randomUUID();
         QhorusCausalLinkResolver mockResolver = mock(QhorusCausalLinkResolver.class);
         when(mockResolver.resolve("ch-123", "corr-456"))
-            .thenReturn(Uni.createFrom().item(Optional.of(entryId)));
-        var prov = new ClaudonyReactiveWorkerProvisioner(
+            .thenReturn(Optional.of(entryId));
+        var prov = new ClaudonyWorkerProvisioner(
             true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver);
         UUID caseId = UUID.randomUUID();
         var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, "ch-123", "corr-456");
 
-        ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx)
-            .await().indefinitely();
+        ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx);
 
         assertThat(result.causedByEntryId()).isEqualTo(entryId);
         assertThat(prov.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId)).isEqualTo(entryId);
@@ -229,13 +219,12 @@ class ClaudonyReactiveWorkerProvisionerTest {
     @Test
     void provision_withNullTriggerFields_guardShortCircuits() throws Exception {
         QhorusCausalLinkResolver mockResolver = mock(QhorusCausalLinkResolver.class);
-        var prov = new ClaudonyReactiveWorkerProvisioner(
+        var prov = new ClaudonyWorkerProvisioner(
             true, tmux, registry, configSource, sessionMapping, "claude", "/tmp/workers", null, null, mockResolver);
         UUID caseId = UUID.randomUUID();
         var ctx = new ProvisionContext(caseId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, "code-reviewer", null, null, null, null);
 
-        ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx)
-            .await().indefinitely();
+        ProvisionResult result = prov.provision(Set.of("code-reviewer"), ctx);
 
         assertThat(result.causedByEntryId()).isNull();
         assertThat(prov.drainCausalContext(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, caseId)).isNull();
@@ -260,11 +249,10 @@ class ClaudonyReactiveWorkerProvisionerTest {
                 return Set.of("code-reviewer");
             }
         };
-        var prov = new ClaudonyReactiveWorkerProvisioner(
+        var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
 
-        prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
-                .await().indefinitely();
+        prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
         var captor = ArgumentCaptor.forClass(String.class);
         verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
@@ -288,11 +276,10 @@ class ClaudonyReactiveWorkerProvisionerTest {
                 return Set.of("code-reviewer");
             }
         };
-        var prov = new ClaudonyReactiveWorkerProvisioner(
+        var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, dirSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
 
-        prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
-                .await().indefinitely();
+        prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
         var captor = ArgumentCaptor.forClass(String.class);
         verify(tmux).createWorkerSession(anyString(), captor.capture(), anyString());
@@ -312,11 +299,11 @@ class ClaudonyReactiveWorkerProvisionerTest {
                 return Set.of();
             }
         };
-        var prov = new ClaudonyReactiveWorkerProvisioner(
+        var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, emptySource, sessionMapping, "claude", "/tmp/workers", null, null, null);
 
         prov.provision(Set.of("unknown-agent"), provisionContext(UUID.randomUUID()))
-                .await().indefinitely();
+                ;
 
         var captor = ArgumentCaptor.forClass(String.class);
         verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
@@ -340,11 +327,10 @@ class ClaudonyReactiveWorkerProvisionerTest {
                 return Set.of("code-reviewer");
             }
         };
-        var prov = new ClaudonyReactiveWorkerProvisioner(
+        var prov = new ClaudonyWorkerProvisioner(
                 true, tmux, registry, richSource, sessionMapping, "claude", "/tmp/workers", null, null, null);
 
-        prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
-                .await().indefinitely();
+        prov.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()));
 
         var captor = ArgumentCaptor.forClass(Session.class);
         verify(registry).register(captor.capture());
@@ -371,8 +357,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
         var ctx = provisionContextWithWorkerContext(caseId,
                 Map.of("systemPrompt", "You are on case " + caseId));
 
-        provisioner.provision(Set.of("code-reviewer"), ctx)
-                .await().indefinitely();
+        provisioner.provision(Set.of("code-reviewer"), ctx);
 
         var captor = ArgumentCaptor.forClass(String.class);
         verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
@@ -383,7 +368,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
     @Test
     void provision_withNullWorkerContext_noAppendFlag() throws Exception {
         provisioner.provision(Set.of("code-reviewer"), provisionContext(UUID.randomUUID()))
-                .await().indefinitely();
+                ;
 
         var captor = ArgumentCaptor.forClass(String.class);
         verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
@@ -396,8 +381,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
         var ctx = provisionContextWithWorkerContext(caseId,
                 Map.of("meshParticipation", "SILENT"));
 
-        provisioner.provision(Set.of("code-reviewer"), ctx)
-                .await().indefinitely();
+        provisioner.provision(Set.of("code-reviewer"), ctx);
 
         var captor = ArgumentCaptor.forClass(String.class);
         verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());
@@ -410,8 +394,7 @@ class ClaudonyReactiveWorkerProvisionerTest {
         var ctx = provisionContextWithWorkerContext(caseId,
                 Map.of("meshParticipation", "ACTIVE", "clean-start", true));
 
-        provisioner.provision(Set.of("code-reviewer"), ctx)
-                .await().indefinitely();
+        provisioner.provision(Set.of("code-reviewer"), ctx);
 
         var captor = ArgumentCaptor.forClass(String.class);
         verify(tmux).createWorkerSession(anyString(), anyString(), captor.capture());

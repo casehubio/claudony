@@ -1,17 +1,15 @@
 package io.casehub.claudony.casehub;
 
 import io.casehub.api.model.CaseChannel;
-import io.casehub.api.spi.mesh.CaseChannelLayout;
 import io.casehub.api.spi.mesh.NormativeChannelLayout;
 import io.casehub.platform.api.identity.ActorType;
+import io.casehub.qhorus.api.channel.Channel;
+import io.casehub.qhorus.api.channel.ChannelCreateRequest;
 import io.casehub.qhorus.api.message.DispatchResult;
 import io.casehub.qhorus.api.message.MessageDispatch;
 import io.casehub.qhorus.api.message.MessageType;
-import io.casehub.qhorus.api.channel.Channel;
-import io.casehub.qhorus.api.channel.ChannelCreateRequest;
-import io.casehub.qhorus.runtime.channel.ReactiveChannelService;
-import io.casehub.qhorus.runtime.message.ReactiveMessageService;
-import io.smallrye.mutiny.Uni;
+import io.casehub.qhorus.runtime.channel.ChannelService;
+import io.casehub.qhorus.runtime.message.MessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,23 +19,30 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
-class ClaudonyReactiveCaseChannelProviderTest {
+class ClaudonyCaseChannelProviderTest {
 
-    private ReactiveChannelService  channelService;
-    private ReactiveMessageService  messageService;
-    private ClaudonyReactiveCaseChannelProvider provider;
+    private ChannelService                           channelService;
+    private MessageService                           messageService;
+    private ClaudonyCaseChannelProvider                      provider;
     private io.casehub.qhorus.runtime.gateway.ChannelGateway gateway;
 
     @BeforeEach
     void setUp() {
-        channelService = mock(ReactiveChannelService.class);
-        messageService = mock(ReactiveMessageService.class);
+        channelService = mock(ChannelService.class);
+        messageService = mock(MessageService.class);
         gateway = mock(io.casehub.qhorus.runtime.gateway.ChannelGateway.class);
-        provider = new ClaudonyReactiveCaseChannelProvider(
+        provider = new ClaudonyCaseChannelProvider(
                 channelService, messageService, new NormativeChannelLayout(),
                 gateway,
                 () -> io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
@@ -57,7 +62,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
                 req != null && req.name().contains(caseId.toString()))))
                 .thenAnswer(inv -> {
                     ChannelCreateRequest req = inv.getArgument(0);
-                    return Uni.createFrom().item(stubChannel(UUID.randomUUID(), req.name()));
+                    return (stubChannel(UUID.randomUUID(), req.name()));
                 });
     }
 
@@ -68,7 +73,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        CaseChannel result = provider.openChannel(caseId, "work").await().indefinitely();
+        CaseChannel result = provider.openChannel(caseId, "work");
 
         assertThat(result).isNotNull();
         assertThat(result.purpose()).isEqualTo("work");
@@ -81,7 +86,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        provider.openChannel(caseId, "work").await().indefinitely();
+        provider.openChannel(caseId, "work");
 
         // NormativeChannelLayout opens 3 channels on first touch
         verify(channelService, times(3)).create(any(ChannelCreateRequest.class));
@@ -92,8 +97,8 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        provider.openChannel(caseId, "work").await().indefinitely();
-        provider.openChannel(caseId, "observe").await().indefinitely();
+        provider.openChannel(caseId, "work");
+        provider.openChannel(caseId, "observe");
 
         // Still only 3 createChannel calls total (initialised on first touch)
         verify(channelService, times(3)).create(any(ChannelCreateRequest.class));
@@ -106,8 +111,8 @@ class ClaudonyReactiveCaseChannelProviderTest {
         stubCreate(caseId1);
         stubCreate(caseId2);
 
-        provider.openChannel(caseId1, "work").await().indefinitely();
-        provider.openChannel(caseId2, "work").await().indefinitely();
+        provider.openChannel(caseId1, "work");
+        provider.openChannel(caseId2, "work");
 
         verify(channelService, times(6)).create(any(ChannelCreateRequest.class));
     }
@@ -131,10 +136,8 @@ class ClaudonyReactiveCaseChannelProviderTest {
                 try {
                     ready.countDown();
                     go.await();
-                    provider.openChannel(caseId, purposes[idx])
-                            .subscribe().with(
-                                    ch -> { results[idx] = ch; done.countDown(); },
-                                    err -> { errors[idx] = err; done.countDown(); });
+                    results[idx] = provider.openChannel(caseId, purposes[idx]);
+                    done.countDown();
                 } catch (Exception e) {
                     errors[idx] = e;
                     done.countDown();
@@ -163,16 +166,16 @@ class ClaudonyReactiveCaseChannelProviderTest {
         // First call: channelService.create fails
         when(channelService.create(argThat((ChannelCreateRequest req) ->
                 req != null && req.name().contains(caseId.toString()))))
-                .thenReturn(Uni.createFrom().failure(new RuntimeException("transient error")));
+                .thenThrow(new RuntimeException("transient error"));
 
-        assertThatThrownBy(() -> provider.openChannel(caseId, "work").await().indefinitely())
+        assertThatThrownBy(() -> provider.openChannel(caseId, "work"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("transient error");
 
         // Second call: channelService.create succeeds — should retry, not replay cached failure
         stubCreate(caseId);
 
-        CaseChannel result = provider.openChannel(caseId, "work").await().indefinitely();
+        CaseChannel result = provider.openChannel(caseId, "work");
 
         assertThat(result).isNotNull();
         assertThat(result.purpose()).isEqualTo("work");
@@ -183,7 +186,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        provider.openChannel(caseId, "work").await().indefinitely();
+        provider.openChannel(caseId, "work");
 
         verify(channelService).create(
                 argThat((ChannelCreateRequest req) -> req.name().equals("case-" + caseId + "/work")));
@@ -194,7 +197,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        provider.openChannel(caseId, "oversight").await().indefinitely();
+        provider.openChannel(caseId, "oversight");
 
         verify(channelService).create(argThat((ChannelCreateRequest req) ->
                 req.name().contains("/oversight")
@@ -207,7 +210,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        provider.openChannel(caseId, "observe").await().indefinitely();
+        provider.openChannel(caseId, "observe");
 
         verify(channelService).create(argThat((ChannelCreateRequest req) ->
                 req.name().contains("/observe")
@@ -220,7 +223,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        provider.openChannel(caseId, "work").await().indefinitely();
+        provider.openChannel(caseId, "work");
 
         verify(channelService).create(argThat((ChannelCreateRequest req) ->
                 req.name().contains("/work")
@@ -232,7 +235,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        provider.openChannel(caseId, "work").await().indefinitely();
+        provider.openChannel(caseId, "work");
 
         // NormativeChannelLayout creates 3 channels — initChannel called once per channel
         verify(gateway, times(3)).initChannel(
@@ -245,7 +248,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         UUID caseId = UUID.randomUUID();
         stubCreate(caseId);
 
-        provider.openChannel(caseId, "work").await().indefinitely();
+        provider.openChannel(caseId, "work");
 
         verify(gateway).initChannel(
                 any(UUID.class),
@@ -255,21 +258,13 @@ class ClaudonyReactiveCaseChannelProviderTest {
     // ── listChannels ─────────────────────────────────────────────────────────
 
     @Test
-    void listChannels_returnsEmptyFromNonEventLoopThread() {
-        // listChannels() returns empty when called from a non-Vert.x thread (executor/JUnit).
-        // The reactive path (doListChannels) is only taken from the Vert.x event loop.
-        List<CaseChannel> result = provider.listChannels(UUID.randomUUID()).await().indefinitely();
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void doListChannels_mapsReturnedChannels() {
+    void listChannels_mapsReturnedChannels() {
         UUID caseId = UUID.randomUUID();
         Channel ch = stubChannel(UUID.randomUUID(), "case-" + caseId + "/coord");
         when(channelService.findByNamePrefix("case-" + caseId))
-                .thenReturn(Uni.createFrom().item(List.of(ch)));
+                .thenReturn((List.of(ch)));
 
-        List<CaseChannel> result = provider.doListChannels(caseId).await().indefinitely();
+        List<CaseChannel> result = provider.listChannels(caseId);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).name()).isEqualTo("case-" + caseId + "/coord");
@@ -278,11 +273,11 @@ class ClaudonyReactiveCaseChannelProviderTest {
     }
 
     @Test
-    void doListChannels_noMatch_returnsEmpty() {
+    void listChannels_noMatch_returnsEmpty() {
         when(channelService.findByNamePrefix(anyString()))
-                .thenReturn(Uni.createFrom().item(List.of()));
+                .thenReturn((List.of()));
 
-        List<CaseChannel> result = provider.doListChannels(UUID.randomUUID()).await().indefinitely();
+        List<CaseChannel> result = provider.listChannels(UUID.randomUUID());
 
         assertThat(result).isEmpty();
     }
@@ -299,9 +294,9 @@ class ClaudonyReactiveCaseChannelProviderTest {
         CaseChannel ch = new CaseChannel(channelId.toString(), "case-x/work", "work", "qhorus",
                 Map.of("qhorus-name", "case-x/work"));
         when(messageService.dispatch(any(MessageDispatch.class)))
-                .thenReturn(Uni.createFrom().item(dr(channelId, "alice", MessageType.STATUS)));
+                .thenReturn((dr(channelId, "alice", MessageType.STATUS)));
 
-        provider.postToChannel(ch, "alice", "hello", MessageType.STATUS, null, null, null).await().indefinitely();
+        provider.postToChannel(ch, "alice", "hello", MessageType.STATUS, null, null, null);
 
         verify(messageService).dispatch(argThat(d ->
                 channelId.equals(d.channelId()) &&
@@ -322,7 +317,7 @@ class ClaudonyReactiveCaseChannelProviderTest {
         // null type is now rejected by MessageDispatch.builder().build() — null was a silent pass-through
         // with the old send() flat-param API; the builder enforces the 9-type taxonomy invariant.
         assertThatThrownBy(() ->
-                provider.postToChannel(ch, "alice", "hello", null, null, null, null).await().indefinitely())
+                provider.postToChannel(ch, "alice", "hello", null, null, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("type is required");
     }
@@ -335,10 +330,9 @@ class ClaudonyReactiveCaseChannelProviderTest {
         String content = "{\"type\":\"COMMAND\",\"capability\":\"research\","
                 + "\"correlationId\":\"42\",\"input\":{}}";
         when(messageService.dispatch(any(MessageDispatch.class)))
-                .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.COMMAND)));
+                .thenReturn((dr(channelId, "engine", MessageType.COMMAND)));
 
-        provider.postToChannel(ch, "engine", content, MessageType.COMMAND, "42", null, null)
-                .await().indefinitely();
+        provider.postToChannel(ch, "engine", content, MessageType.COMMAND, "42", null, null);
 
         verify(messageService).dispatch(argThat(d ->
                 channelId.equals(d.channelId()) &&
@@ -355,10 +349,9 @@ class ClaudonyReactiveCaseChannelProviderTest {
                 Map.of("qhorus-name", "case-x/work"));
         String content = "{\"type\":\"QUERY\",\"correlationId\":\"q-99\",\"input\":{}}";
         when(messageService.dispatch(any(MessageDispatch.class)))
-                .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.QUERY)));
+                .thenReturn((dr(channelId, "engine", MessageType.QUERY)));
 
-        provider.postToChannel(ch, "engine", content, MessageType.QUERY, "q-99", null, null)
-                .await().indefinitely();
+        provider.postToChannel(ch, "engine", content, MessageType.QUERY, "q-99", null, null);
 
         verify(messageService).dispatch(argThat(d ->
                 channelId.equals(d.channelId()) &&
@@ -372,10 +365,9 @@ class ClaudonyReactiveCaseChannelProviderTest {
                 Map.of("qhorus-name", "case-x/work"));
         String deadline = "2026-05-23T12:00:00Z";
         when(messageService.dispatch(any(MessageDispatch.class)))
-                .thenReturn(Uni.createFrom().item(dr(channelId, "engine", MessageType.COMMAND)));
+                .thenReturn((dr(channelId, "engine", MessageType.COMMAND)));
 
-        provider.postToChannel(ch, "engine", "{}", MessageType.COMMAND, "42", deadline, null)
-                .await().indefinitely();
+        provider.postToChannel(ch, "engine", "{}", MessageType.COMMAND, "42", deadline, null);
 
         verify(messageService).dispatch(argThat(d ->
                 "42".equals(d.correlationId()) &&
@@ -388,9 +380,8 @@ class ClaudonyReactiveCaseChannelProviderTest {
     void closeChannel_isNoOp() {
         CaseChannel ch = new CaseChannel("ch-id", "channel", "purpose", "qhorus", Map.of("qhorus-name", "ch"));
 
-        Void result = provider.closeChannel(ch).await().indefinitely();
+        provider.closeChannel(ch);
 
-        assertThat(result).isNull();
         verifyNoInteractions(channelService, messageService);
     }
 }

@@ -3,21 +3,20 @@ package io.casehub.claudony.casehub;
 import io.casehub.api.engine.CaseHubRuntime;
 import io.casehub.engine.common.spi.event.CaseLifecycleEvent;
 import io.casehub.engine.common.spi.scheduler.WorkerBackend;
-import io.casehub.ledger.model.CaseLedgerEntry;
-import io.casehub.platform.api.identity.ActorTypeResolver;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.spi.LedgerEntryRepository;
+import io.casehub.ledger.model.CaseLedgerEntry;
+import io.casehub.platform.api.identity.ActorTypeResolver;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
-
-import org.jboss.logging.Logger;
 
 /**
  * CDI observer that captures CaseLifecycleEvents and writes CaseLedgerEntry rows.
@@ -41,7 +40,7 @@ public class ClaudonyLedgerEventCapture {
     LedgerEntryRepository ledgerRepo;
 
     @Inject
-    ClaudonyReactiveWorkerProvisioner provisioner;
+    ClaudonyWorkerProvisioner provisioner;
 
     @Inject
     @WorkerBackend
@@ -96,7 +95,7 @@ public class ClaudonyLedgerEventCapture {
         if ("WorkerExecutionCompleted".equals(event.eventType())) {
             String roleName = execManager.drainExitSignal(event.caseId());
             if (roleName != null && !caseHubRuntime.isUnsatisfied()) {
-                CaseHubRuntimeCompat.signal(caseHubRuntime.get(),
+                caseHubRuntime.get().signal(
                         event.caseId(), "workers." + roleName + ".exited", true);
             }
         }

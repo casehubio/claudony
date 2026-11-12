@@ -1,6 +1,6 @@
 package io.casehub.claudony;
 
-import io.casehub.claudony.casehub.ClaudonyReactiveWorkerContextProvider;
+import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
 import io.casehub.api.model.WorkRequest;
 import io.casehub.api.model.WorkerContext;
 import io.quarkus.test.junit.QuarkusTest;
@@ -9,7 +9,6 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Map;
-import static org.assertj.core.api.Assertions.*;
 
 /**
  * Integration tests that verify the CDI wiring for MeshParticipationStrategy
@@ -20,7 +19,7 @@ import static org.assertj.core.api.Assertions.*;
 class MeshParticipationIntegrationTest {
 
     @Inject
-    ClaudonyReactiveWorkerContextProvider provider;
+    ClaudonyWorkerContextProvider provider;
 
     @Test
     void defaultConfig_stampsActiveParticipation() {

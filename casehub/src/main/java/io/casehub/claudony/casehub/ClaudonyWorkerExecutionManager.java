@@ -1,19 +1,17 @@
 package io.casehub.claudony.casehub;
 
-import io.casehub.worker.api.Capability;
-import io.casehub.worker.api.Worker;
-import io.casehub.worker.api.WorkerFunction;
-import io.casehub.worker.api.WorkerResult;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.TmuxService;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.WorkflowExecutionCompleted;
-import io.casehub.engine.common.internal.history.EventLog;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
 import io.casehub.engine.common.spi.scheduler.WorkerBackend;
 import io.casehub.engine.common.spi.scheduler.WorkerExecutionManager;
-import io.smallrye.mutiny.Uni;
+import io.casehub.worker.api.Capability;
+import io.casehub.worker.api.Worker;
+import io.casehub.worker.api.WorkerFunction;
+import io.casehub.worker.api.WorkerResult;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Priority;
@@ -76,22 +74,21 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
     }
 
     @Override
-    public Uni<Void> submit(Long eventLogId, CaseInstance instance, Worker worker,
-                            Capability capability, Map<String, Object> inputData) {
-        if (!config.enabled()) return Uni.createFrom().voidItem();
+    public void submit(Long eventLogId, CaseInstance instance, Worker worker,
+                       Capability capability, Map<String, Object> inputData) {
+        if (!config.enabled()) {return;}
 
-        var caseId = instance.getUuid();
-        var roleName = worker.name();
+        var caseId       = instance.getUuid();
+        var roleName     = worker.name();
         var sessionIdOpt = sessionMapping.findByCase(caseId.toString(), roleName);
         if (sessionIdOpt.isEmpty()) {
             LOG.warnf("No session found for case %s / role %s — watcher not started", caseId, roleName);
-            return Uni.createFrom().voidItem();
+            return;
         }
 
-        var sessionId = sessionIdOpt.get();
-        var sessionName = ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + sessionId;
+        var sessionId   = sessionIdOpt.get();
+        var sessionName = ClaudonyWorkerProvisioner.SESSION_PREFIX + sessionId;
         watch(sessionId, sessionName, instance, worker);
-        return Uni.createFrom().voidItem();
     }
 
     /** Direct entry point used by recovery path (bypasses sessionMapping which is empty after restart). */
@@ -130,11 +127,11 @@ public class ClaudonyWorkerExecutionManager implements WorkerExecutionManager {
             LOG.warnf("startWatcherForSession: case %s not found", caseId);
             return;
         }
-        String sessionName = ClaudonyReactiveWorkerProvisioner.SESSION_PREFIX + sessionId;
+        String sessionName = ClaudonyWorkerProvisioner.SESSION_PREFIX + sessionId;
         var worker = Worker.builder()
                 .name(roleName)
                 .capabilityName(roleName)
-                .function(new WorkerFunction.Sync<>(Void.class, ctx -> WorkerResult.of(java.util.Map.of())))
+                .function(new WorkerFunction.None())
                 .build();
         watch(sessionId, sessionName, instance, worker);
     }
