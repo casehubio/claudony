@@ -5,7 +5,7 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import io.casehub.claudony.server.SessionRegistry;
 import io.casehub.claudony.server.model.Session;
 import io.casehub.claudony.server.model.SessionStatus;
-import io.casehub.qhorus.runtime.mcp.ReactiveQhorusMcpTools;
+import io.casehub.qhorus.runtime.mcp.QhorusMcpTools;
 import io.casehub.qhorus.persistence.memory.InMemoryChannelStore;
 import io.casehub.qhorus.persistence.memory.InMemoryMessageStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -32,7 +32,7 @@ import io.casehub.platform.api.identity.TenancyConstants;
 class CaseContextPanelE2ETest extends PlaywrightBase {
 
     @Inject SessionRegistry registry;
-    @Inject ReactiveQhorusMcpTools tools;
+    @Inject QhorusMcpTools tools;
     @Inject InMemoryChannelStore channelStore;
     @Inject InMemoryMessageStore messageStore;
 

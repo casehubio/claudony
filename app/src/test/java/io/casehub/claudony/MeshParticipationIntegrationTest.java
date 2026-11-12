@@ -7,8 +7,9 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import java.time.Duration;
 import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests that verify the CDI wiring for MeshParticipationStrategy
@@ -24,8 +25,7 @@ class MeshParticipationIntegrationTest {
     @Test
     void defaultConfig_stampsActiveParticipation() {
         WorkerContext ctx = provider.buildContext("integration-worker", null,
-                WorkRequest.of("task", Map.of()))
-                .await().atMost(Duration.ofSeconds(5));
+                WorkRequest.of("task", Map.of()));
 
         assertThat(ctx.properties())
                 .containsEntry("meshParticipation", "ACTIVE");
@@ -34,8 +34,7 @@ class MeshParticipationIntegrationTest {
     @Test
     void defaultConfig_meshParticipationKeyAlwaysPresent() {
         WorkerContext ctx = provider.buildContext("integration-worker", null,
-                WorkRequest.of("agent", Map.of()))
-                .await().atMost(Duration.ofSeconds(5));
+                WorkRequest.of("agent", Map.of()));
 
         assertThat(ctx.properties()).containsKey("meshParticipation");
     }

@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { customElement, state } from 'lit/decorators.js';
 import { attachTerminal, type TerminalHandle } from '../util/terminal-controller.js';
 import type { PagesTerminal } from '@casehubio/pages-component-terminal';
 import './worker-panel.js';
@@ -20,6 +20,7 @@ interface WorkspaceConfig {
 
 @customElement('claudony-terminal-workspace')
 export class ClaudonyTerminalWorkspace extends LitElement {
+  @state() private _activeTab: 'terminal' | 'chat' = 'terminal';
   private _config: WorkspaceConfig | null = null;
   private _handle: TerminalHandle | null = null;
 
@@ -29,6 +30,28 @@ export class ClaudonyTerminalWorkspace extends LitElement {
     #terminal-container pages-component-terminal { flex: 1; overflow: hidden; }
     pages-component-terminal .xterm { height: 100%; }
     pages-component-terminal .xterm-viewport { overflow: hidden !important; }
+    .tab-content { display: contents; }
+    .tab-panel { display: contents; }
+    .tab-bar { display: none; }
+    @media (max-width: 767px) {
+      :host { flex-direction: column; }
+      .tab-content { display: flex; position: relative; flex: 1; overflow: hidden; }
+      .tab-panel { display: flex; position: absolute; inset: 0; visibility: hidden; flex-direction: column; }
+      .tab-panel.active { visibility: visible; z-index: 1; }
+      .tab-bar {
+        display: flex; height: 48px;
+        border-top: 1px solid var(--pages-neutral-4, #3e3e42);
+        background: var(--pages-neutral-2, #252526);
+        padding-bottom: env(safe-area-inset-bottom);
+        flex-shrink: 0;
+      }
+      .tab-btn {
+        flex: 1; display: flex; align-items: center; justify-content: center;
+        background: none; border: none; color: var(--pages-neutral-8, #888);
+        font-size: 12px; cursor: pointer; min-height: 44px;
+      }
+      .tab-btn[aria-selected="true"] { color: var(--pages-accent-9, #6366f1); }
+    }
   `;
 
   override firstUpdated(): void {
@@ -89,11 +112,37 @@ export class ClaudonyTerminalWorkspace extends LitElement {
     (this.renderRoot.querySelector('claudony-channel-panel') as ClaudonyChannelPanel | null)?.toggle();
   }
 
+  private _switchTab(tab: 'terminal' | 'chat'): void {
+    this._activeTab = tab;
+    this.dispatchEvent(new CustomEvent('pages-event', {
+      bubbles: true, composed: true,
+      detail: { topic: 'active-tab-changed', payload: { tab } },
+    }));
+    if (tab === 'terminal') {
+      requestAnimationFrame(() => {
+        const term = this.renderRoot.querySelector('pages-component-terminal');
+        if (term && 'fit' in term) (term as { fit(): void }).fit();
+      });
+    }
+  }
+
   override render() {
     return html`
       <claudony-worker-panel></claudony-worker-panel>
-      <div id="terminal-container"></div>
-      <claudony-channel-panel></claudony-channel-panel>
+      <div class="tab-content">
+        <div class="tab-panel ${this._activeTab === 'terminal' ? 'active' : ''}">
+          <div id="terminal-container"></div>
+        </div>
+        <div class="tab-panel ${this._activeTab === 'chat' ? 'active' : ''}">
+          <claudony-channel-panel></claudony-channel-panel>
+        </div>
+      </div>
+      <nav class="tab-bar" role="tablist" aria-label="Panel navigation">
+        <button class="tab-btn" role="tab" aria-selected=${this._activeTab === 'terminal'}
+          @click=${() => this._switchTab('terminal')}>Terminal</button>
+        <button class="tab-btn" role="tab" aria-selected=${this._activeTab === 'chat'}
+          @click=${() => this._switchTab('chat')}>Chat</button>
+      </nav>
     `;
   }
 

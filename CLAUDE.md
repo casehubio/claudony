@@ -451,7 +451,7 @@ quarkus.flyway.qhorus.migrate-at-start=true
 
 ## Test Count and Status
 
-**Baseline (as of 2026-07-26, after claudony#184 reactive→blocking migration):** 16 in `claudony-core` + 175 in `claudony-casehub` + 405 in `claudony-app` = **596 total, 596 passing** (casehub -1: dropped reactive-specific event loop test). App module gained 6 tests (MeshResource validation, commitment endpoint, timeline enrichment). Previous baseline: 591 (2026-07-07, after #168 broadcaster migration). Frontend: 25 vitest (was 19; +6 adapter tests for toChannelMember/toQhorusTopic in #185). E2E: 4 new workbench tests (WorkbenchE2ETest). No known failing tests. Docker required for dev/test (PostgreSQL via Dev Services).
+**Baseline (as of 2026-07-31, after claudony#188 SPI migration + #179 responsive):** 16 in `claudony-core` + 175 in `claudony-casehub` + 412 in `claudony-app` = **603 total, 601 passing** (app +7: restored CaseEngineRoundTripTest, AgentCaseCompletionTest, and 5 previously skipped integration tests after reactive→blocking SPI migration). 2 worktree-environmental failures (StaticFilesTest: frontend not built; GitStatusTest: worktree git remote). Previous baseline: 596 (2026-07-26, after #184). Frontend: 25 vitest. E2E: 4 workbench tests. Docker required for dev/test (PostgreSQL via Dev Services).
 
 **Test convention — self-referencing REST clients:** In `@QuarkusTest` with `quarkus.http.test-port=0`, any REST client that calls back to the same running app must override its URL in `src/test/resources/application.properties`:
 ```properties

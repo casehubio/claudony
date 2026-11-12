@@ -49,6 +49,18 @@ export class ClaudonyWorkerPanel extends LitElement {
       padding: 16px; color: var(--pages-neutral-8);
       font-size: 13px; text-align: center;
     }
+    @media (max-width: 1024px) {
+      :host { width: 48px; min-width: 48px; }
+      :host(.collapsed) { width: 0; min-width: 0; }
+      :host(:not(.collapsed)) {
+        position: fixed; z-index: 100; left: 0; top: 0; bottom: 0;
+        width: 240px; min-width: 240px;
+        box-shadow: 4px 0 8px rgba(0,0,0,0.3);
+      }
+    }
+    @media (max-width: 767px) {
+      :host { display: none; }
+    }
   `;
 
   configure(opts: { sessionId: string }): void {

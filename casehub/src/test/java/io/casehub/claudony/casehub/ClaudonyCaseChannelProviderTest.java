@@ -88,8 +88,8 @@ class ClaudonyCaseChannelProviderTest {
 
         provider.openChannel(caseId, "work");
 
-        // NormativeChannelLayout opens 3 channels on first touch
-        verify(channelService, times(3)).create(any(ChannelCreateRequest.class));
+        // NormativeChannelLayout opens 4 channels on first touch (work, observe, oversight, coordination)
+        verify(channelService, times(4)).create(any(ChannelCreateRequest.class));
     }
 
     @Test
@@ -100,8 +100,8 @@ class ClaudonyCaseChannelProviderTest {
         provider.openChannel(caseId, "work");
         provider.openChannel(caseId, "observe");
 
-        // Still only 3 createChannel calls total (initialised on first touch)
-        verify(channelService, times(3)).create(any(ChannelCreateRequest.class));
+        // Still only 4 createChannel calls total (initialised on first touch)
+        verify(channelService, times(4)).create(any(ChannelCreateRequest.class));
     }
 
     @Test
@@ -114,7 +114,7 @@ class ClaudonyCaseChannelProviderTest {
         provider.openChannel(caseId1, "work");
         provider.openChannel(caseId2, "work");
 
-        verify(channelService, times(6)).create(any(ChannelCreateRequest.class));
+        verify(channelService, times(8)).create(any(ChannelCreateRequest.class));
     }
 
     @Test
@@ -155,8 +155,8 @@ class ClaudonyCaseChannelProviderTest {
             assertThat(results[i].purpose()).isEqualTo(purposes[i]);
         }
 
-        // NormativeChannelLayout has 3 channels — should create exactly 3, not 6 or 9
-        verify(channelService, times(3)).create(any(ChannelCreateRequest.class));
+        // NormativeChannelLayout has 4 channels — should create exactly 4, not 8 or 12
+        verify(channelService, times(4)).create(any(ChannelCreateRequest.class));
     }
 
     @Test
@@ -237,8 +237,8 @@ class ClaudonyCaseChannelProviderTest {
 
         provider.openChannel(caseId, "work");
 
-        // NormativeChannelLayout creates 3 channels — initChannel called once per channel
-        verify(gateway, times(3)).initChannel(
+        // NormativeChannelLayout creates 4 channels — initChannel called once per channel
+        verify(gateway, times(4)).initChannel(
                 any(UUID.class),
                 any(io.casehub.qhorus.api.gateway.ChannelRef.class));
     }

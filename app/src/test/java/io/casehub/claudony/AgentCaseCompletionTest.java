@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -90,9 +89,7 @@ class AgentCaseCompletionTest {
 
     @Test
     void agentCase_completesWhenWorkerSessionExits() throws Exception {
-        UUID caseId = completionCase.startCase()
-                .toCompletableFuture()
-                .get(10, TimeUnit.SECONDS);
+        UUID caseId = completionCase.startCase();
 
         // Signal exit — triggers goal evaluation → COMPLETED.
         // No sleep needed: TestCompletionCase has no bindings so no competing CONTEXT_CHANGED.

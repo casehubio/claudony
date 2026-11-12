@@ -1,16 +1,16 @@
 package io.casehub.claudony;
 
-import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
 import io.casehub.api.model.WorkRequest;
+import io.casehub.claudony.casehub.ClaudonyWorkerContextProvider;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
-import io.quarkus.test.vertx.RunOnVertxContext;
-import io.quarkus.test.vertx.UniAsserter;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+
 import java.util.Map;
 import java.util.UUID;
-import static org.assertj.core.api.Assertions.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
 @TestSecurity(user = "test", roles = "user")
@@ -20,29 +20,23 @@ class SystemPromptIntegrationTest {
     ClaudonyWorkerContextProvider provider;
 
     @Test
-    @RunOnVertxContext
-    void defaultConfig_activeStrategy_systemPromptPresent(UniAsserter asserter) {
+    void defaultConfig_activeStrategy_systemPromptPresent() {
         UUID caseId = UUID.randomUUID();
-        asserter.assertThat(
-                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of())),
-                ctx -> assertThat(ctx.properties()).containsKey("systemPrompt"));
+        var  ctx    = provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of()));
+        assertThat(ctx.properties()).containsKey("systemPrompt");
     }
 
     @Test
-    @RunOnVertxContext
-    void defaultConfig_systemPromptContainsCaseId(UniAsserter asserter) {
+    void defaultConfig_systemPromptContainsCaseId() {
         UUID caseId = UUID.randomUUID();
-        asserter.assertThat(
-                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of())),
-                ctx -> assertThat((String) ctx.properties().get("systemPrompt")).contains(caseId.toString()));
+        var  ctx    = provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of()));
+        assertThat((String) ctx.properties().get("systemPrompt")).contains(caseId.toString());
     }
 
     @Test
-    @RunOnVertxContext
-    void defaultConfig_systemPromptContainsStartupSection(UniAsserter asserter) {
+    void defaultConfig_systemPromptContainsStartupSection() {
         UUID caseId = UUID.randomUUID();
-        asserter.assertThat(
-                () -> provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of())),
-                ctx -> assertThat((String) ctx.properties().get("systemPrompt")).contains("STARTUP:"));
+        var  ctx    = provider.buildContext("integration-worker", caseId, WorkRequest.of("agent", Map.of()));
+        assertThat((String) ctx.properties().get("systemPrompt")).contains("STARTUP:");
     }
 }

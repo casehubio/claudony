@@ -156,6 +156,17 @@ export class ClaudonyChannelPanel extends LitElement {
     .stale-btn.secondary { opacity: 0.7; }
 
     .error { font-size: 11px; color: var(--pages-danger-9, #f44747); padding: 4px 8px; }
+    @media (max-width: 1024px) {
+      :host { display: none; width: 0; min-width: 0; }
+      :host(:not(.collapsed)) {
+        display: flex; position: fixed; z-index: 100;
+        right: 0; top: 0; bottom: 0; width: 300px; min-width: 300px;
+        box-shadow: -4px 0 8px rgba(0,0,0,0.3);
+      }
+    }
+    @media (max-width: 767px) {
+      :host { display: none; width: 0; min-width: 0; }
+    }
   `;
 
   override updated(changed: PropertyValues): void {

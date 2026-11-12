@@ -12,3 +12,4 @@ wksp
 .claude/scheduled_tasks.lock
 .claude
 package-lock.json
+.mvn/maven.config
