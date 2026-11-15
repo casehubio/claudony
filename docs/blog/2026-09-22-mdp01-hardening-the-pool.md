@@ -2,7 +2,7 @@
 layout: post
 title: "Hardening the Agent Pool — From Design to Deployable"
 date: 2026-09-22
-entry_type: article
+entry_type: note
 subtype: diary
 projects: [casehubio/claudony]
 tags: [agents, fleet-management, pool-design, audit, downstream-integration]
