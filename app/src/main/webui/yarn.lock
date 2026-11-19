@@ -52,6 +52,8 @@ __metadata:
 "@casehubio/pages-component@portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A.":
   version: 0.0.0-use.local
   resolution: "@casehubio/pages-component@portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."
+  dependencies:
+    yaml: "npm:^2.9.0"
   languageName: node
   linkType: soft
 
@@ -1486,7 +1488,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yaml@npm:^2.7.0":
+"yaml@npm:^2.7.0, yaml@npm:^2.9.0":
   version: 2.9.1
   resolution: "yaml@npm:2.9.1"
   bin:

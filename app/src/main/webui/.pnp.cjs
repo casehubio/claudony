@@ -104,7 +104,8 @@ const RAW_RUNTIME_STATE =
       ["portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A.", {\
         "packageLocation": "./.casehub-packages/packages/pages-component/",\
         "packageDependencies": [\
-          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."]\
+          ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=claudony-webui%40workspace%3A."],\
+          ["yaml", "npm:2.9.1"]\
         ],\
         "linkType": "SOFT"\
       }]\
