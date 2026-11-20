@@ -1,0 +1,23 @@
+- generic [active] [ref=f14e1]:
+  - banner [ref=f14e2]:
+    - heading "Claudony" [level=1] [ref=f14e3]
+  - generic [ref=f14e6]:
+    - generic [ref=f14e7]:
+      - button "Sessions" [ref=f14e8] [cursor=pointer]
+      - button "Cases" [ref=f14e9] [cursor=pointer]
+      - button "Inbox" [ref=f14e10] [cursor=pointer]
+      - button "Chat" [ref=f14e11] [cursor=pointer]
+      - button "Pools" [ref=f14e12] [cursor=pointer]
+      - button "Fleet" [ref=f14e13] [cursor=pointer]
+      - button "Mesh" [ref=f14e14] [cursor=pointer]
+    - generic [ref=f14e17]:
+      - generic [ref=f14e18]:
+        - heading "Sessions" [level=2] [ref=f14e19]
+        - generic [ref=f14e20]:
+          - generic [ref=f14e21]:
+            - button "▦" [ref=f14e22] [cursor=pointer]
+            - button "☰" [ref=f14e23] [cursor=pointer]
+          - button "+ New Session" [ref=f14e25] [cursor=pointer]
+      - generic [ref=f14e27]:
+        - paragraph [ref=f14e28]: No active sessions
+        - button "+ Create your first session" [ref=f14e30] [cursor=pointer]

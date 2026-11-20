@@ -1,0 +1,38 @@
+- generic [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - heading "Claudony" [level=1] [ref=f1e3]
+  - generic [ref=f1e6]:
+    - generic [ref=f1e7]:
+      - button "Sessions" [ref=f1e8] [cursor=pointer]
+      - button "Cases" [ref=f1e9] [cursor=pointer]
+      - button "Inbox" [ref=f1e10] [cursor=pointer]
+      - button "Chat" [active] [ref=f1e11] [cursor=pointer]
+      - button "Pools" [ref=f1e12] [cursor=pointer]
+      - button "Fleet" [ref=f1e13] [cursor=pointer]
+      - button "Mesh" [ref=f1e14] [cursor=pointer]
+    - generic [ref=f1e34]:
+      - generic [ref=f1e35]:
+        - generic [ref=f1e36]:
+          - button "Chans" [ref=f1e37] [cursor=pointer]
+          - button "Mbrs" [ref=f1e38] [cursor=pointer]
+          - button "Tasks" [ref=f1e39] [cursor=pointer]
+          - button "Corr" [ref=f1e40] [cursor=pointer]
+          - button "Arts" [ref=f1e41] [cursor=pointer]
+        - generic [ref=f1e43]:
+          - generic [ref=f1e44]:
+            - combobox [ref=f1e45] [cursor=pointer]:
+              - option "All Spaces" [selected]
+            - button "Create Space" [ref=f1e46] [cursor=pointer]: +
+          - tree
+          - button "Create Channel" [ref=f1e48] [cursor=pointer]
+      - generic [ref=f1e49]:
+        - generic [ref=f1e50]: Connection lost
+        - log [ref=f1e52]:
+          - generic [ref=f1e53]: No messages yet
+        - generic [ref=f1e54]:
+          - generic "New topic" [ref=f1e55] [cursor=pointer]:
+            - button "+" [ref=f1e56]
+          - generic [ref=f1e57]:
+            - textbox "Message" [ref=f1e58]:
+              - /placeholder: Type a message...
+            - button "Send message" [disabled] [ref=f1e59]

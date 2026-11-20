@@ -1,0 +1,70 @@
+- generic [active] [ref=f16e1]:
+  - banner [ref=f16e2]:
+    - heading "Claudony" [level=1] [ref=f16e3]
+  - generic [ref=f16e6]:
+    - generic [ref=f16e7]:
+      - button "Sessions" [ref=f16e8] [cursor=pointer]
+      - button "Cases" [ref=f16e9] [cursor=pointer]
+      - button "Inbox" [ref=f16e10] [cursor=pointer]
+      - button "Chat" [ref=f16e11] [cursor=pointer]
+      - button "Pools" [ref=f16e12] [cursor=pointer]
+      - button "Fleet" [ref=f16e13] [cursor=pointer]
+      - button "Mesh" [ref=f16e14] [cursor=pointer]
+    - generic [ref=f16e34]:
+      - generic [ref=f16e35]:
+        - button "Channels" [ref=f16e36] [cursor=pointer]
+        - button "Members" [ref=f16e39] [cursor=pointer]
+        - button "Tasks" [ref=f16e45] [cursor=pointer]
+        - button "Correlation" [ref=f16e49] [cursor=pointer]
+        - button "Artifacts" [ref=f16e53] [cursor=pointer]
+      - generic [ref=f16e57]:
+        - generic [ref=f16e58]:
+          - combobox [ref=f16e59] [cursor=pointer]:
+            - option "All Spaces" [selected]
+          - button "Create Space" [ref=f16e60] [cursor=pointer]: +
+        - tree [ref=f16e61]:
+          - list [ref=f16e62]:
+            - option "# life/standup Delete channel life/standup" [selected] [ref=f16e63]:
+              - generic [ref=f16e64]: "#"
+              - generic [ref=f16e65]: life/standup
+              - generic "Delete channel life/standup" [ref=f16e66] [cursor=pointer]:
+                - button "✕" [ref=f16e67]
+            - option "# team/engineering Delete channel team/engineering" [ref=f16e68]:
+              - generic [ref=f16e69]: "#"
+              - generic [ref=f16e70]: team/engineering
+              - generic "Delete channel team/engineering" [ref=f16e71] [cursor=pointer]:
+                - button "✕" [ref=f16e72]
+            - option "# team/general Delete channel team/general" [ref=f16e73]:
+              - generic [ref=f16e74]: "#"
+              - generic [ref=f16e75]: team/general
+              - generic "Delete channel team/general" [ref=f16e76] [cursor=pointer]:
+                - button "✕" [ref=f16e77]
+        - button "Create Channel" [ref=f16e79] [cursor=pointer]
+      - generic [ref=f16e81]:
+        - log [ref=f16e83]:
+          - generic [ref=f16e84]:
+            - generic [ref=f16e85]: mark
+            - generic "STATUS message from mark" [ref=f16e89]:
+              - generic [ref=f16e90]:
+                - generic [ref=f16e91]: 👤
+                - generic [ref=f16e92]: mark
+                - time [ref=f16e93]: 2h
+              - paragraph [ref=f16e95]: "Yesterday: landed chat view (#288), fixed viewport layout. Today: verify with seeded data, then work-end. Blockers: none."
+              - group "Message reactions"
+          - generic [ref=f16e96]:
+            - generic [ref=f16e97]: alex
+            - generic "STATUS message from alex" [ref=f16e101]:
+              - generic [ref=f16e102]:
+                - generic [ref=f16e103]: 👤
+                - generic [ref=f16e104]: alex
+                - time [ref=f16e105]: 2h
+              - paragraph [ref=f16e107]: "Yesterday: completed code review pass on auth middleware. Today: session expiry integration tests. Blockers: waiting on auth PR merge."
+              - group "Message reactions"
+        - generic [ref=f16e108]:
+          - generic "New topic" [ref=f16e109] [cursor=pointer]:
+            - button "+" [ref=f16e110]
+          - generic [ref=f16e111]:
+            - textbox "Message" [ref=f16e112]:
+              - /placeholder: Type a message...
+            - button "Send message" [disabled] [ref=f16e113]
+      - generic [ref=f16e117]: No members

@@ -1,0 +1,6 @@
+[     169ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0
+[   80123ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/actions:0
+[   80650ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/cases?limit=25:0
+[   82904ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/peers:0
+[   86714ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/cases?limit=25:0
+[   87154ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0

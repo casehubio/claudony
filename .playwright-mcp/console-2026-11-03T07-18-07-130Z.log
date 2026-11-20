@@ -1,0 +1,4 @@
+[     125ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0
+[  755800ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0
+[  765710ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:7777/api/channels/4473c0fd-0f7e-420f-82ca-d19bdb82a85c/messages/undefined/reactions:0
+[  789315ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:7777/api/channels/4473c0fd-0f7e-420f-82ca-d19bdb82a85c/messages/undefined/reactions:0

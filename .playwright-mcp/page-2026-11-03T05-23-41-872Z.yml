@@ -1,0 +1,80 @@
+- generic [ref=f9e1]:
+  - banner [ref=f9e2]:
+    - heading "Claudony" [level=1] [ref=f9e3]
+  - generic [ref=f9e6]:
+    - generic [ref=f9e7]:
+      - button "Sessions" [ref=f9e8] [cursor=pointer]
+      - button "Cases" [ref=f9e9] [cursor=pointer]
+      - button "Inbox" [ref=f9e10] [cursor=pointer]
+      - button "Chat" [active] [ref=f9e11] [cursor=pointer]
+      - button "Pools" [ref=f9e12] [cursor=pointer]
+      - button "Fleet" [ref=f9e13] [cursor=pointer]
+      - button "Mesh" [ref=f9e14] [cursor=pointer]
+    - generic [ref=f9e34]:
+      - generic [ref=f9e35]:
+        - button "Channels" [ref=f9e36] [cursor=pointer]
+        - button "Members" [ref=f9e39] [cursor=pointer]
+        - button "Tasks" [ref=f9e45] [cursor=pointer]
+        - button "Correlation" [ref=f9e49] [cursor=pointer]
+        - button "Artifacts" [ref=f9e53] [cursor=pointer]
+      - generic [ref=f9e57]:
+        - generic [ref=f9e58]:
+          - combobox [ref=f9e59] [cursor=pointer]:
+            - option "All Spaces" [selected]
+          - button "Create Space" [ref=f9e60] [cursor=pointer]: +
+        - tree [ref=f9e61]:
+          - list [ref=f9e62]:
+            - option "# life/standup Delete channel life/standup" [selected] [ref=f9e63]:
+              - generic [ref=f9e64]: "#"
+              - generic [ref=f9e65]: life/standup
+              - generic "Delete channel life/standup" [ref=f9e66] [cursor=pointer]:
+                - button "✕" [ref=f9e67]
+            - option "# team/engineering Delete channel team/engineering" [ref=f9e68]:
+              - generic [ref=f9e69]: "#"
+              - generic [ref=f9e70]: team/engineering
+              - generic "Delete channel team/engineering" [ref=f9e71] [cursor=pointer]:
+                - button "✕" [ref=f9e72]
+            - option "# team/general Delete channel team/general" [ref=f9e73]:
+              - generic [ref=f9e74]: "#"
+              - generic [ref=f9e75]: team/general
+              - generic "Delete channel team/general" [ref=f9e76] [cursor=pointer]:
+                - button "✕" [ref=f9e77]
+        - button "Create Channel" [ref=f9e79] [cursor=pointer]
+      - generic [ref=f9e81]:
+        - log [ref=f9e83]:
+          - generic [ref=f9e84]:
+            - generic [ref=f9e85]: mark
+            - generic [ref=f9e87]:
+              - generic [ref=f9e121]:
+                - button "Add reaction" [ref=f9e122] [cursor=pointer]: 😊
+                - button "Reply" [ref=f9e123] [cursor=pointer]: ↩
+                - button "More actions" [ref=f9e124] [cursor=pointer]: ⋯
+              - generic "STATUS message from mark" [ref=f9e89]:
+                - generic [ref=f9e90]:
+                  - generic [ref=f9e91]: 👤
+                  - generic [ref=f9e92]: mark
+                  - time [ref=f9e93]: 25m
+                - paragraph [ref=f9e95]: "Yesterday: landed chat view (#288), fixed viewport layout. Today: verify with seeded data, then work-end. Blockers: none."
+                - group "Message reactions"
+          - generic [ref=f9e96]:
+            - generic [ref=f9e97]: alex
+            - generic [ref=f9e99]:
+              - generic [ref=f9e126]:
+                - button "Add reaction" [ref=f9e127] [cursor=pointer]: 😊
+                - button "Reply" [ref=f9e128] [cursor=pointer]: ↩
+                - button "More actions" [ref=f9e129] [cursor=pointer]: ⋯
+              - generic "STATUS message from alex" [ref=f9e101]:
+                - generic [ref=f9e102]:
+                  - generic [ref=f9e103]: 👤
+                  - generic [ref=f9e104]: alex
+                  - time [ref=f9e105]: 25m
+                - paragraph [ref=f9e107]: "Yesterday: completed code review pass on auth middleware. Today: session expiry integration tests. Blockers: waiting on auth PR merge."
+                - group "Message reactions"
+        - generic [ref=f9e108]:
+          - generic "New topic" [ref=f9e109] [cursor=pointer]:
+            - button "+" [ref=f9e110]
+          - generic [ref=f9e111]:
+            - textbox "Message" [ref=f9e112]:
+              - /placeholder: Type a message...
+            - button "Send message" [disabled] [ref=f9e113]
+      - generic [ref=f9e117]: No members

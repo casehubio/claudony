@@ -1,0 +1,4 @@
+[     152ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0
+[    5156ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0
+[   10156ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0
+[   15180ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:7777/api/sessions:0

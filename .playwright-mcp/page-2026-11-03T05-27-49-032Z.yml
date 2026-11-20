@@ -1,0 +1,298 @@
+- generic [ref=f10e1]:
+  - banner [ref=f10e2]:
+    - heading "Claudony" [level=1] [ref=f10e3]
+  - generic [ref=f10e6]:
+    - generic [ref=f10e7]:
+      - button "Sessions" [ref=f10e8] [cursor=pointer]
+      - button "Cases" [ref=f10e9] [cursor=pointer]
+      - button "Inbox" [ref=f10e10] [cursor=pointer]
+      - button "Chat" [ref=f10e11] [cursor=pointer]
+      - button "Pools" [ref=f10e12] [cursor=pointer]
+      - button "Fleet" [ref=f10e13] [cursor=pointer]
+      - button "Mesh" [ref=f10e14] [cursor=pointer]
+    - generic [ref=f10e34]:
+      - generic [ref=f10e35]:
+        - button "Channels" [ref=f10e36] [cursor=pointer]
+        - button "Members" [ref=f10e39] [cursor=pointer]
+        - button "Tasks" [ref=f10e45] [cursor=pointer]
+        - button "Correlation" [ref=f10e49] [cursor=pointer]
+        - button "Artifacts" [ref=f10e53] [cursor=pointer]
+      - generic [ref=f10e57]:
+        - generic [ref=f10e58]:
+          - combobox [ref=f10e59] [cursor=pointer]:
+            - option "All Spaces" [selected]
+          - button "Create Space" [ref=f10e60] [cursor=pointer]: +
+        - tree [ref=f10e61]:
+          - list [ref=f10e62]:
+            - option "# life/standup Delete channel life/standup" [selected] [ref=f10e63]:
+              - generic [ref=f10e64]: "#"
+              - generic [ref=f10e65]: life/standup
+              - generic "Delete channel life/standup" [ref=f10e66] [cursor=pointer]:
+                - button "✕" [ref=f10e67]
+            - option "# team/engineering Delete channel team/engineering" [ref=f10e68]:
+              - generic [ref=f10e69]: "#"
+              - generic [ref=f10e70]: team/engineering
+              - generic "Delete channel team/engineering" [ref=f10e71] [cursor=pointer]:
+                - button "✕" [ref=f10e72]
+            - option "# team/general Delete channel team/general" [ref=f10e73]:
+              - generic [ref=f10e74]: "#"
+              - generic [ref=f10e75]: team/general
+              - generic "Delete channel team/general" [ref=f10e76] [cursor=pointer]:
+                - button "✕" [ref=f10e77]
+        - button "Create Channel" [ref=f10e79] [cursor=pointer]
+      - generic [ref=f10e81]:
+        - log [ref=f10e83]:
+          - generic [ref=f10e84]:
+            - generic [ref=f10e85]: mark
+            - generic [ref=f10e87]:
+              - generic [ref=f10e121]:
+                - button "Add reaction" [ref=f10e122] [cursor=pointer]: 😊
+                - button "Reply" [ref=f10e123] [cursor=pointer]: ↩
+                - button "More actions" [ref=f10e124] [cursor=pointer]: ⋯
+                - group "Emoji picker" [ref=f10e131]:
+                  - region "Emoji picker" [ref=f10e133]:
+                    - generic [ref=f10e135]:
+                      - generic [ref=f10e136]:
+                        - combobox "Search" [ref=f10e137]
+                        - generic [ref=f10e138]: Search
+                        - generic [ref=f10e139]: When search results are available, press up or down to select and enter to choose.
+                      - button "Choose a skin tone (currently Default)" [ref=f10e141] [cursor=pointer]: 🖐️
+                      - generic [ref=f10e142]: When expanded, press up or down to select and enter to choose.
+                      - listbox [aria-hidden]:
+                        - option [selected]: 🖐️
+                        - option: 🖐🏻
+                        - option: 🖐🏼
+                        - option: 🖐🏽
+                        - option: 🖐🏾
+                        - option: 🖐🏿
+                    - tablist "Categories" [ref=f10e143]:
+                      - tab "Smileys and emoticons" [selected] [ref=f10e144]:
+                        - generic [ref=f10e145] [cursor=pointer]: 😀
+                      - tab "People and body" [ref=f10e146]:
+                        - generic [ref=f10e147] [cursor=pointer]: 👋
+                      - tab "Animals and nature" [ref=f10e148]:
+                        - generic [ref=f10e149] [cursor=pointer]: 🐱
+                      - tab "Food and drink" [ref=f10e150]:
+                        - generic [ref=f10e151] [cursor=pointer]: 🍎
+                      - tab "Travel and places" [ref=f10e152]:
+                        - generic [ref=f10e153] [cursor=pointer]: 🏠️
+                      - tab "Activities" [ref=f10e154]:
+                        - generic [ref=f10e155] [cursor=pointer]: ⚽
+                      - tab "Objects" [ref=f10e156]:
+                        - generic [ref=f10e157] [cursor=pointer]: 📝
+                      - tab "Symbols" [ref=f10e158]:
+                        - generic [ref=f10e159] [cursor=pointer]: ⛔️
+                      - tab "Flags" [ref=f10e160]:
+                        - generic [ref=f10e161] [cursor=pointer]: 🏁
+                    - tabpanel "Smileys and emoticons" [ref=f10e164]:
+                      - menu "Smileys and emoticons" [ref=f10e167]:
+                        - menuitem "😀, grinning face, grinning, grinning_face" [ref=f10e168] [cursor=pointer]: 😀
+                        - menuitem "😃, grinning face with big eyes, grinning_face_with_big_eyes, smiley" [ref=f10e169] [cursor=pointer]: 😃
+                        - menuitem "😄, grinning face with smiling eyes, grinning_face_with_closed_eyes, smile" [ref=f10e170] [cursor=pointer]: 😄
+                        - menuitem "😁, beaming face with smiling eyes, beaming_face, grin" [ref=f10e171] [cursor=pointer]: 😁
+                        - menuitem "😆, grinning squinting face, laughing, lol, satisfied, squinting_face" [ref=f10e172] [cursor=pointer]: 😆
+                        - menuitem "😅, grinning face with sweat, grinning_face_with_sweat, sweat_smile" [ref=f10e173] [cursor=pointer]: 😅
+                        - menuitem "🤣, rolling on the floor laughing, rofl" [ref=f10e174] [cursor=pointer]: 🤣
+                        - menuitem "😂, face with tears of joy, joy, lmao, tears_of_joy" [ref=f10e175] [cursor=pointer]: 😂
+                        - menuitem "🙂, slightly smiling face, slightly_smiling_face" [ref=f10e176] [cursor=pointer]: 🙂
+                        - menuitem "🙃, upside-down face, upside_down_face" [ref=f10e177] [cursor=pointer]: 🙃
+                        - menuitem "🫠, melting face, melt, melting_face" [ref=f10e178] [cursor=pointer]: 🫠
+                        - menuitem "😉, winking face, wink, winking_face" [ref=f10e179] [cursor=pointer]: 😉
+                        - menuitem "😊, smiling face with smiling eyes, blush, smiling_face_with_closed_eyes" [ref=f10e180] [cursor=pointer]: 😊
+                        - menuitem "😇, smiling face with halo, halo, innocent" [ref=f10e181] [cursor=pointer]: 😇
+                        - menuitem "🥰, smiling face with hearts, smiling_face_with_3_hearts" [ref=f10e182] [cursor=pointer]: 🥰
+                        - menuitem "😍, smiling face with heart-eyes, heart_eyes, smiling_face_with_heart_eyes" [ref=f10e183] [cursor=pointer]: 😍
+                        - menuitem "🤩, star-struck, star_struck" [ref=f10e184] [cursor=pointer]: 🤩
+                        - menuitem "😘, face blowing a kiss, blowing_a_kiss, kissing_heart" [ref=f10e185] [cursor=pointer]: 😘
+                        - menuitem "😗, kissing face, kissing, kissing_face" [ref=f10e186] [cursor=pointer]: 😗
+                        - menuitem "☺️, smiling face, relaxed, smiling_face" [ref=f10e187] [cursor=pointer]: ☺️
+                        - menuitem "😚, kissing face with closed eyes, kissing_closed_eyes, kissing_face_with_closed_eyes" [ref=f10e188] [cursor=pointer]: 😚
+                        - menuitem "😙, kissing face with smiling eyes, kissing_face_with_smiling_eyes, kissing_smiling_eyes" [ref=f10e189] [cursor=pointer]: 😙
+                        - menuitem "🥲, smiling face with tear, smiling_face_with_tear" [ref=f10e190] [cursor=pointer]: 🥲
+                        - menuitem "😋, face savoring food, savoring_food, yum" [ref=f10e191] [cursor=pointer]: 😋
+                        - menuitem "😛, face with tongue, face_with_tongue, stuck_out_tongue" [ref=f10e192] [cursor=pointer]: 😛
+                        - menuitem "😜, winking face with tongue, stuck_out_tongue_winking_eye" [ref=f10e193] [cursor=pointer]: 😜
+                        - menuitem "🤪, zany face, zany, zany_face" [ref=f10e194] [cursor=pointer]: 🤪
+                        - menuitem "😝, squinting face with tongue, stuck_out_tongue_closed_eyes" [ref=f10e195] [cursor=pointer]: 😝
+                        - menuitem "🤑, money-mouth face, money_mouth_face" [ref=f10e196] [cursor=pointer]: 🤑
+                        - menuitem "🤗, smiling face with open hands, hug, hugging, hugging_face" [ref=f10e197] [cursor=pointer]: 🤗
+                        - menuitem "🤭, face with hand over mouth, face_with_hand_over_mouth, hand_over_mouth" [ref=f10e198] [cursor=pointer]: 🤭
+                        - menuitem "🫢, face with open eyes and hand over mouth, face_with_open_eyes_hand_over_mouth, gasp" [ref=f10e199] [cursor=pointer]: 🫢
+                        - menuitem "🫣, face with peeking eye, face_with_peeking_eye, peek" [ref=f10e200] [cursor=pointer]: 🫣
+                        - menuitem "🤫, shushing face, shush, shushing_face" [ref=f10e201] [cursor=pointer]: 🤫
+                        - menuitem "🤔, thinking face, thinking, thinking_face, wtf" [ref=f10e202] [cursor=pointer]: 🤔
+                        - menuitem "🫡, saluting face, salute, saluting_face" [ref=f10e203] [cursor=pointer]: 🫡
+                        - menuitem "🤐, zipper-mouth face, zipper_mouth, zipper_mouth_face" [ref=f10e204] [cursor=pointer]: 🤐
+                        - menuitem "🤨, face with raised eyebrow, face_with_raised_eyebrow, raised_eyebrow" [ref=f10e205] [cursor=pointer]: 🤨
+                        - menuitem "😐️, neutral face, neutral, neutral_face" [ref=f10e206] [cursor=pointer]: 😐️
+                        - menuitem "😑, expressionless face, expressionless, expressionless_face" [ref=f10e207] [cursor=pointer]: 😑
+                        - menuitem "😶, face without mouth, no_mouth" [ref=f10e208] [cursor=pointer]: 😶
+                        - menuitem "🫥, dotted line face, dotted_line_face" [ref=f10e209] [cursor=pointer]: 🫥
+                        - menuitem "😶‍🌫️, face in clouds, in_clouds" [ref=f10e210] [cursor=pointer]: 😶‍🌫️
+                        - menuitem "😏, smirking face, smirk, smirking, smirking_face" [ref=f10e211] [cursor=pointer]: 😏
+                        - menuitem "😒, unamused face, unamused, unamused_face" [ref=f10e212] [cursor=pointer]: 😒
+                        - menuitem "🙄, face with rolling eyes, rolling_eyes" [ref=f10e213] [cursor=pointer]: 🙄
+                        - menuitem "😬, grimacing face, grimacing, grimacing_face" [ref=f10e214] [cursor=pointer]: 😬
+                        - menuitem "😮‍💨, face exhaling, exhale, exhaling" [ref=f10e215] [cursor=pointer]: 😮‍💨
+                        - menuitem "🤥, lying face, lying, lying_face" [ref=f10e216] [cursor=pointer]: 🤥
+                        - menuitem "🫨, shaking face, shaking, shaking_face" [ref=f10e217] [cursor=pointer]: 🫨
+                        - menuitem "🙂‍↔️, head shaking horizontally, head_shaking_horizontally" [ref=f10e218] [cursor=pointer]: 🙂‍↔️
+                        - menuitem "🙂‍↕️, head shaking vertically, head_shaking_vertically" [ref=f10e219] [cursor=pointer]: 🙂‍↕️
+                        - menuitem "😌, relieved face, relieved, relieved_face" [ref=f10e220] [cursor=pointer]: 😌
+                        - menuitem "😔, pensive face, pensive, pensive_face" [ref=f10e221] [cursor=pointer]: 😔
+                        - menuitem "😪, sleepy face, sleepy, sleepy_face" [ref=f10e222] [cursor=pointer]: 😪
+                        - menuitem "🤤, drooling face, drooling, drooling_face" [ref=f10e223] [cursor=pointer]: 🤤
+                        - menuitem "😴, sleeping face, sleeping, sleeping_face" [ref=f10e224] [cursor=pointer]: 😴
+                        - menuitem "🫩, face with bags under eyes, face_with_eye_bags" [ref=f10e225] [cursor=pointer]: 🫩
+                        - menuitem "😷, face with medical mask, mask, medical_mask" [ref=f10e226] [cursor=pointer]: 😷
+                        - menuitem "🤒, face with thermometer, face_with_thermometer" [ref=f10e227] [cursor=pointer]: 🤒
+                        - menuitem "🤕, face with head-bandage, face_with_head_bandage" [ref=f10e228] [cursor=pointer]: 🤕
+                        - menuitem "🤢, nauseated face, nauseated, nauseated_face" [ref=f10e229] [cursor=pointer]: 🤢
+                        - menuitem "🤮, face vomiting, face_vomiting, vomiting" [ref=f10e230] [cursor=pointer]: 🤮
+                        - menuitem "🤧, sneezing face, sneezing, sneezing_face" [ref=f10e231] [cursor=pointer]: 🤧
+                        - menuitem "🥵, hot face, hot, hot_face" [ref=f10e232] [cursor=pointer]: 🥵
+                        - menuitem "🥶, cold face, cold, cold_face" [ref=f10e233] [cursor=pointer]: 🥶
+                        - menuitem "🥴, woozy face, woozy, woozy_face" [ref=f10e234] [cursor=pointer]: 🥴
+                        - menuitem "😵, face with crossed-out eyes, dizzy_face, knocked_out" [ref=f10e235] [cursor=pointer]: 😵
+                        - menuitem "😵‍💫, face with spiral eyes, dizzy_eyes" [ref=f10e236] [cursor=pointer]: 😵‍💫
+                        - menuitem "🤯, exploding head, exploding_head" [ref=f10e237] [cursor=pointer]: 🤯
+                        - menuitem "🤠, cowboy hat face, cowboy, cowboy_face" [ref=f10e238] [cursor=pointer]: 🤠
+                        - menuitem "🥳, partying face, hooray, partying, partying_face" [ref=f10e239] [cursor=pointer]: 🥳
+                        - menuitem "🥸, disguised face, disguised, disguised_face" [ref=f10e240] [cursor=pointer]: 🥸
+                        - menuitem "😎, smiling face with sunglasses, smiling_face_with_sunglasses, sunglasses_cool, too_cool" [ref=f10e241] [cursor=pointer]: 😎
+                        - menuitem "🤓, nerd face, nerd, nerd_face" [ref=f10e242] [cursor=pointer]: 🤓
+                        - menuitem "🧐, face with monocle, face_with_monocle" [ref=f10e243] [cursor=pointer]: 🧐
+                        - menuitem "😕, confused face, confused, confused_face" [ref=f10e244] [cursor=pointer]: 😕
+                        - menuitem "🫤, face with diagonal mouth, face_with_diagonal_mouth" [ref=f10e245] [cursor=pointer]: 🫤
+                        - menuitem "😟, worried face, worried, worried_face" [ref=f10e246] [cursor=pointer]: 😟
+                        - menuitem "🙁, slightly frowning face, slightly_frowning_face" [ref=f10e247] [cursor=pointer]: 🙁
+                        - menuitem "☹️, frowning face, white_frowning_face" [ref=f10e248] [cursor=pointer]: ☹️
+                        - menuitem "😮, face with open mouth, face_with_open_mouth, open_mouth" [ref=f10e249] [cursor=pointer]: 😮
+                        - menuitem "😯, hushed face, hushed, hushed_face" [ref=f10e250] [cursor=pointer]: 😯
+                        - menuitem "😲, astonished face, astonished, astonished_face" [ref=f10e251] [cursor=pointer]: 😲
+                        - menuitem "😳, flushed face, flushed, flushed_face" [ref=f10e252] [cursor=pointer]: 😳
+                        - menuitem "🫪, distorted face, distorted_face" [ref=f10e253] [cursor=pointer]: 🫪
+                        - menuitem "🥺, pleading face, pleading, pleading_face" [ref=f10e254] [cursor=pointer]: 🥺
+                        - menuitem "🥹, face holding back tears, face_holding_back_tears, watery_eyes" [ref=f10e255] [cursor=pointer]: 🥹
+                        - menuitem "😦, frowning face with open mouth, frowning, frowning_face" [ref=f10e256] [cursor=pointer]: 😦
+                        - menuitem "😧, anguished face, anguished, anguished_face" [ref=f10e257] [cursor=pointer]: 😧
+                        - menuitem "😨, fearful face, fearful, fearful_face" [ref=f10e258] [cursor=pointer]: 😨
+                        - menuitem "😰, anxious face with sweat, anxious, anxious_face, cold_sweat" [ref=f10e259] [cursor=pointer]: 😰
+                        - menuitem "😥, sad but relieved face, disappointed_relieved, sad_relieved_face" [ref=f10e260] [cursor=pointer]: 😥
+                        - menuitem "😢, crying face, cry, crying_face" [ref=f10e261] [cursor=pointer]: 😢
+                        - menuitem "😭, loudly crying face, loudly_crying_face, sob" [ref=f10e262] [cursor=pointer]: 😭
+                        - menuitem "😱, face screaming in fear, scream, screaming_in_fear" [ref=f10e263] [cursor=pointer]: 😱
+                        - menuitem "😖, confounded face, confounded, confounded_face" [ref=f10e264] [cursor=pointer]: 😖
+                        - menuitem "😣, persevering face, persevere, persevering_face" [ref=f10e265] [cursor=pointer]: 😣
+                        - menuitem "😞, disappointed face, disappointed, disappointed_face" [ref=f10e266] [cursor=pointer]: 😞
+                        - menuitem "😓, downcast face with sweat, downcast_face, sweat" [ref=f10e267] [cursor=pointer]: 😓
+                        - menuitem "😩, weary face, weary, weary_face" [ref=f10e268] [cursor=pointer]: 😩
+                        - menuitem "😫, tired face, tired, tired_face" [ref=f10e269] [cursor=pointer]: 😫
+                        - menuitem "🥱, yawning face, yawn, yawning, yawning_face" [ref=f10e270] [cursor=pointer]: 🥱
+                        - menuitem "😤, face with steam from nose, nose_steam, triumph" [ref=f10e271] [cursor=pointer]: 😤
+                        - menuitem "😡, enraged face, pout, pouting_face, rage" [ref=f10e272] [cursor=pointer]: 😡
+                        - menuitem "😠, angry face, angry, angry_face" [ref=f10e273] [cursor=pointer]: 😠
+                        - menuitem "🤬, face with symbols on mouth, censored, face_with_symbols_on_mouth" [ref=f10e274] [cursor=pointer]: 🤬
+                        - menuitem "😈, smiling face with horns, smiling_imp" [ref=f10e275] [cursor=pointer]: 😈
+                        - menuitem "👿, angry face with horns, angry_imp, imp" [ref=f10e276] [cursor=pointer]: 👿
+                        - menuitem "💀, skull" [ref=f10e277] [cursor=pointer]: 💀
+                        - menuitem "☠️, skull and crossbones, skull_and_crossbones" [ref=f10e278] [cursor=pointer]: ☠️
+                        - menuitem "💩, pile of poo, poop, shit" [ref=f10e279] [cursor=pointer]: 💩
+                        - menuitem "🤡, clown face, clown, clown_face" [ref=f10e280] [cursor=pointer]: 🤡
+                        - menuitem "👹, ogre, japanese_ogre" [ref=f10e281] [cursor=pointer]: 👹
+                        - menuitem "👺, goblin, japanese_goblin" [ref=f10e282] [cursor=pointer]: 👺
+                        - menuitem "👻, ghost" [ref=f10e283] [cursor=pointer]: 👻
+                        - menuitem "👽️, alien" [ref=f10e284] [cursor=pointer]: 👽️
+                        - menuitem "👾, alien monster, alien_monster, space_invader" [ref=f10e285] [cursor=pointer]: 👾
+                        - menuitem "🤖, robot, robot_face" [ref=f10e286] [cursor=pointer]: 🤖
+                        - menuitem "😺, grinning cat, grinning_cat, smiley_cat" [ref=f10e287] [cursor=pointer]: 😺
+                        - menuitem "😸, grinning cat with smiling eyes, grinning_cat_with_closed_eyes, smile_cat" [ref=f10e288] [cursor=pointer]: 😸
+                        - menuitem "😹, cat with tears of joy, joy_cat, tears_of_joy_cat" [ref=f10e289] [cursor=pointer]: 😹
+                        - menuitem "😻, smiling cat with heart-eyes, heart_eyes_cat, smiling_cat_with_heart_eyes" [ref=f10e290] [cursor=pointer]: 😻
+                        - menuitem "😼, cat with wry smile, smirk_cat, wry_smile_cat" [ref=f10e291] [cursor=pointer]: 😼
+                        - menuitem "😽, kissing cat, kissing_cat" [ref=f10e292] [cursor=pointer]: 😽
+                        - menuitem "🙀, weary cat, scream_cat, weary_cat" [ref=f10e293] [cursor=pointer]: 🙀
+                        - menuitem "😿, crying cat, crying_cat" [ref=f10e294] [cursor=pointer]: 😿
+                        - menuitem "😾, pouting cat, pouting_cat" [ref=f10e295] [cursor=pointer]: 😾
+                        - menuitem "🙈, see-no-evil monkey, see_no_evil" [ref=f10e296] [cursor=pointer]: 🙈
+                        - menuitem "🙉, hear-no-evil monkey, hear_no_evil" [ref=f10e297] [cursor=pointer]: 🙉
+                        - menuitem "🙊, speak-no-evil monkey, speak_no_evil" [ref=f10e298] [cursor=pointer]: 🙊
+                        - menuitem "💌, love letter, love_letter" [ref=f10e299] [cursor=pointer]: 💌
+                        - menuitem "💘, heart with arrow, cupid, heart_with_arrow" [ref=f10e300] [cursor=pointer]: 💘
+                        - menuitem "💝, heart with ribbon, gift_heart, heart_with_ribbon" [ref=f10e301] [cursor=pointer]: 💝
+                        - menuitem "💖, sparkling heart, sparkling_heart" [ref=f10e302] [cursor=pointer]: 💖
+                        - menuitem "💗, growing heart, growing_heart, heartpulse" [ref=f10e303] [cursor=pointer]: 💗
+                        - menuitem "💓, beating heart, beating_heart, heartbeat" [ref=f10e304] [cursor=pointer]: 💓
+                        - menuitem "💞, revolving hearts, revolving_hearts" [ref=f10e305] [cursor=pointer]: 💞
+                        - menuitem "💕, two hearts, two_hearts" [ref=f10e306] [cursor=pointer]: 💕
+                        - menuitem "💟, heart decoration, heart_decoration" [ref=f10e307] [cursor=pointer]: 💟
+                        - menuitem "❣️, heart exclamation, heart_exclamation" [ref=f10e308] [cursor=pointer]: ❣️
+                        - menuitem "💔, broken heart, broken_heart" [ref=f10e309] [cursor=pointer]: 💔
+                        - menuitem "❤️‍🔥, heart on fire, heart_on_fire" [ref=f10e310] [cursor=pointer]: ❤️‍🔥
+                        - menuitem "❤️‍🩹, mending heart, mending_heart" [ref=f10e311] [cursor=pointer]: ❤️‍🩹
+                        - menuitem "❤️, red heart, heart, red_heart" [ref=f10e312] [cursor=pointer]: ❤️
+                        - menuitem "🩷, pink heart, pink_heart" [ref=f10e313] [cursor=pointer]: 🩷
+                        - menuitem "🧡, orange heart, orange_heart" [ref=f10e314] [cursor=pointer]: 🧡
+                        - menuitem "💛, yellow heart, yellow_heart" [ref=f10e315] [cursor=pointer]: 💛
+                        - menuitem "💚, green heart, green_heart" [ref=f10e316] [cursor=pointer]: 💚
+                        - menuitem "💙, blue heart, blue_heart" [ref=f10e317] [cursor=pointer]: 💙
+                        - menuitem "🩵, light blue heart, light_blue_heart" [ref=f10e318] [cursor=pointer]: 🩵
+                        - menuitem "💜, purple heart, purple_heart" [ref=f10e319] [cursor=pointer]: 💜
+                        - menuitem "🤎, brown heart, brown_heart" [ref=f10e320] [cursor=pointer]: 🤎
+                        - menuitem "🖤, black heart, black_heart" [ref=f10e321] [cursor=pointer]: 🖤
+                        - menuitem "🩶, grey heart, gray_heart, grey_heart" [ref=f10e322] [cursor=pointer]: 🩶
+                        - menuitem "🤍, white heart, white_heart" [ref=f10e323] [cursor=pointer]: 🤍
+                        - menuitem "💋, kiss mark, kiss" [ref=f10e324] [cursor=pointer]: 💋
+                        - menuitem "💯, hundred points, 100" [ref=f10e325] [cursor=pointer]: 💯
+                        - menuitem "💢, anger symbol, anger" [ref=f10e326] [cursor=pointer]: 💢
+                        - menuitem "🫯, fight cloud, fight_cloud" [ref=f10e327] [cursor=pointer]: 🫯
+                        - menuitem "💥, collision, boom" [ref=f10e328] [cursor=pointer]: 💥
+                        - menuitem "💫, dizzy" [ref=f10e329] [cursor=pointer]: 💫
+                        - menuitem "💦, sweat droplets, sweat_drops" [ref=f10e330] [cursor=pointer]: 💦
+                        - menuitem "💨, dashing away, dash, dashing_away" [ref=f10e331] [cursor=pointer]: 💨
+                        - menuitem "🕳️, hole" [ref=f10e332] [cursor=pointer]: 🕳️
+                        - menuitem "💬, speech balloon, speech_balloon" [ref=f10e333] [cursor=pointer]: 💬
+                        - menuitem "👁️‍🗨️, eye in speech bubble, eye_in_speech_bubble" [ref=f10e334] [cursor=pointer]: 👁️‍🗨️
+                        - menuitem "🗨️, left speech bubble, left_speech_bubble" [ref=f10e335] [cursor=pointer]: 🗨️
+                        - menuitem "🗯️, right anger bubble, right_anger_bubble" [ref=f10e336] [cursor=pointer]: 🗯️
+                        - menuitem "💭, thought balloon, thought_balloon" [ref=f10e337] [cursor=pointer]: 💭
+                        - menuitem "💤, ZZZ, zzz" [ref=f10e338] [cursor=pointer]: 💤
+                    - menu "Favorites" [ref=f10e339]:
+                      - menuitem "😊, smiling face with smiling eyes, blush, smiling_face_with_closed_eyes" [ref=f10e340] [cursor=pointer]: 😊
+                      - menuitem "😒, unamused face, unamused, unamused_face" [ref=f10e341] [cursor=pointer]: 😒
+                      - menuitem "❤️, red heart, heart, red_heart" [ref=f10e342] [cursor=pointer]: ❤️
+                      - menuitem "👍️, thumbs up, +1, thumbsup, yes" [ref=f10e343] [cursor=pointer]: 👍️
+                      - menuitem "😍, smiling face with heart-eyes, heart_eyes, smiling_face_with_heart_eyes" [ref=f10e344] [cursor=pointer]: 😍
+                      - menuitem "😂, face with tears of joy, joy, lmao, tears_of_joy" [ref=f10e345] [cursor=pointer]: 😂
+                      - menuitem "😭, loudly crying face, loudly_crying_face, sob" [ref=f10e346] [cursor=pointer]: 😭
+                      - menuitem "☺️, smiling face, relaxed, smiling_face" [ref=f10e347] [cursor=pointer]: ☺️
+                    - button [aria-hidden]: 😀
+              - generic "STATUS message from mark" [ref=f10e89]:
+                - generic [ref=f10e90]:
+                  - generic [ref=f10e91]: 👤
+                  - generic [ref=f10e92]: mark
+                  - time [ref=f10e93]: 29m
+                - paragraph [ref=f10e95]: "Yesterday: landed chat view (#288), fixed viewport layout. Today: verify with seeded data, then work-end. Blockers: none."
+                - group "Message reactions"
+          - generic [ref=f10e96]:
+            - generic [ref=f10e97]: alex
+            - generic [ref=f10e99]:
+              - generic [ref=f10e126]:
+                - button "Add reaction" [ref=f10e127] [cursor=pointer]: 😊
+                - button "Reply" [ref=f10e128] [cursor=pointer]: ↩
+                - button "More actions" [ref=f10e129] [cursor=pointer]: ⋯
+              - generic "STATUS message from alex" [ref=f10e101]:
+                - generic [ref=f10e102]:
+                  - generic [ref=f10e103]: 👤
+                  - generic [ref=f10e104]: alex
+                  - time [ref=f10e105]: 29m
+                - paragraph [ref=f10e107]: "Yesterday: completed code review pass on auth middleware. Today: session expiry integration tests. Blockers: waiting on auth PR merge."
+                - group "Message reactions"
+        - generic [ref=f10e108]:
+          - generic "New topic" [ref=f10e109] [cursor=pointer]:
+            - button "+" [ref=f10e110]
+          - generic [ref=f10e111]:
+            - textbox "Message" [ref=f10e112]:
+              - /placeholder: Type a message...
+            - button "Send message" [disabled] [ref=f10e113]
+      - generic [ref=f10e117]: No members
